@@ -858,7 +858,6 @@ long gensubToTcsAo
 
       /* write whole array to valj for the TCS to pick up */
       /* but make sure that spherical and Z11-Z19 aberrations are not sent to TCS
-       */
  
       aoDataTcs[2]=0.0;
       aoDataTcs[3]=0.0;
@@ -873,7 +872,8 @@ long gensubToTcsAo
       aoDataTcs[18]=0.0;
       aoDataTcs[19]=0.0;
       aoDataTcs[20]=0.0;
- 
+	*/
+
       memcpy (pgsub->valj, aoDataTcs, AO_ARRAY_SIZE * sizeof (double));
 
       /* write Zernike values to vala for display */
