@@ -6,8 +6,8 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="29"
-	nstr="69"
+	npc="25"
+	nstr="70"
 	ndynamic="34"
 	nplot="0"
 	nrd="1"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="771"
-		height="723"
+		height="745"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5550"
-	nwords_sta="1812"
+	nwords_dspy="5526"
+	nwords_sta="1836"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="3044"
-	osta="1232"
-	odynamic="3044"
-	oplot="5378"
-	ord="5378"
-	oes="5538"
-	okd="5538"
-	opd="5550"
-	opo="5550"
+	odyng="3020"
+	osta="1184"
+	odynamic="3020"
+	oplot="5354"
+	ord="5354"
+	oes="5514"
+	okd="5514"
+	opd="5526"
+	opo="5526"
 	opc="68"
-	ostr="470"
-	ocmap="1232"
-	ocrules="1232"
+	ostr="406"
+	ocmap="1184"
+	ocrules="1184"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -52,7 +52,7 @@ display {
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
-	mmht="288"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -78,7 +78,7 @@ display {
 		x="4"
 		y="37"
 		width="761"
-		height="678"
+		height="700"
 		groupid="0"
 	}
 }
@@ -251,30 +251,30 @@ display {
 }
 "text" {
 	object {
-		x="8"
-		y="450"
+		x="9"
+		y="477"
 		width="604"
 		height="16"
 		groupid="0"
 	}
-	textix="J, K: Save aO control circular buffer during closed loop :"
+	textix="J: Save aO control circular buffer during closed loop :"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="495"
-		y="482"
-		width="40"
+		x="403"
+		y="509"
+		width="84"
 		height="16"
 		groupid="0"
 	}
-	textix="mn"
+	textix="60 mn"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="336"
-		y="480"
+		x="337"
+		y="507"
 		width="65"
 		height="16"
 		groupid="0"
@@ -332,20 +332,20 @@ display {
 }
 "line" {
 	object {
-		x="5"
-		y="442"
+		x="6"
+		y="469"
 		width="761"
 		height="0"
 		groupid="0"
 	}
 	npoints="2"
 	point[0] {
-		x="5"
-		y="442"
+		x="6"
+		y="469"
 	}
 	point[1] {
-		x="766"
-		y="442"
+		x="767"
+		y="469"
 	}
 	orgpoint[0] {
 		x="0"
@@ -358,8 +358,8 @@ display {
 }
 "text" {
 	object {
-		x="8"
-		y="510"
+		x="9"
+		y="537"
 		width="604"
 		height="16"
 		groupid="0"
@@ -369,8 +369,8 @@ display {
 }
 "text" {
 	object {
-		x="495"
-		y="542"
+		x="496"
+		y="569"
 		width="40"
 		height="16"
 		groupid="0"
@@ -380,8 +380,8 @@ display {
 }
 "text" {
 	object {
-		x="336"
-		y="540"
+		x="337"
+		y="567"
 		width="65"
 		height="16"
 		groupid="0"
@@ -428,8 +428,8 @@ display {
 }
 "text" {
 	object {
-		x="8"
-		y="574"
+		x="9"
+		y="601"
 		width="168"
 		height="16"
 		groupid="0"
@@ -450,8 +450,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="657"
+		x="10"
+		y="684"
 		width="634"
 		height="16"
 		groupid="0"
@@ -461,20 +461,20 @@ display {
 }
 "line" {
 	object {
-		x="4"
-		y="645"
+		x="5"
+		y="672"
 		width="761"
 		height="0"
 		groupid="0"
 	}
 	npoints="2"
 	point[0] {
-		x="4"
-		y="645"
+		x="5"
+		y="672"
 	}
 	point[1] {
-		x="765"
-		y="645"
+		x="766"
+		y="672"
 	}
 	orgpoint[0] {
 		x="0"
@@ -542,20 +542,20 @@ display {
 }
 "line" {
 	object {
-		x="4"
-		y="602"
+		x="5"
+		y="629"
 		width="761"
 		height="0"
 		groupid="0"
 	}
 	npoints="2"
 	point[0] {
-		x="4"
-		y="602"
+		x="5"
+		y="629"
 	}
 	point[1] {
-		x="765"
-		y="602"
+		x="766"
+		y="629"
 	}
 	orgpoint[0] {
 		x="0"
@@ -568,13 +568,35 @@ display {
 }
 "text" {
 	object {
-		x="8"
-		y="617"
+		x="9"
+		y="644"
 		width="235"
 		height="16"
 		groupid="0"
 	}
 	textix="T: Seeing computation:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="751"
+		y="443"
+		width="15"
+		height="16"
+		groupid="0"
+	}
+	textix="s"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="333"
+		y="442"
+		width="326"
+		height="16"
+		groupid="0"
+	}
+	textix="K: Pause between 2 aO commands:"
 	align="horiz. left"
 }
 "message button" {
@@ -765,7 +787,7 @@ display {
 	inactive_label="DEFAULT"
 	pressed_label=""
 	press_msg="1"
-	release_msg="CLEAR"
+	release_msg=""
 }
 "text update" {
 	object {
@@ -998,10 +1020,10 @@ display {
 }
 "text entry" {
 	object {
-		x="400"
-		y="478"
-		width="87"
-		height="23"
+		x="654"
+		y="441"
+		width="95"
+		height="21"
 		groupid="0"
 	}
 	control {
@@ -1043,8 +1065,8 @@ display {
 }
 "message button" {
 	object {
-		x="70"
-		y="475"
+		x="71"
+		y="502"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1091,8 +1113,8 @@ display {
 }
 "message button" {
 	object {
-		x="146"
-		y="475"
+		x="147"
+		y="502"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1139,8 +1161,8 @@ display {
 }
 "text entry" {
 	object {
-		x="223"
-		y="475"
+		x="224"
+		y="502"
 		width="99"
 		height="27"
 		groupid="0"
@@ -1274,8 +1296,8 @@ display {
 }
 "text entry" {
 	object {
-		x="400"
-		y="539"
+		x="401"
+		y="566"
 		width="87"
 		height="23"
 		groupid="0"
@@ -1319,8 +1341,8 @@ display {
 }
 "message button" {
 	object {
-		x="70"
-		y="535"
+		x="71"
+		y="562"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1367,8 +1389,8 @@ display {
 }
 "message button" {
 	object {
-		x="146"
-		y="535"
+		x="147"
+		y="562"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1415,8 +1437,8 @@ display {
 }
 "text entry" {
 	object {
-		x="223"
-		y="535"
+		x="224"
+		y="562"
 		width="99"
 		height="27"
 		groupid="0"
@@ -1601,8 +1623,8 @@ display {
 }
 "text entry" {
 	object {
-		x="175"
-		y="573"
+		x="176"
+		y="600"
 		width="587"
 		height="21"
 		groupid="0"
@@ -1787,8 +1809,8 @@ display {
 }
 "message button" {
 	object {
-		x="42"
-		y="681"
+		x="43"
+		y="708"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1835,8 +1857,8 @@ display {
 }
 "message button" {
 	object {
-		x="118"
-		y="681"
+		x="119"
+		y="708"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1883,8 +1905,8 @@ display {
 }
 "text entry" {
 	object {
-		x="195"
-		y="681"
+		x="196"
+		y="708"
 		width="99"
 		height="27"
 		groupid="0"
@@ -2018,8 +2040,8 @@ display {
 }
 "message button" {
 	object {
-		x="232"
-		y="612"
+		x="233"
+		y="639"
 		width="63"
 		height="26"
 		groupid="0"
@@ -2066,8 +2088,8 @@ display {
 }
 "message button" {
 	object {
-		x="308"
-		y="612"
+		x="309"
+		y="639"
 		width="63"
 		height="26"
 		groupid="0"
@@ -2114,8 +2136,8 @@ display {
 }
 "text entry" {
 	object {
-		x="385"
-		y="612"
+		x="386"
+		y="639"
 		width="99"
 		height="27"
 		groupid="0"

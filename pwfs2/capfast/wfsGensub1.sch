@@ -28,6 +28,7 @@ p -400 1376 100 0 1 FTQ:LONG
 p -400 1344 100 0 1 FTR:DOUBLE
 p -400 1312 100 0 1 FTS:DOUBLE
 p -400 1280 100 0 1 FTT:LONG
+p -400 1248 100 0 0 FTU:DOUBLE
 p -128 1888 100 0 1 FTVA:DOUBLE
 p -128 1856 100 0 1 FTVB:LONG
 p -128 1824 100 0 1 FTVC:LONG
@@ -48,6 +49,7 @@ p -128 1376 100 0 1 FTVQ:LONG
 p -128 1344 100 0 1 FTVR:DOUBLE
 p -128 1312 100 0 1 FTVS:DOUBLE
 p -128 1280 100 0 1 FTVT:LONG
+p -128 1248 100 0 0 FTVU:DOUBLE
 p -768 1502 100 0 0 INAM:
 p -416 896 100 0 1 PINI:NO
 p -416 928 100 0 1 PREC:5
@@ -74,14 +76,15 @@ p 32 1376 100 0 1 def(OUTQ):$(top)$(wfs)detSigModeSeq.Q
 p 32 1344 100 0 1 def(OUTR):$(top)$(wfs)detSigModeSeq.R
 p 32 1312 100 0 1 def(OUTS):$(top)$(wfs)detSigModeSeq.S
 p 32 1280 100 0 1 def(OUTT):$(top)$(wfs)detSigModeSeq.T
+p 32 1248 100 0 0 def(OUTU):0.0000000000000000e+00
 use bd200tr -1024 -920 -100 0 frame
 xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 1 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2004-01-08 23:44:05 $
-p 2592 2304 200 0 -1 id:$Id: wfsGensub1.sch,v 1.1 2004-01-08 23:44:05 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2004-03-02 00:44:35 $
+p 2592 2304 200 0 -1 id:$Id: wfsGensub1.sch,v 1.2 2004-03-02 00:44:35 cboyer Exp $
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.1 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.2 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor more genSub Records
 [comments]
