@@ -46,6 +46,7 @@ DATA	= \
 	$(wildcard ../*.ini*) \
 	$(wildcard ../*.control*) \
 	$(wildcard ../*.fvars*) \
+	$(wildcard ../*.aoscale*) \
 	$(wildcard ../*.mult*) \
 	$(wildcard ../*.sub*) \
 	$(wildcard ../*.wcs*) \
