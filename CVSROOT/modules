@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.72 2005-02-08 19:13:20 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.73 2005-02-08 19:20:22 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -75,22 +75,30 @@ pcs	pcs
 
 #D	mbec	Matthieu's test area
 mbec	mbec
-#M	pcstest	Jmaclean Runtime version of the PCS
-pcstest	mbec/pcstest
-#M	gnaacSrc-mv167-gem5	Niri temporary backup for mv167 target
+
+#M	pcstest	Jmaclean Runtime version of the PCS (obsolete)
+#pcstest	mbec/pcstest
+
+#M	gnaacSrc-mv167-gem5	Niri DC CTRL (actually running on mv162)
 gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
-#M	gnaacSrc-ppc-gem6t	Niri temporary backup for ppc target
-gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
+
+#M	gnaacSrc-ppc-gem6t	Niri temporary backup for ppc target (obsolete)
+#gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
+
 #M	vaioc	IOC vaio
 vaioc	mbec/vaioc
-#M	comcon	Components Controller 3.12
-comcon	niri3.12/comcon
-#D	niri3.12	Gemini NIRI Software 3.12
-niri3.12	niri3.12
-#M	gn-4	Detector Controller (1fps coadder) 3.12
-gn-4	niri3.12/gn-4
-#M	niricnfg	NIRI configurator tool 3.12
-niricnfg	niri3.12/niricnfg
+
+#M	comcon	Components Controller 3.12 (obsolete)
+#comcon	niri3.12/comcon
+
+#D	niri3.12	Gemini NIRI Software 3.12 (obsolete)
+#niri3.12	niri3.12
+
+#M	gn-4	Detector Controller (1fps coadder) 3.12 (obsolete)
+#gn-4	niri3.12/gn-4
+
+#M	niricnfg	NIRI configurator tool 3.12 (obsolete)
+# niricnfg	niri3.12/niricnfg
 
 #D	niri	Gemini NIRI Software
 niri	niri
@@ -153,8 +161,8 @@ dhs	dhs
 #M	docs	Documents
 docs	docs
 
-#D	gcal	Gemini Calibration Unit (standalone)
-#M	gcal	Gemini Calibration Unit (standalone)
+#D	gcal	Gemini Calibration Unit (standalone) (obsolete)
+#M	gcal	Gemini Calibration Unit (standalone) (obsolete)
 gcal	gcal
 
 #D	gcalgpol	Gemini Calibration & Polarisation Units
@@ -171,14 +179,15 @@ jcs	jcs
 
 #D	ocssupport	OCS support library
 ocssupport	ocssupport
-#M	ocsacqcam	Acquisition Camera
-ocsacqcam	ocssupport/acqcam
-#M	ocsdhshdr	DHS fits header
-ocsdhshdr	ocssupport/dhshdr
+
+#M	ocsacqcam	Acquisition Camera (obsolete)
+#ocsacqcam	ocssupport/acqcam
+#M	ocsdhshdr	DHS fits header (obsolete)
+#ocsdhshdr	ocssupport/dhshdr
 #M	ocsgmos	GMOS
-ocsgmos	ocssupport/gmos
+#ocsgmos	ocssupport/gmos (obsolete)
 #M	ocsniri	NIRI
-ocsniri	ocssupport/niri
+#ocsniri	ocssupport/niri (obsolete)
 #M	ocsseq	Sequencing library
 ocsseq	ocssupport/seq
 #M	ocstcclib	TCC library
@@ -188,7 +197,7 @@ ocstcclib	ocssupport/tcc
 #M	oiwfs	On-Instrument WFS
 oiwfs	oiwfs
 
-## don't think this is used ...
+## don't think this is used ... (yes, obsolete)
 ##D	pfwfs	PWFS
 ##M	pfwfs	PWFS
 #pfwfs	pfwfs
