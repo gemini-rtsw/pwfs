@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.64 2002-06-07 02:50:54 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.65 2002-06-07 02:51:51 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -68,8 +68,8 @@ mcs     mcs
 #M	pcs	Gemini Primary Control System
 pcs	pcs
 
-#D	gca	Gemini Engineering Channel Archiver
-#M	gca	Gemini Engineering Channel Archiver
+#D	geca	Gemini Engineering Channel Archiver
+#M	geca	Gemini Engineering Channel Archiver
 geca	geca
 
 #D	mbec	Matthieu's test area
