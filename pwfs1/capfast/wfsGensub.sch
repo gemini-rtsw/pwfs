@@ -1,7 +1,8 @@
 [schematic2]
-uniq 115
+uniq 117
 [tools]
 [detail]
+w -348 1851 100 2 n#116 hwin.hwin#115.in -352 1856 -352 1856 egenSub.ttfZero.INPC
 w 388 1851 100 2 n#114 hwin.hwin#113.in 384 1856 384 1856 egenSub.aoZero.INPC
 w 2610 75 100 0 n#112 egenSubC.aoDiag4.FLNK 2560 64 2720 64 2720 96 2880 96 egenSubC.fgDiag.SLNK
 w 1954 75 100 0 n#111 egenSubC.aoDiag3.FLNK 1888 64 2080 64 2080 96 2272 96 egenSubC.aoDiag4.SLNK
@@ -18,6 +19,15 @@ s 112 2224 500 0 PWFS1 - WFS genSub records
 use hwin 192 1815 100 0 hwin#113
 xform 0 288 1856
 p 176 1888 100 0 -1 val(in):ag:p1:armAngle
+use hwin 192 1943 100 0 hwin#98
+xform 0 288 1984
+p 176 2016 100 0 -1 val(in):ag:p1:RT34PosA.VALA
+use hwin -544 1943 100 0 hwin#96
+xform 0 -448 1984
+p -560 2016 100 0 -1 val(in):ag:p1:RT34PosA.VALA
+use hwin -544 1815 100 0 hwin#115
+xform 0 -448 1856
+p -560 1888 100 0 -1 val(in):ag:p1:armAngle
 use egenSubC -352 7 100 0 aoDiag1
 xform 0 -208 432
 p -352 -48 100 0 1 DESC:Display ao Diagnostics 1
@@ -60,12 +70,6 @@ p 1984 558 100 0 0 PREC:4
 p 2272 -240 100 0 1 PV:$(top)$(wfs)
 p 2272 -208 100 0 1 SCAN:Passive
 p 2272 -160 100 0 1 SNAM:showAoDiag4
-use hwin 192 1943 100 0 hwin#98
-xform 0 288 1984
-p 176 2016 100 0 -1 val(in):ag:p1:tableAngle
-use hwin -544 1943 100 0 hwin#96
-xform 0 -448 1984
-p -560 2016 100 0 -1 val(in):ag:p1:angle
 use egenSub 1056 1223 100 0 probeOffset
 xform 0 1200 1648
 p 1120 1184 100 0 1 DESC:Probe offsets
@@ -112,10 +116,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 1 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-06-23 08:02:12 $
-p 2592 2304 200 0 -1 id:$Id: wfsGensub.sch,v 1.4 1999-06-23 08:02:12 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2000-01-05 20:50:17 $
+p 2592 2304 200 0 -1 id:$Id: wfsGensub.sch,v 1.5 2000-01-05 20:50:17 cboyer Exp $
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.4 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.5 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor genSub Records
 use notes 3552 -281 100 0 notes#13
 xform 0 3808 -96
