@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.21 2000-09-25 23:32:58 dayle Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.22 2000-12-18 21:53:52 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -41,6 +41,12 @@ loginfo		-i /home/ajf/bin/mkmodules CVSROOT loginfo
 rcsinfo		-i /home/ajf/bin/mkmodules CVSROOT rcsinfo
 rcstemplate	-i /home/ajf/bin/mkmodules CVSROOT rcstemplate
 taginfo		-i /home/ajf/bin/mkmodules CVSROOT taginfo
+
+
+#D	CVSROOT	The CVS root configuration
+#M	CVSROOT	The CVS root configuration
+CVSROOT     CVSROOT
+
 
 # Add more modules here 
 #
