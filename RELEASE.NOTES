@@ -242,3 +242,10 @@ V4-1 22 May 2002 CB:
     and updates the default focus gain at 100Hz when no observing
   - update default parameters
   - add bancom card status in main screen
+
+V4-2 18 June 2002 CB:
+---------------------
+  - Allow ao + chopping: aoModeCompute() modified to check the status of the
+    raw image
+
+dev equivalent to V4-2
