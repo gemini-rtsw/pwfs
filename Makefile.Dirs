@@ -1,0 +1,11 @@
+DIRS += adl 
+DIRS += capfast 
+DIRS += src 
+DIRS += dspsrc 
+DIRS += par 
+DIRS += startup 
+DIRS += db 
+DIRS += db 
+DIRS += adl 
+DIRS += docs 
+DIRS += db 
