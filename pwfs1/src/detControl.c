@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.11 2000-06-21 01:28:27 cboyer Exp $"};
+   "$Id: detControl.c,v 1.12 2000-07-12 00:51:43 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -101,6 +101,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "aoP1Lib.h"
 #include "synchroMap.h"
 #include "wfsControl.h"
+#include "wfsDb.h"
 #include "cicsLib.h"
 /*#include "xycom.h"*/
 
@@ -295,58 +296,72 @@ LOCAL uint32   detSigInitFgGain (CAD_CMD_CONTEXT cadCmdContext,
                                  int commandNumber, SDSU_ID sdsuId, 
                                  OBS_ID obsId, AO_CTRL_ID aoCtrlId);
 
-LOCAL uint32   detSigModeNone (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+LOCAL uint32   detSigModeNone (const char * pRecordPrefix,
+                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                                SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigModeDark (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+LOCAL uint32   detSigModeDark (const char * pRecordPrefix,
+                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                                SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigModeGg (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+LOCAL uint32   detSigModeGg (const char * pRecordPrefix,
+                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigModeGgAo (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeGgAo (const char * pRecordPrefix,
+                               CAD_CMD_CONTEXT cadCmdContext,
                                int commandNumber, SDSU_ID sdsuId,
                                OBS_ID obsId);
 
-LOCAL uint32   detSigModeAo (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeAo (const char * pRecordPrefix,
+                             CAD_CMD_CONTEXT cadCmdContext,
                              int commandNumber, SDSU_ID sdsuId,
                              OBS_ID obsId);
 
-LOCAL uint32   detSigModeCoadd (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeCoadd (const char * pRecordPrefix,
+                                CAD_CMD_CONTEXT cadCmdContext,
                                 int commandNumber, SDSU_ID sdsuId,
                                 OBS_ID obsId);
 
-LOCAL uint32   detSigModeThresh (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeThresh (const char * pRecordPrefix,
+                                 CAD_CMD_CONTEXT cadCmdContext,
                                  int commandNumber, SDSU_ID sdsuId,
                                  OBS_ID obsId);
 
-LOCAL uint32   detSigModeGgCoadd (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeGgCoadd (const char * pRecordPrefix,
+                                  CAD_CMD_CONTEXT cadCmdContext,
                                   int commandNumber, SDSU_ID sdsuId,
                                   OBS_ID obsId);
 
-LOCAL uint32   detSigModeFgCoadd (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeFgCoadd (const char * pRecordPrefix,
+                                  CAD_CMD_CONTEXT cadCmdContext,
                                   int commandNumber, SDSU_ID sdsuId,
                                   OBS_ID obsId);
 
-LOCAL uint32   detSigModeSeq (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeSeq (const char * pRecordPrefix,
+                              CAD_CMD_CONTEXT cadCmdContext,
                               int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigModeTotal (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeTotal (const char * pRecordPrefix,
+                                CAD_CMD_CONTEXT cadCmdContext,
                                 int commandNumber, SDSU_ID sdsuId,
                                 OBS_ID obsId);
 
-LOCAL uint32   detSigModeFgFocus (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeFgFocus (const char * pRecordPrefix,
+                                  CAD_CMD_CONTEXT cadCmdContext,
                                   int commandNumber, SDSU_ID sdsuId,
                                   OBS_ID obsId);
 
-LOCAL uint32   detSigModeFgFocusAo (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigModeFgFocusAo (const char * pRecordPrefix,
+                                    CAD_CMD_CONTEXT cadCmdContext,
                                     int commandNumber, SDSU_ID sdsuId,
                                     OBS_ID obsId);
 
 LOCAL uint32   detSigInitCB (CAD_CMD_CONTEXT cadCmdContext,
                              int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32 detSigMeasIm (CAD_CMD_CONTEXT cadCmdContext, int commandNumber, 
+LOCAL uint32 detSigMeasIm (const char * pRecordPrefix,
+                           CAD_CMD_CONTEXT cadCmdContext, int commandNumber, 
                            SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32 detSigCompMat (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,   
@@ -354,9 +369,14 @@ LOCAL uint32 detSigCompMat (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                             DATREC_CONTEXT pAoIntMatInitContext, 
                             DATREC_CONTEXT pAoContMatInitContext);
 
-LOCAL uint32 detSigModeSeqDark (CAD_CMD_CONTEXT cadCmdContext, 
-                                int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
+LOCAL uint32 detSigModeSeqDark (const char * pRecordPrefix,
+                                CAD_CMD_CONTEXT cadCmdContext, 
+                                int commandNumber, SDSU_ID sdsuId, 
+                                OBS_ID obsId);
  
+LOCAL uint32 detInitObserveRecord (const char * pRecordPrefix, long * pNExp,
+                                   double * pExpTime, long * pOutOption);
+
 /******************************************* Plus some additional functions ***/
 
 OBS_ID detObsContextCreate( void );
@@ -542,6 +562,10 @@ STATUS   detControl
 
    char           pStatusString [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                                     /* Status string.                         */
+
+   long         nExp;               /* Number of exposure                     */
+   long         outOption;          /* Output option                          */
+   double       expTime;            /* Exposure time                          */
 
 
    /* Initialize xycom board for benchmarking */
@@ -883,7 +907,7 @@ STATUS   detControl
    obsId->saveCbCtrl = FALSE;
    obsId->saveCbFgCtrl = FALSE;
    obsId->sigMode = AO_MODE_NONE;
-   obsId->dhsQlRate = 1;
+   obsId->dhsQlRate = 100;
 
    /*
     * Create the AO CCD context structure geometry
@@ -1537,11 +1561,11 @@ STATUS   detControl
     * Init the AO control context structure
     */
 
-   if ( strcmp (DET_CONTROL_PWFS1_AO_CTRL_INIT_FILE, "NONE") != 0 )
+   if ( strcmp (DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
    {
       strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
       strcat ( aoInitFileName , "/" ) ;
-      strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_CTRL_INIT_FILE ) ;
+      strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE ) ;
 
       if ( aoCtrlContextInit ( aoInitFileName, aoCcdId, aoCtrlId ) == ERROR )
       {
@@ -1629,6 +1653,26 @@ STATUS   detControl
    else
    {
       MESSAGE_LOG (MSG_LOG, "PWFS1 - AO control context not initialised");
+   }
+
+   /*
+    * Mode is no processing, init the fields of the observe CAD record
+    */
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
    }
 
    /*
@@ -2026,7 +2070,8 @@ STATUS   detControl
             /* Set to no processing the processig mode */
 
             errorNumber =
-            detSigModeNone (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeNone (pRecordPrefix,
+                            cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_DARK)
@@ -2035,7 +2080,8 @@ STATUS   detControl
             /* Set to dark subtraction the signal processing */
 
             errorNumber =
-            detSigModeDark (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeDark (pRecordPrefix, cadCmdContext, commandNumber, 
+                            sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG)
@@ -2044,7 +2090,8 @@ STATUS   detControl
             /* Set to global guide the signal processing */
 
             errorNumber =
-            detSigModeGg (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeGg (pRecordPrefix, cadCmdContext, commandNumber, 
+                          sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG_AO)
@@ -2053,7 +2100,8 @@ STATUS   detControl
             /* Set to global guide and aO correction the signal processing */
 
             errorNumber =
-            detSigModeGgAo (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeGgAo (pRecordPrefix, cadCmdContext, commandNumber, 
+                            sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_AO)
@@ -2062,7 +2110,8 @@ STATUS   detControl
             /* Set to aO correction the signal processing */
 
             errorNumber =
-            detSigModeAo (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeAo (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+                          obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_COADD)
@@ -2071,7 +2120,8 @@ STATUS   detControl
             /* Set to coadd the signal processing */
 
             errorNumber =
-            detSigModeCoadd (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeCoadd (pRecordPrefix, cadCmdContext, commandNumber, 
+                             sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_THRESH)
@@ -2080,7 +2130,8 @@ STATUS   detControl
             /* Set to threshold computation the signal processing */
 
             errorNumber =
-            detSigModeThresh (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeThresh (pRecordPrefix, cadCmdContext, commandNumber, 
+                              sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG_COADD)
@@ -2089,7 +2140,8 @@ STATUS   detControl
             /* Set to global guide and coadd the signal processing */
 
             errorNumber =
-            detSigModeGgCoadd (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeGgCoadd (pRecordPrefix, cadCmdContext, commandNumber, 
+                               sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_SEQ)
@@ -2098,7 +2150,8 @@ STATUS   detControl
             /* Set to sequence closed loop the signal processing */
 
             errorNumber =
-            detSigModeSeq (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeSeq (pRecordPrefix,
+                           cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_TOTAL)
@@ -2107,7 +2160,8 @@ STATUS   detControl
             /* Set to average flux computation the signal processing */
 
             errorNumber =
-            detSigModeTotal (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeTotal (pRecordPrefix, cadCmdContext, commandNumber, 
+                             sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS)
@@ -2116,7 +2170,8 @@ STATUS   detControl
             /* Set to FG and focus the signal processing */
 
             errorNumber =
-            detSigModeFgFocus (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeFgFocus (pRecordPrefix, cadCmdContext, commandNumber, 
+                               sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS_AO)
@@ -2125,7 +2180,8 @@ STATUS   detControl
             /* Set to FG and focus and aO the signal processing */
 
             errorNumber =
-            detSigModeFgFocusAo (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeFgFocusAo (pRecordPrefix,
+                                 cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS_COADD)
@@ -2134,7 +2190,8 @@ STATUS   detControl
             /* Set to FG and focus and coadd the signal processing */
 
             errorNumber =
-            detSigModeFgCoadd (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeFgCoadd (pRecordPrefix,
+                               cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGINIT_CB)
@@ -2152,7 +2209,8 @@ STATUS   detControl
             /* Set parameters to measure a column of the interaction matrix */
 
             errorNumber = 
-            detSigMeasIm (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigMeasIm (pRecordPrefix,
+                          cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGCOMP_MAT)
@@ -2169,7 +2227,8 @@ STATUS   detControl
 
             /* Sequence dark mode */
             errorNumber =
-            detSigModeSeqDark (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigModeSeqDark (pRecordPrefix,
+                               cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else
@@ -3263,7 +3322,7 @@ uint32 detExposure
       ERROR_LOG ("Failed to set integration time SIR record");
    }
 
-   obsId->expTime = exposure;
+   obsId->exposureTime = exposure;
    sdsuId->readMethod = 1;
 
    if ( nframe == -1 )
@@ -4986,7 +5045,7 @@ uint32 detObserveStart
          return (errorNumber);
       }
 
-      obsId->expTime = exposure;
+      obsId->exposureTime = exposure;
       aoCbImId->exposureTime = exposure;
       aoCbCtrlId->exposureTime = exposure;
       aoCbFgCtrlId->exposureTime = exposure;
@@ -5009,7 +5068,29 @@ uint32 detObserveStart
       if ( obsId->sigMode == AO_MODE_CLOSED_LOOP )
       {
          if ( obsId->averageFluxFlag == TRUE )
+         {
             obsId->aoCtrlId->totalThreshold = 0.0;
+            if (epToVxPipeWrite (NULL,
+                              (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                              obsId->pAoTotalContext) == ERROR)
+            {
+               ERROR_LOG ("Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+            }
+         }
+
+         if ( obsId->threshFlag == FALSE )
+            obsId->nAverageDataThreshComp = 0;
+         else
+         {
+            obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+            if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->threshold),
+                obsId->pAoThreshContext) == ERROR)
+            {
+               ERROR_LOG (
+               "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+            }
+         }
 
          if ( obsId->fgTime == 0.0 )
             obsId->fgFrame = 0;
@@ -5500,7 +5581,7 @@ uint32 detObserveStart
        * parallel thread.
        */
 
-      sdsuId->frameTimeout = (int) (obsId->expTime + 30) * sysClkRateGet();
+      sdsuId->frameTimeout = (int) (obsId->exposureTime + 30) * sysClkRateGet();
 
       MESSAGE_LOG2 (MSG_MINDEBUG, 
                     "Starting exposure of %f seconds in %d frames...",
@@ -6013,10 +6094,10 @@ uint32 detObserveStart
                             NULL, obsId->pObsType, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "exptime", DHS_DT_DOUBLE, 0,
-                            NULL, obsId->expTime, &dhsErrno);
+                            NULL, obsId->exposureTime, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "darktime", DHS_DT_DOUBLE, 0,
-                            NULL, obsId->expTime, &dhsErrno);
+                            NULL, obsId->exposureTime, &dhsErrno);
             CHECK_DHS (dhsErrno);
 
 
@@ -9869,6 +9950,8 @@ void detObserveEnd
 
                      obsId->aoCtrlId->threshold = 
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
+                     obsId->aoCtrlId->thresholdDark =
+                     obsId->aoCtrlId->threshold ;
                      /*printf ( "Threshold = %f\n", obsId->aoCtrlId->threshold);*/
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
@@ -10427,6 +10510,8 @@ void detObserveEnd
 
                      obsId->aoCtrlId->threshold =
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
+                     obsId->aoCtrlId->thresholdDark =
+                     obsId->aoCtrlId->threshold ;
                      /*printf ( "Threshold = %f\n", 
                                 obsId->aoCtrlId->threshold); */
                      if (epToVxPipeWrite (NULL,
@@ -10483,84 +10568,104 @@ void detObserveEnd
                   }
                   obsId->coaddCounter ++;
                }
-               else
+               else if ( (obsId->threshFlag == TRUE) &&
+                         (obsId->coaddCounter < obsId->nAverageDataThreshComp +
+                                                obsId->fgFrame) )
                {
-                  if ( obsId->averageFluxFlag == FALSE )
-                  {
-                     /*printf ( "coaddCounter =%d ao guide \n", 
+                  /* printf ( "coaddCounter =%d compute thresh \n",
                            obsId->coaddCounter );*/
 
-                     if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                           obsId->aoCtrlId, pTotal, pCentroids, 
-                                           pErrorCentroids, pFg, pErrorsFg, 
-                                           pTime, pWfsStatus) == ERROR )
-                     {
-                        ERROR_LOG ("Failed to run FG correction");
-                     }
+                  if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
+                                        obsId->aoCtrlId, pTotal, pCentroids, 
+                                        pErrorCentroids, pFg, pErrorsFg, 
+                                        pTime, pWfsStatus) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to run FG correction");
+                  }
 
-                     if ( aoModeCompute (pImage, obsId->aoCcdId, 
-                                         obsId->aoCtrlId,
-                                         nCoadds, obsId->aoCbCtrlId) == ERROR )
+                  if ( aoImageFloatAverage (pImage, obsId->aoCcdId,
+                                            obsId->aoCtrlId,
+                                            obsId->nAverageDataThreshComp)
+                       == ERROR )
+                  {
+                     ERROR_LOG ("Failed to average images");
+                  }
+                  obsId->coaddCounter ++;
+
+                  if ( obsId->coaddCounter ==
+                       (obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                  {
+                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
+                                              obsId->aoCcdId,
+                                              obsId->rateBrightPixThreshComp,
+                                              &obsId->aoCtrlId->threshold)
+                          == ERROR )
                      {
-                        ERROR_LOG ("Failed to aO correction");
+                        ERROR_LOG ("Failed to compute threshold") ;
+                     }
+                     /*printf ( "Threshold = %f\n",
+                                obsId->aoCtrlId->threshold); */
+                     if (epToVxPipeWrite (NULL,
+                                  (char *)(int)& (obsId->aoCtrlId->threshold),
+                                  obsId->pAoThreshContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                               "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME");
                      }
                   }
-                  else
-                  {
-                     if ( obsId->coaddCounter < obsId->nFramesAverageFlux +
-                                                obsId->fgFrame )
-                     {
-                        /*printf ( "coaddCounter =%d compute total \n", 
+               }
+               else if ( (obsId->averageFluxFlag == TRUE) &&
+                         (obsId->coaddCounter < obsId->nFramesAverageFlux +
+                          obsId->nAverageDataThreshComp + obsId->fgFrame) )
+               {
+                  /*printf ( "coaddCounter =%d compute total \n", 
                            obsId->coaddCounter );*/
-                        if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                       obsId->aoCtrlId, pTotal, pCentroids,
-                                       pErrorCentroids, pFg, pErrorsFg, 
-                                       pTime, pWfsStatus) == ERROR )
-                        {
-                           ERROR_LOG ("Failed to run FG correction");
-                        }
-                        obsId->averageFlux += *pFlux ;
-                        obsId->coaddCounter ++;
+                  if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
+                                        obsId->aoCtrlId, pTotal, pCentroids,
+                                        pErrorCentroids, pFg, pErrorsFg, 
+                                        pTime, pWfsStatus) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to run FG correction");
+                  }
+                  obsId->averageFlux += *pFlux ;
+                  obsId->coaddCounter ++;
 
-                        if ( obsId->coaddCounter == (obsId->nFramesAverageFlux+
-                             obsId->fgFrame) )
-                        {
-                           obsId->averageFlux /= 
-                           (double)obsId->nFramesAverageFlux;
-                           obsId->aoCtrlId->averageTotal = obsId->averageFlux;
-                           obsId->aoCtrlId->totalThreshold = 
-                           obsId->averageFlux * obsId->multCoeffAverageFlux;
-                           if (epToVxPipeWrite (NULL, 
+                  if ( obsId->coaddCounter == (obsId->nFramesAverageFlux+
+                       obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                  {
+                     obsId->averageFlux /= 
+                     (double)obsId->nFramesAverageFlux;
+                     obsId->aoCtrlId->averageTotal = obsId->averageFlux;
+                     obsId->aoCtrlId->totalThreshold = 
+                     obsId->averageFlux * obsId->multCoeffAverageFlux;
+                     if (epToVxPipeWrite (NULL, 
                               (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
                               obsId->pAoTotalContext) == ERROR)
-                           {
-                              ERROR_LOG (
-                              "Failed to init AOTOTAL_SIR_NAME record");
-                           }
-                           /*printf ( "coaddCounter =%d total =%f \n", 
-                           obsId->coaddCounter,obsId->averageFlux );*/
-                        }
-                     }
-                     else
                      {
-                        /*printf ( "coaddCounter =%d ao guide \n", 
-                           obsId->coaddCounter );*/
-                        if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                       obsId->aoCtrlId, pTotal, pCentroids,
-                                       pErrorCentroids, pFg, pErrorsFg, 
-                                       pTime, pWfsStatus) == ERROR )
-                        {
-                           ERROR_LOG ("Failed to run FG correction");
-                        }
-
-                        if ( aoModeCompute (pImage, obsId->aoCcdId, 
-                                            obsId->aoCtrlId,
-                                            nCoadds, obsId->aoCbCtrlId) 
-                           == ERROR )
-                        {
-                           ERROR_LOG ("Failed to aO correction");
-                        }
+                        ERROR_LOG ( "Failed to init AOTOTAL_SIR_NAME record");
                      }
+                     /*printf ( "coaddCounter =%d total =%f \n", 
+                     obsId->coaddCounter,obsId->averageFlux );*/
+                  }
+               }
+               else
+               {
+                  /*printf ( "coaddCounter =%d ao guide \n", 
+                        obsId->coaddCounter );*/
+
+                  if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
+                                        obsId->aoCtrlId, pTotal, pCentroids, 
+                                        pErrorCentroids, pFg, pErrorsFg, 
+                                        pTime, pWfsStatus) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to run FG correction");
+                  }
+
+                  if ( aoModeCompute (pImage, obsId->aoCcdId, 
+                                      obsId->aoCtrlId,
+                                      nCoadds, obsId->aoCbCtrlId) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to aO correction");
                   }
                }
 
@@ -10570,8 +10675,9 @@ void detObserveEnd
                   if (obsId->saveFgCbCounter == 
                       obsId->saveCbFgCtrlClosedLoopFrame)
                   {
-                     if ( aoCbFgCtrlSave (obsId->aoCcdId, obsId->aoCtrlId, 
-                                          obsId->aoCbFgCtrlId) == ERROR )
+                     if ( aoCbFgCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
+                                          obsId->aoCtrlId, obsId->aoCbFgCtrlId) 
+                          == ERROR )
                      {
                         ERROR_LOG ("Failed to save FG control CB\n" );
                      }
@@ -10585,8 +10691,9 @@ void detObserveEnd
                   if (obsId->saveCbCounter == 
                       obsId->saveCbCtrlClosedLoopFrame)
                   {
-                     if ( aoCbCtrlSave (obsId->aoCcdId, obsId->aoCtrlId, 
-                                        obsId->aoCbCtrlId) == ERROR )
+                     if ( aoCbCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
+                                        obsId->aoCtrlId, obsId->aoCbCtrlId) 
+                          == ERROR )
                      {
                         ERROR_LOG ("Failed to save aO control CB\n" );
                      }
@@ -10934,8 +11041,8 @@ void detObserveEnd
 
       if ( obsId->saveCbIm == TRUE )
       {
-         if ( aoCbImSave (obsId->aoCcdId, obsId->aoCtrlId, obsId->aoCbImId) 
-              == ERROR )
+         if ( aoCbImSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+                          obsId->aoCbImId) == ERROR )
          {
             ERROR_LOG ("Failed to save image circular buffer\n" ) ;
          }
@@ -10943,8 +11050,8 @@ void detObserveEnd
 
       if ( obsId->saveCbCtrl == TRUE )
       {
-         if ( aoCbCtrlSave (obsId->aoCcdId, obsId->aoCtrlId, obsId->aoCbCtrlId) 
-              == ERROR )
+         if ( aoCbCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+                            obsId->aoCbCtrlId) == ERROR )
          {
             ERROR_LOG ("Failed to save control circular buffer\n" ) ;
          }
@@ -10952,7 +11059,7 @@ void detObserveEnd
 
       if ( obsId->saveCbFgCtrl == TRUE )
       {
-         if ( aoCbFgCtrlSave (obsId->aoCcdId, obsId->aoCtrlId, 
+         if ( aoCbFgCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
                               obsId->aoCbFgCtrlId) == ERROR )
          {
             ERROR_LOG ("Failed to save FG control circular buffer\n" ) ;
@@ -11822,7 +11929,7 @@ STATUS detReadFitsImageUint16
  *   detWriteFits
  *
  *   INVOCATION:
- *   detWriteFits (filename. obsId, xPixels, yPixels, pImageBuffer)
+ *   detWriteFits (filename, obsId, xPixels, yPixels, pImageBuffer)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) filename     (char *)   Name of file to contain data.
@@ -11835,13 +11942,13 @@ STATUS detReadFitsImageUint16
  *   (STATUS)   OK if command successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Write floating point data to FITS file 
+ *   Write floating point data to FITS file
  *
  *   DESCRIPTION:
  *   This function writes the contents of the frame buffer to a FITS file.
  *
  *   EXTERNAL VARIABLES:
- *   None. 
+ *   None.
  *
  *   PRIOR REQUIREMENTS:
  *   It is assumed that pImageBuffer points to a buffer of memory containing
@@ -11864,11 +11971,18 @@ STATUS detWriteFits
 {
    char           telName[40];
    char           bunit[40];
-   int            fitsStatus;
-   fitsfile *     pFile;
+
+   int            i;
+   int            extra;
+   int            counter;
+   int            bufferSize;
+
+   float          extraBuffer[2880];
    double         elapsedTime;
 
-   /*
+   FILE           *pFile; 
+
+   /* 
     * Check the parameters provided.
     */
 
@@ -11900,312 +12014,171 @@ STATUS detWriteFits
    }
 
    sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
-            obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], 
-            obsId->timeArrayEnd[2], obsId->timeArrayEnd[3], 
+            obsId->timeArrayEnd[0], obsId->timeArrayEnd[1],
+            obsId->timeArrayEnd[2], obsId->timeArrayEnd[3],
             obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
 
-   /* Create the fits file and save the image into */
-
-   if ( aoFitsImageFloatWrite (filename, pImageBuffer, xPixels, yPixels)
-        == ERROR )
-   {
-      ERROR_SET1 (0, "Can't create and save the image into the FITS file %s", 
-                  ERROR_LOG_SAVE, filename);
-      return (ERROR);
-   }
-
-   /* Update the header of the fits file */
-
-   fitsStatus = 0;
-
-   if ( fits_open_file (&pFile, filename, FITSIO_READWRITE, &fitsStatus) > 0 )
-   {
-      ERROR_SET2 (0, "Can't open FITS file %s in read/write mode: %d", 
-                  ERROR_LOG_SAVE, filename, fitsStatus);
-      return (ERROR);
-   }
-
-   if ( fits_update_key (pFile, TSTRING, "UTSTART", obsId->utStartString,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword UTSTART in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-   
-   if ( fits_update_key (pFile, TSTRING, "UTEND", obsId->utEndString,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword UTEND in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TDOUBLE, "EXPTIME", &(obsId->expTime),
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword EXPTIME in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TDOUBLE, "DARKTIME", &(obsId->expTime),
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword DARKTIME in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   elapsedTime = (obsId->rawtEnd - obsId->rawtStart);
-   if ( fits_update_key (pFile, TDOUBLE, "ELAPSED", &elapsedTime,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword ELAPSED in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   elapsedTime =  (obsId->rawtEnd - obsId->rawtStart);
 
    wfsGetTelName ( telName ) ;
-   if ( fits_update_key (pFile, TSTRING, "TELESCOP", telName,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword TELESCOP in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
 
-   if ( fits_update_key (pFile, TSTRING, "INSTRUME", obsId->pWfsName,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword INSTRUME in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TSTRING, "OBSERVAT", telName,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword OBSERVAT in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-   
    strcpy ( bunit, DET_BUNIT ) ;
-   if ( fits_update_key (pFile, TSTRING, "BUNIT", bunit,
-                         "", &fitsStatus) )
+
+   /* Create the FITS file */
+
+   pFile = fopen ( filename , "w" );
+
+   if ( pFile == (FILE *)NULL )
    {
-      ERROR_SET2 ( 0, "Problem adding keyword BUNIT in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
+      ERROR_SET1 ( 0, "Can't create FITS file %s", ERROR_LOG_SAVE,
+                   filename );
+      return (ERROR);
    }
 
-   if ( fits_update_key (pFile, TSTRING, "UNITS", bunit,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword UNITS in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   /* Write a complete header */
 
-   if ( fits_update_key (pFile, TSTRING, "OBSTYPE", obsId->pObsType,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword OBSTYPE in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   counter = 0;
+
+   fprintf ( pFile, "SIMPLE  =                    T /                                                " );
+   counter ++;
+   fprintf ( pFile, "BITPIX  =                  -32 /                                                " );
+   counter ++;
+   fprintf ( pFile, "NAXIS   =                    2 /                                                " );
+   counter ++;
+   fprintf ( pFile, "NAXIS1  =                %5d /                                                ", xPixels );
+   counter ++;
+   fprintf ( pFile, "NAXIS2  =                %5d /                                                ", yPixels );
+   counter ++;
+   fprintf ( pFile, "BZERO   =                    0 /                                                " );
+   counter ++;
+   fprintf ( pFile, "EXTEND  =                    T /                                                " );
+   counter ++;
+   fprintf ( pFile, "UTEND   ='%20s'/                                                ", obsId->utEndString );
+   counter ++;
+   fprintf ( pFile, "UTSTART ='%20s'/                                                ", obsId->utStartString );
+   counter ++;
+   fprintf ( pFile, "EXPTIME =      %15f /                                                ", obsId->exposureTime);
+   counter ++;
+   fprintf ( pFile, "DARKTIME=      %15f /                                                ", obsId->exposureTime);
+   counter ++;
+   fprintf ( pFile, "ELAPSED =      %15f /                                                ", elapsedTime);
+   counter ++;
+   fprintf ( pFile, "TELESCOP='%20s'/                                                ", telName);
+   counter ++;
+   fprintf ( pFile, "INSTRUME='%20s'/                                                ", obsId->pWfsName);
+   counter ++;
+   fprintf ( pFile, "OBSERVAT='%20s'/                                                ", telName);
+   counter ++;
+   fprintf ( pFile, "BUNIT   ='%20s'/                                                ", bunit);
+   counter ++;
+   fprintf ( pFile, "UNITS   ='%20s'/                                                ", bunit);
+   counter ++;
+   fprintf ( pFile, "OBSTYPE ='%20s'/                                                ", obsId->pObsType);
+   counter ++;
 
    if ( obsId->wcsStatus == 0 )
    {
-      if ( fits_update_key (pFile, TSTRING, "CTYPE1", obsId->ctype1,
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CTYPE1 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CRPIX1", &(obsId->crpix1),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CRPIX1 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CRVAL1", &(obsId->crval1),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CRVAL1 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TSTRING, "CTYPE2", &(obsId->ctype2),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CTYPE2 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CRPIX2", &(obsId->crpix2),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CRPIX2 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CRVAL2", &(obsId->crval2),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CRVAL2 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CD1_1", &(obsId->cd1_1),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CD1_1 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CD1_2", &(obsId->cd1_2),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CD1_2 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CD2_1", &(obsId->cd2_1),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CD2_1 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TDOUBLE, "CD2_2", &(obsId->cd2_2),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword CD2_2 in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
-
-      if ( fits_update_key (pFile, TSTRING, "RADECSYS", &(obsId->radecsys),
-                            "", &fitsStatus) )
-      {
-         ERROR_SET2 ( 0, "Problem adding keyword RADECSYS in fits file %s: %d", 
-                      ERROR_LOG_SAVE, filename, fitsStatus );
-         return (ERROR) ;
-      }
+      fprintf ( pFile, "CTYPE1  ='%20s'/                                                ", obsId->ctype1);
+      counter ++;
+      fprintf ( pFile, "CRPIX1  =      %15f /                                                ", obsId->crpix1);
+      counter ++;
+      fprintf ( pFile, "CRVAL1  =      %15f /                                                ", obsId->crval1);
+      counter ++;
+      fprintf ( pFile, "CTYPE2  ='%20s'/                                                ", obsId->ctype2);
+      counter ++;
+      fprintf ( pFile, "CRPIX2  =      %15f /                                                ", obsId->crpix2);
+      counter ++;
+      fprintf ( pFile, "CRVAL2  =      %15f /                                                ", obsId->crval2);
+      counter ++;
+      fprintf ( pFile, "CD1_1   =      %15f /                                                ", obsId->cd1_1);
+      counter ++;
+      fprintf ( pFile, "CD1_2   =      %15f /                                                ", obsId->cd1_2);
+      counter ++;
+      fprintf ( pFile, "CD2_1   =      %15f /                                                ", obsId->cd2_1);
+      counter ++;
+      fprintf ( pFile, "CD2_2   =      %15f /                                                ", obsId->cd2_2);
+      counter ++;
+      fprintf ( pFile, "RADECSYS='%20s'/                                                ", obsId->radecsys);
+      counter ++;
    }
 
-   if ( fits_update_key (pFile, TDOUBLE, "RA", &(obsId->RA),
-                         "", &fitsStatus) )
+   fprintf ( pFile, "RA      =      %15f /                                                ", obsId->RA);
+   counter ++;
+   fprintf ( pFile, "DEC     =      %15f /                                                ", obsId->Dec);
+   counter ++;
+   fprintf ( pFile, "EQUINOX =      %15f /                                                ", obsId->equinox);
+   counter ++;
+   fprintf ( pFile, "MJDOBS  =      %15f /                                                ", obsId->mjdobs);
+   counter ++;
+   fprintf ( pFile, "XBIN    =                %5d /                                                ", obsId->aoCcdId->xBin);
+   counter ++;
+   fprintf ( pFile, "YBIN    =                %5d /                                                ", obsId->aoCcdId->yBin);
+   counter ++;
+   fprintf ( pFile, "DATASEC ='%20s'/                                                ", obsId->dataSec);
+   counter ++;
+   fprintf ( pFile, "CCDSEC  ='%20s'/                                                ", obsId->ccdSec);
+   counter ++;
+   fprintf ( pFile, "ORIGSEC ='%20s'/                                                ", obsId->origSec);
+   counter ++;
+   fprintf ( pFile, "DETTYPE ='%20s'/                                                ", obsId->detType);
+   counter ++;
+   fprintf ( pFile, "DETID   ='%20s'/                                                ", obsId->detId);
+   counter ++;
+   fprintf ( pFile, "END                                                                             ");
+   counter ++;
+
+   /* Fill the rest of the header with blanks: header 36 * 80 char */
+
+   /*printf ( "counter = %d\n" , counter );*/
+   counter = counter % 36 ;
+   /*printf ( "counter = %d\n" , counter );*/
+   if ( counter != 0 )
    {
-      ERROR_SET2 ( 0, "Problem adding keyword RA in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
+      for ( i = counter ; i < 36 ; i ++ )
+          fprintf ( pFile, "                                                                                " );
    }
 
-   if ( fits_update_key (pFile, TDOUBLE, "DEC", &(obsId->Dec),
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword DEC in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   /* Write the image in 2880 byte blocks to the Fits file */
 
-   if ( fits_update_key (pFile, TDOUBLE, "EQUINOX", &(obsId->equinox),
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword EQUINOX in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   bufferSize = xPixels * yPixels;
 
-   if ( fits_update_key (pFile, TDOUBLE, "MJDOBS", &(obsId->mjdobs),
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword MJDOBS in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   extra = (bufferSize*4) % 2880;
 
-   if ( fits_update_key (pFile, TINT, "XBIN", &(obsId->aoCcdId->xBin),
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword XBIN in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+   /*printf ( "extra=%d\n", extra );*/
 
-   if ( fits_update_key (pFile, TINT, "YBIN", &(obsId->aoCcdId->yBin),
-                         "", &fitsStatus) )
+   if ( fwrite ( pImageBuffer, sizeof (float), bufferSize, pFile ) != 
+        bufferSize )
    {
-      ERROR_SET2 ( 0, "Problem adding keyword YBIN in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
+      ERROR_SET1 ( 0, "Failed to write image into %s",
+                   ERROR_LOG_SAVE, filename );
 
-   if ( fits_update_key (pFile, TSTRING, "DATASEC", obsId->dataSec,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword DATASEC in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TSTRING, "CCDSEC", obsId->ccdSec,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword CCDSEC in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TSTRING, "ORIGSEC", obsId->origSec,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword ORIGSEC in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TSTRING, "DETTYPE", obsId->detType,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword DETTYPE in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   if ( fits_update_key (pFile, TSTRING, "DETID", obsId->detId,
-                         "", &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem adding keyword DETID in fits file %s: %d", 
-                   ERROR_LOG_SAVE, filename, fitsStatus );
-      return (ERROR) ;
-   }
-
-   /* Close the fits file */
-   
-   if ( fits_close_file (pFile, &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                   filename, fitsStatus );
-
+      fclose ( pFile );
       return (ERROR);
    }
 
-   return (OK);
+   if ( extra != 0 )
+   {
+      extra = (2880 - extra)/4;
+      /*printf ( "extra=%d\n", extra );*/
+      for ( i = 0 ; i < extra ; i ++ )
+          extraBuffer[i]=0;
+
+      if ( fwrite ( extraBuffer, sizeof (float), extra, pFile ) != 
+           extra )
+      {
+         ERROR_SET1 ( 0, "Failed to fill with zero image into %s",
+                      ERROR_LOG_SAVE, filename );
+
+         fclose ( pFile );
+         return (ERROR);
+      }
+   }
+
+   /* Close the fits file */
+
+   fclose ( pFile ) ;
+
+   return ( OK ) ;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -12311,6 +12284,32 @@ uint32 detFrameSize
    long         xReqTail;   /* Number of trailing X pixels to be discarded on */
    long         reqPixelsNb;/* Total number of digitised pixels.              */
    int          nPackets;   /* Number of packets expected per frame.          */
+
+   /*
+    * Parameters to update the aoCtrlId structure
+    */
+
+   int          updateAoCtrlFlag = FALSE;
+   char         path[STRING_SIZE];
+   char         darkFileName[STRING_SIZE];
+   char         fullDarkFileName[STRING_SIZE];
+   char         flatFileName[STRING_SIZE];
+   char         fullFlatFileName[STRING_SIZE];
+   char         refFileName[STRING_SIZE];
+   char         fullRefFileName[STRING_SIZE];
+   char         imFileName[STRING_SIZE];
+   char         fullImFileName[STRING_SIZE];
+   char         cmFileName[STRING_SIZE];
+   char         fullCmFileName[STRING_SIZE];
+   char         fgCmFileName[STRING_SIZE];
+   char         fullFgCmFileName[STRING_SIZE];
+   char         aoInitFileName[STRING_SIZE];
+   double       angleM2;
+   double       angleM1;
+   double       refX;
+   double       refY;
+   double       thresh;
+   double       totalThresh;
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -12438,6 +12437,32 @@ uint32 detFrameSize
          ERROR_LOG (
          "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
       }
+
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               refFileName, &refX, &refY, imFileName, 
+                               cmFileName, fgCmFileName, &thresh,
+                               &totalThresh, &angleM2, &angleM1) == ERROR )
+         {
+            ERROR_LOG ("Failed to read ao control file parameters");
+         }
+
+         sprintf ( fullDarkFileName, "%s/%s", path, darkFileName );
+         sprintf ( fullFlatFileName, "%s/%s", path, flatFileName );
+         sprintf ( fullRefFileName, "%s/%s", path, refFileName );
+         sprintf ( fullImFileName, "%s/%s", path, imFileName );
+         sprintf ( fullCmFileName, "%s/%s", path, cmFileName );
+         sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
+         updateAoCtrlFlag = TRUE;
+      }
+
    }
    else if ( (binFlag == TRUE) && (aoCcdId->binningFlag == TRUE) )
    {
@@ -12535,6 +12560,31 @@ uint32 detFrameSize
       {
          ERROR_LOG (
          "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+      }
+
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               refFileName, &refX, &refY, imFileName, 
+                               cmFileName, fgCmFileName, &thresh,
+                               &totalThresh, &angleM2, &angleM1) == ERROR )
+         {
+            ERROR_LOG ("Failed to read ao control file parameters");
+         }
+
+         sprintf ( fullDarkFileName, "%s/%s", path, darkFileName );
+         sprintf ( fullFlatFileName, "%s/%s", path, flatFileName );
+         sprintf ( fullRefFileName, "%s/%s", path, refFileName );
+         sprintf ( fullImFileName, "%s/%s", path, imFileName );
+         sprintf ( fullCmFileName, "%s/%s", path, cmFileName );
+         sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
+         updateAoCtrlFlag = TRUE;
       }
    }
    else 
@@ -12716,6 +12766,97 @@ uint32 detFrameSize
    {
       ERROR_LOG ("Failed to init ystart sad record");
       return (ERROR);
+   }
+
+   if ( updateAoCtrlFlag == TRUE )
+   {
+      if (aoCtrlContextUpdate ( fullDarkFileName, fullFlatFileName,
+                                fullRefFileName, fullImFileName, fullCmFileName,
+                                fullFgCmFileName, refX, refY, angleM2, angleM1,
+                                aoCcdId, aoCtrlId ) == ERROR )
+      {
+         ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
+      }
+
+      obsId->aoCtrlId->threshold = thresh;
+      obsId->aoCtrlId->totalThreshold = totalThresh;
+
+      aoCtrlContextShow (aoCcdId, aoCtrlId, FALSE);
+
+      if ( aoCtrlId->initFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, "Initialized", pAoCtrlInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->darkInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->darkFileName, 
+                              obsId->pAoDarkInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->flatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->flatFileName, pAoFlatInitContext)
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->intMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->intMatFileName, 
+                              pAoIntMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->contMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->contMatFileName, 
+                              pAoContMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->fgContMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->fgContMatFileName, 
+                              pAoFgContMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+         }
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
+                           obsId->pAoThreshContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                           obsId->pAoTotalContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+      }
+
    }
 
    return (errorNumber);
@@ -13473,6 +13614,8 @@ STATUS detObsShow
            (int)obsId->methodFluxComp);
    printf ("Average flux flag                : %s\n", 
            (obsId->averageFluxFlag ? "TRUE" : "FALSE") );
+   printf ("Threshold flag                   : %s\n", 
+           (obsId->threshFlag ? "TRUE" : "FALSE") );
    printf ("nFramesAverageFlux               : %d\n", 
            (int)(obsId->nFramesAverageFlux) );
    printf ("Time with FG only                : %f sec\n", (obsId->fgTime) );
@@ -13496,6 +13639,8 @@ STATUS detObsShow
    printf ("Coadd file name                  : %s\n", obsId->pCoaddFileName);
    printf ("Centroids file name              : %s\n", obsId->pCentFileName);
    printf ("Centroids comments               : %s\n", obsId->pCentComment);
+   printf ("Save circular buffer directory   : %s\n", obsId->pCbPath);
+   printf ("Save control CB directory (seq)  : %s\n", obsId->pCbPathSeq);
 
    printf ("dataSec                          : %s\n", obsId->dataSec);
    printf ("ccdSec                           : %s\n", obsId->ccdSec);
@@ -14190,9 +14335,10 @@ uint32 detSigInitFgGain
  *   detSigModeNone
  *
  *   INVOCATION:
- *   detSigModeNone (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeNone (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14223,6 +14369,7 @@ uint32 detSigInitFgGain
 
 uint32 detSigModeNone
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14232,6 +14379,10 @@ uint32 detSigModeNone
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
                                 /* closed loop sequence                       */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+
    /*
     * Initialise the error number and obtain the attributes provided with the
     * command.
@@ -14288,6 +14439,24 @@ uint32 detSigModeNone
 
    obsId->sigMode = sigMode;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -14309,9 +14478,10 @@ uint32 detSigModeNone
  *   detSigModeDark
  *
  *   INVOCATION:
- *   detSigModeDark (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeDark (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14342,6 +14512,7 @@ uint32 detSigModeNone
 
 uint32 detSigModeDark
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14350,6 +14521,10 @@ uint32 detSigModeDark
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
+
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -14408,6 +14583,24 @@ uint32 detSigModeDark
 
    obsId->sigMode = sigMode;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -14429,9 +14622,10 @@ uint32 detSigModeDark
  *   detSigModeGg
  *
  *   INVOCATION:
- *   detSigModeGg (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeGg (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14463,6 +14657,7 @@ uint32 detSigModeDark
 
 uint32 detSigModeGg
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14471,6 +14666,9 @@ uint32 detSigModeGg
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -14529,6 +14727,21 @@ uint32 detSigModeGg
 
    obsId->sigMode = sigMode;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -14550,9 +14763,10 @@ uint32 detSigModeGg
  *   detSigModeGgAo
  *
  *   INVOCATION:
- *   detSigModeGgAo (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeGgAo (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14584,6 +14798,7 @@ uint32 detSigModeGg
 
 uint32 detSigModeGgAo
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14594,6 +14809,9 @@ uint32 detSigModeGgAo
    long         sigMode;        /* Signal processing mode.                    */
    long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -14659,6 +14877,21 @@ uint32 detSigModeGgAo
    obsId->nCoaddFrames = imageNb;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -14680,9 +14913,10 @@ uint32 detSigModeGgAo
  *   detSigModeAo
  *
  *   INVOCATION:
- *   detSigModeAo (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeAo (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14713,6 +14947,7 @@ uint32 detSigModeGgAo
 
 uint32 detSigModeAo
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14723,6 +14958,9 @@ uint32 detSigModeAo
    long         sigMode;        /* Signal processing mode.                    */
    long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -14788,6 +15026,21 @@ uint32 detSigModeAo
    obsId->nCoaddFrames = imageNb;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -14809,9 +15062,11 @@ uint32 detSigModeAo
  *   detSigModeFgFocus
  *
  *   INVOCATION:
- *   detSigModeFgFocus (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeFgFocus (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14842,6 +15097,7 @@ uint32 detSigModeAo
 
 uint32 detSigModeFgFocus
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14851,6 +15107,9 @@ uint32 detSigModeFgFocus
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -14913,6 +15172,21 @@ uint32 detSigModeFgFocus
    obsId->sigMode = sigMode;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -14934,9 +15208,11 @@ uint32 detSigModeFgFocus
  *   detSigModeFgCoadd
  *
  *   INVOCATION:
- *   detSigModeFgCoadd (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeFgCoadd (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -14968,6 +15244,7 @@ uint32 detSigModeFgFocus
 
 uint32 detSigModeFgCoadd
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -14978,6 +15255,9 @@ uint32 detSigModeFgCoadd
    long         sigMode;        /* Signal processing mode.                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files.                         */
@@ -15057,6 +15337,21 @@ uint32 detSigModeFgCoadd
    strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
             (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames; /* nCoaddFrames exposures */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -15078,9 +15373,11 @@ uint32 detSigModeFgCoadd
  *   detSigModeFgFocusAo
  *
  *   INVOCATION:
- *   detSigModeFgFocusAo (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeFgFocusAo (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                        obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -15112,6 +15409,7 @@ uint32 detSigModeFgCoadd
 
 uint32 detSigModeFgFocusAo
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -15122,6 +15420,9 @@ uint32 detSigModeFgFocusAo
    long         sigMode;        /* Signal processing mode.                    */
    long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -15187,6 +15488,19 @@ uint32 detSigModeFgFocusAo
    obsId->nCoaddFrames = imageNb;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -15208,9 +15522,11 @@ uint32 detSigModeFgFocusAo
  *   detSigModeCoadd
  *
  *   INVOCATION:
- *   detSigModeCoadd (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeCoadd (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                    obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -15241,6 +15557,7 @@ uint32 detSigModeFgFocusAo
 
 uint32 detSigModeCoadd
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -15251,10 +15568,15 @@ uint32 detSigModeCoadd
    long         sigMode;        /* Signal processing mode.                    */
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
 
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files.                         */
    char         pCoaddFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
    char         pFullCoaddFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -15327,6 +15649,21 @@ uint32 detSigModeCoadd
    strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
             (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames ;      /* nCoaddFrames exposures */
+   outOption = 0 ;            /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;        /* 10ms */
+   else
+      expTime = 0.005 ;       /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -15348,9 +15685,11 @@ uint32 detSigModeCoadd
  *   detSigModeThresh
  *
  *   INVOCATION:
- *   detSigModeThresh (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeThresh (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                     obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -15381,6 +15720,7 @@ uint32 detSigModeCoadd
 
 uint32 detSigModeThresh
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -15391,6 +15731,9 @@ uint32 detSigModeThresh
    long         sigMode;        /* Signal processing mode.                    */
    long         method;         /* Method for threshold computation.          */
    long         nAverageData;   /* Number of data to average.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeff;      /* Multiplicative coefficients for rms value  */
    double       threshold;      /* Threshold value if no computation          */
@@ -15445,6 +15788,8 @@ uint32 detSigModeThresh
       return (errorNumber);
    }
 
+   rateBright = rateBright/100.0; /* in percent */
+
    MESSAGE_LOG4 (MSG_LOG,
             "Signal processing switched to \"Threshold Computation\" mode - "
             "method=%d, nAverageData=%d, rateBright=%f, multCoeff=%f",
@@ -15482,6 +15827,21 @@ uint32 detSigModeThresh
          ERROR_LOG (
               "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
       }
+
+      /* Init the fields of the observe CAD record */
+
+      nExp = nAverageData ;     /* nAverageData exposure */
+      outOption = 0 ;           /* NONE */
+      if ( obsId->aoCcdId->binningFlag == FALSE )
+         expTime = 0.01 ;       /* 10ms */
+      else
+         expTime = 0.005 ;      /* 5ms */
+
+      if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+           ERROR )
+      {
+         ERROR_LOG ( "Failed to initialise fields of observe record");
+      }
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -15505,9 +15865,11 @@ uint32 detSigModeThresh
  *   detSigModeGgCoadd
  *
  *   INVOCATION:
- *   detSigModeGgCoadd (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeGgCoadd (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -15538,6 +15900,7 @@ uint32 detSigModeThresh
 
 uint32 detSigModeGgCoadd
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -15547,6 +15910,9 @@ uint32 detSigModeGgCoadd
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files.                         */
@@ -15623,6 +15989,21 @@ uint32 detSigModeGgCoadd
    strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
             (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames ;     /* nCoaddFrames exposures */
+   outOption = 0 ;           /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;       /* 10ms */
+   else
+      expTime = 0.005 ;      /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -15644,9 +16025,10 @@ uint32 detSigModeGgCoadd
  *   detSigModeSeq
  *
  *   INVOCATION:
- *   detSigModeSeq (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeSeq (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -15676,6 +16058,7 @@ uint32 detSigModeGgCoadd
  */
 uint32 detSigModeSeq
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -15686,24 +16069,33 @@ uint32 detSigModeSeq
    long         sigMode;        /* Signal processing mode.                    */
    double       fgTime;         /* Time when fg over the whole CCD in the     */
                                 /* closed loop sequence                       */
-   double       saveCbFgCtrlEveryTime;
-                                /* Time when to save the FG control circular  */
-                                /* buffer in the closed loop sequence         */
    long         saveCbFgCtrlClosedLoopFlag;
                                 /* Save FG control circular buffer during     */
                                 /* closed loop flag.                          */
-   double       saveCbCtrlEveryTime;
-                                /* Time when to save the aO control circular  */
-                                /* buffer in the closed loop sequence         */
    long         saveCbCtrlClosedLoopFlag;
                                 /* Save aO control circular buffer during     */
                                 /* closed loop flag.                          */
+   long         threshFlag;     /* Threshold after GG Flag                    */
+   long         nFramesThresh;  /* Number of frames to compute the threshold  */
    long         fluxFlag;       /* Average flux after FG Flag                 */
    long         nFramesFlux;    /* Number of frames to average for computing  */
                                 /* the average flux                           */
-   double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
    long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+   double       rateBright;     /* Rate of brightest pixels.                  */
+   double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
+   double       saveCbCtrlEveryTime;
+                                /* Time when to save the aO control circular  */
+                                /* buffer in the closed loop sequence         */
+   double       saveCbFgCtrlEveryTime;
+                                /* Time when to save the FG control circular  */
+                                /* buffer in the closed loop sequence         */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                                /* Path name for circular buffer.             */
+
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -15713,21 +16105,29 @@ uint32 detSigModeSeq
    errorNumber = 0;
    sigMode = AO_MODE_CLOSED_LOOP;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & fgTime);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *) & fluxFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+                          (char *) & threshFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
-                          (char *) & nFramesFlux);
+                          (char *) & nFramesThresh);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3,
-                          (char *) & multCoeffFlux);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&imageNb);
+                          (char *) & rateBright);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *) & fluxFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5,
+                          (char *) & nFramesFlux);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6,
-                          (char *) & saveCbCtrlClosedLoopFlag);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7,
-                          (char *) & saveCbCtrlEveryTime);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8,
-                          (char *) & saveCbFgCtrlClosedLoopFlag);
+                          (char *) & multCoeffFlux);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&subapOff);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&imageNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9,
+                          (char *) & saveCbCtrlClosedLoopFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10,
+                          (char *) & saveCbCtrlEveryTime);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11,
+                          (char *) & saveCbFgCtrlClosedLoopFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12,
                           (char *) & saveCbFgCtrlEveryTime);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, pFilePath);
+
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -15762,9 +16162,14 @@ uint32 detSigModeSeq
       return (errorNumber);
    }
 
+   rateBright = rateBright / 100.0 ; /* in percent */
+   multCoeffFlux = multCoeffFlux / 100.0 ; /* in percent */
+
    MESSAGE_LOG1 (MSG_LOG,
       "Signal processing switched to \"Sequence closed loop\" mode - "
       "fgTime=%f", fgTime );
+   MESSAGE_LOG3 (MSG_LOG, "threshFlag=%d, nFramesThresh=%d, rateBright=%f",
+                 (int)threshFlag, (int)nFramesThresh, rateBright);
    MESSAGE_LOG3 (MSG_LOG, "fluxFlag=%d, nFramesFlux=%d, multCoeffFlux=%f",
                  (int)fluxFlag, (int)nFramesFlux, multCoeffFlux);
    MESSAGE_LOG2 (MSG_LOG, "imageNb=%d, allowedSubapOff=%d",
@@ -15773,6 +16178,8 @@ uint32 detSigModeSeq
       (int)saveCbFgCtrlClosedLoopFlag, saveCbFgCtrlEveryTime);
    MESSAGE_LOG2 (MSG_LOG, "saveCbCtrlFlag=%d, saveCbCtrlEveryTime=%f",
       (int)saveCbCtrlClosedLoopFlag, saveCbCtrlEveryTime);
+   MESSAGE_LOG1 (MSG_LOG, "pFilePath=%s", pFilePath);
+
    if (epToVxPipeWrite (NULL, "Sequence closed loop",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15792,15 +16199,40 @@ uint32 detSigModeSeq
    obsId->saveCbFgCtrlClosedLoopTime = saveCbFgCtrlEveryTime;
    obsId->saveCbCtrlClosedLoop = saveCbCtrlClosedLoopFlag;
    obsId->saveCbCtrlClosedLoopTime = saveCbCtrlEveryTime;
+
    obsId->averageFluxFlag = fluxFlag;
    obsId->nFramesAverageFlux = nFramesFlux;
    obsId->multCoeffAverageFlux = multCoeffFlux;
+
+   obsId->threshFlag = threshFlag;
+   obsId->methodThreshComp = AO_THRESH_SPOTS;
+   obsId->aoCtrlId->thresholdMethod = AO_THRESH_SPOTS;
+   obsId->nAverageDataThreshComp = nFramesThresh;
+   obsId->rateBrightPixThreshComp = rateBright;
+   obsId->aoCtrlId->thresholdRate = rateBright;
 
    if ( fluxFlag == TRUE )
       obsId->aoCtrlId->multCoeffTotal= multCoeffFlux;
 
    obsId->nCoaddFrames = imageNb;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
+
+   strcpy ( obsId->pCbPathSeq, pFilePath );
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
 
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
@@ -15823,9 +16255,11 @@ uint32 detSigModeSeq
  *   detSigModeTotal
  *
  *   INVOCATION:
- *   detSigModeTotal (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigModeTotal (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                    obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -15856,6 +16290,7 @@ uint32 detSigModeSeq
 
 uint32 detSigModeTotal
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -15868,6 +16303,9 @@ uint32 detSigModeTotal
    long         method;         /* Method for average flux computation        */
    long         nFramesFlux;    /* Number of frames to average for computing  */
                                 /* the average flux                           */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
    double       thresholdFlux;  /* threshold for flux value                   */
 
@@ -15920,6 +16358,8 @@ uint32 detSigModeTotal
       return (errorNumber);
    }
 
+   multCoeffFlux = multCoeffFlux / 100.0 ; /* in percent */
+
    MESSAGE_LOG4 (MSG_LOG,
             "Signal processing switched to \"Average Flux computation\" mode - "
             "method=%d, thresholdFlux=%f, nFramesFlux=%d, multCoeffFlux=%f",
@@ -15955,6 +16395,21 @@ uint32 detSigModeTotal
       {
          ERROR_LOG (
             "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      }
+
+      /* Init the fields of the observe CAD record */
+
+      nExp = nFramesFlux ;     /* nFramesFlux exposures */
+      outOption = 0 ;          /* NONE */
+      if ( obsId->aoCcdId->binningFlag == FALSE )
+         expTime = 0.01 ;      /* 10ms */
+      else
+         expTime = 0.005 ;     /* 5ms */
+
+      if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+           ERROR )
+      {
+         ERROR_LOG ( "Failed to initialise fields of observe record");
       }
    }
 
@@ -16022,6 +16477,8 @@ uint32 detSigInitCB
    long         saveCbImFlag;   /* Save image circular buffer flag.           */
    long         saveCbCtrlFlag; /* Save control circular buffer flag.         */
    long         saveCbFgCtrlFlag; /* Save FG control circular buffer flag.    */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                                /* Path name for circular buffer.             */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -16035,6 +16492,7 @@ uint32 detSigInitCB
                           (char *) & saveCbCtrlFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
                           (char *) & saveCbFgCtrlFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pFilePath);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16100,6 +16558,7 @@ uint32 detSigInitCB
    obsId->saveCbIm = saveCbImFlag;
    obsId->saveCbCtrl = saveCbCtrlFlag;
    obsId->saveCbFgCtrl = saveCbFgCtrlFlag;
+   strcpy ( obsId->pCbPath , pFilePath );
 
    return (errorNumber);
 }
@@ -16111,9 +16570,10 @@ uint32 detSigInitCB
  *   detSigMeasIm
  *
  *   INVOCATION:
- *   detSigMeasIm (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigMeasIm (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -16145,6 +16605,7 @@ uint32 detSigInitCB
 
 uint32 detSigMeasIm
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure          */
    int             commandNumber,   /* Command number                         */
    SDSU_ID         sdsuId,          /* SDSU context structure                 */
@@ -16157,6 +16618,9 @@ uint32 detSigMeasIm
    long         newMat;         /* New matrix flag                            */
    long         nMode;          /* Mode number                                */
    long         nCoaddFrames;   /* Number of frames to coadd                  */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
    double       amplitude;      /* Amplitude of the mode                      */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
@@ -16286,6 +16750,21 @@ uint32 detSigMeasIm
    sprintf ( obsId->pCentComment, "Mode %d, amplitude %f microns", 
              (int)nMode, (float)amplitude );
  
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames ;  
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -16500,9 +16979,11 @@ uint32 detSigCompMat
  *   detSigModeSeqDark
  *
  *   INVOCATION:
- *   detSigModeSeqDark (cadCmdContext, commandNumber, sdsuId, obsId) 
+ *   detSigModeSeqDark (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId) 
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext      (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber      (int)             Command number
  *   (>) sdsuId             (SDSU_ID)         Current SDSU context structure
@@ -16532,6 +17013,7 @@ uint32 detSigCompMat
  */
 uint32 detSigModeSeqDark
    (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,       /* CAD command context structure.     */
    int             commandNumber,       /* Command number.                    */
    SDSU_ID         sdsuId,              /* SDSU context structure.            */
@@ -16542,6 +17024,9 @@ uint32 detSigModeSeqDark
    long         sigMode;        /* Signal processing mode.                    */
    long         nCoaddFrames;   /* Image number to average                    */
    long         nAverageData;   /* Number of data to average.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
    double       multCoeff;      /* Multiplicative coefficients for rms value  */
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files.                         */
@@ -16658,6 +17143,21 @@ uint32 detSigModeSeqDark
    obsId->multCoeffRmsThreshComp = multCoeff;
    obsId->aoCtrlId->thresholdMultCoeff = multCoeff;
 
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames + nAverageData;
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
    /* Initialise the coadd counter used to decide when to save coadded data
     * to disk.
     */
@@ -16746,4 +17246,328 @@ uint32 detSimulateImage
    (void)fclose (pFile);
 
    return ( OK );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitObserbeRecord
+ *
+ *   INVOCATION:
+ *   detInitObserbeRecord (pRecordPrefix, nExp, expTime, outOption)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *) Record Name prefix
+ *   (>) pNExp         (long *)       Number of exposures
+ *   (>) pExpTime      (double *)     Exposure time
+ *   (>) pOutOption    (long *)       Output option (NONE, DHS, FILE)
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Initialize the fields of the observe CAD record
+ *
+ *   DESCRIPTION:
+ *   Initialize the fields of the observe CAD record according to the signal 
+ *   processing
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detInitObserveRecord
+   (
+   const char *    pRecordPrefix,   /* Record Name Prefix  */
+   long *          pNExp,           /* Number of exposures */
+   double *        pExpTime,        /* Exposure time       */
+   long *          pOutOption       /* Output option       */
+   )
+{
+   uint32       errorNumber=0;  /* Error number reported by task.             */
+   long         value;
+   char         message [EPICS_MAX_BYTES_STRING_ATTRIB * 2];
+   char         pRecordName [EPICS_MAX_BYTES_RECORD_NAME + 1];
+                                /* String to store record fields.         */
+   char         label [EPICS_MAX_BYTES_RECORD_NAME + 1];
+   char         path [EPICS_MAX_BYTES_RECORD_NAME + 1];
+   char         file [EPICS_MAX_BYTES_RECORD_NAME + 1];
+   char         sim [EPICS_MAX_BYTES_RECORD_NAME + 1];
+
+#ifdef DEBUG
+   printf ( "detInitObserverecord(%s,%d,%f,%d)\n", pRecordPrefix, *pNExp, 
+            *pExpTime, *pOutOption);
+#endif
+
+   /* Init the field A of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.A", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   if ( cicsDbPut (pRecordName, message, DBF_LONG, pNExp) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field B of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.B", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   /*if ( cicsDbPut (pRecordName, message, DBF_DOUBLE, pExpTime) == ERROR )*/
+   if ( cicsDbPut (pRecordName, message, 8, pExpTime) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field C of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.C", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   if ( cicsDbPut (pRecordName, message, DBF_LONG, pOutOption) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field D of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.D", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy ( label, "NONE" );
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, label) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field E of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.E", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   value = 2;
+   if ( cicsDbPut (pRecordName, message, DBF_LONG, &value) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field F of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.F", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy (path, "." );
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, path) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field G of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.G", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy (file, "pwfs1.fits");
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, file) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field H of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.H", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy (sim, "NONE");
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, sim) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitSigInit
+ *
+ *   INVOCATION:
+ *   detInitSigInit (struct genSubRecord *pgsub)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) pgsub (struct genSubRecord *) Pointer to initSigInit gsub record
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Init the detSigInit input fields according to the binning status
+ *
+ *   DESCRIPTION:
+ *   For this record, I have decided to use Epics facilities and not 
+ *   epToVxLib. Faster and simpler. CB - 11 July 2000
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   external variables: detObsIdP1
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detInitSigInit
+   (
+   struct genSubRecord * pgsub      /* Pointer to "initSigInit" gensub record */
+   )
+{
+   long xbin;
+   long ybin;
+   char path[STRING_SIZE];
+   char darkFileName[STRING_SIZE];
+   char flatFileName[STRING_SIZE];
+   char refFileName[STRING_SIZE];
+   char imFileName[STRING_SIZE];
+   char cmFileName[STRING_SIZE];
+   char fgCmFileName[STRING_SIZE];
+   char aoInitFileName[STRING_SIZE];
+   double angleM2;
+   double angleM1;
+   double refX;
+   double refY;
+   double thresh;
+   double totalThresh;
+
+   if ( detObsIdP1 == NULL )
+   {
+      return (ERROR);
+   }
+
+   xbin = *(long *)pgsub->b;
+
+   ybin = *(long *)pgsub->d;
+
+   if ( (xbin == 1) && (ybin == 1) )
+   {
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               refFileName, &refX, &refY, imFileName, 
+                               cmFileName, fgCmFileName, &thresh,
+                               &totalThresh, &angleM2, &angleM1) == ERROR )
+         {
+            printf ("Failed to read ao control file parameters\n");
+            return (ERROR);
+         }
+
+         strcpy ( (char *)pgsub->vala, path );
+         strcpy ( (char *)pgsub->valb, darkFileName );
+         strcpy ( (char *)pgsub->valc, flatFileName );
+         *(double *)pgsub->vald = angleM2;
+         *(double *)pgsub->vale = refX;
+         *(double *)pgsub->valf = refY;
+         *(double *)pgsub->valg = angleM1;
+         strcpy ( (char *)pgsub->valh, refFileName );
+         strcpy ( (char *)pgsub->vali, imFileName );
+         strcpy ( (char *)pgsub->valj, cmFileName );
+         strcpy ( (char *)pgsub->valk, fgCmFileName );
+
+         /*strcpy ( (char *)pgsub->vala, "." );
+         strcpy ( (char *)pgsub->valb, "data/defFullP1Dark.fits" );
+         strcpy ( (char *)pgsub->valc, "data/defFullP1Flat.fits" );
+         *(double *)pgsub->vald = 0.0;
+         *(double *)pgsub->vale = 39.5;
+         *(double *)pgsub->valf = 39.5;
+         *(double *)pgsub->valg = 0.0;
+         strcpy ( (char *)pgsub->valh, "data/defFullRefP1.dat" );
+         strcpy ( (char *)pgsub->vali, "data/defIntMatP1.dat" );
+         strcpy ( (char *)pgsub->valj, "data/defContMatP1.dat" );
+         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1.dat" );*/
+      }
+   }
+   else if ( (xbin == 2) && (ybin == 2) )
+   {
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               refFileName, &refX, &refY, imFileName, 
+                               cmFileName, fgCmFileName, &thresh,
+                               &totalThresh, &angleM2, &angleM1) == ERROR )
+         {
+            ERROR_LOG ("Failed to read ao control file parameters");
+            return (ERROR);
+         }
+
+         strcpy ( (char *)pgsub->vala, path );
+         strcpy ( (char *)pgsub->valb, darkFileName );
+         strcpy ( (char *)pgsub->valc, flatFileName );
+         *(double *)pgsub->vald = angleM2;
+         *(double *)pgsub->vale = refX;
+         *(double *)pgsub->valf = refY;
+         *(double *)pgsub->valg = angleM1;
+         strcpy ( (char *)pgsub->valh, refFileName );
+         strcpy ( (char *)pgsub->vali, imFileName );
+         strcpy ( (char *)pgsub->valj, cmFileName );
+         strcpy ( (char *)pgsub->valk, fgCmFileName );
+
+         /*strcpy ( (char *)pgsub->vala, "." );
+         strcpy ( (char *)pgsub->valb, "data/defBinP1Dark.fits" );
+         strcpy ( (char *)pgsub->valc, "data/defBinP1Flat.fits" );
+         *(double *)pgsub->vald = 0.0;
+         *(double *)pgsub->vale = 18.5;
+         *(double *)pgsub->valf = 18.5;
+         *(double *)pgsub->valg = 0.0;
+         strcpy ( (char *)pgsub->valh, "data/defBinRefP1.dat" );
+         strcpy ( (char *)pgsub->vali, "data/defIntMatP1.dat" );
+         strcpy ( (char *)pgsub->valj, "data/defContMatP1.dat" );*/
+         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1.dat" );
+      }
+   }
+   else
+   {
+#ifdef DEBUG
+      ERROR_LOG ( "xbin and ybin sir records should contain 1 or 2" );
+#endif
+   }
+
+   return (OK) ;
 }

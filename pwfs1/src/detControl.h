@@ -223,6 +223,9 @@
                                     /* Name of SIR record containing    */
                                     /* the elapsed time                 */
 
+#define   DET_CONTROL_OBSERVE_CAD_NAME        "observe"
+                                    /* Name of observe CAD record       */
+
 #define   DET_DHS_TASK_PRIORITY               210
                                     /* Priority of the dhs task               */
 
@@ -248,10 +251,17 @@
 #define DET_CONTROL_MAX_WCSPOINTS             40   
                                      /* Max number of WCS calibration points. */
 
-#define DET_CONTROL_PWFS1_AO_CTRL_INIT_FILE   "defFullCtrlP1.dat"  
+#define DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE   "defFullCtrlP1.dat"  
                                     /* Define the default ao control init file*/
-                                    /* for PWFS1. Set to "NONE" if no default */
-                                    /* ao control initialisation is required. */
+                                    /* for PWFS1 when no binning. Set to      */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE    "defBinCtrlP1.dat"  
+                                    /* Define the default ao control init file*/
+                                    /* for PWFS1 when binning. Set to "NONE"  */
+                                    /* if no default ao control initialisation*/
+                                    /* is required.                           */
 
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
                                     /* Directory containing OMF files for the */
@@ -388,6 +398,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Method for average flux computation             */
    long         averageFluxFlag;
                            /* Average flux after FG Flag                      */
+   long         threshFlag;
+                           /* Threshold after FG Flag                         */
    long         nFramesAverageFlux;
                            /* Number of frames to average for computing the   */
                            /* average flux                                    */
@@ -424,6 +436,11 @@ typedef   struct      /* Context structure used to describe an observation.   */
    char         pCentFileName[(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
                            /* Combined path name and file name for centroids  */
    char         pCentComment[EPICS_MAX_BYTES_STRING_ATTRIB];
+   char         pCbPath[EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                           /* Directory where to save the Circular Buffers    */
+   char         pCbPathSeq[EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                           /* Directory where to save the control circular    */
+                           /* buffer during closed loop                       */
 
                            /* Fits keywords                                   */
                            /* -------------                                   */
@@ -442,7 +459,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* ------------                                    */
    double       rawtStart; /* Raw Gemini time at start of observation.        */
    double       rawtEnd;   /* Raw Gemini time at end of observation.          */
-   double       expTime;   /* Current exposure time                           */
+   double       exposureTime;
+                           /* Current exposure time                           */
    double       exposedRQ; /* Requested total exposure time.                  */
    double       exposed;   /* Actual total exposure time.                     */
 

@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="12"
-	nstr="55"
-	ndynamic="17"
+	npc="13"
+	nstr="53"
+	ndynamic="18"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="707"
-		height="332"
+		height="360"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2538"
-	nwords_sta="580"
+	nwords_dspy="2592"
+	nwords_sta="592"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1350"
-	osta="770"
-	odynamic="1350"
-	oplot="2526"
-	ord="2526"
-	oes="2526"
-	okd="2526"
-	opd="2538"
-	opo="2538"
+	odyng="1338"
+	osta="746"
+	odynamic="1338"
+	oplot="2580"
+	ord="2580"
+	oes="2580"
+	okd="2580"
+	opd="2592"
+	opo="2592"
 	opc="68"
-	ostr="220"
-	ocmap="770"
-	ocrules="770"
+	ostr="234"
+	ocmap="746"
+	ocrules="746"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="6"
 		y="38"
 		width="690"
-		height="281"
+		height="311"
 		groupid="0"
 	}
 }
@@ -213,7 +213,7 @@ display {
 }
 "text" {
 	object {
-		x="15"
+		x="14"
 		y="223"
 		width="352"
 		height="16"
@@ -224,8 +224,8 @@ display {
 }
 "text" {
 	object {
-		x="15"
-		y="255"
+		x="14"
+		y="254"
 		width="353"
 		height="16"
 		groupid="0"
@@ -262,13 +262,24 @@ display {
 }
 "text" {
 	object {
-		x="15"
-		y="287"
+		x="14"
+		y="285"
 		width="351"
 		height="16"
 		groupid="0"
 	}
 	textix="C: Save FG control circular buffer:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="14"
+		y="317"
+		width="353"
+		height="16"
+		groupid="0"
+	}
+	textix="D: Circular buffers save directory:"
 	align="horiz. left"
 }
 "message button" {
@@ -1033,6 +1044,51 @@ display {
 	}
 	control {
 		chan="$(top)detSigInitCB.C"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitCB.VAL"
+		rulechan[1] = "$(top)detSigInitCB.VAL"
+		rulechan[2] = "$(top)detSigInitCB.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitCB"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="370"
+		y="316"
+		width="320"
+		height="21"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitCB.D"
 		clr="0"
 		bclr="6"
 		label="none"

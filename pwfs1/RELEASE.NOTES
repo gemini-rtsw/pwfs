@@ -45,9 +45,19 @@ V0-9 18 Apr 2000 CB:
   - default temperature is now -20 (see wfsDb.c)
 
 V1-0 13 June 2000 CB:
+---------------------
   - new version of P1: major modifications. New lib for signal processing 
     aoP1Lib instead of original ospLib. Include GG, FG, circular buffer, 
     threshold computation...
     DHS connection improved.
     SAD database done.
 
+V1-1 10 July 2000 CB:
+---------------------
+  - NFS bug fixed (return in file names)
+  - cfitsio replaced by simple routines
+  - directory to save circular buffers
+  - parameters of observe cad per default for each sig mode
+  - button full/bin in detSigInit + detFrameSize -> automatic download of the
+    default configuration (full/bin) for signal processing
+  - threshold computation in seq closed loop

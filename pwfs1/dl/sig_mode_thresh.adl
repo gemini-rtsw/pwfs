@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="14"
-	nstr="56"
+	nstr="58"
 	ndynamic="16"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2916"
-	nwords_sta="1032"
+	nwords_dspy="2946"
+	nwords_sta="1044"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1810"
-	osta="778"
-	odynamic="1810"
-	oplot="2904"
-	ord="2904"
-	oes="2904"
-	okd="2904"
-	opd="2916"
-	opo="2916"
+	odyng="1842"
+	osta="798"
+	odynamic="1842"
+	oplot="2934"
+	ord="2934"
+	oes="2934"
+	okd="2934"
+	opd="2946"
+	opo="2946"
 	opc="68"
 	ostr="264"
-	ocmap="778"
-	ocrules="778"
+	ocmap="798"
+	ocrules="798"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -355,6 +355,17 @@ display {
 		x="999"
 		y="-1"
 	}
+}
+"text" {
+	object {
+		x="661"
+		y="346"
+		width="21"
+		height="27"
+		groupid="0"
+	}
+	textix="%"
+	align="horiz. left"
 }
 "message button" {
 	object {
@@ -916,20 +927,20 @@ display {
 	}
 	format="decimal"
 }
-"valuator" {
+"text entry" {
 	object {
 		x="466"
 		y="347"
-		width="224"
+		width="186"
 		height="22"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigThreshAo.VAL"
+		chan="$(top)detSigModeThresh.C"
 		clr="0"
 		bclr="6"
-		label="limits"
-		clrmod="static"
+		label="none"
+		clrmod="rule"
 		rulechan[0] = ""
 		rulechan[1] = ""
 		rulechan[2] = ""
@@ -946,23 +957,20 @@ display {
 		rulechan[13] = ""
 		rulechan[14] = ""
 		rulechan[15] = ""
-		clrrule="alarm"
-		clrargs=""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeTotal"
 		rulecolorbg="1"
 		rulecolorfg="1"
-		hdl="1"
+		hdl="0"
 		ldl="0"
-		prec="3"
+		prec="-1"
 		newunits=""
 		units="none"
 		decorate="none"
 		convertFunc=""
 		convertParams=""
 	}
-	direction="down"
-	gain="coarse"
-	sendMode="send on motion"
-	increment="0.001"
+	format="decimal"
 }
 "text entry" {
 	object {

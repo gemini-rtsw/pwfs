@@ -344,6 +344,9 @@ typedef struct
    double       thresholdMultCoeff;    /* Multiplicative coefficient for      */
                                        /* threshold computation               */
 
+   double       thresholdDark;         /* Threshold computed during sequence  */
+                                       /* dark - save                         */
+
    double       averageTotal;          /* Average of the total counts for the */
                                        /* whole CCD                           */
 
@@ -691,15 +694,15 @@ STATUS aoCentroidsCompute (float * pImage, AO_CCD_ID aoCcdId,
                            double * pErrorCentroidsVect, int * pWfsStatus);
 STATUS aoModeCompute (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                       int imageNb, AO_CB_CTRL_ID aoCbCtrlId);
-STATUS aoCbImSave (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                   AO_CB_IM_ID aoCbImId);
+STATUS aoCbImSave (char * pCbImFilePath, AO_CCD_ID aoCcdId, 
+                   AO_CTRL_ID aoCtrlId, AO_CB_IM_ID aoCbImId);
 STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
 STATUS aoCbCtrlZero (AO_CB_CTRL_ID aoCbCtrlId);
 STATUS aoCbFgCtrlZero (AO_CB_FG_CTRL_ID aoCbFgCtrlId);
-STATUS aoCbCtrlSave (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                     AO_CB_CTRL_ID aoCbCtrlId );
-STATUS aoCbFgCtrlSave (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                       AO_CB_FG_CTRL_ID aoCbFgCtrlId );
+STATUS aoCbCtrlSave (char * pCbCtrlFilePath, AO_CCD_ID aoCcdId, 
+                     AO_CTRL_ID aoCtrlId, AO_CB_CTRL_ID aoCbCtrlId );
+STATUS aoCbFgCtrlSave (char * pCbFgCtrlSave, AO_CCD_ID aoCcdId, 
+                       AO_CTRL_ID aoCtrlId, AO_CB_FG_CTRL_ID aoCbFgCtrlId );
 STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                         double *pTotalCountsVect, double *pCentroidsVect,
                         double *pErrorCentroidsVect, double *pFgVect,
@@ -714,6 +717,12 @@ STATUS aoMatZero (AO_CTRL_ID aoCtrlId);
 STATUS aoMatCompute (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoDarkUpdate (char * pDarkFileName, AO_CCD_ID aoCcdId, 
                      AO_CTRL_ID aoCtrlId);
+STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
+                       char * pFlatFileName, char * pRefFileName, 
+                       double * pRefX, double * pRefY, char * pImFileName,
+                       char * pCmFileName, char * pFgCmFileName,
+                       double * pThresh, double * pTotalThresh,
+                       double * pAngleM2, double * pAngleM1);
 #endif
 
 #endif /* __INCaoP1Libh */

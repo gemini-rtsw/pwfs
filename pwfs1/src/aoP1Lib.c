@@ -65,6 +65,7 @@
  *   aoMatZero() - Set to zero the interaction and the control matrix 
  *   aoMatCompute() - Compute the interaction and the control matrix
  *   aoDarkUpdate() - Update the dark buffer of the control context structure
+ *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
  *   21 April 2000: CB - original creation
@@ -863,170 +864,6 @@ STATUS aoScaleUpdate (
 
 /*+
  *   FUNCTION NAME:
- *   aoFitsImageFloatRead
- *
- *   INVOCATION:
- *   aoFitsImageFloatRead (pFileName, pImageBuffer, xBufferSize, yBufferSize)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pFitsFileName (char *)  Pointer to the name of the FITS file
- *   (<) pImageBuffer  (float *) Pointer to the buffer where to store the image
- *   (>) xBufferSize   (int)     X size of the image buffer
- *   (>) yBufferSize   (int)     Y size of the image buffer
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Read a float image from a FITS file
- *
- *   DESCRIPTION:
- *   The FITS file is opened and the NAXIS keywords read to get the image
- *   size. If the size is greater than xBufferSize*yBufferSize, only enough of
- *   the image to fill the buffer is read in. If the image is smaller than
- *   or equal to the size of the buffer, the whole image is read in.
- *   No padding to fill any unassigned elements of the buffer takes place,
- *   as the image dimensions for any subsequent processing should be strictly
- *   controlled to match the dimensions specified in the CCD geometry context
- *   structure. The FITS file is then closed.
- *
- *   EXTERNAL VARIABLES:
- *   None.
- *
- *   PRIOR REQUIREMENTS:
- *   The pFileName is the full name of the file including the path.
- *   The buffer pointed to by pImageBuffer has been allocated large enough to
- *   accomodate xBufferSize*yBufferSize float.
- *
- *   ACKNOWLEDGEMENTS:
- *   This function is based on a private function provided by Steven Heddle,
- *   UKATC, Edinburgh 18/1/1999.
- *
- *   INCLUDE FILES:
- *   aoP1Lib.h
- *   fitsio.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-STATUS aoFitsImageFloatRead (
-   char *     pFitsFileName,
-   float *    pImageBuffer,
-   int        xBufferSize,
-   int        yBufferSize
-   )
-{
-   fitsfile *     pFile;        /* FITS File descriptor.                   */
-   int            fitsStatus;   /* FITS status used by the fits function   */
-   int            bufferSize;   /* Buffer size                             */
-   int            foundNb;      /* Number of keywords founds               */
-   long           axes[2];      /* Array of keyword NAXIS values           */
-   long           pixelsNb;     /* Number of pixels of the image           */
-   long           elemReadNb;   /* Number of pixels read                   */
-   long           firstPixel;   /* First pixel read                        */
-   float          nullVal;      /* Value for undefined pixels when reading */
-   int            anyNull;      /* Set to 1 if any values are null; else 0 */
-#ifdef DEBUG
-   int            i;            /* Index to display the first 10 pixels in */
-                                /* DEBUG node */
-#endif
-
-   /* Set to zero the FITS status */
-
-   fitsStatus = 0;
-
-   /* Open the FITS file */
-
-
-   if ( fits_open_file ( &pFile, pFitsFileName, FITSIO_READONLY, &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Can't open FITS file %s: %d", ERROR_LOG_SAVE,
-                   pFitsFileName, fitsStatus);
-      return (ERROR);
-   }
-
-   /* Read the keywords NAXIS1 and NAXIS2 to get image size */
-
-   if ( fits_read_keys_lng ( pFile, "NAXIS", 1, 2, axes, &foundNb,
-                             &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Failed to read keywords NAXIS from %s: %d",
-                   ERROR_LOG_SAVE, pFitsFileName, fitsStatus);
-
-      if (fits_close_file (pFile, &fitsStatus))
-      {
-         ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                      pFitsFileName, fitsStatus );
-      }
-
-      return (ERROR);
-   }
-
-   pixelsNb = axes[0] * axes[1];
-
-   /* Check the image size in comparison to the buffer size */
-
-   bufferSize = xBufferSize * yBufferSize;
-
-   if ( bufferSize != pixelsNb )
-   {
-      ERROR_SET2 ( 0, "Dark Image size %d not as expected %d",
-                   ERROR_LOG_SAVE, (int)pixelsNb, bufferSize);
-
-      if (fits_close_file (pFile, &fitsStatus))
-      {
-         ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                      pFitsFileName, fitsStatus );
-      }
-
-      return (ERROR);
-   }
-
-   elemReadNb = bufferSize;
-
-   /* Read the image */
-
-   firstPixel = 1;
-   nullVal = 0;           /* don't check for null values in the image */
-
-   if ( fits_read_img (pFile, TFLOAT, firstPixel, elemReadNb, &nullVal,
-                       pImageBuffer, &anyNull, &fitsStatus) )
-   {
-      ERROR_SET2 ( 0, "Failed to read image from %s: %d", ERROR_LOG_SAVE,
-                   pFitsFileName, fitsStatus );
-
-      if (fits_close_file (pFile, &fitsStatus))
-      {
-         ERROR_SET2 ( 0, "Problem closing FITS file %s: %d",
-                      ERROR_LOG_SAVE, pFitsFileName, fitsStatus);
-      }
-
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   for ( i = 0 ; i < 10 ; i ++ )
-       printf ( "pixel %d = %f\n", i, *(pImageBuffer + i) );
-#endif
-
-   /* Close the FITS file */
-
-   if (fits_close_file (pFile, &fitsStatus))
-   {
-      ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                   pFitsFileName, fitsStatus);
-      return (ERROR);
-   }
-
-   return (OK);
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
  *   aoFitsImageFloatWrite
  *
  *   INVOCATION:
@@ -1055,12 +892,10 @@ STATUS aoFitsImageFloatRead (
  *   The pFileName is the full name of the file including the path.
  *
  *   ACKNOWLEDGEMENTS:
- *   This function is based on a private function provided by Steven Heddle,
- *   UKATC, Edinburgh 18/1/1999.
+ *   This function is based on a private function provided by Andrew Johnson.
  *
  *   INCLUDE FILES:
  *   aoP1Lib.h
- *   fitsio.h
  *
  *   DEFICIENCIES:
  *   None known
@@ -1074,92 +909,253 @@ STATUS aoFitsImageFloatWrite (
    int        yBufferSize
    )
 {
-   fitsfile *     pFile;        /* FITS File descriptor.                   */
-   long           firstPixel;   /* Index of the first pixel to write       */
-   long           elemNb;       /* Number of pixels to write               */
-   int            fitsStatus;   /* FITS status used by the fits function   */
-   int            bitpix;       /* Bits per pixel: DOUBLE_IMG              */
-   long           axisNb;       /* Number of dimensions in the FITS array  */
-   long           axes[2];      /* Array to store the FITS image dimensions*/
+   int        i;                /* index                                      */
+   int        bufferSize;       /* Size of the buffer to write                */
+   FILE       *pFile;           /* File descriptor                            */
 
-   /* Set to zero the FITS status */
+   /* Create the FITS file */
 
-   fitsStatus = 0;
+   pFile = fopen ( pFitsFileName , "w" );
 
-   /* Some inits */
-
-   bitpix = FLOAT_IMG;
-   axisNb = 2;
-   axes[0] = xBufferSize;
-   axes[1] = yBufferSize;
-   firstPixel = 1;
-   elemNb = axes[0] * axes[1];
-
-   /* Remove the file if this one already exists */
-  
-   if ( fits_open_file ( &pFile, pFitsFileName, FITSIO_READONLY, &fitsStatus)
-        == 0 )
+   if ( pFile == (FILE *)NULL )
    {
-      if ( fits_delete_file ( pFile, &fitsStatus ) )
+      ERROR_SET1 ( 0, "Can't create FITS file %s", ERROR_LOG_SAVE,
+                   pFitsFileName );
+      return (ERROR);
+   }
+
+   /* Write a minimal header */
+
+   fprintf ( pFile, "SIMPLE  =                    T /                                                " );
+   fprintf ( pFile, "BITPIX  =                  -32 /                                                " );
+   fprintf ( pFile, "NAXIS   =                    2 /                                                " );
+   fprintf ( pFile, "NAXIS1  =                %5d /                                                ", xBufferSize );
+   fprintf ( pFile, "NAXIS2  =                %5d /                                                ", yBufferSize );
+   fprintf ( pFile, "BZERO   =                    0 /                                                " );
+   fprintf ( pFile, "EXTEND  =                    T /                                                " );
+   fprintf ( pFile, "END                                                                             ");
+
+   /* Fill the rest of the header with blanks: header 36 * 80 char */
+
+   for ( i = 0 ; i < 28 ; i ++ )
+       fprintf ( pFile, "                                                                                " );
+
+   /* Write the image to the Fits file */
+
+   bufferSize = xBufferSize * yBufferSize;
+
+   if ( fwrite ( pImageBuffer, sizeof (float), bufferSize, pFile ) != 
+        bufferSize )
+   {
+      ERROR_SET1 ( 0, "Failed to write image into %s",
+                   ERROR_LOG_SAVE, pFitsFileName );
+
+      fclose ( pFile );
+      return (ERROR);
+   }
+
+   /* Close the fits file */
+
+   fclose ( pFile ) ;
+
+   return ( OK ) ;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoFitsImageFloatRead
+ *
+ *   INVOCATION:
+ *   aoFitsImageFloatRead (pFileName, pImageBuffer, xBufferSize, yBufferSize)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pFitsFileName (char *)  Pointer to the name of the FITS file
+ *   (<) pImageBuffer  (float *) Pointer to the buffer where to store the image
+ *   (>) xBufferSize   (int)     X size of the image buffer
+ *   (>) yBufferSize   (int)     Y size of the image buffer
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read a float image from a FITS file
+ *
+ *   DESCRIPTION:
+ *   This routine allows to read simple FITS file which have been written with
+ *   aoFitsImageFloatWrite.
+ *
+ *   ACKNOWLEDGEMENTS:
+ *   This function is based on a private function provided by Marianne Takamiya
+ *   and Mark Chun. 
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pFileName is the full name of the file including the path.
+ *   The buffer pointed to by pImageBuffer has been allocated large enough to
+ *   accomodate xBufferSize*yBufferSize float.
+ *
+ *   INCLUDE FILES:
+ *   aoP1Lib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoFitsImageFloatRead (
+   char *     pFitsFileName,
+   float *    pImageBuffer,
+   int        xBufferSize,
+   int        yBufferSize
+   )
+{
+   char       header[2880];
+   char       line[81];
+   char       restHeader[2880];
+   char       keyword[8];
+   char       *token;
+   char       *delim1 = "=";
+   char       *delim2 = "\0";
+
+   int        flag;
+   int        bufferSize;
+   int        pixelsNb;
+   int        bitpix;
+   int        naxis;
+   int        naxis1;
+   int        naxis2;
+
+   long       restSize;
+   long       lineSize=80;
+   long       nChar;
+   long       headerSize=0;
+
+   FILE       *pFile;
+
+#ifdef DEBUG
+   int        i;
+#endif
+
+   /* Open the FITS file */
+
+   pFile = fopen ( pFitsFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      ERROR_SET1 ( 0, "Can't open FITS file %s", ERROR_LOG_SAVE,
+                   pFitsFileName);
+      return (ERROR);
+   }
+
+   /* Read the first line */
+
+   nChar = fread ( header, sizeof (char), lineSize, pFile );
+
+   if ( nChar != lineSize )
+   {
+      ERROR_SET1 ( 0, "Can't read the first line of %s", ERROR_LOG_SAVE,
+                   pFitsFileName);
+      fclose ( pFile );
+      return (ERROR);
+   }
+
+   strncpy ( line, header, lineSize );
+   line[81]='\0';
+
+   /* Check this line contains SIMPLE keyword */
+
+   if ( strncmp ( "SIMPLE  ", line, 8 ) != 0 )
+   {
+      ERROR_SET1 ( 0, "File %s doesn't contain SIMPLE keyword", ERROR_LOG_SAVE,
+                   pFitsFileName);
+      fclose ( pFile );
+      return (ERROR);
+   }
+
+   headerSize += 80;
+
+   flag = TRUE;
+   while ( flag )
+   {
+      nChar = fread ( header, sizeof (char), lineSize, pFile );
+
+      if ( nChar != lineSize )
       {
-         ERROR_SET2 ( 0, "Can't delete the old FITS file %s: %d",
-                      ERROR_LOG_SAVE, pFitsFileName, fitsStatus);
+         ERROR_SET1 ( 0, "Can't read the next line of %s", ERROR_LOG_SAVE,
+                      pFitsFileName);
+         fclose ( pFile );
+         return (ERROR);
+      }
+
+      strncpy ( line, header, lineSize );
+      line[81]= '\0';
+
+      strncpy ( keyword, line, 8 );
+
+      token = strtok ( line, delim1);
+      token = strtok ( NULL, delim2);
+
+      if ( strncmp ( "END     ", keyword, 8) == 0 ) 
+         flag = FALSE;
+      if ( strncmp ( "BITPIX  ", keyword, 8) == 0 ) 
+         sscanf ( token, "%d", &bitpix);
+      if ( strncmp ( "NAXIS   ", keyword, 8) == 0 ) 
+         sscanf ( token, "%d", &naxis);
+      if ( strncmp ( "NAXIS1  ", keyword, 8) == 0 ) 
+         sscanf ( token, "%d", &naxis1);
+      if ( strncmp ( "NAXIS2  ", keyword, 8) == 0 ) 
+         sscanf ( token, "%d", &naxis2);
+
+      headerSize += 80;
+   }
+
+   if ( headerSize % 2880 != 0 )
+   {
+      restSize = 2880 - (headerSize % 2880);
+      nChar = fread ( restHeader, sizeof (char), restSize, pFile );
+      if ( nChar != restSize )
+      {
+         ERROR_SET1 ( 0, "Can't read the rest of the header of %s", 
+                      ERROR_LOG_SAVE, pFitsFileName);
+         fclose ( pFile );
          return (ERROR);
       }
    }
 
-   /* Create the FITS file */
+   /* Now read the data */
 
-   fitsStatus = 0;
+   bufferSize = xBufferSize * yBufferSize;
+   pixelsNb = naxis1 * naxis2;
 
-   if ( fits_create_file ( &pFile, pFitsFileName, &fitsStatus ) )
+   if ( pixelsNb != bufferSize )
    {
-      ERROR_SET2 ( 0, "Can't create FITS file %s: %d", ERROR_LOG_SAVE,
-                   pFitsFileName, fitsStatus);
+      ERROR_SET2 ( 0, "Dark Image size %d not as expected %d",
+                   ERROR_LOG_SAVE, (int)pixelsNb, bufferSize);
+      fclose ( pFile );
       return (ERROR);
    }
 
-   /* Write the keywords for the FITS image, BITPIX=-32 (float) */
-
-   if ( fits_create_img ( pFile, bitpix, axisNb, axes, &fitsStatus ) )
+   if ( fread ( pImageBuffer, sizeof (float), bufferSize, pFile ) != 
+        bufferSize )
    {
-      ERROR_SET2 ( 0, "Failed to write keywords into %s: %d",
-                   ERROR_LOG_SAVE, pFitsFileName, fitsStatus);
-
-      if (fits_close_file (pFile, &fitsStatus))
-      {
-         ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                      pFitsFileName, fitsStatus );
-      }
-
+      ERROR_SET1 ( 0, "Failed to read image from %s", ERROR_LOG_SAVE,
+                   pFitsFileName);
+      fclose ( pFile );
       return (ERROR);
    }
 
-   /* Write the image to the FITS file */
-
-   if ( fits_write_img ( pFile, TFLOAT, firstPixel, elemNb, pImageBuffer,
-                         &fitsStatus ) )
-   {
-      ERROR_SET2 ( 0, "Failed to write image into %s: %d",
-                   ERROR_LOG_SAVE, pFitsFileName, fitsStatus);
-
-      if (fits_close_file (pFile, &fitsStatus))
-      {
-         ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                      pFitsFileName, fitsStatus );
-      }
-
-      return (ERROR);
-   }
+#ifdef DEBUG
+   for ( i = 0 ; i < 10 ; i ++ )
+       printf ( "pixel %d = %f\n", i, *(pImageBuffer + i) );
+#endif
 
    /* Close the FITS file */
 
-   if (fits_close_file (pFile, &fitsStatus))
-   {
-      ERROR_SET2 ( 0, "Problem closing FITS file %s: %d", ERROR_LOG_SAVE,
-                   pFitsFileName, fitsStatus);
-      return (ERROR);
-   }
+   fclose ( pFile );
 
    return (OK);
 }
@@ -1848,6 +1844,15 @@ STATUS aoCtrlContextInit (
       return (ERROR);
    }
 
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
+   }
+
 #ifdef DEBUG
    printf ( "aoCtrlContextInit(): dark file name: %s\n", fileName );
 #endif
@@ -1910,6 +1915,15 @@ STATUS aoCtrlContextInit (
       return (ERROR);
    }
 
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
+   }
+
 #ifdef DEBUG
    printf ( "aoCtrlContextInit(): flat file name: %s\n", fileName );
 #endif
@@ -1969,6 +1983,15 @@ STATUS aoCtrlContextInit (
       fclose (pFile);
       aoCtrlId->initFlag = FALSE;
       return (ERROR);
+   }
+
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
    }
 
 #ifdef DEBUG
@@ -2193,6 +2216,15 @@ STATUS aoCtrlContextInit (
       return (ERROR);
    }
 
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
+   }
+
 #ifdef DEBUG
    printf ( "aoCtrlContextInit(): aO scale factor file name: %s\n", fileName );
 #endif
@@ -2233,6 +2265,15 @@ STATUS aoCtrlContextInit (
       fclose (pFile);
       aoCtrlId->initFlag = FALSE;
       return (ERROR);
+   }
+
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
    }
 
 #ifdef DEBUG
@@ -2278,6 +2319,15 @@ STATUS aoCtrlContextInit (
       return (ERROR);
    }
 
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
+   }
+
 #ifdef DEBUG
    printf ( "aoCtrlContextInit(): control matrix file name: %s\n", 
             fileName );
@@ -2319,6 +2369,15 @@ STATUS aoCtrlContextInit (
       fclose (pFile);
       aoCtrlId->initFlag = FALSE;
       return (ERROR);
+   }
+
+   if ( fileName[strlen(fileName) - 1] == '\n' )
+   {
+      fileName[strlen(fileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlContextInit(): last character of %s was return\n",
+               fileName );
+#endif
    }
 
 #ifdef DEBUG
@@ -2443,6 +2502,7 @@ STATUS aoCtrlContextInit (
    }
 
    aoCtrlId->threshold = value;
+   aoCtrlId->thresholdDark = value;
    aoCtrlId->thresholdMethod = AO_THRESH_VALUE;
    aoCtrlId->thresholdMultCoeff = 0.0;
    aoCtrlId->thresholdRate = 0.0;
@@ -3062,6 +3122,7 @@ STATUS aoCtrlContextShow (
 
    printf ( "Threshold method: %d\n" , aoCtrlId->thresholdMethod );
    printf ( "Threshold: %f\n" , aoCtrlId->threshold );
+   printf ( "Threshold dark: %f\n" , aoCtrlId->thresholdDark );
    printf ( "Threshold rate: %f\n" , aoCtrlId->thresholdRate );
    printf ( "Threshold mult coeff: %f\n" , aoCtrlId->thresholdMultCoeff );
    printf ( "Average total counts method: %d\n" , aoCtrlId->totalMethod );
@@ -4245,12 +4306,15 @@ STATUS aoModeCompute (
  *   aoCbImSave
  *
  *   INVOCATION:
- *   aoCbImSave (aoCcdId, aoCtrlId, aoCbImId)
+ *   aoCbImSave (pCbImFilePath, aoCcdId, aoCtrlId, aoCbImId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) aoCcdId     (AO_CCD_ID)   Pointer to the CCD geometry context structure
- *   (>) aoCtrlId    (AO_CTRL_ID)  Pointer to the control context structure
- *   (>) aoCbImId    (AO_CB_IM_ID) Pointer to the image circular buffer
+ *   (>) pCbImFilePath (char *)      Directory where to save the circular buffer
+ *                                   image
+ *   (>) aoCcdId       (AO_CCD_ID)   Pointer to the CCD geometry context 
+ *                                   structure
+ *   (>) aoCtrlId      (AO_CTRL_ID)  Pointer to the control context structure
+ *   (>) aoCbImId      (AO_CB_IM_ID) Pointer to the image circular buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -4280,6 +4344,7 @@ STATUS aoModeCompute (
 
 STATUS aoCbImSave
    (
+   char *          pCbImFilePath,   /* Image circular buffer directory        */
    AO_CCD_ID       aoCcdId,         /* Pointer to the CCD geometry structure  */
    AO_CTRL_ID      aoCtrlId,        /* Pointer to the control structure       */
    AO_CB_IM_ID     aoCbImId         /* Pointer to the image circular buffer   */
@@ -4318,13 +4383,35 @@ STATUS aoCbImSave
 
    if ( defNameFlag != TRUE )
    {
-      sprintf ( aoHeaderCbIm.cbImFileName, "D%04d%02d%02dT%02d%02d%02dP1.cbi",
-                timeArray[0], timeArray[1], timeArray[2], timeArray[3],
-                timeArray[4], timeArray[5]);
+      if ( ( strcmp (pCbImFilePath, "") == 0 ) ||
+           ( strcmp (pCbImFilePath, "NONE") == 0 ) )
+      {
+         sprintf ( aoHeaderCbIm.cbImFileName, 
+                   "./D%04d%02d%02dT%02d%02d%02dP1.cbi",
+                   timeArray[0], timeArray[1], timeArray[2], timeArray[3],
+                   timeArray[4], timeArray[5]);
+      }
+      else
+      {
+         sprintf ( aoHeaderCbIm.cbImFileName, 
+                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbi",
+                   pCbImFilePath, timeArray[0], timeArray[1], timeArray[2], 
+                   timeArray[3], timeArray[4], timeArray[5]);
+      }
    }
    else
    {
-      strcpy ( aoHeaderCbIm.cbImFileName, "defaultP1.cbi" );
+      if ( ( strcmp (pCbImFilePath, "") == 0 ) ||
+           ( strcmp (pCbImFilePath, "NONE") == 0 ) )
+      {
+         strcpy ( aoHeaderCbIm.cbImFileName, "./defaultP1.cbi" );
+      }
+      else
+      {
+       
+         sprintf ( aoHeaderCbIm.cbImFileName, "%s/defaultP1.cbi",
+                   pCbImFilePath );
+      }
    }
 
 #ifdef DEBUG
@@ -4725,12 +4812,15 @@ STATUS aoCbFgCtrlZero
  *   aoCbCtrlSave
  *
  *   INVOCATION:
- *   aoCbCtrlSave (aoCcdId, aoCtrlId, aoCbCtrlId)
+ *   aoCbCtrlSave (pCbCtrlFilePath, aoCcdId, aoCtrlId, aoCbCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) aoCcdId    (AO_CCD_ID)      Pointer to the CCD geometry structure
- *   (>) aoCtrlId   (AO_CTRL_ID)     Pointer to the control context structure
- *   (>) aoCbCtrlId (AO_CB_CTRL_ID)  Pointer to the control circular buffer
+ *   (>) pCbCtrlFilePath (char *)        Directory where to save the circular 
+ *                                       buffer control
+ *   (>) aoCcdId         (AO_CCD_ID)     Pointer to the CCD geometry structure
+ *   (>) aoCtrlId        (AO_CTRL_ID)    Pointer to the control context 
+ *                                       structure
+ *   (>) aoCbCtrlId      (AO_CB_CTRL_ID) Pointer to the control circular buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -4760,9 +4850,10 @@ STATUS aoCbFgCtrlZero
 
 STATUS aoCbCtrlSave
    (
-   AO_CCD_ID       aoCcdId,       /* Pointer to the CCD geometry structure  */
-   AO_CTRL_ID      aoCtrlId,      /* Pointer to the control structure       */
-   AO_CB_CTRL_ID   aoCbCtrlId     /* Pointer to the control circular buffer */
+   char *          pCbCtrlFilePath, /* Control circular buffer directory      */
+   AO_CCD_ID       aoCcdId,         /* Pointer to the CCD geometry structure  */
+   AO_CTRL_ID      aoCtrlId,        /* Pointer to the control structure       */
+   AO_CB_CTRL_ID   aoCbCtrlId       /* Pointer to the control circular buffer */
    )
 {
    int                         i;
@@ -4799,14 +4890,34 @@ STATUS aoCbCtrlSave
 
    if ( defNameFlag != TRUE )
    {
-      sprintf ( aoHeaderCbCtrl.cbCtrlFileName,
-                "D%04d%02d%02dT%02d%02d%02dP1.cbc",
-                timeArray[0], timeArray[1], timeArray[2], timeArray[3],
-                timeArray[4], timeArray[5]);
+      if ( ( strcmp (pCbCtrlFilePath, "") == 0 ) ||
+           ( strcmp (pCbCtrlFilePath, "NONE") == 0 ) )
+      {
+         sprintf ( aoHeaderCbCtrl.cbCtrlFileName,
+                   "./D%04d%02d%02dT%02d%02d%02dP1.cbc",
+                   timeArray[0], timeArray[1], timeArray[2], timeArray[3],
+                   timeArray[4], timeArray[5]);
+      }
+      else
+      {
+         sprintf ( aoHeaderCbCtrl.cbCtrlFileName,
+                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbc",
+                   pCbCtrlFilePath, timeArray[0], timeArray[1], timeArray[2], 
+                   timeArray[3], timeArray[4], timeArray[5]);
+      }
    }
    else
    {
-      strcpy ( aoHeaderCbCtrl.cbCtrlFileName, "defaultP1.cbc" );
+      if ( ( strcmp (pCbCtrlFilePath, "") == 0 ) ||
+           ( strcmp (pCbCtrlFilePath, "NONE") == 0 ) )
+      {
+         strcpy ( aoHeaderCbCtrl.cbCtrlFileName, "./defaultP1.cbc" );
+      }
+      else
+      {
+         sprintf ( aoHeaderCbCtrl.cbCtrlFileName, "%s/defaultP1.cbc",
+                   pCbCtrlFilePath );
+      }
    }
 
 #ifdef DEBUG
@@ -4985,9 +5096,11 @@ STATUS aoCbCtrlSave
  *   aoCbFgCtrlSave
  *
  *   INVOCATION:
- *   aoCbFgCtrlSave (aoCcdId, aoCtrlId, aoCbCtrlId)
+ *   aoCbFgCtrlSave (pCbFgCtrlFilePath, aoCcdId, aoCtrlId, aoCbCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pCbFgCtrlFilePath (char *)     Directory where to save the circular 
+ *                                      buffer FG control
  *   (>) aoCcdId      (AO_CCD_ID)       Pointer to the CCD geometry structure
  *   (>) aoCtrlId     (AO_CTRL_ID)      Pointer to the control context structure
  *   (>) aoCbFgCtrlId (AO_CB_FGCTRL_ID) Pointer to the FG control circular 
@@ -5021,6 +5134,7 @@ STATUS aoCbCtrlSave
 
 STATUS aoCbFgCtrlSave
    (
+   char *           pCbFgCtrlFilePath, /* Control circular buffer directory   */
    AO_CCD_ID        aoCcdId,      /* Pointer to the CCD geometry structure    */
    AO_CTRL_ID       aoCtrlId,     /* Pointer to the control structure         */
    AO_CB_FG_CTRL_ID aoCbFgCtrlId  /* Pointer to the FG control circular buffer*/
@@ -5060,14 +5174,34 @@ STATUS aoCbFgCtrlSave
 
    if ( defNameFlag != TRUE )
    {
-      sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                "D%04d%02d%02dT%02d%02d%02dP1.cbfgc",
-                timeArray[0], timeArray[1], timeArray[2], timeArray[3],
-                timeArray[4], timeArray[5]);
+      if ( ( strcmp (pCbFgCtrlFilePath, "") == 0 ) ||
+           ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
+      {
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
+                   "./D%04d%02d%02dT%02d%02d%02dP1.cbfgc",
+                   timeArray[0], timeArray[1], timeArray[2], timeArray[3],
+                   timeArray[4], timeArray[5]);
+      }
+      else
+      {
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
+                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbfgc",
+                   pCbFgCtrlFilePath, timeArray[0], timeArray[1], timeArray[2], 
+                   timeArray[3], timeArray[4], timeArray[5]);
+      }
    }
    else
    {
-      strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "defaultP1.cbfgc" );
+      if ( ( strcmp (pCbFgCtrlFilePath, "") == 0 ) ||
+           ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
+      {
+         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP1.cbfgc" );
+      }
+      else
+      {
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP1.cbfgc",
+                   pCbFgCtrlFilePath );
+      }
    }
 
 #ifdef DEBUG
@@ -6086,6 +6220,562 @@ STATUS aoDarkUpdate (
    aoCtrlId->darkInitFlag = TRUE;
 
    /* End */
+
+   return ( OK );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoCtrlFileRead
+ *
+ *   INVOCATION:
+ *   aoCtrlFileRead (pInitFileName, pPath, pDarkFileName, pFlatFileName, 
+ *                   pRefFileName, pRefX, pRefY, pImFileName, pCmFileName, 
+ *                   pFgCmFileName, pThresh, pTotalThresh, pAngleM2, pAngleM1)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName (char *)   Pointer to the AO init file name 
+ *   (<) pPath         (char *)   Pointer to the path
+ *   (<) pDarkFileName (char *)   Pointer to the dark file name
+ *   (<) pFlatFileName (char *)   Pointer to the dark file name
+ *   (<) pRefFileName  (char *)   Pointer to the SH reference file name
+ *   (<) pRefX         (double *) Pointer to the X center for the whole CCD
+ *   (<) pRefY         (double *) Pointer to the X center for the whole CCD
+ *   (<) pImFileName   (char *)   Pointer to the interaction matrix file name
+ *   (<) pCmFileName   (char *)   Pointer to the control matrix file name
+ *   (<) pFgCmFileName (char *)   Pointer to the FG control matrix file name
+ *   (<) pThresh       (double *) Pointer to the threshold
+ *   (<) pTotalThresh  (double *) Pointer to the total flux threshold
+ *   (<) pAngleM2      (double *) Pointer to the angle with M2
+ *   (<) pAngleM1      (double *) Pointer to the angle with M1
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the AO control file
+ *
+ *   DESCRIPTION:
+ *   Read the parameters of the AO control file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   aoP1Lib.h
+ *
+ *   DEFICIENCIES:
+ *   Can't use ERROR_SET1, replace by printf for now - CB 11 july 2000
+ *-
+ */
+
+STATUS aoCtrlFileRead (
+   char *   pInitFileName,
+   char *   pPath,
+   char *   pDarkFileName,
+   char *   pFlatFileName,
+   char *   pRefFileName,
+   double * pRefX,
+   double * pRefY,
+   char *   pImFileName,
+   char *   pCmFileName,
+   char *   pFgCmFileName,
+   double * pThresh,
+   double * pTotalThresh,
+   double * pAngleM2,
+   double * pAngleM1
+   )
+{
+   FILE *     pFile;
+   char       comment [STRING_SIZE];
+   int        i;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      printf ( "Failed to open the AO init file %s\n", pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read first line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): first line of comments:\n" );
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the second line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif 
+
+   /* Read the name of the dark fits file and init the dark vector */
+
+   if ( fgets (pDarkFileName, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the name of the dark file from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pDarkFileName[strlen(pDarkFileName) - 1] == '\n' )
+   {
+      pDarkFileName[strlen(pDarkFileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): last character of %s was return\n", 
+               pDarkFileName );
+#endif
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): dark file name: %s\n", pDarkFileName );
+#endif
+
+   /* Path will always be "." */
+
+   strcpy ( pPath , "." ) ;
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif 
+
+   /* Read the name of the flat fits file and init the flat vector */
+
+   if ( fgets (pFlatFileName, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the name of the flat file from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pFlatFileName[strlen(pFlatFileName) - 1] == '\n' )
+   {
+      pFlatFileName[strlen(pFlatFileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): last character of %s was return\n", 
+               pFlatFileName );
+#endif
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): flat file name: %s\n", pFlatFileName );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif 
+
+   /* Read the name of the WFS reference file */
+
+   if ( fgets (pRefFileName, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the WFS reference file name from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pRefFileName[strlen(pRefFileName) - 1] == '\n' )
+   {
+      pRefFileName[strlen(pRefFileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): last character of %s was return\n", 
+               pRefFileName );
+#endif
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): WFS reference file name: %s\n", pRefFileName );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read value of xcenter for the whole CCD */
+
+   if ( (fscanf (pFile, "%lf\n", pRefX)) == EOF )
+   {
+      printf ( 
+      "Failed to read x center of the whole CCD from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): x center for whole CCD=%f\n", *pRefX );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read value of ycenter for the whole CCD */
+
+   if ( (fscanf (pFile, "%lf\n", pRefY)) == EOF )
+   {
+      printf ( 
+         "Failed to read y center for the whole CCD from the AO init file %s\n",
+         pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): y center for whole CCD=%f\n", *pRefY);
+#endif
+
+   /* Skip the next lines of comments */
+
+   for ( i = 0 ; i < 6 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         printf ( 
+         "Failed to read the next line of comments from the AO init file %s\n",
+         pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   }
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read the name of the interaction matrix file */
+
+   if ( fgets (pImFileName, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the name of the IM from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pImFileName[strlen(pImFileName) - 1] == '\n' )
+   {
+      pImFileName[strlen(pImFileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): last character of %s was return\n", 
+               pImFileName );
+#endif
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): IM file name: %s\n", pImFileName );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read the name of the control matrix file */
+
+   if ( fgets (pCmFileName, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the name of the CM from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pCmFileName[strlen(pCmFileName) - 1] == '\n' )
+   {
+      pCmFileName[strlen(pCmFileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): last character of %s was return\n", 
+               pCmFileName );
+#endif
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): CM file name: %s\n", pCmFileName );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read the name of the FG control matrix file */
+
+   if ( fgets (pFgCmFileName, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (  
+      "Failed to read the name of the FG CM from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pFgCmFileName[strlen(pFgCmFileName) - 1] == '\n' )
+   {
+      pFgCmFileName[strlen(pFgCmFileName) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): last character of %s was return\n", 
+               pFgCmFileName );
+#endif
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): FG CM file name: %s\n", pFgCmFileName );
+#endif
+
+   /* Skip the next lines of comments */
+
+   for ( i = 0 ; i < 8 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         printf ( 
+         "Failed to read the next line of comments from the AO init file %s\n",
+         pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   }
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read threshold */
+
+   if ( (fscanf (pFile, "%lf\n", pThresh)) == EOF )
+   {
+      printf ( "Failed to read threshold from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): threshold = %f\n", *pThresh );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read total threshold */
+
+   if ( (fscanf (pFile, "%lf\n", pTotalThresh)) == EOF )
+   {
+      printf ( "Failed to read total threshold from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): total threshold = %f\n", *pTotalThresh );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read angle between M2 and P1 */
+
+   if ( (fscanf (pFile, "%lf\n", pAngleM2)) == EOF )
+   {
+      printf ( "Failed to read angleM2 from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): angleWithM2 = %f\n", *pAngleM2 );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf ( 
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read angle between M1 and P1 */
+
+   if ( (fscanf (pFile, "%lf\n", pAngleM1)) == EOF )
+   {
+      printf ( "Failed to read angleM1 from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): angleWithM1 = %f\n", *pAngleM1 );
+#endif
+
+   /* End - close and return */
+
+   fclose (pFile);
 
    return ( OK );
 }
