@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: sdsuLib.c,v 1.6 2000-06-21 01:28:36 cboyer Exp $"};
+   "$Id: sdsuLib.c,v 1.7 2000-08-11 19:49:56 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -386,7 +386,7 @@ LOCAL SDSU_CMD_DEF sdsuCmdTable [] =
    {"LDA", 1, 0, 200000, BIT_FIELD_REPLY_DON},  /* Load application.          */
    {"LDP", 0, 0, 0, BIT_FIELD_REPLY_NONE},      /* Load parameters.           */
    {"RDC", 0, 0, 2000000, BIT_FIELD_REPLY_DON}, /* Readout CCD.               */
-   {"RDM", 1, 0, 1000000, BIT_FIELD_REPLY_DAT | BIT_FIELD_REPLY_AFE},
+   {"RDM", 1, 0, 2000000, BIT_FIELD_REPLY_DAT | BIT_FIELD_REPLY_AFE},
                                                 /* Read memory.               */
    {"RRS", 0, 0, 1000000, BIT_FIELD_REPLY_SYR}, /* Reset remote system.       */
    {"SRA", 2, 0, 500000, BIT_FIELD_REPLY_DON},  /* Set reply address.         */
@@ -1095,7 +1095,7 @@ uint32 sdsuVersionGet ( SDSU_ID         context,
     */
 
    if (destId == SDSU_IDENT_HST)
-      return (sdsu_getVersion ("$Revision: 1.6 $"));
+      return (sdsu_getVersion ("$Revision: 1.7 $"));
    
    /*
     * The SDSU context must be valid if the code gets this far, as the version 

@@ -65,3 +65,14 @@ V1-1 10 July 2000 CB:
 V1-2 11 July 2000 CB:
 ---------------------
   - minor bug : testKit.c
+
+V1-3 11 August 2000 CB:
+-----------------------
+  - add offset per defaults : 2100, 2250, 2530,2190
+  - temp + offsets in detInit + detReset
+  - fix a bug in aoThresholdCompute(): replace ratePixel by (1.0 - ratePixel)
+  - sumVect in aoCtrlContextInit was not completely set to zero (2xSUBAP_NB) 
+    instead of CCD_SIZE
+  - remove offset per defaults : 2100, 2250, 2530,2190
+
+newDev equivalent to V1-3

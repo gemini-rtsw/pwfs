@@ -2642,7 +2642,7 @@ STATUS aoCtrlContextInit (
    aoCtrlId->focusCounter = 0;
    aoCtrlId->previousFocus = 0.0;
 
-   for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
+   for ( i = 0 ; i < CCD_SIZE ; i ++ )
        aoCtrlId->sumVect[i] = 0.0;
 
    aoCtrlId->initFlag = TRUE;
@@ -3913,7 +3913,7 @@ STATUS aoThresholdCompute (
 
    /* Determine the threshold: corresponds to ratePixel% of brightest pixels */
 
-   index = (int) ceil ((double)(aoCcdId->pixelsNb) * ratePixel);
+   index = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
    printf ( "index = %d\n" ,index);
 
    *pThreshold = *(pn + index);

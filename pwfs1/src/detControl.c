@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.12 2000-07-12 00:51:43 cboyer Exp $"};
+   "$Id: detControl.c,v 1.13 2000-08-11 19:49:55 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -529,6 +529,11 @@ STATUS   detControl
                                     /* DSP code                               */
    uint32         tempCode;         /* Target temperature code                */
    uint32         tempCoeff;        /* Coefficient for temperature control    */
+   /*long           offset0;*/          /* ADC offset for output 0.               */
+   /*long           offset1;*/          /* ADC offset for output 1.               */
+   /*long           offset2;*/          /* ADC offset for output 2.               */
+   /*long           offset3;*/          /* ADC offset for output 3.               */
+
 
    /* Variables associated with active optics */
 
@@ -1461,6 +1466,61 @@ STATUS   detControl
       readTempReadyFlag = TRUE ;
    }
 
+   /*
+    * Set the default offsets for the PWFS1 CCD sectors
+    */
+
+   /*if ( sdsuId == NULL )
+   {
+      ERROR_LOG ("Failed to set CCD default offset");
+      initFailed = TRUE;
+   }
+   else
+   {
+      offset0 = 2100 ;
+      offset1 = 2250 ;
+      offset2 = 2530 ;
+      offset3 = 2190 ;
+
+      MESSAGE_LOG4 (MSG_LOG, 
+              "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
+              offset0, offset1, offset2, offset3);
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
+                         (uint32) offset0 ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 0 parameter");
+         initFailed = TRUE;
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
+                         (uint32) offset1 ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 1 parameter");
+         initFailed = TRUE;
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
+                         (uint32) offset2 ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 2 parameter");
+         initFailed = TRUE;
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
+                         (uint32) offset3 ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 3 parameter");
+         initFailed = TRUE;
+      }
+
+      if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to activate TIMING DSP parameters with LDP command");
+         initFailed = TRUE;
+      }
+   }*/
 
    /*
     * Now init all the geometry SIR records
@@ -6700,7 +6760,12 @@ uint32 detInit
                                  /* memory                                    */
    int          nPixels;         /* Total number of digitised pixels.         */
    int          newMaxFrames;    /* New maximum number of frames.             */
-
+   /*long         offset0;*/         /* ADC offset for output 0.                  */
+   /*long         offset1;*/         /* ADC offset for output 1.                  */
+   /*long         offset2;*/         /* ADC offset for output 2.                  */
+   /*long         offset3;*/         /* ADC offset for output 3.                  */
+   uint32       tempCode;        /* Target temperature code                   */
+   uint32       tempCoeff;       /* Coefficient for temperature control       */
    
    /*
     * Initialise the error number.
@@ -7113,6 +7178,67 @@ uint32 detInit
    }
 
    /*
+    * Set the default offsets for the PWFS1 CCD sectors
+    */
+
+   /*offset0 = 2100 ;
+   offset1 = 2250 ;
+   offset2 = 2530 ;
+   offset3 = 2190 ;
+
+   MESSAGE_LOG4 (MSG_LOG,
+           "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
+           offset0, offset1, offset2, offset3);
+
+   if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
+                      (uint32) offset0 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 0 parameter");
+   }
+
+   if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
+                      (uint32) offset1 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 1 parameter");
+   }
+
+   if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
+                      (uint32) offset2 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 2 parameter");
+   }
+
+   if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
+                      (uint32) offset3 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 3 parameter");
+   }
+
+   if (sdsuPrimitive (*pSdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ( "Failed to activate TIMING DSP parameters with LDP command");
+   }*/
+
+   /*
+    * Set the default temperature to -20C
+    */
+
+   tempCode = (uint32)1282 ;
+   tempCoeff = (uint32)128 ;
+
+   MESSAGE_LOG2 (MSG_LOG,
+                 "Defining temperature control parameters: %#lx %#lx",
+                 tempCode, tempCoeff);
+
+   if ( (sdsuParamWrite (*pSdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
+         == ERROR) ||
+        (sdsuParamWrite (*pSdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
+         == ERROR) )
+   {
+      ERROR_LOG ("Error setting temperasture control parameters");
+   }
+
+   /*
     * If the error number is good after initialisation the health of
     * the controller can be restored to "GOOD".
     *
@@ -7212,12 +7338,19 @@ uint32 detReset
    uint32       resetMask;         /* Mask specifying what to reset.          */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                              /* Path name for file.                    */
+                                   /* Path name for file.                     */
    char         pOmfFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                              /* File name.                             */
+                                   /* File name.                              */
    char         pFullOmfFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-                              /* Combined path name and file name.      */
-   BOOL         limitAdrsRange;      /* Flag for limiting address range */
+                                   /* Combined path name and file name.       */
+   BOOL         limitAdrsRange;    /* Flag for limiting address range         */
+
+   /*long         offset0;*/           /* ADC offset for output 0.                */
+   /*long         offset1;*/           /* ADC offset for output 1.                */
+   /*long         offset2;*/           /* ADC offset for output 2.                */
+   /*long         offset3;*/           /* ADC offset for output 3.                */
+   uint32       tempCode;          /* Target temperature code                 */
+   uint32       tempCoeff;         /* Coefficient for temperature control     */
 
    /*
     * Initialise the error number and obtain the attributes provided with the 
@@ -7431,6 +7564,67 @@ uint32 detReset
          ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
          errorNumber = S_detControl_SDSU_ERROR;
       }
+   }
+
+   /*
+    * Set the default offsets for the PWFS1 CCD sectors
+    */
+
+   /*offset0 = 2100 ;
+   offset1 = 2250 ;
+   offset2 = 2530 ;
+   offset3 = 2190 ;
+
+   MESSAGE_LOG4 (MSG_LOG,
+                 "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
+                 offset0, offset1, offset2, offset3);
+
+   if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
+                      (uint32) offset0 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 0 parameter");
+   }
+
+   if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
+                      (uint32) offset1 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 1 parameter");
+   }
+
+   if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
+                      (uint32) offset2 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 2 parameter");
+   }
+
+   if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
+                      (uint32) offset3 ) == ERROR )
+   {
+      ERROR_LOG ("Error setting ADC offset 3 parameter");
+   }
+
+   if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ( "Failed to activate TIMING DSP parameters with LDP command");
+   }*/
+
+   /*
+    * Set the default temperature to -20
+    */
+
+   tempCode = (uint32)1282 ;
+   tempCoeff = (uint32)128 ;
+
+   MESSAGE_LOG2 (MSG_LOG,
+                 "Defining temperature control parameters: %#lx %#lx",
+                 tempCode, tempCoeff);
+
+   if ( (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
+         == ERROR) ||
+        (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
+         == ERROR) )
+   {
+      ERROR_LOG ("Error setting temperature control parameters");
    }
 
    /*
@@ -13195,7 +13389,7 @@ STATUS detHeadTempGet
    {
 
       meanValue6 = meanValue7 = 0.0;
-      for ( sample=0; sample<20; sample++)
+      for ( sample=0; sample<1; sample++)
       {
          if (sdsuParamRead (detSdsuIdP1, SDSU_IDENT_UTL, "U_ADC6", &value) == 
              ERROR)
@@ -13220,8 +13414,8 @@ STATUS detHeadTempGet
          }
       }
 
-      meanValue6 /= 20.0;
-      meanValue7 /= 20.0;
+      /*meanValue6 /= 20.0;
+      meanValue7 /= 20.0;*/
 
       sdsuTemp6 = meanValue6 * (-0.01545); 
                                       /* 0.01545 is not quite SDSU_TEMP_UNIT*/
