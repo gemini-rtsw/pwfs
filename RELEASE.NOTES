@@ -225,3 +225,5 @@ V3-2 04 March 2002 CB:
     computed between index1 and index2
 
 dev equivalent V3-2
+  - writeWfsToSynchro(): replace the running average for the focus by a
+    second order butterworth filter

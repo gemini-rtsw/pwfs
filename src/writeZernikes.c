@@ -81,6 +81,7 @@
  * 30-Nov-2001: cb - add writeToRm to writeWfsToSynchro
  * 14-Dec-2001: cb - add threshold in real time
  * 21-Jan-2002: cb - add wfsStatus to writeWfsToTcs()
+ * 12-Mar-2002: cb - implement butterworth filter to focus
  *
  */
 /* INDENT ON */
@@ -1261,6 +1262,7 @@ STATUS writeWfsToSynchro
 
       focus = *(pz+2) - focusModel.focus;
 
+#ifdef RUNNING_AVERAGE
       if ( aoCtrlId->focusCounter == 0 )
       {
          aoCtrlId->previousFocus = focus;
@@ -1270,12 +1272,15 @@ STATUS writeWfsToSynchro
       averageFocus = 
       (aoCtrlId->slidingFocusGain * focus) +
       (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus) ;
+#else
+      averageFocus = newDfilter (focus,2);
+#endif 
 
       result.z4 = averageFocus * aoCtrlId->fgScaleFactorVect[2];
 
+#ifdef RUNNING_AVERAGE
       aoCtrlId->previousFocus = averageFocus;
-
-      /*result.z4 = (*(pz+2)) - (pWfs->focusscale * f->null[7]);*/
+#endif
 
       /* store the vector after rotation into pFgVectAfterRot */
 
