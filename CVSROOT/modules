@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.28 2001-01-13 00:34:11 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.29 2001-01-13 00:37:19 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -79,6 +79,8 @@ somtest	mbec/sometest
 niri	niri
 #D	niri	Gemini NIRI Software
 niri	niri
+#M	comcon	Components Controller
+comcon	niri/comcon
 
 #D	scs	Gemini Secondary Control System
 #M	scs	Gemini Secondary Control System
@@ -91,6 +93,3 @@ m2	m2
 #D	m2cfg	Gemini M2 Tilt System Configuration
 #M	m2cfg	Gemini M2 Tilt System Configuration
 m2cfg	m2cfg
-#D	comcon	Components Controller
-#M	comcon	Components Controller
-comcon	niri/comcon
