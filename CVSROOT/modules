@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.55 2001-08-16 22:59:12 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.56 2001-08-16 23:01:05 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -83,8 +83,8 @@ gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
 #M	vaioc	IOC vaio
 vaioc	mbec/vaioc
 #M	comcon	Components Controller
-#D	niri	Gemini NIRI Software
-niri	niri
+#D	NIRI	Gemini NIRI Software
+NIRI	niri
 #D	niri	Gemini NIRI Software
 niri	niri
 #M	gn-4	Detector Controller (1fps coadder)
