@@ -1,8 +1,0 @@
-#
-# Script enables wdog timer board reset for MVME167
-#	*0xfff4004c = 0x000c00 -> 4-sec timeout
-#	*0xfff4006c = 0x030000 -> local reset (0x050000->sysrst)
-#
-*0xfff4004c |= 0xc00
-__wdTemp = *0xfff40060 | 0x230000
-period (1, vxMemProbe, 0xfff40060, 1, 4, &__wdTemp)
