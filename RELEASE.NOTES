@@ -178,16 +178,4 @@ V2-2 13 September 2001 CB:
     according to the site. During the init process, model init file is read 
     and the models are initialized
 
-V2-3 17 September 2001 CB:
---------------------------
-  - Threshold per subaperture implemented
-
-V2-4 28 November 2001 CB:
--------------------------
-  - TT guide values x 2 when binning. Gains for TT divided by 2 in par files.
-
-V2-5 03 December 2001 CB:
--------------------------
-  - add writeToRm flag when doing guiding
-
-newDev equivalent to V2-5
+test equivalent to V2-2

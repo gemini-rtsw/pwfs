@@ -72,13 +72,8 @@
  *   aoModTrefFileRead () - Read trefoil zero point model from model file
  *   aoModComaFileRead () - Read coma zero point model from model file
  *   aoModFocFileRead () - Read focus zero point model from model file
- *   aoThresholdPerSubapCompute() - Compute a threshold per subaperture
  * 
  *INDENT-OFF*
- *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
- *   31 Oct 2001: CB - aoGlobalGuide and aoGuideAndFocus x2 the TT values when
- *                     binning
- *   13 Sep 2001: CB - Add aoThresholdPerSubapCompute()
  *   08 Aug 2001: CB - Major modifications to have ao correction with P2 also
  *   29 Mar 2001: CB - For guide and focus multiply focus per two when binning
  *                     for TT fix bug in rotation matrix
@@ -2504,10 +2499,7 @@ STATUS aoCtrlContextInit (
    }
 
    aoCtrlId->threshold = value;
-   aoCtrlId->thresholdDarkFull = value;
-   aoCtrlId->thresholdDarkBin = value;
-   for ( i = 0 ; i < aoCcdId->subapUsedNb ; i ++ )
-       aoCtrlId->thresholdVect[i] = value;
+   aoCtrlId->thresholdDark = value;
    aoCtrlId->thresholdMethod = AO_THRESH_VALUE;
    aoCtrlId->thresholdMultCoeff = 0.0;
    aoCtrlId->thresholdRate = 0.0;
@@ -3104,10 +3096,7 @@ STATUS aoCtrlContextShow (
 
    printf ( "Threshold method: %d\n" , aoCtrlId->thresholdMethod );
    printf ( "Threshold: %f\n" , aoCtrlId->threshold );
-   printf ( "Threshold dark (no bin): %f\n" , aoCtrlId->thresholdDarkFull );
-   printf ( "Threshold dark (bin): %f\n" , aoCtrlId->thresholdDarkBin );
-   for ( i = 0 ; i < aoCcdId->subapUsedNb ; i ++ )
-       printf ( "ThresholdVect[%d] = %f\n" , i , aoCtrlId->thresholdVect[i]);
+   printf ( "Threshold dark: %f\n" , aoCtrlId->thresholdDark );
    printf ( "Threshold rate: %f\n" , aoCtrlId->thresholdRate );
    printf ( "Threshold mult coeff: %f\n" , aoCtrlId->thresholdMultCoeff );
    printf ( "Average total counts method: %d\n" , aoCtrlId->totalMethod );
@@ -3199,8 +3188,7 @@ STATUS aoDarkSubtract (
  *
  *   INVOCATION:
  *   aoGlobalGuide (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, pGuidesVect,
- *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
- *                  writeToRm)
+ *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3219,7 +3207,6 @@ STATUS aoDarkSubtract (
  *                                     vectors
  *   (<) pWfsStatus       (int *)      Pointer to the status flag when 
  *                                     computing the centroids 
- *   (>) writeToRm        (int)        Flag to write or not to RM (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3257,8 +3244,7 @@ STATUS aoGlobalGuide (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -3336,18 +3322,18 @@ STATUS aoGlobalGuide (
       *(pGuidesVect) = xCenter - (x / total);
       *(pGuidesVect + 1) = yCenter - (y / total);
 
-      if ( aoCcdId->binningFlag == TRUE )
-      {
-         *(pFgVect) = 2.0 * (*pGuidesVect);
-         *(pFgVect + 1) = 2.0 * (*(pGuidesVect+1));
-         *(pFgVect + 2) = 0.0;
-      }
-      else
-      {
-         *(pFgVect) = (*pGuidesVect);
-         *(pFgVect + 1) = *(pGuidesVect+1);
-         *(pFgVect + 2) = 0.0;
-      }
+/*
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
+                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
+
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect+1)) -
+                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
+*/
+      *(pFgVect) = (*pGuidesVect);
+
+      *(pFgVect + 1) = *(pGuidesVect+1);
+
+      *(pFgVect + 2) = 0.0;
 
       *(pFgErrorsVect) = 0.0;
       *(pFgErrorsVect + 1) = 0.0;
@@ -3382,8 +3368,9 @@ STATUS aoGlobalGuide (
       *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
+ 
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
-                          pTime, writeToRm) != OK )
+                          pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -3401,7 +3388,7 @@ STATUS aoGlobalGuide (
  *   INVOCATION:
  *   aoGlobalGuideAndError (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                          pGuidesVect, pFgVect, pFgVectAfterRot, 
- *                          pFgErrorsVect, pTime, pWfsStatus, writeToRm)
+ *                          pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3420,7 +3407,6 @@ STATUS aoGlobalGuide (
  *                                     the vectors
  *   (<) pWfsStatus       (int *)      Pointer to the status flag when 
  *                                     computing the centroids 
- *   (>) writeToRm        (int)        Write to RM flag (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3459,8 +3445,7 @@ STATUS aoGlobalGuideAndError (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -3557,19 +3542,18 @@ STATUS aoGlobalGuideAndError (
 
       *(pGuidesVect) = xCenter - xTemp;
       *(pGuidesVect + 1) = yCenter - yTemp;
+/*
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
+                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
-      if ( aoCcdId->binningFlag == TRUE )
-      {
-         *(pFgVect) = 2.0 * (*(pGuidesVect));
-         *(pFgVect + 1) = 2.0 * (*(pGuidesVect +1));
-         *(pFgVect + 2) = 0.0;
-      }
-      else
-      {
-         *(pFgVect) = *(pGuidesVect);
-         *(pFgVect + 1) = *(pGuidesVect +1);
-         *(pFgVect + 2) = 0.0;
-      }
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
+                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
+*/
+      *(pFgVect) = *(pGuidesVect) ;
+
+      *(pFgVect + 1) = *(pGuidesVect +1);
+
+      *(pFgVect + 2) = 0.0;
 
       xSigma = (((xErr / total) - (xTemp * xTemp))/total);
       ySigma = (((yErr / total) - (yTemp * yTemp))/total);
@@ -3614,7 +3598,7 @@ STATUS aoGlobalGuideAndError (
 
  
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
-                          pFgErrorsVect, pTime, writeToRm) != OK )
+                          pFgErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -3692,10 +3676,6 @@ STATUS aoImageFloatAverage (
           *(p++) = *(pi++);
       }
       aoCtrlId->coaddCounter ++;
-#ifdef DEBUG
-      printf ( "Pixel[0]=%f, Sum[0]=%f\n" , *pImage, aoCtrlId->sumVect[0]);
-#endif
-
    }
    else
    {
@@ -3706,10 +3686,6 @@ STATUS aoImageFloatAverage (
              *p = ( *(p) + *(pi++) );
          }
          aoCtrlId->coaddCounter ++;
-#ifdef DEBUG
-         printf ( "Pixel[0]=%f, Sum[0]=%f\n" , *pImage, aoCtrlId->sumVect[0]);
-#endif
-
       }
 
       if  ( aoCtrlId->coaddCounter == imageNb )
@@ -3719,10 +3695,6 @@ STATUS aoImageFloatAverage (
                *p = (*(p) / imageNb);
           }
           aoCtrlId->coaddCounter = 0;
-#ifdef DEBUG
-          printf ( "Sum[0]=%f\n" , aoCtrlId->sumVect[0]);
-#endif
-
       }
    }
 
@@ -3995,7 +3967,6 @@ STATUS aoCentroidsCompute (
    float *      pi;
    float *      pMin;
    float *      pMax;
-   double       thresh;
    double       totalSubap;
    double       total;
    double       xSubap;
@@ -4023,7 +3994,6 @@ STATUS aoCentroidsCompute (
               xSubap = (double)(0.0);
               ySubap = (double)(0.0);
               totalSubap = (double)(0.0);
-              thresh = aoCtrlId->thresholdVect[m];
 
               xSubapCenter = aoCtrlId->refWfsVect[2*m] - aoCcdId->xRaster*l;
               ySubapCenter = aoCtrlId->refWfsVect[2*m+1] -
@@ -4043,8 +4013,7 @@ STATUS aoCentroidsCompute (
 
                   for ( pi = pMin ; pi < pMax ; pi ++)
                   {
-                      /*pixelVal = (double)(*pi) - aoCtrlId->threshold;*/
-                      pixelVal = (double)(*pi) - thresh;
+                      pixelVal = (double)(*pi) - aoCtrlId->threshold;
                       if ( pixelVal > (double)(0.0) )
                       {
                          xSubap += pixelVal*j;
@@ -5222,14 +5191,14 @@ STATUS aoCbFgCtrlSave
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "./D%04d%02d%02dT%02d%02d%02dP2.cbcfg",
+                   "./D%04d%02d%02dT%02d%02d%02dP2.cbfgc",
                    timeArray[0], timeArray[1], timeArray[2], timeArray[3],
                    timeArray[4], timeArray[5]);
       }
       else
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "%s/D%04d%02d%02dT%02d%02d%02dP2.cbcfg",
+                   "%s/D%04d%02d%02dT%02d%02d%02dP2.cbfgc",
                    pCbFgCtrlFilePath, timeArray[0], timeArray[1], timeArray[2],
                    timeArray[3], timeArray[4], timeArray[5]);
       }
@@ -5239,11 +5208,11 @@ STATUS aoCbFgCtrlSave
       if ( ( strcmp (pCbFgCtrlFilePath, "") == 0 ) ||
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
-         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP2.cbcfg" );
+         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP2.cbfgc" );
       }
       else
       {
-         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP2.cbcfg",
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP2.cbfgc",
                    pCbFgCtrlFilePath );
       }
    }
@@ -5436,8 +5405,7 @@ STATUS aoCbFgCtrlSave
  *   INVOCATION:
  *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                    pCentroidsVect, pErrorCentroidsVect, pFgVect, 
- *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
- *                    writeToRm)
+ *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the image from which to 
@@ -5459,7 +5427,6 @@ STATUS aoCbFgCtrlSave
  *                                        the vectors
  *   (<) pWfsStatus          (int *)      Pointer to the status flag when 
  *                                        computing the centroids 
- *   (>) writeToRm           (int)        Write to RM flag (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -5502,8 +5469,7 @@ STATUS aoGuideAndFocus (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -5556,15 +5522,18 @@ STATUS aoGuideAndFocus (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
-      if ( aoCcdId->binningFlag == TRUE )
-      {
-         *(fg) *= 2.0;
-         *(fg+1) *= 2.0;
-         *(fg+2) *= 2.0;
-      }
-
+/*
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*fg) +
+                   aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
+                       aoCtrlId->sinAngleWithM2 * (*fg) );
+*/
       *(pFgVect) = *(fg);
       *(pFgVect + 1) = *(fg + 1);
+
+      if ( aoCcdId->binningFlag == TRUE )
+         *(fg+2) *= 2.0;
+
       *(pFgVect + 2) = *(fg+2);
 
       *(pErrorFg + 0) = 0.0;
@@ -5591,7 +5560,7 @@ STATUS aoGuideAndFocus (
    };
  
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
-                          pFgErrorsVect, pTime, writeToRm) != OK )
+                          pFgErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -8227,158 +8196,4 @@ STATUS aoModFocFileRead (
    fclose (pFile);
 
    return ( OK );
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   aoThresholdPerSubapCompute
- *
- *   INVOCATION:
- *   aoThresholdPerSubapCompute (pImage, aoCcdId, ratePixel, pThreshold)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage         (float *)    Pointer to the image from which to compute
- *                                   the centroids
- *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
- *                                   structure
- *   (>) ratePixel      (double)     Rate of the brightest pixels to determine
- *                                   the thresholds - should be between 0 and 1
- *   (<) pThreshold     (double *)   Pointer to the threshold vector 
- *
- *   FUNCTION VALUE:
- *   (STATUS) OK if successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   To compute the threshold per subaperture
- *
- *   DESCRIPTION:
- *   This routine allows to compute the optimized threshold per subaperture 
- *   from a PWFS2 spots image pImage according to the following criteria: 
- *   ratePixel % of the brightest pixels of the subaperture.
- *
- *   EXTERNAL VARIABLES:
- *   None.
- *
- *   PRIOR REQUIREMENTS:
- *
- *   INCLUDE FILES:
- *   aoP2Lib.h
- *   fitsio.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-STATUS aoThresholdPerSubapCompute (
-   float *      pImage,
-   AO_CCD_ID    aoCcdId,
-   double       ratePixel,
-   double *     pThreshold
-   )
-{
-   int          index;
-   int          gap;
-   int          pixelsNb;
-   int          subapNb;
-   int          i, j;
-   int          l, k;
-   int          m;
-   float        temp;
-   float *      pn;
-   float *      pi;
-   float *      pMin;
-   float *      pMax;
-   IMAGE_VECT   newImageVect;
-
-   /* Check range of ratePixel: should be between 0 and 1 */
-
-   if ( (ratePixel < 0.0) || (ratePixel > 1.0) )
-   {
-      ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
-                   ERROR_LOG_SAVE, ratePixel );
-      return (ERROR);
-   }
-
-   /* Store the pixels of the subaperture into newImageVect */
-
-   m=0;
-   for ( k = 0 ; k < 2 * aoCcdId->ySubapNb ; k ++ )
-   {
-       for ( l = 0 ; l < 2 * aoCcdId->xSubapNb ; l ++ )
-       {
-           subapNb = 2*k*aoCcdId->xSubapNb + l;
-           pn = newImageVect;
-
-           if ( aoCcdId->subapUsedVect[subapNb] == TRUE)
-           {
-              pixelsNb = aoCcdId->xRaster * aoCcdId->yRaster; 
-
-#ifdef DEBUG
-              printf ( "subaperture NB = %d is used\n" , subapNb );
-#endif
-
-              for ( i = 1 ; i <= aoCcdId->yRaster ; i ++ )
-              {
-                  pMin = pImage + ((i-1)*aoCcdId->xPixels) +
-                         (l*aoCcdId->xRaster) +
-                         (k * aoCcdId->xPixels * aoCcdId->yRaster);
-                  pMax = pMin + aoCcdId->xRaster;
-
-                  for ( pi = pMin ; pi < pMax ; pi ++)
-                      *(pn ++) = *pi;
-              }
-
-#ifdef DEBUG
-              pn = newImageVect;
-              printf ( "Pixels = " );
-              for ( i = 0; i < pixelsNb ; i ++ )
-                  printf ( "%f " , *(pn + i));
-              printf ( "\n" );
-#endif
-
-              /* Now sort newImageVector */
-
-              pn = newImageVect;
-
-              for ( gap = pixelsNb/2 ; gap > 0 ; gap /= 2 )
-              {
-                  for ( i = gap ; i < pixelsNb ; i ++ )
-                  {
-                      for ( j = i - gap ; j >= 0 && (*(pn+j)>*(pn+j+gap)) ; 
-                            j -= gap)
-                      {
-                          temp = *(pn+j);
-                          *(pn+j) = *(pn+j+gap);
-                          *(pn+j+gap) = temp;
-                      }
-                  }
-              }
-
-#ifdef DEBUG
-              pn = newImageVect;
-              printf ( "Pixels = " );
-              for ( i = 0; i < pixelsNb ; i ++ )
-                  printf ( "%f " , *(pn + i));
-              printf ( "\n" );
-#endif
-
-              /* Now compute the threshold for this subaperture */
-
-              index = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
-
-              *(pThreshold + m) = *(pn + index);
-
-#ifdef DEBUG
-              printf ( "index = %d\n" ,index);
-              printf ( "threshold[%d] = %f\n" , m , *(pThreshold + m));
-#endif
-              m ++;
-           }
-       }
-   }
-
-   return (OK);
 }
