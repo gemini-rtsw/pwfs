@@ -8643,8 +8643,10 @@ double aoTotalThresholdCompute (
 
    if ( N > 2.0 )
    {
+#ifdef DEBUG
       ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
                    ERROR_LOG_SAVE, N );
+#endif
       N = 2;
    };
 
