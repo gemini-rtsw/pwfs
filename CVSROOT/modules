@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.3 1998-07-23 21:37:02 ajf Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.4 1998-07-23 21:50:20 ajf Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -45,6 +45,22 @@ taginfo		-i /home/ajf/bin/mkmodules CVSROOT taginfo
 # Add more modules here 
 #
 
-#D	pcs	Primary Control System applications
-#M	pcs	Prototype EPICS Control System
+#D	ecs	Gemini Enclosure Control System
+#M	ecs	Gemini Enclosure Control System
+ecs     ecs
+
+#D	gis	Gemini Interlock System
+#M	gis	Gemini Interlock System
+gis     gis
+
+#D	gws	Gemini Weather Server
+#M	gws	Gemini Weather Server
+gws     gws
+
+#D	mcs	Gemini Mount Control System
+#M	mcs	Gemini Mount Control System
+mcs     mcs
+
+#D	pcs	Gemini Primary Control System
+#M	pcs	Gemini Primary Control System
 pcs	pcs
