@@ -51,6 +51,7 @@ DATA	= \
 	$(wildcard ../*.sub*) \
 	$(wildcard ../*.wcs*) \
 	$(wildcard ../*.dat*) \
+	$(wildcard ../*.ST*) \
 	$(wildcard ../*.fits*)
 
 # Any extra targets can be placed in a TARGETS macro (the build target
