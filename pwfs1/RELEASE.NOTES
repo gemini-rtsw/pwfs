@@ -170,3 +170,9 @@ V2-3 29 May 2001 CB:
   - add detSigInitModComa : zero point model for coma off axis
   - scale factors for TTF and ao have been removed from aoP1Lib.c and add in
     writeZernikes.c
+
+V2-4 15 June 2001 CB:
+---------------------
+  - add detSigInitModFoc : zero point model for focus off axis
+  - sliding average for focus removed from aoP1Lib.c and add in writeZernikes.c
+  - reject observe command if no binning and exposure time < 0.01s

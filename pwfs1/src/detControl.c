@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.23 2001-05-30 04:21:06 cboyer Exp $"};
+   "$Id: detControl.c,v 1.24 2001-06-16 00:26:29 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   15 Jun 2001: CB - reject observe command if exposure time < 0.01 and no
+ *                     binning
+ *   06 Jun 2001: CB - add detSigInitModFoc
  *   29 May 2001: CB - add detSigInitModComa
  *   23 May 2001: CB - replace command detSComa by detSigInitModAst and 
  *                     add detSigInitModTref
@@ -237,6 +240,12 @@ extern COMA_ZP_MODEL_ID_STRUCT comaModel;
 extern SEM_ID accessComaModel;     /* Semaphore Coma model defined in         */
                                    /* writeZernikes.c                         */
 
+extern FOCUS_ZP_MODEL_ID_STRUCT focusModel;
+                                   /* Focus model defined in writeZernikes.c  */
+
+extern SEM_ID accessFocusModel;    /* Semaphore Focus model defined in        */
+                                   /* writeZernikes.c                         */
+
 /******************************************************* External functions ***/
 
 extern void ImpMaster ();
@@ -430,6 +439,10 @@ LOCAL uint32 detSigInitModTref (CAD_CMD_CONTEXT cadCmdContext,
 LOCAL uint32 detSigInitModComa (CAD_CMD_CONTEXT cadCmdContext, 
                                 int commandNumber, SDSU_ID sdsuId, 
                                 OBS_ID obsId);
+
+LOCAL uint32 detSigInitModFoc (CAD_CMD_CONTEXT cadCmdContext, 
+                               int commandNumber, SDSU_ID sdsuId, 
+                               OBS_ID obsId);
 
 /******************************************* Plus some additional functions ***/
 
@@ -2018,6 +2031,14 @@ STATUS   detControl
             /* Init zero point model for coma off axis */
             errorNumber =
             detSigInitModComa (cadCmdContext, commandNumber, sdsuId, obsId); 
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_FOCUS_MODEL)
+         {
+
+            /* Init zero point model for focus off axis */
+            errorNumber =
+            detSigInitModFoc (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
          else
@@ -4852,6 +4873,15 @@ uint32 detObserveStart
          errorNumber = S_detControl_BAD_ATTRIBUTE;
          return (errorNumber);
       }
+
+      if ( (exposure < 0.01 ) && (aoCcdId->binningFlag == FALSE ) )
+      {
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
+                     "Invalid exposure time %f seconds if no binning",
+                     ERROR_LOG_NOW, exposure);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      } 
 
       obsId->exposureTime = exposure;
       aoCbImId->exposureTime = exposure;
@@ -20244,6 +20274,126 @@ uint32 detSigInitModComa
       comaModel.applyModel = apply;
 
       semGive (accessComaModel);
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitModFoc
+ *
+ *   INVOCATION:
+ *   detSigInitModFoc (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitModFoc command
+ *
+ *   DESCRIPTION:
+ *   This function updates the external structure focusModel
+ * 
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitModFoc
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32       errorNumber;      /* Error number reported by task.           */
+
+   double       a1;
+   double       a2;
+   double       p1;
+   double       p2;
+   double       c;
+   long         apply;
+
+
+   /*
+    * Initialise the error number 
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Get the attributes provided with this command.
+    */
+       
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&a1);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&a2);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&p1);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&p2);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&c);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&apply);
+
+   /*
+    * Update the focusModel structure
+    */
+
+   if (semTake (accessFocusModel, 100) != OK)
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Timeout on mutex acess to focusModel",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   else
+   {
+      focusModel.a1 = a1;
+      focusModel.a2 = a2;
+      focusModel.p1 = p1;
+      focusModel.p2 = p2;
+      focusModel.c = c;
+      focusModel.applyModel = apply;
+
+      semGive (accessFocusModel);
    }
 
    return (errorNumber);

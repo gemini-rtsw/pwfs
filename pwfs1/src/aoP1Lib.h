@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 06 June 2001: CB - add FOCUS_ZP_MODEL_ID structure 
  * 29 May 2001: CB - add COMA_ZP_MODEL_ID structure 
  * 23 May 2001: CB - replace ZP_MODEL_ID by AST_ZP_MODEL_ID structure
  *                   add TREF_ZP_MODEL_ID structure as well
@@ -723,6 +724,22 @@ typedef struct
                                        /* TRUE|FALSE                          */
 
 } COMA_ZP_MODEL_ID_STRUCT, *COMA_ZP_MODEL_ID;
+
+/************************ Structure for zero point model for focus off axis ***/
+
+typedef struct
+{
+
+   double   a1;                        /* Scale factor of cos (theta)         */
+   double   a2;                        /* Scale factor of cos (2*theta)       */
+   double   p1;                        /* Phase of cos (theta)                */
+   double   p2;                        /* Phase of cos (2*theta)              */
+   double   c;                         /* Constant term for focus             */
+   double   focus;                     /* Zero point model for comaX          */
+   int      applyModel;                /* Apply the focus zero point model    */
+                                       /* TRUE|FALSE                          */
+
+} FOCUS_ZP_MODEL_ID_STRUCT, *FOCUS_ZP_MODEL_ID;
 
 /**************************************************************** Functions ***/
 

@@ -68,6 +68,7 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   06 June 2001: CB - For focus sliding average is now in writeZernikes.c 
  *   29 May 2001: CB - For guide and focus and ao remove scale factor 
  *                     multiplication - now scale factor multiplication is 
  *                     in writeZernikes.c 
@@ -5610,6 +5611,7 @@ STATUS aoGuideAndFocus (
       if ( aoCcdId->binningFlag == TRUE )
 	 *(fg+2) *= 2.0;
 
+#ifdef GAIN
       if ( aoCtrlId->focusCounter == 0 )
       {
          aoCtrlId->previousFocus = *(fg + 2);
@@ -5618,14 +5620,17 @@ STATUS aoGuideAndFocus (
      
       averageFocus = (aoCtrlId->slidingFocusGain * (*(fg+2))) +
          (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus);
+#endif
 
 #ifdef GAIN
       *(pFgVect + 2) = focusScale * averageFocus;
 #else
-      *(pFgVect + 2) = averageFocus;
+      *(pFgVect + 2) = *(fg+2);
 #endif
 
+#ifdef GAIN
       aoCtrlId->previousFocus = averageFocus; /* Bug fixed 11 June 2000 - cb */
+#endif
 
       *(pErrorFg + 0) = 0.0;
       *(pErrorFg + 1) = 0.0;

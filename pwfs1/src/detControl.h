@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   06 Jun 2001: CB - add detSigInitModFoc
  *   29 May 2001: CB - add detSigInitModComa
  *   23 May 2001: CB - add detSigInitModTref and replace detSigInitMod by
  *                     detSigInitModAst
@@ -770,6 +771,8 @@ enum
                                /* Init zero point model for trefoil off axis  */
    DET_CONTROL_CMD_SIGINIT_COMA_MODEL,
                                /* Init zero point model for coma off axis     */
+   DET_CONTROL_CMD_SIGINIT_FOCUS_MODEL,
+                               /* Init zero point model for focus off axis    */
 
 
    /* genSub commands. */

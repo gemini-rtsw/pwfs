@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="1"
-	npc="163"
-	nstr="95"
-	ndynamic="113"
+	npc="164"
+	nstr="96"
+	ndynamic="114"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="328"
 		y="298"
 		width="758"
-		height="732"
+		height="758"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="12144"
-	nwords_sta="224"
+	nwords_dspy="12244"
+	nwords_sta="236"
 	nwords_cmap="120"
 	nwords_crules="820"
-	odyng="4618"
-	osta="4394"
-	odynamic="4674"
-	oplot="12132"
-	ord="12132"
-	oes="12132"
-	okd="12132"
-	opd="12144"
-	opo="12144"
+	odyng="4652"
+	osta="4416"
+	odynamic="4708"
+	oplot="12232"
+	ord="12232"
+	oes="12232"
+	okd="12232"
+	opd="12244"
+	opo="12244"
 	opc="68"
-	ostr="2436"
-	ocmap="3454"
-	ocrules="3574"
+	ostr="2450"
+	ocmap="3476"
+	ocrules="3596"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -1228,7 +1228,7 @@ display {
 		x="9"
 		y="50"
 		width="733"
-		height="599"
+		height="632"
 		groupid="0"
 	}
 }
@@ -1289,8 +1289,8 @@ display {
 }
 "rectangle" {
 	object {
-		x="9"
-		y="658"
+		x="8"
+		y="686"
 		width="735"
 		height="62"
 		groupid="0"
@@ -1298,8 +1298,8 @@ display {
 }
 "text" {
 	object {
-		x="20"
-		y="663"
+		x="19"
+		y="691"
 		width="128"
 		height="19"
 		groupid="0"
@@ -1397,8 +1397,8 @@ display {
 }
 "text" {
 	object {
-		x="321"
-		y="670"
+		x="320"
+		y="698"
 		width="124"
 		height="19"
 		groupid="0"
@@ -1408,8 +1408,8 @@ display {
 }
 "text" {
 	object {
-		x="141"
-		y="668"
+		x="140"
+		y="696"
 		width="27"
 		height="19"
 		groupid="0"
@@ -1419,13 +1419,24 @@ display {
 }
 "text" {
 	object {
-		x="141"
-		y="692"
+		x="140"
+		y="720"
 		width="27"
 		height="19"
 		groupid="0"
 	}
 	textix="Y"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="290"
+		y="653"
+		width="179"
+		height="20"
+		groupid="0"
+	}
+	textix="Focus:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -4790,8 +4801,8 @@ display {
 }
 "text update" {
 	object {
-		x="154"
-		y="665"
+		x="153"
+		y="693"
 		width="95"
 		height="21"
 		groupid="0"
@@ -4836,8 +4847,8 @@ display {
 }
 "text update" {
 	object {
-		x="154"
-		y="689"
+		x="153"
+		y="717"
 		width="95"
 		height="21"
 		groupid="0"
@@ -6630,8 +6641,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="667"
+		x="380"
+		y="695"
 		width="178"
 		height="21"
 		groupid="0"
@@ -6639,6 +6650,52 @@ display {
 	monitor {
 		chan="$(top)fgDiag6.VALH"
 		clr="11"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="363"
+		y="652"
+		width="127"
+		height="23"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)ttfZero.VALJ"
+		clr="0"
 		bclr="7"
 		label="none"
 		clrmod="static"

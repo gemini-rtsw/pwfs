@@ -77,6 +77,8 @@
  * 23-May-2001: cb - add zero point model for trefoil off axis
  * 29-May-2001: cb - add zero point model for coma off axis and now scale factor
  *                   in writeZernikes.c
+ * 06-Jun-2001: cb - add zero point model for focus off axis and now sliding
+ *                   average in writeZernikes.c
  *
  */
 /* INDENT ON */
@@ -213,6 +215,9 @@ SEM_ID  accessTrefoilModel;
 
 COMA_ZP_MODEL_ID_STRUCT comaModel;
 SEM_ID  accessComaModel;
+
+FOCUS_ZP_MODEL_ID_STRUCT focusModel;
+SEM_ID  accessFocusModel;
 
 /* declare prototypes */
 
@@ -522,6 +527,18 @@ long gensubToTcsInit
       }
    }
 
+   /* create semaphore to prevent multiple access to focusModel data */
+
+   if(accessFocusModel == NULL)
+   {
+      if ((accessFocusModel = 
+          semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) 
+          == NULL)
+      {
+             printf ("unable to create accessFocusModel sem\n");
+      }
+   }
+
    /* init structure astigModel */
 
    astigModel.a1 = 0.0;
@@ -569,6 +586,15 @@ long gensubToTcsInit
    comaModel.comaX = 0.0;
    comaModel.comaY = 0.0;
    comaModel.applyModel = 0.0;
+
+   /* init structure focusModel */
+
+   focusModel.a1 = 0.0;
+   focusModel.a2 = 0.0;
+   focusModel.p1 = 0.0;
+   focusModel.p2 = 0.0;
+   focusModel.c = 0.0;
+   focusModel.focus = 0.0;
 
    /* create structure holding angle and null values for ao data */
 
@@ -1223,6 +1249,8 @@ STATUS writeWfsToSynchro
    converted  result;
    frame      *f;
    double     *pz;
+   double     averageFocus;
+   double     focus;
 
 
    /* access frame */
@@ -1248,7 +1276,21 @@ STATUS writeWfsToSynchro
       ( (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) 
         - f->null[6] ) * aoCtrlId->fgScaleFactorVect[1];
 
-      result.z4 = ( *(pz+2) ) * aoCtrlId->fgScaleFactorVect[2];
+      focus = *(pz+2) - focusModel.focus;
+
+      if ( aoCtrlId->focusCounter == 0 )
+      {
+         aoCtrlId->previousFocus = focus;
+         aoCtrlId->focusCounter ++;
+      }
+
+      averageFocus = 
+      (aoCtrlId->slidingFocusGain * focus) +
+      (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus) ;
+
+      result.z4 = averageFocus * aoCtrlId->fgScaleFactorVect[2];
+
+      aoCtrlId->previousFocus = averageFocus;
 #endif
 
       /*result.z4 = (*(pz+2)) - (pWfs->focusscale * f->null[7]);*/
@@ -1463,6 +1505,31 @@ long ttfZero
       return(ERROR);
    }
 
+   /* Compute focus zero point model */
+
+   if(semTake(accessFocusModel, WFS_TIMEOUT) == OK)
+   {
+     if (focusModel.applyModel == 0 )
+     {
+        focusModel.focus = 0.0;
+     }
+     else
+     {
+        focusModel.focus =
+        focusModel.a1*cos(compositeAngle + focusModel.p1*DEGS2RADS) +
+        focusModel.a2*cos(2*compositeAngle + focusModel.p2*DEGS2RADS) +
+        focusModel.c;
+     }
+
+     semGive (accessFocusModel);
+   }
+   else
+   {
+      logMsg("Modify frame - unable to get mutex for focusModel \n",
+             0, 0, 0, 0 ,0 ,0);
+      return(ERROR);
+   }
+
    /* write sample values to genSub ouputs */
 
    *(double *) pgsub->vala = f->null[0];         /* tSent */ 
@@ -1475,6 +1542,8 @@ long ttfZero
    *(double *) pgsub->valg = f->null[5];         /* z2 */
    *(double *) pgsub->valh = f->null[6];         /* z3 */
    *(double *) pgsub->vali = f->null[7];         /* z4 */
+
+   *(double *) pgsub->valj = focusModel.focus;
 
    return (OK);
 }
@@ -1723,6 +1792,7 @@ long aoZero
              0, 0, 0, 0 ,0 ,0);
       return(ERROR);
    }
+
 
    /* write sample values to genSub ouputs */
 
