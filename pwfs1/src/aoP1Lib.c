@@ -75,6 +75,7 @@
  *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   04 Feb 2003: CB - Implement proportional law for aO
  *   12 Jun 2002: CB - aoModeCompute(): add imageStatus in invocation to check
  *                     wether to coadd the image or not
  *   23 May 2002: CB - aoThresholdCompute() and aoThresholdPerSubapCompute()
@@ -2708,6 +2709,41 @@ STATUS aoCtrlContextInit (
             aoCtrlId->sinAngleWithM1 );
 #endif
 
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the AO init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): %s\n", comment );
+#endif
+
+   /* Read aO threshold above which the aO gain is increased */
+
+   if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read aO threshold from the AO init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+   aoCtrlId->aoThreshold = value;
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): aoThreshold = %f\n",
+            aoCtrlId->aoThreshold );
+#endif
+
    /* End - close and return */
 
    aoCtrlId->initFlag = TRUE;
@@ -2737,7 +2773,8 @@ STATUS aoCtrlContextInit (
  *   aoCtrlContextUpdate (pDarkFileName, pFlatFileName, pRefFileName, 
  *                        pAoIntMatFileName, pAoContMatFileName, 
  *                        pFgContMatFileName, xCenter, yCenter, 
- *                        angleWithM2, angleWithM1, aoCcdId, aoCtrlId)
+ *                        angleWithM2, angleWithM1, aoThreshold,
+ *                        aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pDarkFileName      (char *)     Pointer to the dark file name
@@ -2753,6 +2790,7 @@ STATUS aoCtrlContextInit (
  *   (>) yCenter            (double)     New yCenter value for whole CCD
  *   (>) angleWithM2        (double)     New angle between M2 and P1
  *   (>) angleWithM1        (double)     New angle between M1 and P1
+ *   (>) aoThreshold        (double)     ao Threshold
  *   (>) aoCcdId            (AO_CCD_ID)  Pointer to the CCD geometry context
  *                                       structure
  *   (<) aoCtrlId           (AO_CTRL_ID) Pointer to the control context 
@@ -2798,6 +2836,7 @@ STATUS aoCtrlContextUpdate (
    double     yCenter,
    double     angleWithM2,
    double     angleWithM1,
+   double     aoThreshold,
    AO_CCD_ID  aoCcdId,
    AO_CTRL_ID aoCtrlId
    )
@@ -2988,6 +3027,15 @@ STATUS aoCtrlContextUpdate (
             aoCtrlId->cosAngleWithM1 );
    printf ( "aoCtrlContextUpdate(): sin(angleWithM1) = %f\n",
             aoCtrlId->sinAngleWithM1 );
+#endif
+
+   /* Init the aO threshold */
+
+   aoCtrlId->aoThreshold = aoThreshold;
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextUpdate(): aoThreshold = %f\n",
+            aoCtrlId->aoThreshold );
 #endif
 
    /* End */
@@ -3201,6 +3249,7 @@ STATUS aoCtrlContextShow (
    printf ( "coaddCounter: %d\n" , aoCtrlId->coaddCounter );
    printf ( "Focus counter : %d\n", aoCtrlId->focusCounter);
    printf ( "Allowed subapertures to be off: %d\n", aoCtrlId->allowedSubapOff);
+   printf ( "aoThreshold: %f\n" , aoCtrlId->aoThreshold );
 
    return (OK);
 }
@@ -6434,7 +6483,7 @@ STATUS aoDarkUpdate (
  *   aoCtrlFileRead (pInitFileName, pPath, pDarkFileName, pFlatFileName, 
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName, 
  *                   pFgCmFileName, pRms, pThresh, pTotalThresh, pAngleM2, 
- *                   pAngleM1)
+ *                   pAngleM1, pAoThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName (char *)   Pointer to the AO init file name 
@@ -6452,6 +6501,7 @@ STATUS aoDarkUpdate (
  *   (<) pTotalThresh  (double *) Pointer to the total flux threshold
  *   (<) pAngleM2      (double *) Pointer to the angle with M2
  *   (<) pAngleM1      (double *) Pointer to the angle with M1
+ *   (<) pAoThreshold  (double *) Pointer to the aO threshold
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK if successful, ERROR if unsuccessful
@@ -6491,7 +6541,8 @@ STATUS aoCtrlFileRead (
    double * pThresh,
    double * pTotalThresh,
    double * pAngleM2,
-   double * pAngleM1
+   double * pAngleM1,
+   double * pAoThreshold
    )
 {
    FILE *     pFile;
@@ -6999,6 +7050,35 @@ STATUS aoCtrlFileRead (
 
 #ifdef DEBUG
    printf ( "aoCtrlFileRead(): angleWithM1 = %f\n", *pAngleM1 );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read aO threshold */
+
+   if ( (fscanf (pFile, "%lf\n", pAoThreshold)) == EOF )
+   {
+      printf ( "Failed to read aO threshold from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): aoThreshold = %f\n", *pAoThreshold );
 #endif
 
    /* End - close and return */

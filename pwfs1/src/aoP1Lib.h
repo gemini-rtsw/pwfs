@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 04 Feb 2003: CB - Add aoThreshold to aoCtrlId
  * 08 Feb 2002: CB - Implement threshold per sub-aperture and in real time
  * 21 Dec 2001: CB - add automatic init of zero point models from par file
  * 06 June 2001: CB - add FOCUS_ZP_MODEL_ID structure 
@@ -406,6 +407,9 @@ typedef struct
    double       one_slidingFocusGain;  /* 1 - slidingFocusGain                */
 
    double       previousFocus;         /* Previous focus mode value           */
+
+   double       aoThreshold;           /* aO threshold above which the aO     */
+                                       /* gains are increased                 */
 
    int          allowedSubapOff;       /* Number of subapertures allowed to   */
                                        /* be off when computing the centroids */
@@ -835,8 +839,8 @@ STATUS aoCtrlContextUpdate (char * pDarkFileName, char * pFlatFileName,
                             char * pAoContMatFileName, 
                             char * pFgContMatFileName, double xCenter, 
                             double yCenter, double angleWithM2, 
-                            double angleWithM1, AO_CCD_ID aoCcdId, 
-                            AO_CTRL_ID aoCtrlId);
+                            double angleWithM1, double aoThreshold, 
+                            AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
 STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels, int yPixels);
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
@@ -893,7 +897,8 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        double * pRefX, double * pRefY, char * pAoImFileName,
                        char * pAoCmFileName, char * pFgCmFileName,
                        double * pRms, double * pThresh, double * pTotalThresh,
-                       double * pAngleM2, double * pAngleM1);
+                       double * pAngleM2, double * pAngleM1, 
+                       double * pAoThreshold);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
                   FOCUS_ZP_MODEL_ID focModelId);

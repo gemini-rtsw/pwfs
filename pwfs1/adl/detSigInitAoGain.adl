@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="28"
-	nstr="61"
-	ndynamic="27"
+	npc="29"
+	nstr="63"
+	ndynamic="28"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3602"
-	nwords_sta="740"
+	nwords_dspy="3952"
+	nwords_sta="972"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1790"
-	osta="1050"
-	odynamic="1790"
-	oplot="3590"
-	ord="3590"
-	oes="3590"
-	okd="3590"
-	opd="3602"
-	opo="3602"
+	odyng="2074"
+	osta="1102"
+	odynamic="2074"
+	oplot="3940"
+	ord="3940"
+	oes="3940"
+	okd="3940"
+	opd="3952"
+	opo="3952"
 	opc="68"
-	ostr="482"
-	ocmap="1050"
-	ocrules="1050"
+	ostr="504"
+	ocmap="1102"
+	ocrules="1102"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -52,7 +52,7 @@ display {
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
-	mmht="289"
+	mmht="288"
 }
 "<<basic attribute>>" {
 	attr {
@@ -407,6 +407,54 @@ display {
 		groupid="0"
 	}
 	textix="Gain Z19 ... .:"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="329"
+		y="154"
+		width="0"
+		height="453"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="329"
+		y="154"
+	}
+	point[1] {
+		x="329"
+		y="607"
+	}
+	orgpoint[0] {
+		x="-1"
+		y="0"
+	}
+	orgpoint[1] {
+		x="-1"
+		y="1000"
+	}
+}
+"text" {
+	object {
+		x="338"
+		y="172"
+		width="357"
+		height="16"
+		groupid="0"
+	}
+	textix="Threshold above which the gain is"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="338"
+		y="194"
+		width="116"
+		height="16"
+		groupid="0"
+	}
+	textix="increased:"
 	align="horiz. left"
 }
 "message button" {
@@ -1603,6 +1651,51 @@ display {
 	}
 	control {
 		chan="$(top)detSigInitAoGain.S"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitAoGain.VAL"
+		rulechan[1] = "$(top)detSigInitAoGain.VAL"
+		rulechan[2] = "$(top)detSigInitAoGain.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitAoGain"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="446"
+		y="193"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitAoGain.T"
 		clr="0"
 		bclr="6"
 		label="none"

@@ -241,3 +241,9 @@ V4-3 15 Nov 2002 CB:
   - update defFullCtrlP1CP.dat, defBinCtrlP1CP.dat, defDetContP1CP.dat, 
     defAoModP1CP.dat
   - startupCP.vws: change IP address of reggie
+
+dev
+  - Fix a bug in detSigInit (angleWitM2 and angleWithM1 were already
+    defined as global)
+  - Implement proportional law for aO gains
+

@@ -944,10 +944,39 @@ STATUS writeWfsToTcs
    frame     *f;
    converted result;
    double    *pz;
+
+   double    posThresh = (aoCtrlId->aoThreshold);
+   double    negThresh = (aoCtrlId->aoThreshold) * -1.0;
+
    double    astig0;
    double    astig45;
+
    double    g0;
    double    g45;
+
+   double    z2AfterRot;
+   double    z3AfterRot;
+
+   double    z5AfterRot;
+   double    z6AfterRot;
+
+   double    z7AfterRot;
+   double    z8AfterRot;
+
+   double    z10AfterRot;
+   double    z11AfterRot;
+
+   double    z12AfterRot;
+   double    z13AfterRot;
+
+   double    z14AfterRot;
+   double    z15AfterRot;
+
+   double    z17AfterRot;
+   double    z18AfterRot;
+
+   double    z19AfterRot;
+   double    z20AfterRot;
 
    /* check that array counts are within limits */
 
@@ -970,10 +999,37 @@ STATUS writeWfsToTcs
          /* first rotate the tip and tilt values to the tcs frame of reference*/
          /* tip and tilt: r * cos(t) and r * sin(t) */
 
+         z2AfterRot = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1)));
+         z3AfterRot = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz));
+
+         if ( z2AfterRot >= posThresh)
+            result.z2 =
+            (z2AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[0];
+         else if ( z2AfterRot <= negThresh )
+            result.z2 =
+            (z2AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[0];
+         else
+            result.z2 = z2AfterRot*aoCtrlId->aoScaleFactorVect[0];
+
+         if ( z3AfterRot >= posThresh )
+            result.z3 =
+            (z3AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[1];
+         else if ( z3AfterRot <= negThresh )
+            result.z3 =
+            (z3AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[1];
+         else
+            result.z3 = z3AfterRot*aoCtrlId->aoScaleFactorVect[1];
+
+/*
          result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
                      * aoCtrlId->aoScaleFactorVect[0];
          result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz))
                      * aoCtrlId->aoScaleFactorVect[1];
+*/
 
          /* focus : 2*r^2 -1 */
 
@@ -986,6 +1042,37 @@ STATUS writeWfsToTcs
          g0 = astigModel.gain0;
          g45 = astigModel.gain45;
 
+         z5AfterRot = (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45))
+                      - ((f->null[8])*1000.0)
+                      - (astigModel.astig0);
+         z6AfterRot = (g45*f->cos2Theta*(astig45) - g45*f->sin2Theta*(astig0))
+                      - ((f->null[9])*1000.0)
+                      - (astigModel.astig45);
+
+         if ( z5AfterRot >= posThresh )
+            result.z5 =
+            (z5AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[3];
+         else if ( z5AfterRot <= negThresh )
+            result.z5 =
+            (z5AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[3];
+         else
+            result.z5 = z5AfterRot*aoCtrlId->aoScaleFactorVect[3];
+
+         if ( z6AfterRot >= posThresh )
+            result.z6 =
+            (z6AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[4];
+         else if ( z6AfterRot <= negThresh )
+            result.z6 =
+            (z6AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[4];
+         else
+            result.z6 = z6AfterRot*aoCtrlId->aoScaleFactorVect[4];
+
+
+/*
          result.z5 = ( (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
                      - ((f->null[8])*1000.0)
                      - (astigModel.astig0) ) * (aoCtrlId->aoScaleFactorVect[3]);
@@ -993,15 +1080,47 @@ STATUS writeWfsToTcs
                      - ((f->null[9])*1000.0)
                      - (astigModel.astig45) ) * 
                      (aoCtrlId->aoScaleFactorVect[4]);
+*/
 
          /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and 
             (3*r^2 - 2) * r * sin(t) */
 
+         z7AfterRot = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
+                      - (comaModel.comaX);
+
+         z8AfterRot = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
+                      - (comaModel.comaY);
+
+         if ( z7AfterRot >= posThresh )
+            result.z7 =
+            (z7AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[5];
+         else if ( z7AfterRot <= negThresh )
+            result.z7 =
+            (z7AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[5];
+         else
+            result.z7 = z7AfterRot*aoCtrlId->aoScaleFactorVect[5];
+
+         if ( z8AfterRot >= posThresh )
+            result.z8 =
+            (z8AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[6];
+         else if ( z8AfterRot <= negThresh )
+            result.z8 =
+            (z8AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[6];
+         else
+            result.z8 = z8AfterRot*aoCtrlId->aoScaleFactorVect[6];
+
+
+/*
          result.z7 = ( (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
                      - (comaModel.comaX) ) * (aoCtrlId->aoScaleFactorVect[5]);
 
          result.z8 = ( (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
                      - (comaModel.comaY) ) * (aoCtrlId->aoScaleFactorVect[6]);
+*/
 
          /* spherical: 6*r^4 - 6*r^2 + 1 */
    
@@ -1009,6 +1128,35 @@ STATUS writeWfsToTcs
 
          /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
 
+         z10AfterRot = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
+                       - (trefoilModel.costref);
+
+         z11AfterRot = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
+                       - (trefoilModel.sintref);
+
+         if ( z10AfterRot >= posThresh )
+            result.z10 =
+            (z10AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[8];
+         else if ( z10AfterRot <= negThresh )
+            result.z10 =
+            (z10AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[8];
+         else
+            result.z10 = z10AfterRot*aoCtrlId->aoScaleFactorVect[8];
+
+         if ( z11AfterRot >= posThresh )
+            result.z11 =
+            (z11AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[9];
+         else if ( z11AfterRot <= negThresh )
+            result.z11 =
+            (z11AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[9];
+         else
+            result.z11 = z11AfterRot*aoCtrlId->aoScaleFactorVect[9];
+
+/*
          result.z10 = ( (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
                       - (trefoilModel.costref) ) * 
                       (aoCtrlId->aoScaleFactorVect[8]);
@@ -1016,21 +1164,76 @@ STATUS writeWfsToTcs
          result.z11 = ( (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
                       - (trefoilModel.sintref) ) * 
                       (aoCtrlId->aoScaleFactorVect[9]);
+*/
 
          /* (4*r^2-3) * r^2 * cos(2t) and (4*r^2-3) * r^2 * sin(2t) */
 
+         z12AfterRot = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11)));
+         z13AfterRot = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)));
+
+         if ( z12AfterRot >= posThresh )
+            result.z12 =
+            (z12AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[10];
+         else if ( z12AfterRot <= negThresh )
+            result.z12 =
+            (z12AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[10];
+         else
+            result.z12 = z12AfterRot*aoCtrlId->aoScaleFactorVect[10];
+
+         if ( z13AfterRot >= posThresh )
+            result.z13 =
+            (z13AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[11];
+         else if ( z13AfterRot <= negThresh )
+            result.z13 =
+            (z13AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[11];
+         else
+            result.z13 = z13AfterRot*aoCtrlId->aoScaleFactorVect[11];
+
+/*
          result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11))) 
                       * (aoCtrlId->aoScaleFactorVect[10]);
          result.z13 = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)))
                       * (aoCtrlId->aoScaleFactorVect[11]);
+*/
 
          /* (10*r^4 -12*r^3 + 3) * r * cos(t) and 
             (10*r^4 -12*r^3 + 3) * r * sin(t) */
 
+         z14AfterRot = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)));
+         z15AfterRot = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)));
+
+         if ( z14AfterRot >= posThresh )
+            result.z14 =
+            (z14AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[12];
+         else if ( z14AfterRot <= negThresh )
+            result.z14 =
+            (z14AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[12];
+         else
+            result.z14 = z14AfterRot*aoCtrlId->aoScaleFactorVect[12];
+
+         if ( z15AfterRot >= posThresh )
+            result.z15 =
+            (z15AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[13];
+         else if ( z15AfterRot <= negThresh )
+            result.z15 =
+            (z15AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[13];
+         else
+            result.z15 = z15AfterRot*aoCtrlId->aoScaleFactorVect[13];
+
+/*
          result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)))
                       * (aoCtrlId->aoScaleFactorVect[12]);
          result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)))
                       * (aoCtrlId->aoScaleFactorVect[13]);
+*/
 
          /* 20*r^6 - 30*r^4 + 12*r^2 - 1 */
 
@@ -1038,17 +1241,71 @@ STATUS writeWfsToTcs
 
          /* r^4 * cos(4t) and r^4 * sin(4t) */
 
+         z17AfterRot = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)));
+         z18AfterRot = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)));
+
+         if ( z17AfterRot >= posThresh )
+            result.z17 =
+            (z17AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[15];
+         else if ( z17AfterRot <= negThresh )
+            result.z17 =
+            (z17AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[15];
+         else
+            result.z17 = z17AfterRot*aoCtrlId->aoScaleFactorVect[15];
+
+         if ( z18AfterRot >= posThresh )
+            result.z18 =
+            (z18AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[16];
+         else if ( z18AfterRot <= negThresh )
+            result.z18 =
+            (z18AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[16];
+         else
+            result.z18 = z18AfterRot*aoCtrlId->aoScaleFactorVect[16];
+
+/*
          result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)))
                       * (aoCtrlId->aoScaleFactorVect[15]);
          result.z18 = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)))
                       * (aoCtrlId->aoScaleFactorVect[16]);
+*/
 
          /* (5*r^2 - 4) * r^3 * cos(3t) and (5*r^2 - 4) * r^3 * cos(3t) */
 
+         z19AfterRot = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)));
+         z20AfterRot = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)));
+
+         if ( z19AfterRot >= posThresh )
+            result.z19 =
+            (z19AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[17];
+         else if ( z19AfterRot <= negThresh )
+            result.z19 =
+            (z19AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[17];
+         else
+            result.z19 = z19AfterRot*aoCtrlId->aoScaleFactorVect[17];
+
+         if ( z20AfterRot >= posThresh )
+            result.z20 =
+            (z20AfterRot*3.0 - posThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[18];
+         else if ( z20AfterRot <= negThresh )
+            result.z20 =
+            (z20AfterRot*3.0 - negThresh*2.0)*
+            aoCtrlId->aoScaleFactorVect[18];
+         else
+            result.z20 = z20AfterRot*aoCtrlId->aoScaleFactorVect[18];
+
+/*
          result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)))
                       * (aoCtrlId->aoScaleFactorVect[17]);
          result.z20 = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)))
                       * (aoCtrlId->aoScaleFactorVect[18]);
+*/
       }
       else
       {

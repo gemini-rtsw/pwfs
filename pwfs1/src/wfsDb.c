@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.27 2002-11-16 01:09:48 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.28 2003-02-05 03:02:55 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  *INDENT-OFF*
+ * 04 Feb 2003 - cb Add aoThreshold detSigInitAoGain
  * 18 Oct 2002 - cb add detPowerOff
  * 23 May 2002 - cb add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw,
  *               cfTipTiltBw and fgFocusGain100 sir records
@@ -463,7 +464,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_P, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_Q, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_R, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_T, EPICS_DATA_TYPE_DOUBLE, "0.5", {"0.01", "10.0"}
  },
 #if (MK)
  {

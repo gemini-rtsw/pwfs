@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   04 Feb 2003: CB - Add aoThreshold
  *   17 Oct 2002: CB - Add detPowerOff
  *   23 May 2002: CB - Add fgFocusGain100, fgTipGain, fgTiltGain, fgFocusGain, 
  *                     cfFocusBw, cfTipTiltBw sir records
@@ -582,6 +583,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Gain for the sliding average for the focus mode */
    double       amplitude; /* Amplitude of the mode when computing a column   */
                            /* of the interaction matrix                       */
+   double       aoThreshold;
+                           /* Threshold for aO correction                     */
    AO_VECT      aoScaleVect; 
                            /* Scale factor vector for aO modes                */
    char         pCoaddFileName[(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];

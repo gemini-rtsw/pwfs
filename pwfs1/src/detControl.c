@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.32 2002-11-16 01:09:47 cboyer Exp $"};
+   "$Id: detControl.c,v 1.33 2003-02-05 03:02:54 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   04 Feb 2003: CB - Add proportional gain for aO
+ *   30 Jan 2003: CB - Fix a little bug in detSigInit
  *   17 Oct 2002: CB - remove error in detObserveStart when starting an 
  *                     observation already in progress
  *                   - add detPowerOff
@@ -11655,6 +11657,7 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
 
@@ -11703,6 +11706,7 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
 
@@ -12111,6 +12115,7 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
 
@@ -12319,6 +12324,7 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
 
@@ -14096,6 +14102,7 @@ uint32 detFrameSize
    double       rms;
    double       thresh;
    double       totalThresh;
+   double       aoThreshold;
 
    /*
     * Parameters to update the ADC offset
@@ -14249,7 +14256,8 @@ uint32 detFrameSize
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
-                               &totalThresh, &angleM2, &angleM1) == ERROR )
+                               &totalThresh, &angleM2, &angleM1, 
+                               &aoThreshold) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -14387,7 +14395,8 @@ uint32 detFrameSize
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
-                               &totalThresh, &angleM2, &angleM1) == ERROR )
+                               &totalThresh, &angleM2, &angleM1, 
+                               &aoThreshold) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -14662,8 +14671,8 @@ uint32 detFrameSize
       if (aoCtrlContextUpdate ( fullDarkFileName, fullFlatFileName,
                                 fullRefFileName, fullAoImFileName, 
                                 fullAoCmFileName, fullFgCmFileName, 
-                                refX, refY, angleM2, angleM1, obsId->aoCcdId, 
-                                obsId->aoCtrlId ) == ERROR )
+                                refX, refY, angleM2, angleM1, aoThreshold,
+                                obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
       {
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       }
@@ -15599,6 +15608,7 @@ STATUS detObsShow
    printf ("Default focus scale 100Hz        : %f\n",
            obsId->defFocusScale100Hz);
    printf ("Sliding Focus gain               : %f\n", obsId->slidingFocusGain);
+   printf ("aO threshold                     : %f\n", obsId->aoThreshold);
    printf ("aoScaleVect                      : %p\n", obsId->aoScaleVect);
    printf ("Coadd file name                  : %s\n", obsId->pCoaddFileName);
    printf ("Centroids file name              : %s\n", obsId->pCentFileName);
@@ -15713,8 +15723,8 @@ uint32 detSigInit
    char         pFullAoContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullFgContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    double       refX, refY;
-   double       angleWithM2;
-   double       angleWithM1;
+   double       angleM2;
+   double       angleM1;
 
    /*
     * Initialise the error number and get the attributes provided with this
@@ -15726,11 +15736,11 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pDarkFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFlatFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, 
-                          (char *)&angleWithM2);
+                          (char *)&angleM2);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&refX);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&refY);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, 
-                          (char *)&angleWithM1);
+                          (char *)&angleM1);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, pRefFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, pAoIntMatFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, pAoContMatFileName);
@@ -15822,7 +15832,8 @@ uint32 detSigInit
    if (aoCtrlContextUpdate ( pFullDarkFileName, pFullFlatFileName,
                              pFullRefFileName, pFullAoIntMatFileName,
                              pFullAoContMatFileName, pFullFgContMatFileName,
-                             refX, refY, angleWithM2, angleWithM1, 
+                             refX, refY, angleM2, angleM1, 
+                             obsId->aoCtrlId->aoThreshold, 
                              obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
    {
       ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
@@ -16002,6 +16013,8 @@ uint32 detSigInitAoGain
 
    AO_VECT      aoScaleVect;
 
+   double       aoThreshold;
+
    /*
     * Initialise the error number 
     */
@@ -16086,6 +16099,8 @@ uint32 detSigInitAoGain
                              (char *)&(obsId->aoScaleVect[17]));
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18,
                              (char *)&(obsId->aoScaleVect[18]));
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 19,
+                             (char *)&(obsId->aoThreshold));
       obsId->updateAoScale = TRUE ;
    }
    else /* observation not in progress */
@@ -16138,6 +16153,8 @@ uint32 detSigInitAoGain
                              (char *)&(aoScaleVect[17]));
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18, 
                              (char *)&(aoScaleVect[18]));
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 19,
+                             (char *)&aoThreshold);
 
       if ( aoScaleUpdate (aoScaleVect, obsId->aoCtrlId) == ERROR )
       {
@@ -16146,6 +16163,8 @@ uint32 detSigInitAoGain
          errorNumber = S_detControl_INTERNAL;
          return (errorNumber);
       }
+     obsId->aoCtrlId->aoThreshold = aoThreshold;
+     obsId->aoThreshold = aoThreshold;
    }
 
    return (errorNumber);
@@ -19708,6 +19727,8 @@ STATUS detInitSigInit
    double thresh;
    double rms;
    double totalThresh;
+   double aoThreshold;
+
 
    if ( detObsIdP1 == NULL )
    {
@@ -19737,7 +19758,8 @@ STATUS detInitSigInit
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
-                               &totalThresh, &angleM2, &angleM1) == ERROR )
+                               &totalThresh, &angleM2, &angleM1,
+                               &aoThreshold) == ERROR )
          {
             printf ("Failed to read ao control file parameters\n");
             return (ERROR);
@@ -19777,7 +19799,8 @@ STATUS detInitSigInit
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
-                               &totalThresh, &angleM2, &angleM1) == ERROR )
+                               &totalThresh, &angleM2, &angleM1,
+                               &aoThreshold) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
             return (ERROR);
