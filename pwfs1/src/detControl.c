@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.24 2001-06-16 00:26:29 cboyer Exp $"};
+   "$Id: detControl.c,v 1.25 2001-09-04 20:40:28 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -10349,6 +10349,18 @@ void detObserveEnd
 
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
+               printf ("aoDarkSubtract: %p %p %d %d\n", 
+                       pImage, obsId->aoCtrlId->darkVect, 
+                       obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels);
+#endif
+               if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                    obsId->aoCcdId->xPixels, 
+                                    obsId->aoCcdId->yPixels) == ERROR )
+               {
+                  ERROR_LOG ("Failed to subtract DARK from current frame");
+               }
+
+#ifdef DEBUG
                printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
                        obsId->aoCbCtrlId);
@@ -12950,6 +12962,7 @@ uint32 detFrameSize
          ERROR_LOG (
          "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
       }
+      aoCtrlId->intMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", 
                            obsId->pAoIntMatInitContext) == ERROR)
       {

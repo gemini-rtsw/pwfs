@@ -68,6 +68,8 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   28 Aug 2001: CB - Found some non initialized variables and fixed it
+ *                     Didn't produce errors, but fixed it anyway
  *   06 June 2001: CB - For focus sliding average is now in writeZernikes.c 
  *   29 May 2001: CB - For guide and focus and ao remove scale factor 
  *                     multiplication - now scale factor multiplication is 
@@ -4293,6 +4295,9 @@ STATUS aoModeCompute (
          pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
          pMat = aoCtrlId->contMat;
 
+         for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+             *pAo = 0.0;
+
 #ifdef GAIN
          pScale = aoCtrlId->aoScaleFactorVect;
 #endif
@@ -5565,6 +5570,9 @@ STATUS aoGuideAndFocus (
 
    pMat = aoCtrlId->fgContMat;
 
+   for ( pFg = fg ; pFg < pMaxFg ; pFg ++ )
+       *pFg = 0.0;
+
 #ifdef GAIN
    tipScale = aoCtrlId->fgScaleFactorVect[0];
    tiltScale = aoCtrlId->fgScaleFactorVect[1];
@@ -5750,6 +5758,9 @@ STATUS aoModeAnalyze (
    pMaxAo = pAoVect + aoCtrlId->aoModeNb;
    pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
    pMat = aoCtrlId->contMat;
+
+   for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+       *pAo = 0.0;
 
 #ifdef GAIN
    pScale = aoCtrlId->aoScaleFactorVect;

@@ -176,3 +176,8 @@ V2-4 15 June 2001 CB:
   - add detSigInitModFoc : zero point model for focus off axis
   - sliding average for focus removed from aoP1Lib.c and add in writeZernikes.c
   - reject observe command if no binning and exposure time < 0.01s
+
+newDev equivalent to V2-4
+  - set the default for init zero point coma and astigmatism and trefoil
+  - fix a init pb in aoP1Lib.c
+  - fix AO_MODE_AO only: add dark subtraction
