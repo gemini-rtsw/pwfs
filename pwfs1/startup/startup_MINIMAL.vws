@@ -1,5 +1,10 @@
+# Minimal VxWorks startup script for PWFS2
+#
+
+# Execute Gemini VxWorks script to ensure all users are recognised.
 < /usr/local/vxworks/vxUsers
 
+# Set the prompt
 shellPromptSet "Minimal startup pwfs1> "
 
 loginStringSet "MVME2700 PPC vxWorks (sim4)\n\nlogin: "
@@ -10,3 +15,4 @@ tyBackspaceSet 0177
 # cd to application install startup directory (beware automounter problems)
 cd "$(iocpath)/bin/$(arch)"
 #cd "$(install)/bin/$(arch)"
+pwd

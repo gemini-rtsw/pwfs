@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.15 2001-01-29 08:49:45 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.16 2001-02-26 19:21:38 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,13 +61,14 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  *INDENT-OFF*
- *   26 Jan 2001 - cb detSigInit according to the site
- *   7 Dec 2000 - cb add aoSaveCbIm, aoSaveCbCtrl, aoSaveCbFgCtrl sir records
- *                   add detSigInitBW, detSigReset
- *   26 May 2000 - cb add detFrameSize
- *   20 April 2000 - cb major modifications: new ao lib and a lot of sir and 
- *                   new cad records
- *   8 July 1999 - cb add new parameter time to detSigMode
+ * 20 Feb 2001 - cb add dhsCon sir record
+ * 26 Jan 2001 - cb detSigInit according to the site
+ * 07 Dec 2000 - cb add aoSaveCbIm, aoSaveCbCtrl, aoSaveCbFgCtrl sir records
+ *                  add detSigInitBW, detSigReset
+ * 26 May 2000 - cb add detFrameSize
+ * 20 Apr 2000 - cb major modifications: new ao lib and a lot of sir and 
+ *                  new cad records
+ * 08 Jul 1999 - cb add new parameter time to detSigMode
  *
  *INDENT-ON*
  *-
@@ -1004,6 +1005,10 @@ SIR_RECORD pWfsDbSirList [] =
  },
  {
   RECORD_NAME ("dc:utend"),
+  EPICS_DATA_TYPE_STRING
+ },
+ {
+  RECORD_NAME ("dc:dhsCon"),
   EPICS_DATA_TYPE_STRING
  }
 };

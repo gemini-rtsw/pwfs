@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.17 2001-02-15 05:39:29 cboyer Exp $"};
+   "$Id: detControl.c,v 1.18 2001-02-26 19:21:38 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   20 Feb 2001: CB - add detDhsConnected flag and dhsCon sir record
  *   09 Feb 2001: CB - ADC offset now for bin and no bin
  *   26 Jan 2001: CB - read the detector init file according to the site
  *                     read the ao init file according to the site
@@ -161,12 +162,14 @@ BOOL    detDhsInitialised = FALSE;
                               /* Flag to determine whether the DHS            */
                               /* library has been initialised.                */
 
+BOOL    detDhsConnected = NOT_CONNECTED;
+                                   /* Flag to determine whether the WFS is    */
+                                   /* connected to the DHS.                   */
+
 int     detDhsTaskId = 0;     /* Task Id of the dhs task                      */
 
 DHS_CONNECT detDhsConnection = NULL; 
                               /* DHS connection ID for this controller.       */
-
-SEM_ID  detDhsSem = NULL;     /* Semaphore to control access to DHS.          */
 
 SEM_ID  detDhsStartSem = NULL;/* Semaphore to start DHS when starting a       */
                               /* new observation                              */
@@ -876,6 +879,7 @@ STATUS   detControl
     */
 
 #ifdef DEBUG_DOWNLOAD
+   sdsuPrintCmdBuf (sdsuId, TRUE) ;
    sdsuPrintRepBuf (sdsuId) ;
 #endif
 
@@ -885,17 +889,20 @@ STATUS   detControl
    {
          /* RESET REP BUFFER, VME and CONTROLLER */
 #ifdef DEBUG_DOWNLOAD
+         sdsuPrintCmdBuf (sdsuId, TRUE) ;
          sdsuPrintRepBuf (sdsuId) ;
 #endif
          if ( sdsu_initRepBuf (sdsuId) == ERROR )
             ERROR_LOG ("Failed to reset to zero the reply buffer ");
 #ifdef DEBUG_DOWNLOAD
+         sdsuPrintCmdBuf (sdsuId, TRUE) ;
          sdsuPrintRepBuf (sdsuId) ;
 #endif
          if ( sdsuReset (sdsuId, SDSU_RESET_VME | SDSU_RESET_CONTROLLER) 
               == ERROR )
             ERROR_LOG ("Failed to reset SDSU interface and controller");
 #ifdef DEBUG_DOWNLOAD
+         sdsuPrintCmdBuf (sdsuId, TRUE) ;
          sdsuPrintRepBuf (sdsuId) ;
 #endif
 
@@ -1336,10 +1343,40 @@ STATUS   detControl
          ERROR_LOG ("Failed to connect to DHS");
          initWarning = TRUE;
       }      
+
+      if ( detDhsConnected == CONNECTED )
+      {
+         if (epToVxPipeWrite (NULL, "CONNECTED", obsId->pDhsConContext)
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+            errorNumber = ERROR;
+         }
+      };
+
+      if ( detDhsConnected == NOT_CONNECTED )
+      {
+         if (epToVxPipeWrite (NULL, " NOT CONNECTED", obsId->pDhsConContext)
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+            errorNumber = ERROR;
+         }
+      };
    }
    else
    {
       MESSAGE_LOG (MSG_LOG, "WARNING: DHS not initialised");
+      detDhsConnected = NOT_INIT;
+      if (epToVxPipeWrite (NULL, "NOT INIT", obsId->pDhsConContext)
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+         errorNumber = ERROR;
+      }
    }
 
    /*
@@ -3474,7 +3511,6 @@ void detDhsErrorCallback         /* DHS error callback function.              */
  *
  *   EXTERNAL VARIABLES:
  *   (<) detDhsInitialised (BOOL)   DHS initialised flag.
- *   (<) detDhsSem         (SEM_ID) DHS semaphore
  *   (<) detDhsStartSem    (SEM_ID) DHS semaphore
  *   (<) pDetDhsClientName (char *) Current name of DHS client= Instrument name.
  *   (<) pDetDhsHostName   (char *) Current name of DHS server host.
@@ -3519,18 +3555,6 @@ STATUS detDhsInit
       return (ERROR);
    }
 
-   /* Create the DHS semaphore and take it, ensuring that only one task 
-    * attempts to initialise the DHS and update the DHS global variables.
-    */
-
-   detDhsSem = semMCreate( SEM_Q_FIFO | SEM_DELETE_SAFE );
-   if ( (detDhsSem == NULL) || (semTake (detDhsSem, NO_WAIT) == ERROR) )
-   {
-      ERROR_SET (0, "Failed to create and take DHS semaphore", ERROR_LOG_NOW);
-      semGive (detDhsSem);
-      return (ERROR);
-   }
-
    /*
     * Initialise the DHS, specifying a unique name and maximum number of 
     * connections.
@@ -3549,7 +3573,6 @@ STATUS detDhsInit
       ERROR_SET1 (S_detControl_DHS_ERROR, 
                   "Failed to initialise DHS (dhsErrno=%d)",
                   ERROR_LOG_SAVE, dhsErrno);
-      semGive (detDhsSem);
       return (ERROR);
    }
 
@@ -3569,7 +3592,6 @@ STATUS detDhsInit
       ERROR_SET1 (S_detControl_DHS_ERROR, 
          "Failed to set up DHS error callback (dhsErrno=%d)",
          ERROR_LOG_SAVE, dhsErrno);
-      semGive (detDhsSem);
       return (ERROR);
    }
 
@@ -3594,7 +3616,6 @@ STATUS detDhsInit
       ERROR_SET1 (S_detControl_DHS_ERROR, 
          "Failed to start DHS event loop (dhsErrno=%d)",
          ERROR_LOG_SAVE, dhsErrno);
-      semGive (detDhsSem);
       return (ERROR);
    }
 
@@ -3618,7 +3639,6 @@ STATUS detDhsInit
    /* Finally, set the detDhsInitialised flag and return the semaphore. */
 
    detDhsInitialised = TRUE;
-   semGive (detDhsSem);
 
    return (OK);
 }
@@ -3831,23 +3851,7 @@ STATUS detDhsConnect
    if (!detDhsInitialised)
    {
       ERROR_SET (S_detControl_DHS_ERROR, "DHS not initialised", ERROR_LOG_NOW);
-      return (ERROR);
-   }
-
-   /*
-    * Take the DHS semaphore, so that only one WFS attempts to connect to the
-    * DHS and access the pDetDhsHostName and pDetDhsServerName global variables
-    * at any one time.
-    */
-
-#ifdef DEBUG
-   printf ("detDhsConnect: Taking DHS semaphore for PWFS1...\n");
-#endif /* DEBUG */
-
-   if ( semTake (detDhsSem, DHS_WAIT_TIMEOUT) == ERROR )
-   {
-      ERROR_SET (0, "Failed to take DHS semaphore", ERROR_LOG_NOW);
-      semGive (detDhsSem);
+      detDhsConnected = NOT_INIT;
       return (ERROR);
    }
 
@@ -3873,13 +3877,13 @@ STATUS detDhsConnect
       ERROR_SET3 (S_detControl_DHS_ERROR,
          "Failed to connect to DHS server %s on %s (dhsErrno=%d)",
          ERROR_LOG_SAVE, pDetDhsServerName, pDetDhsHostName, dhsErrno);
-      semGive (detDhsSem);
       return (ERROR);
    }
 
-   /* Finally, return the semaphore. */
+   /* Finally, return. */
 
-   semGive (detDhsSem);
+   detDhsConnected = CONNECTED;
+   MESSAGE_LOG (MSG_LOG, "Connected to DHS");
 
    return (OK);
 }
@@ -13132,11 +13136,19 @@ uint32 detDhsReconnect
     
    if ( connect == 0 ) /* disconnect requested */
    {
-      semTake (detDhsSem, WAIT_FOREVER);
 
-      dhsErrno = 0;
-      dhsDisconnect (detDhsConnection, &dhsErrno);
-      CHECK_DHS (dhsErrno);
+      if ( detDhsConnected == CONNECTED )
+      {
+         dhsErrno = 0;
+         dhsDisconnect (detDhsConnection, &dhsErrno);
+         CHECK_DHS (dhsErrno);
+         if ( dhsErrno == DHS_S_SUCCESS )
+         {
+            detDhsConnected = NOT_CONNECTED;
+            MESSAGE_LOG (MSG_LOG, "Disconnected to DHS");
+         }
+      }
+
       /*dhsEventLoopEnd(&dhsErrno);
       CHECK_DHS (dhsErrno);
       dhsExit ( &dhsErrno );
@@ -13175,11 +13187,6 @@ uint32 detDhsReconnect
       }
 
       detDhsInitialised = FALSE;
-      if (semDelete (detDhsSem) == ERROR )
-      {      
-         ERROR_SET (0, "Failed to delete DHS semaphore", ERROR_LOG_NOW);
-         return (ERROR);
-      }
       if (semDelete (detDhsStartSem) == ERROR )
       {      
          ERROR_SET (0, "Failed to delete DHS start semaphore", ERROR_LOG_NOW);
@@ -13205,12 +13212,43 @@ uint32 detDhsReconnect
          ERROR_SET (0, "Can't reinit the dhs", ERROR_LOG_NOW);
          return (ERROR);
       }*/
-      if ( detDhsConnect () == ERROR )
+
+      if ( detDhsConnected == NOT_CONNECTED )
       {
-         ERROR_SET (0, "Can't recoonect to the dhs", ERROR_LOG_NOW);
-         return (ERROR);
+
+         if ( detDhsConnect () == ERROR )
+         {
+            ERROR_SET (0, "Can't reconnect to the dhs", ERROR_LOG_NOW);
+            return (ERROR);
+         }
       }
    }
+
+   /*
+    * Now report to the SIR record
+    */
+
+   if ( detDhsConnected == CONNECTED )
+   {
+      if (epToVxPipeWrite (NULL, "CONNECTED", obsId->pDhsConContext)
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+         errorNumber = ERROR;
+      }
+   };
+
+   if ( detDhsConnected == NOT_CONNECTED )
+   {
+      if (epToVxPipeWrite (NULL, " NOT CONNECTED", obsId->pDhsConContext)
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+         errorNumber = ERROR;
+       }
+   };
 
    return (OK); 
 }
@@ -19223,6 +19261,17 @@ uint32 detGetSirContext
       errorNumber = ERROR;
    }
 
+   /* Get the context of the "dhsCon" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_DHSCON_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pDhsConContext), NULL)
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_DHSCON_SIR_NAME SIR context");
+      errorNumber = ERROR;
+   }
+
    /* Return */
 
    return ( errorNumber );
@@ -19431,6 +19480,14 @@ uint32 detWriteDefSirContext
    if (epToVxPipeWrite( NULL, DET_BUNIT, obsId->pBunitContext ) == ERROR)
    {
       ERROR_LOG ("Failed to set default detector type");
+      errorNumber = ERROR;
+   }
+
+   /* Init the "dhsCon" sir record */
+
+   if (epToVxPipeWrite( NULL, "NOT CONNECTED", obsId->pDhsConContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init dhs connection sir record");
       errorNumber = ERROR;
    }
 

@@ -129,3 +129,13 @@ V1-7 14 February 2001 CB:
   - Add a Binning flag in the signal processing main window
   - ADC offset for binning and no binning (par and src)
   - measure defFullP2DarkMK.fits and defBinP2DarkMK.fits
+
+V1-8 26 February 2001 CB:
+-------------------------
+  - when reboot, exit properly the dhs. Add detDhsConnected flag.
+  - sir record dhsCon in sad to indicates status of the connection,
+    remove detDhsSem leftover when we have one detControl for 3 WFS
+  - Now startupCP.vws and startupMK.vws
+
+newDev equivalent to V1-8
+
