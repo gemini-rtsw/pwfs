@@ -26,9 +26,9 @@ data/defFgContMatP2CP.dat
 # Scale factor for tilt mode (double)
 0.1
 # Scale factor for focus mode (double)
-0.001
+0.0001
 # Gain for focus sliding average (double)
-0.001
+0.0003
 # Threshold value for pixel (double)
 50
 # Threshold value for total counts (double)

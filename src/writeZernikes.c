@@ -29,6 +29,8 @@
  *                     outputs for display
  * showCbDiag        - Write diagnostic data from cb structure to gensub
  *                     outputs for display 
+ * showThreshDiagP2  - Write diagnostic data from ao control structure to 
+ *                     gensub outputs for display
  * gensubFanDouble   - receive array of doubles on port A, write elements to
  *                     individual output ports
  * 
@@ -73,6 +75,7 @@
  * 29-Mar-2001: cb - fix bug for rotation matrix (two bugs which compensate 
  *                   each others)
  * 22-Aug-2001: cb - Major modifications to have ao Correction with P2 also
+ * 14-Sep-2001: cb - Add showThreshDiagP2()
  *
  */
 /* INDENT ON */
@@ -190,6 +193,7 @@ WFS_VECT localCentroidsVect;
 WFS_VECT localTotalCountsVect;
 WFS_VECT localFgCentroidsVect;
 WFS_VECT localFgTotalCountsVect;
+WFS_VECT localThresholdVect;
 SEM_ID   accessAoData=NULL;
 SEM_ID   accessFgData=NULL;
 
@@ -2190,6 +2194,86 @@ long gensubFanDoubles
    *(double *)pgsub->valq = localArray[16];
    *(double *)pgsub->valr = localArray[17];
    *(double *)pgsub->vals = localArray[18];   /* Z20 or E20 */
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showThreshDiagP2
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long showThreshDiagP2 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from aoCtrlId structure to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 14-Sep-2001  Original creation
+ *-
+ */
+
+STATUS showThreshDiagP2
+   (
+   struct genSubRecord * pgsub
+   )
+{
+   int i = 0;
+   int j = 0;
+   double   *pThreshold;
+
+   if (aoCtrlIdP2 == NULL)
+   {
+      /* context structure not yet initialised */
+      return(OK);
+   }
+
+   /* grab data from the ao control structure */
+
+   pThreshold = aoCtrlIdP2->thresholdVect;
+
+   j = 0;
+   for ( i = 0 ; i < aoCcdIdP2->subapNb ; i ++ )
+   {
+       if ( aoCcdIdP2->subapUsedVect[i] == TRUE )
+       {
+          *(localThresholdVect + i) = *(pThreshold + j);
+          j ++ ;
+       }
+       else
+       {
+          *(localThresholdVect + i) = -99.99;
+       }
+   }
+
+   /* write to genSub outputs */
+
+   *(double *)pgsub->vala = *(localThresholdVect+0);
+   *(double *)pgsub->valb = *(localThresholdVect+1);
+   *(double *)pgsub->valc = *(localThresholdVect+2);
+   *(double *)pgsub->vald = *(localThresholdVect+3);
 
    return (OK);
 }
