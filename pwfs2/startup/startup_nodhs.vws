@@ -1,4 +1,4 @@
-# $Id: startup_nodhs.vws,v 1.4 2002-02-23 02:27:23 cboyer Exp $
+# $Id: startup_nodhs.vws,v 1.5 2002-11-26 03:22:14 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -22,9 +22,9 @@ pwd
 < $(version)/bin/$(arch)/local
 
 # Load EPICS core, sequencer and pvload
-ld < /gemini/external/GEM7/base/bin/$(arch)/iocCore
-ld < /gemini/external/GEM7/base/bin/$(arch)/seq
-ld < /gemini/external/GEM7/extensions/bin/$(arch)/pvload
+ld < /gemini/external/GEM8.4/base/bin/$(arch)/iocCore
+ld < /gemini/external/GEM8.4/base/bin/$(arch)/seq
+ld < /gemini/external/GEM8.4/extensions/bin/$(arch)/pvload
 
 # Records, device and driver support for a Gemini base system
 ld < $(version)/bin/$(arch)/gemini$(dbname).Support

@@ -266,3 +266,5 @@ V4-4 4 Nov 2002 CB:
   - modify detInit to initialize correctly signal processing, butterworth 
     filters and zero point models
   - update detAoModP2MK.dat, defBinCtrlP2CP.dat, defFullCtrlP2CP.dat
+  - detControl.c: add testTDL()
+  - startupCP.vws: change IP address of reggie
