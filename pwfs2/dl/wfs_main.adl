@@ -18,7 +18,7 @@ display {
 	object {
 		x="0"
 		y="0"
-		width="978"
+		width="1022"
 		height="351"
 	}
 	clr="1"
@@ -49,10 +49,10 @@ display {
 	clrrule="alarm"
 	pv=""
 	cmap=""
-	pixwid="1024"
-	pixht="768"
-	mmwid="289"
-	mmht="217"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<color map>>" {
 	ncolors="29"
