@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.20 2002-01-24 21:00:19 cboyer Exp $"};
+   "$Id: detControl.c,v 1.21 2002-02-08 02:31:59 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   07 Feb 2002: CB - Reset signal processing when detInit and detReset and
+ *                     reject observe command if signal processing not
+ *                     initialized
  *   18 Jan 2002: CB - add detPowerOn
  *   02 Jan 2002: CB - detDhsInit started from detControl now
  *   14 Dec 2001: CB - Compute threshold per sub-apertures in real time
@@ -5090,6 +5093,21 @@ uint32 detObserveStart
          ERROR_LOG ("Failed to set integration time SIR record");
       }
 
+      /*
+       * Reject the command, if signal processing is not initialized and
+       * sigMode is not set to one of the following mode: AO_MODE_NONE
+       */
+
+      if ( ( obsId->aoCtrlId->initFlag == FALSE ) &&
+           (obsId->sigMode != AO_MODE_NONE) )
+      {
+         ERROR_SET (S_detControl_BAD_ATTRIBUTE,
+         "Signal processing not init, use the init command for the signal processing first",
+         ERROR_LOG_NOW);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+
       /* 
        * Init some parameters according to the signal processing mode
        */
@@ -6971,6 +6989,53 @@ uint32 detInit
       simulate = FALSE;
    }
 
+   /* 
+    * Reset the signal processing 
+    */
+
+   obsId->aoCtrlId->initFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoCtrlInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->darkInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->flatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->aoContMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pAoContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->fgContMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pFgContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
+   }
+
    /*
     * If an SDSU context structure already exists, delete it.
     */
@@ -7636,6 +7701,53 @@ uint32 detReset
    /* Set to FLASE the temperature Flag */
 
    readTempReadyFlag = FALSE ;
+
+   /*
+    * Reset the signal processing
+    */
+
+   obsId->aoCtrlId->initFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoCtrlInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->darkInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->flatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->aoContMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pAoContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->fgContMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pFgContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
+   }
 
    /*
     * Reset the SDSU hardware.
@@ -10348,7 +10460,7 @@ void detObserveEnd
                obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl-1].thresholdVect;
             else
                pPrevThresh =
-               obsId->aoCbFgCtrlId->cbFgCtrlRecord[CB_FG_CTRL_RECORD_NB].thresholdVect;
+               obsId->aoCbFgCtrlId->cbFgCtrlRecord[CB_FG_CTRL_RECORD_NB-1].thresholdVect;
          }
       }
 
@@ -11246,7 +11358,7 @@ void detObserveEnd
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
                pWfsStatus, (int)obsId->writeToRm);
-               printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
+               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
                        pThresh, obsId->aoCbAoCtrlId);
 #endif
@@ -13828,13 +13940,30 @@ uint32 detFrameSize
 */
       if ( obsId->aoCcdId->binningFlag == FALSE )
       {
+/*
          obsId->aoCtrlId->rms = obsId->aoCtrlId->rmsDarkFull;
          obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
+*/
+         obsId->aoCtrlId->rms = rms;
+         obsId->aoCtrlId->threshold = thresh;
+         if ( obsId->aoCtrlId->rmsDarkFull == 0.0 )
+            obsId->aoCtrlId->rmsDarkFull = rms;
+         if ( obsId->aoCtrlId->thresholdDarkFull == 0.0 )
+            obsId->aoCtrlId->thresholdDarkFull = thresh;
       }
       else
       {
-         obsId->aoCtrlId->rms = obsId->aoCtrlId->thresholdDarkBin;
+/*
+         obsId->aoCtrlId->rms = obsId->aoCtrlId->rmsDarkBin;
          obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
+*/
+         obsId->aoCtrlId->rms = rms;
+         obsId->aoCtrlId->threshold = thresh;
+
+         if ( obsId->aoCtrlId->thresholdDarkBin == 0.0 )
+            obsId->aoCtrlId->thresholdDarkBin = thresh;
+         if ( obsId->aoCtrlId->rmsDarkBin == 0.0 )
+            obsId->aoCtrlId->rmsDarkBin = rms;
       }
       for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
           obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;

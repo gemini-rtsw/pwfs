@@ -76,6 +76,8 @@
  *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   07 Feb 2002: CB - Add flip in header of fg and ao circular buffers in order
+ *                     to be identical to oiwfs gmos circular buffer
  *   21 Jan 2002: CB - Add pWfsStatus to writeWfsToTcs()
  *   14 Dec 2001: CB - Threshold in real time: add rms, rmsDarkFull, rmsDarkBin
  *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
@@ -5104,6 +5106,8 @@ STATUS aoCbAoCtrlSave
    aoHeaderCbAoCtrl.threshold = aoCtrlId->threshold;
    aoHeaderCbAoCtrl.totalThreshold = aoCtrlId->totalThreshold;
    aoHeaderCbAoCtrl.angleWithM1 = aoCtrlId->angleWithM1;
+   aoHeaderCbAoCtrl.flipXWithM1 = 0.0;
+   aoHeaderCbAoCtrl.flipYWithM1 = 0.0;
 
    /*
     * Open the aO control circular buffer
@@ -5401,6 +5405,8 @@ STATUS aoCbFgCtrlSave
    aoHeaderCbFgCtrl.rms = aoCtrlId->rms;
    aoHeaderCbFgCtrl.totalThreshold = aoCtrlId->totalThreshold;
    aoHeaderCbFgCtrl.angleWithM2 = aoCtrlId->angleWithM2;
+   aoHeaderCbFgCtrl.flipXWithM2 = 0.0;
+   aoHeaderCbFgCtrl.flipYWithM2 = 0.0;
    aoHeaderCbFgCtrl.slidingFocusGain = aoCtrlId->slidingFocusGain;
 
    /*
@@ -5550,7 +5556,7 @@ STATUS aoCbFgCtrlSave
  *   aoGuideAndFocus
  *
  *   INVOCATION:
- *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
+ *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pThreshVect, pTotalCountsVect, 
  *                    pCentroidsVect, pErrorCentroidsVect, pFgVect, 
  *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
  *                    writeToRm)
@@ -5561,6 +5567,7 @@ STATUS aoCbFgCtrlSave
  *   (>) aoCcdId             (AO_CCD_ID)  Pointer to the AO CCD geometry 
  *                                        context structure
  *   (>) aoCtrlId            (AO_CTRL_ID) Pointer to the AO control structure
+ *   (<) pThreshVect         (double *)   Pointer to the threshold vector
  *   (<) pTotalCounts        (double *)   Pointer to the total counts vector
  *   (<) pCentroidsVect      (double *)   Pointer to the centroids vector
  *   (<) pErrorCentroidsVect (double *)   Pointer to the errors centroids 

@@ -17,6 +17,8 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 07 Feb 2002: CB - Add flip in header of fg and ao circular buffers in order 
+ *                   to be identical to oiwfs gmos circular buffer
  * 14 Dec 2001: CB - Threshold in real time: add rms, rmsDarkFull, rmsDarkBin
  * 13 Sep 2001: CB - Add aoThresholdPerSubapCompute(), thresholdVect, 
  *                   thresholdDarkFull and thresholdDarkBin
@@ -643,6 +645,14 @@ typedef struct
 
    double       angleWithM1;           /* Angle between M1 and P2 coordinates */
 
+   double       flipXWithM1;           /* Flip in X of PWFS2 tip measurements */
+                                       /* according to M1 referential         */
+                                       /* Not used always = 0                 */
+
+   double       flipYWithM1;           /* Flip in Y of PWFS2 Tilt measurements*/
+                                       /* according to M1 referential         */
+                                       /* Not used always = 0                 */
+
    WFS_VECT     thresholdVect;         /* Threshold computed for each         */
                                        /* subaperture                         */
 
@@ -685,6 +695,14 @@ typedef struct
                                        /* the centroids computation           */
 
    double       angleWithM2;           /* Angle between M2 and P2 coordinates */
+
+   double       flipXWithM2;           /* Flip in X of PWFS2 tip measurements */
+                                       /* according to M2 referential         */
+                                       /* Not used always = 0                 */
+
+   double       flipYWithM2;           /* Flip in Y of PWFS2 Tilt measurements*/
+                                       /* according to M2 referential         */
+                                       /* Not used always = 0                 */
 
    double       slidingFocusGain;      /* Gain for sliding average for focus  */
 

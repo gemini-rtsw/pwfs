@@ -204,4 +204,12 @@ V3-0 24 January 2002 CB:
   - add detPowerOn
   - Check wfsStatus in writeWfsToTcs()
 
-dev equivalent to V3-0
+V3-1 07 February 2002 CB:
+-------------------------
+  - Init threshold and rms from the par file in detFrameSize()
+  - Bug fixed in detObserveEnd (prevThresh read from CB_FG_CTRL_RECORD_NB record
+    instead of CB_FG_CTRL_RECORD_NB-1 record)
+  - detInit and detReset: reset to FALSE signal processing and reject command
+    detObserveStart if signal processing not initialized
+  - Add flip in header of fg and ao circular buffers in order to be identical 
+    to oiwfs gmos circular buffers
