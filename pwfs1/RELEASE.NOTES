@@ -10,6 +10,7 @@ Modification toward V0-4
   - New TIM boot codes
 
 V0-6 18 Nov 1999 CB: 
+--------------------
 Modification toward V0-5
   - synchroMap.h identical to pwfs2
   - writeZernikes.c : include the nulls offsets from TCS
@@ -17,3 +18,15 @@ Modification toward V0-5
   - ospLib.c : working on threshold into ospFGCentroidWrapper
     -1 : threshold = 2nd biggest corner 
     -2 : % biggest for each subaperture
+
+V0-7 5 Jan 1999 CB:
+-------------------
+Modification toward V0-6
+  - local.vws modified to allow save into /usr/astro
+  - bug fixed in wfsInitTelName in wfsLib.c
+  - startup.vws : timelib and slalib are now under /gemini
+  - in startup_MINIMAL.vws -> Minimal startup pwfs1
+  - in writeZernikes.c aoZero and ttfZero() remove limits for cass rot angle
+  - capfast: modify ag:p1:tableAngle by ag:p1:RT34PosA.VALA for ttf and ao
+  - add a new angle to differentiate ao and fg in detSigInit
+  - rotate on the slopes and no more on the Z
