@@ -342,6 +342,8 @@ V4-7 25 AUG 2004 AAG:
 	 fixed small bug in aoCtrlFileRead (assumed no blank/comment line 
 	 at the end of the file)
    - par/defAoModP2MK.dat
+   - par/defAoContMatP2MK.dat
+   - par/defAoContMatP2CP.dat
 	updated
    - startup/startupCP.vws
 	Dhs data Server updated (jughead)
