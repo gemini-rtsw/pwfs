@@ -2,71 +2,42 @@
 uniq 71
 [tools]
 [detail]
-w 600 835 100 0 n#54 carID.carID#28.FLNK 288 864 288 832 960 832 egenSub.combWfs.SLNK
-w 456 1387 100 0 n#54 carID.carID#21.FLNK 288 1376 672 1376 672 832 junction
 w 456 331 100 0 n#54 carID.carID#66.FLNK 288 320 672 320 672 832 junction
 w 552 427 100 0 n#70 carID.carID#66.CLID 288 416 864 416 864 1184 960 1184 egenSub.combWfs.INPF
-w 8 459 100 0 n#69 elongouts.testPut.OUT -32 448 96 448 carID.carID#66.IVAL
 w 424 523 100 0 n#69 junction 64 448 64 512 832 512 832 1248 960 1248 egenSub.combWfs.INPE
+w 8 459 100 0 n#69 elongouts.testPut.OUT -32 448 96 448 carID.carID#66.IVAL
 w -360 491 100 0 n#68 esirs.testing.FLNK -448 544 -384 544 -384 480 -288 480 elongouts.testPut.SLNK
 w -392 523 100 0 n#67 esirs.testing.VAL -448 512 -288 512 elongouts.testPut.DOL
 w 520 1483 100 0 n#63 carID.carID#21.CLID 288 1472 800 1472 800 1440 960 1440 egenSub.combWfs.INPB
-w 416 1571 100 0 n#58 carID.carID#21.IVAL 96 1504 64 1504 64 1568 816 1568 816 1504 960 1504 egenSub.combWfs.INPA
+w 456 1387 100 0 n#54 carID.carID#21.FLNK 288 1376 672 1376 672 832 junction
+w 600 835 100 0 n#54 carID.carID#28.FLNK 288 864 288 832 960 832 egenSub.combWfs.SLNK
 w 8 1515 100 0 n#58 elongouts.initPut.OUT 0 1504 64 1504 junction
+w 416 1571 100 0 n#58 carID.carID#21.IVAL 96 1504 64 1504 64 1568 816 1568 816 1504 960 1504 egenSub.combWfs.INPA
 w -360 1579 100 0 n#50 esirs.initialising.VAL -416 1568 -256 1568 elongouts.initPut.DOL
 w -328 1547 100 0 n#49 esirs.initialising.FLNK -416 1600 -352 1600 -352 1536 -256 1536 elongouts.initPut.SLNK
 w 1796 1195 100 0 OERR carID.carID#43.OERR 1664 1408 1792 1408 1792 992 2112 992 outhier.OERR.p
 w 1944 1195 100 0 OMSS carID.carID#43.OMSS 1664 1440 1824 1440 1824 1184 2112 1184 outhier.OMSS.p
 w 1412 1083 100 0 n#46 egenSub.combWfs.FLNK 1248 800 1408 800 1408 1376 1472 1376 carID.carID#43.SLNK
 w 1304 1451 100 0 n#45 egenSub.combWfs.OUTB 1248 1440 1408 1440 1408 1472 1472 1472 carID.carID#43.ICID
-w 1336 1515 100 0 VAL egenSub.combWfs.OUTA 1248 1504 1472 1504 carID.carID#43.IVAL
 w 1806 1763 100 0 VAL junction 1408 1504 1408 1760 2112 1760 outhier.VAL.p
+w 1336 1515 100 0 VAL egenSub.combWfs.OUTA 1248 1504 1472 1504 carID.carID#43.IVAL
 w 1800 1379 100 0 CLID carID.carID#43.CLID 1664 1472 1856 1472 1856 1376 2112 1376 outhier.CLID.p
 w 1656 803 100 0 FLNK carID.carID#43.FLNK 1664 1376 1760 1376 1760 800 2112 800 outhier.FLNK.p
 w 520 963 100 0 n#55 carID.carID#28.CLID 288 960 800 960 800 1312 960 1312 egenSub.combWfs.INPD
 w 392 1059 100 0 n#56 carID.carID#28.IVAL 96 992 64 992 64 1056 768 1056 768 1376 960 1376 egenSub.combWfs.INPC
-s 1488 80 500 512 wfsCar.sch
 s -720 2160 500 0 PWFS2 - Wavefront Sensor CAR Records
+s 1488 80 500 512 wfsCar.sch
 [cell use]
-use carID 1472 1255 100 0 carID#43
-xform 0 1568 1408
-p 1472 1248 100 0 1 set1:car Detector
-p 1472 1216 100 0 1 set2:pv $(top)$(wfs)det
-use carID 96 1255 100 0 carID#21
-xform 0 192 1408
-p 96 1248 100 0 1 set1:car init
-p 96 1216 100 0 1 set2:pv $(top)init
-use carID 96 743 100 0 carID#28
-xform 0 192 896
-p 96 736 100 0 1 set1:car Observation
-p 96 704 100 0 1 set2:pv $(top)$(wfs)observe
 use carID 96 199 100 0 carID#66
 xform 0 192 352
 p 96 192 100 0 1 set1:car test
 p 96 160 100 0 1 set2:pv $(top)test
-use elongouts -256 1447 100 0 initPut
-xform 0 -128 1536
-p -416 1678 100 0 0 EGU:CAR state
-p -192 1424 100 0 1 OMSL:closed_loop
-p -192 1392 100 0 1 PV:$(top)$(wfs)
-p 0 1504 75 768 -1 pproc(OUT):PP
 use elongouts -288 391 100 0 testPut
 xform 0 -160 480
 p -448 622 100 0 0 EGU:CAR state
 p -224 368 100 0 1 OMSL:closed_loop
 p -224 336 100 0 1 PV:$(top)$(wfs)
 p -32 448 75 768 -1 pproc(OUT):PP
-use esirs -832 1351 100 0 initialising
-xform 0 -624 1504
-p -768 1312 100 0 1 DESC:WFS controller initialisation status
-p -768 1248 100 0 1 EGU:CAR state
-p -896 1088 100 0 0 FDSC:WFS ctrlr status (0=IDLE;1=PAUSED;2=BUSY;3=ERR)
-p -768 1280 100 0 1 FTVL:LONG
-p -608 1216 100 0 1 HIGH:2
-p -608 1184 100 0 1 HIHI:3
-p -768 1184 100 0 1 LOLO:0
-p -768 1216 100 0 1 LOW:0
-p -768 1152 100 0 1 PV:$(top)$(wfs)
 use esirs -864 295 100 0 testing
 xform 0 -656 448
 p -800 256 100 0 1 DESC:WFS controller test status
@@ -78,6 +49,35 @@ p -640 128 100 0 1 HIHI:3
 p -800 128 100 0 1 LOLO:0
 p -800 160 100 0 1 LOW:0
 p -800 96 100 0 1 PV:$(top)$(wfs)
+use esirs -832 1351 100 0 initialising
+xform 0 -624 1504
+p -768 1312 100 0 1 DESC:WFS controller initialisation status
+p -768 1248 100 0 1 EGU:CAR state
+p -896 1088 100 0 0 FDSC:WFS ctrlr status (0=IDLE;1=PAUSED;2=BUSY;3=ERR)
+p -768 1280 100 0 1 FTVL:LONG
+p -608 1216 100 0 1 HIGH:2
+p -608 1184 100 0 1 HIHI:3
+p -768 1184 100 0 1 LOLO:0
+p -768 1216 100 0 1 LOW:0
+p -768 1152 100 0 1 PV:$(top)$(wfs)
+use elongouts -256 1447 100 0 initPut
+xform 0 -128 1536
+p -416 1678 100 0 0 EGU:CAR state
+p -192 1424 100 0 1 OMSL:closed_loop
+p -192 1392 100 0 1 PV:$(top)$(wfs)
+p 0 1504 75 768 -1 pproc(OUT):PP
+use carID 96 743 100 0 carID#28
+xform 0 192 896
+p 96 736 100 0 1 set1:car Observation
+p 96 704 100 0 1 set2:pv $(top)$(wfs)observe
+use carID 96 1255 100 0 carID#21
+xform 0 192 1408
+p 96 1248 100 0 1 set1:car init
+p 96 1216 100 0 1 set2:pv $(top)init
+use carID 1472 1255 100 0 carID#43
+xform 0 1568 1408
+p 1472 1248 100 0 1 set1:car Detector
+p 1472 1216 100 0 1 set2:pv $(top)$(wfs)det
 use egenSub 960 743 100 0 combWfs
 xform 0 1104 1168
 p 1024 704 100 0 1 DESC:Combine CAR values
@@ -97,26 +97,35 @@ p 1280 1408 100 0 1 FTVC:LONG
 p 1024 640 100 0 1 PV:$(top)$(wfs)
 p 1024 672 100 0 1 SNAM:cicsCarValCombine
 p 737 517 100 0 0 UFC:
-use outhier 2080 1719 100 0 VAL
-xform 0 2096 1760
-use outhier 2080 1527 100 0 OVAL
-xform 0 2096 1568
-use outhier 2080 1335 100 0 CLID
-xform 0 2096 1376
-use outhier 2080 1143 100 0 OMSS
-xform 0 2096 1184
-use outhier 2080 951 100 0 OERR
-xform 0 2096 992
 use outhier 2080 759 100 0 FLNK
 xform 0 2096 800
+use outhier 2080 951 100 0 OERR
+xform 0 2096 992
+use outhier 2080 1143 100 0 OMSS
+xform 0 2096 1184
+use outhier 2080 1335 100 0 CLID
+xform 0 2096 1376
+use outhier 2080 1527 100 0 OVAL
+xform 0 2096 1568
+use outhier 2080 1719 100 0 VAL
+xform 0 2096 1760
+use notes 1536 279 100 0 notes#13
+xform 0 1792 464
+p 2064 430 100 0 0 AUTHOR:S.M.Beard and N.Dillon
+p 1564 590 100 0 -1 COMMENT1:This schematic contains the CAR records
+p 1564 558 100 0 -1 COMMENT2:for the actions specific to one
+p 1564 528 100 0 -1 COMMENT3:wavefront sensor. The schematic may be
+p 1564 496 100 0 -1 COMMENT4:duplicated, with a separate instance
+p 1564 464 100 0 -1 COMMENT5:for each wavefront sensor; each one
+p 1564 432 100 0 -1 COMMENT6:distinguished by the wfs macro.
 use bc200tr -1024 -104 -100 0 frame
 xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 1 checked:B.Goodrich
-p 1776 16 100 0 -1 date:$Date: 2001-09-04 19:52:58 $
-p 1552 2368 100 0 -1 id:$Id: wfsCar.sch,v 1.4 2001-09-04 19:52:58 cboyer Exp $
+p 1776 16 100 0 -1 date:$Date: 2000-07-10 21:47:06 $
+p 1552 2368 100 0 -1 id:$Id: wfsCar.sch,v 1.3 2000-07-10 21:47:06 cboyer Exp $
 p 1792 176 100 0 -1 project:Gemini PWFS2
-p 1552 144 100 0 -1 revision:$Revision: 1.4 $
+p 1552 144 100 0 -1 revision:$Revision: 1.3 $
 p 1792 112 100 0 -1 title:Wavefront Sensor CAR Records
 [comments]

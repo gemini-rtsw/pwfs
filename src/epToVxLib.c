@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: epToVxLib.c,v 1.4 2001-09-17 20:15:09 cboyer Exp $"};
+   "$Id: epToVxLib.c,v 1.3 2000-07-10 21:47:34 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -127,9 +127,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
- * Revision 1.3  2000/07/10 21:47:34  cboyer
- * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
- *
  * Revision 1.2  1999/07/17 02:14:04  cboyer
  * Minor modifications
  *
@@ -6931,7 +6928,7 @@ STATUS   epToVxPipeWrite
             valueLong = * (long *) (int) pValue;
 
             if ((! pContext->firstWriteDone) ||
-                (fabs ((double) valueLong - pContext->lastWriteValue) >=
+                (fabs ((double) valueLong - pContext->lastWriteValue) >
                  pContext->hysteresisOnWrite))
             {
                hysteresisExceeded = TRUE;
@@ -6951,7 +6948,7 @@ STATUS   epToVxPipeWrite
             valueDouble = * (double *) (int) pValue;
 
             if ((! pContext->firstWriteDone) ||
-                (fabs (valueDouble - pContext->lastWriteValue) >= 
+                (fabs (valueDouble - pContext->lastWriteValue) > 
                 pContext->hysteresisOnWrite))
             {
                hysteresisExceeded = TRUE;
