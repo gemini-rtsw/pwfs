@@ -109,4 +109,28 @@ V1-5 15 December 2000 CB:
   - ttfZero + aoZero in writeZernikes.c modify the formula for compositeAngle,
     now RT angle - CR angle + PA angle
 
-newDev equivalent to V1-5
+V1-6 09 February 2001 CB:
+-------------------------
+  - pwfs2Install : replace the link to cfitsio
+    (/home/cboyer/wfs_lib/cfitsio-ppc) per /gemini/cfitsio/cfitsio
+    and also add the site
+  - par: replace defFullCtrlP2.dat def...CP.dat and def...MK.dat
+    same for defBinCtrlP2.dat, same for dark and flat fits files
+    src: modify the software to include site into detControl.c and to
+    read the good file with good darks and flats
+  - par: add a new init file for CP and MK in order to have default
+    temp, ADC offsets and SN of the CCD
+    Temp, offset not updated according to the site in detInit and detReset.
+    I have to move all the DATREC_CONTEXT structures to obsId, I have created
+    detGetSirContext() and detWriteDefSirContext() and fix the bug.
+    There is still an issue when using detInit, need to do detSigInit after (if
+    not the ref for the centers of the subapertures are messed)
+  - add a StripTool for temperature
+  - det_frameSize.dl -> replace the button x,y X 2 per YES
+  - Add a button "CLEAR ERRORS" on main screen
+  - Add a Binning flag in the signal processing main window
+  - ADC offset for binning and no binning (par and src)
+  - remeasure defFullP2DarkMK.fits and defBinP2DarkMK.fits
+  - Save zernikes vect after rotation in circular buffer
+
+newDev equivalent to V1-6

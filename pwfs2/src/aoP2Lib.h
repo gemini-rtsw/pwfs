@@ -16,8 +16,9 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
- * 25 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
- * 13 May 1999 - CB - Original creation
+ * 08 Feb 2001: CB - Add zernikesVectAfterRot in circular buffer AO_CB_CTRL_ID 
+ * 25 Oct 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
+ * 13 May 1999: CB - Original creation
  *
  */
 
@@ -338,6 +339,10 @@ typedef struct                         /* Definition of the control circular  */
    COMMAND_VECT zernikesVect;          /* Vector which contains the zernikes  */
                                        /* modes to send to the SCS            */
 
+   COMMAND_VECT zernikesVectAfterRot;  /* Vector which contains the zernikes  */
+                                       /* modes to send to the SCS after a&g  */
+                                       /* and cass rototator rotation         */
+
    COMMAND_VECT errorsVect;            /* Vector which contains the errors    */
                                        /* associated with the zernikes modes  */
 
@@ -451,11 +456,12 @@ STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels,
                        int yPixels);
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       double * pTotalCountsVect, double * pCentroidsVect, 
-                      double * pZernikesVect, double * pErrorsVect, 
-                      double * pTime, int * pWfsStatus);
+                      double * pZernikesVect, double * pZernikesVectAfterRot,
+                      double * pErrorsVect, double * pTime, int * pWfsStatus);
 STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId, 
                               AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
                               double * pCentroidsVect, double * pZernikesVect, 
+                              double * pZernikesVectAfterRot, 
                               double * pErrorsVect, double * pTime, 
                               int * pWfsStatus);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
@@ -468,13 +474,16 @@ STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                         double *pTotalCountsVect, double * pCentroidsVect, 
                         double * pErrorCentroidsVect, double * pZernikesVect, 
-                        double * pErrorsVect, double * pTime, int * pWfsStatus);
+                        double * pZernikesVectAfterRot, double * pErrorsVect, 
+                        double * pTime, int * pWfsStatus);
 STATUS aoGuideAndFocusAndError (float * pImage, AO_CCD_ID aoCcdId, 
                                 AO_CTRL_ID aoCtrlId, double *pTotalCountsVect, 
                                 double * pCentroidsVect, 
                                 double * pErrorCentroidsVect, 
-                                double * pZernikesVect, double * pErrorsVect, 
-                                double * pTime, int * pWfsStatus);
+                                double * pZernikesVect, 
+                                double * pZernikesVectAfterRot, 
+                                double * pErrorsVect, double * pTime, 
+                                int * pWfsStatus);
 STATUS aoCbImSave (char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                    AO_CB_IM_ID aoCbImId);
 STATUS aoCbCtrlSave (char *pCbCtrlFilePath, AO_CCD_ID aoCcdId, 

@@ -1,8 +1,8 @@
 # Init file for control structure of PWFS2
 # Name of the bin dark fits file (string)
-data/defBinP2Dark.fits
+data/defBinP2DarkCP.fits
 # Name of the bin flat fits file (string)
-data/defBinP2Flat.fits
+data/defBinP2FlatCP.fits
 # Name of the AO SH reference file (string)
 data/defBinRefP2.dat
 # Number of modes to be corrected

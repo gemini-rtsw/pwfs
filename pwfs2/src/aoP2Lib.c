@@ -52,12 +52,13 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
- *   10 November 2000: CB - Put back sliding average for focus computation in
- *                          aoGuideAndFocus and aoGuideAndFocusAndError
- *   31 October 2000: CB - Remove sliding average for focus computation in
- *                         aoGuideAndFocus and aoGuideAndFocusAndError
- *   25 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
- *   13 March 2000: CB - original creation
+ *   08 Feb 2001: CB - Add zernikesVectAfterRot in circular buffer AO_CB_CTRL_ID
+ *   10 Nov 2000: CB - Put back sliding average for focus computation in
+ *                     aoGuideAndFocus and aoGuideAndFocusAndError
+ *   31 Oct 2000: CB - Remove sliding average for focus computation in
+ *                     aoGuideAndFocus and aoGuideAndFocusAndError
+ *   25 Oct 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
+ *   13 Mar 2000: CB - original creation
  *INDENT-ON*
  *-
  */
@@ -1730,23 +1731,27 @@ STATUS aoDarkSubtract (
  *
  *   INVOCATION:
  *   aoGlobalGuideAndError (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
- *                          pCentroidsVect, pZernikesVect, pErrorsVect, 
- *                          pTime, pWfsStatus)
+ *                          pCentroidsVect, pZernikesVect, 
+ *                          pZernikesVectAfterRot, pErrorsVect, pTime, 
+ *                          pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage           (float *)    Pointer to the image from which to 
- *                                     compute the centroids
- *   (>) aoCcdId          (AO_CCD_ID)  Pointer to the AO CCD geometry context 
- *                                     structure
- *   (>) aoCtrlId         (AO_CTRL_ID) Pointer to the AO control structure
- *   (<) pTotalCountsVect (double *)   Pointer to the total counts vector
- *   (<) pCentroidsVect   (double *)   Pointer to the centroids vector
- *   (<) pZernikesVect    (double *)   Pointer to the zernikes vector
- *   (<) pErrorsVect      (double *)   Pointer to the associated errors vector
- *   (<) pTime            (double *)   Pointer to the time associated to the 
- *                                     vectors
- *   (<) pWfsStatus       (int *)      Pointer to the status flag when computing
- *                                     the centroids 
+ *   (>) pImage                (float *)    Pointer to the image from which to 
+ *                                          compute the centroids
+ *   (>) aoCcdId               (AO_CCD_ID)  Pointer to the AO CCD geometry 
+ *                                          context structure
+ *   (>) aoCtrlId              (AO_CTRL_ID) Pointer to the AO control structure
+ *   (<) pTotalCountsVect      (double *)   Pointer to the total counts vector
+ *   (<) pCentroidsVect        (double *)   Pointer to the centroids vector
+ *   (<) pZernikesVect         (double *)   Pointer to the zernikes vector
+ *   (<) pZernikesVectAfterRot (double *)   Pointer to the zernikes vector after
+ *                                          rotation
+ *   (<) pErrorsVect           (double *)   Pointer to the associated errors 
+ *                                          vector
+ *   (<) pTime                 (double *)   Pointer to the time associated to 
+ *                                          the vectors
+ *   (<) pWfsStatus            (int *)      Pointer to the status flag when 
+ *                                          computing the centroids 
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -1782,6 +1787,7 @@ STATUS aoGlobalGuideAndError (
    double *     pTotalCountsVect,
    double *     pCentroidsVect,
    double *     pZernikesVect,
+   double *     pZernikesVectAfterRot,
    double *     pErrorsVect,
    double *     pTime,
    int *        pWfsStatus
@@ -1942,7 +1948,8 @@ STATUS aoGlobalGuideAndError (
       return (ERROR);
    };
  
-   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
+                          pErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -1959,22 +1966,26 @@ STATUS aoGlobalGuideAndError (
  *
  *   INVOCATION:
  *   aoGlobalGuide (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, pCentroidsVect,
- *                  pZernikesVect, pErrorsVect, pTime, pWfsStatus)
+ *                  pZernikesVect, pZernikesVectAfterRot, pErrorsVect, pTime, 
+ *                  pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage           (float *)    Pointer to the image from which to 
- *                                     compute the centroids
- *   (>) aoCcdId          (AO_CCD_ID)  Pointer to the AO CCD geometry context 
- *                                     structure
- *   (>) aoCtrlId         (AO_CTRL_ID) Pointer to the AO control structure
- *   (<) pTotalCountsVect (double *)   Pointer to the total counts vector
- *   (<) pCentroidsVect   (double *)   Pointer to the centroids vector
- *   (<) pZernikesVect    (double *)   Pointer to the zernikes vector
- *   (<) pErrorsVect      (double *)   Pointer to the associated errors vector
- *   (<) pTime            (double *)   Pointer to the time associated to the 
- *                                     vectors
- *   (<) pWfsStatus       (int *)      Pointer to the status flag when computing
- *                                     the centroids 
+ *   (>) pImage                (float *)    Pointer to the image from which to 
+ *                                          compute the centroids
+ *   (>) aoCcdId               (AO_CCD_ID)  Pointer to the AO CCD geometry 
+ *                                          context structure
+ *   (>) aoCtrlId              (AO_CTRL_ID) Pointer to the AO control structure
+ *   (<) pTotalCountsVect      (double *)   Pointer to the total counts vector
+ *   (<) pCentroidsVect        (double *)   Pointer to the centroids vector
+ *   (<) pZernikesVect         (double *)   Pointer to the zernikes vector
+ *   (<) pZernikesVectAfterRot (double *)   Pointer to the zernikes vector after
+ *                                          rotation
+ *   (<) pErrorsVect           (double *)   Pointer to the associated errors 
+ *                                          vector
+ *   (<) pTime                 (double *)   Pointer to the time associated 
+ *                                          to the vectors
+ *   (<) pWfsStatus            (int *)      Pointer to the status flag when 
+ *                                          computing the centroids 
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -2009,6 +2020,7 @@ STATUS aoGlobalGuide (
    double *     pTotalCountsVect,
    double *     pCentroidsVect,
    double *     pZernikesVect,
+   double *     pZernikesVectAfterRot,
    double *     pErrorsVect,
    double *     pTime,
    int *        pWfsStatus
@@ -2137,7 +2149,8 @@ STATUS aoGlobalGuide (
       return (ERROR);
    };
  
-   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
+                          pErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -2585,23 +2598,27 @@ STATUS aoCtrlContextShow (
  *   INVOCATION:
  *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                    pCentroidsVect, pErrorCentroidsVect, pZernikesVect, 
- *                    pErrorsVect, pTime, pWfsStatus)
+ *                    pZernikesVectAfterRot, pErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage         (float *)    Pointer to the image from which to compute 
- *                                   the centroids
- *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context 
- *                                   structure
- *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control structure
- *   (<) pTotalCounts   (double *)   Pointer to the total counts vector
- *   (<) pCentroidsVect (double *)   Pointer to the centroids vector
- *   (<) pErrorCentroidsVect (double *) Pointer to the errors centroids vector
- *   (<) pZernikesVect  (double *)   Pointer to the zernikes vector
- *   (<) pErrorsVect    (double *)   Pointer to the associated errors vector
- *   (<) pTime          (double *)   Pointer to the time associated to the 
- *                                   vectors
- *   (<) pWfsStatus     (int *)      Pointer to the status flag when computing 
- *                                   the centroids 
+ *   (>) pImage                (float *)    Pointer to the image from which to 
+ *                                          compute the centroids
+ *   (>) aoCcdId               (AO_CCD_ID)  Pointer to the AO CCD geometry 
+ *                                          context structure
+ *   (>) aoCtrlId              (AO_CTRL_ID) Pointer to the AO control structure
+ *   (<) pTotalCounts          (double *)   Pointer to the total counts vector
+ *   (<) pCentroidsVect        (double *)   Pointer to the centroids vector
+ *   (<) pErrorCentroidsVect   (double *)   Pointer to the errors centroids 
+ *                                          vector
+ *   (<) pZernikesVect         (double *)   Pointer to the zernikes vector
+ *   (<) pZernikesVectAfterRot (double *)   Pointer to the zernikes vector after
+ *                                          rotation
+ *   (<) pErrorsVect           (double *)   Pointer to the associated errors 
+ *                                          vector
+ *   (<) pTime                 (double *)   Pointer to the time associated to 
+ *                                          the vectors
+ *   (<) pWfsStatus            (int *)      Pointer to the status flag when 
+ *                                          computing the centroids 
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -2643,6 +2660,7 @@ STATUS aoGuideAndFocus (
    double *     pCentroidsVect,
    double *     pErrorCentroidsVect,
    double *     pZernikesVect,
+   double *     pZernikesVectAfterRot,
    double *     pErrorsVect,
    double *     pTime,
    int *        pWfsStatus
@@ -2993,7 +3011,8 @@ STATUS aoGuideAndFocus (
       return (ERROR);
    };
  
-   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
+                          pErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -3011,23 +3030,28 @@ STATUS aoGuideAndFocus (
  *   INVOCATION:
  *   aoGuideAndFocusAndError (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                            pCentroidsVect, pErrorCentroidsVect, 
- *                            pZernikesVect, pErrorsVect, pTime, pWfsStatus)
+ *                            pZernikesVect, pZernikesVectAfterRot, pErrorsVect,
+ *                            pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage         (float *)    Pointer to the image from which to compute 
- *                                   the centroids
- *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context 
- *                                   structure
- *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control structure
- *   (<) pTotalCounts   (double *)   Pointer to the total counts vector
- *   (<) pCentroidsVect (double *)   Pointer to the centroids vector
- *   (<) pErrorCentroidsVect (double *) Pointer to the errors centroids vector
- *   (<) pZernikesVect  (double *)   Pointer to the zernikes vector
- *   (<) pErrorsVect    (double *)   Pointer to the associated errors vector
- *   (<) pTime          (double *)   Pointer to the time associated to the 
- *                                   vectors
- *   (<) pWfsStatus     (int *)      Pointer to the status flag when computing 
- *                                   the centroids 
+ *   (>) pImage                (float *)    Pointer to the image from which to 
+ *                                          compute the centroids
+ *   (>) aoCcdId               (AO_CCD_ID)  Pointer to the AO CCD geometry 
+ *                                          context structure
+ *   (>) aoCtrlId              (AO_CTRL_ID) Pointer to the AO control structure
+ *   (<) pTotalCounts          (double *)   Pointer to the total counts vector
+ *   (<) pCentroidsVect        (double *)   Pointer to the centroids vector
+ *   (<) pErrorCentroidsVect   (double *)   Pointer to the errors centroids 
+ *                                          vector
+ *   (<) pZernikesVect         (double *)   Pointer to the zernikes vector
+ *   (<) pZernikesVectAfterRot (double *)   Pointer to the zernikes vector after
+ *                                          rotation
+ *   (<) pErrorsVect           (double *)   Pointer to the associated errors 
+ *                                          vector
+ *   (<) pTime                 (double *)   Pointer to the time associated to 
+ *                                          the vectors
+ *   (<) pWfsStatus            (int *)      Pointer to the status flag when 
+ *                                          computing the centroids 
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3069,6 +3093,7 @@ STATUS aoGuideAndFocusAndError (
    double *     pCentroidsVect,
    double *     pErrorCentroidsVect,
    double *     pZernikesVect,
+   double *     pZernikesVectAfterRot,
    double *     pErrorsVect,
    double *     pTime,
    int *        pWfsStatus
@@ -3459,7 +3484,8 @@ STATUS aoGuideAndFocusAndError (
       return (ERROR);
    };
  
-   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
+                          pErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -4167,6 +4193,7 @@ STATUS aoCbCtrlZero
        for ( i = 0 ; i < MODE_NB ; i ++ )
        {
            aoCbCtrlId->cbCtrlRecord[index].zernikesVect[i] = 0.0;
+           aoCbCtrlId->cbCtrlRecord[index].zernikesVectAfterRot[i] = 0.0;
            aoCbCtrlId->cbCtrlRecord[index].errorsVect[i] = 0.0;
        }
    }
