@@ -249,3 +249,43 @@ V4-4 10 July 2003 CB:
   - Implement proportional law for aO gains
   - startupCP.vws fix address of reggie
 
+V4-4-dev 17 May 2004 AAG:
+------------------------
+
+  * read default gains from .dat file when pressing the default button
+  * set default of the detSigModeSeq CAD from pv load file (one per site)
+  * set default of the detSigModeSeqDark CAD from pv load file (one per site)
+
+  - Added pwfs1SetDefCommandCP.pv and pwfs1SetDefCommandMK.pv
+  - src/Makefile.Vx modified
+  - startup/startupCP.vws
+       Included load of pwfs1SetDefCommandCP.pv file
+  - startup/startupMK.vws
+       Included load of pwfs1SetDefCommandMK.pv file
+       DHS Server moved to acamar
+  - IMP_Startup.pwfs1:
+       DHS server moved to acamar
+  - par/defAoModP1MK.dat updated
+  - capfats/wfsGensub1.s* added
+  - capfast/pwfs1.sch modified to include wfsGensub1
+  - capfast/wfsDetSad.sch
+  - capfast/wfsCadMore.sch
+  - src/aoP1Lib.c
+  - src/aoP1Lib.h
+  - src/detControl.h
+  - src/detControl.c
+  - adl/detSigInitFgGain.adl
+  - adl/detSigModeSeq.adl
+  - adl/detSigModeSeqDark.adl
+
+  * aoTotalThresholdCompute(): New fit similar as pwfs2
+  - src/aoP1Lib.c modified
+
+  --- NOT IN CVS --- only as a record
+  Clamp ao commands above a max threshold? -> Confirm if needed
+  (following changes are only locally in /home/aaguayo/CURRENTLY_MOD/pwfs1/)
+  - capfast/wfsCadMore.sch.clamp: Added detSigInitAoThresh record
+  - capfast/wfsGensub1.sch.clamp: Added initSigInitAoThresh record 
+  - adl/detSigInitAoThresh.adl.clamp: added
+  - adl/sig_main.adl.clamp: Added detSigInitAoThresh option
+
