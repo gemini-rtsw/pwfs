@@ -74,6 +74,9 @@
  *                   to contain the modes after rotation
  * 29-Mar-2001: cb - fix bug for rotation matrix (two bugs which compensate
  *                   each others)
+ * 23-May-2001: cb - add zero point model for trefoil off axis
+ * 29-May-2001: cb - add zero point model for coma off axis and now scale factor
+ *                   in writeZernikes.c
  *
  */
 /* INDENT ON */
@@ -207,6 +210,9 @@ SEM_ID  accessAstigModel;
 
 TREF_ZP_MODEL_ID_STRUCT trefoilModel;
 SEM_ID  accessTrefoilModel;
+
+COMA_ZP_MODEL_ID_STRUCT comaModel;
+SEM_ID  accessComaModel;
 
 /* declare prototypes */
 
@@ -504,6 +510,18 @@ long gensubToTcsInit
       }
    }
 
+   /* create semaphore to prevent multiple access to comaModel data */
+
+   if(accessComaModel == NULL)
+   {
+      if ((accessComaModel = 
+          semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) 
+          == NULL)
+      {
+             printf ("unable to create accessComaModel sem\n");
+      }
+   }
+
    /* init structure astigModel */
 
    astigModel.a1 = 0.0;
@@ -539,6 +557,18 @@ long gensubToTcsInit
    trefoilModel.costref = 0.0;
    trefoilModel.sintref = 0.0;
    trefoilModel.applyModel = 0.0;
+
+   /* init structure comaModel */
+
+   comaModel.a = 0.0;
+   comaModel.p = 0.0;
+   comaModel.c = 0.0;
+   comaModel.b = 0.0;
+   comaModel.pp = 0.0;
+   comaModel.d = 0.0;
+   comaModel.comaX = 0.0;
+   comaModel.comaY = 0.0;
+   comaModel.applyModel = 0.0;
 
    /* create structure holding angle and null values for ao data */
 
@@ -891,12 +921,23 @@ STATUS writeWfsToTcs
 
       /* tip and tilt: r * cos(t) and r * sin(t) */
 
-      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1)));
+#ifdef GAIN
+      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))); 
       result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz));
+#else
+      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
+                  * aoCtrlId->aoScaleFactorVect[0];
+      result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz))
+                  * aoCtrlId->aoScaleFactorVect[1];
+#endif
 
       /* focus : 2*r^2 -1 */
 
+#ifdef GAIN
       result.z4 = *(pz+2);
+#else
+      result.z4 = (*(pz+2)) * aoCtrlId->aoScaleFactorVect[2];
+#endif
 
       /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
 
@@ -905,12 +946,21 @@ STATUS writeWfsToTcs
       g0 = astigModel.gain0;
       g45 = astigModel.gain45;
 
+#ifdef GAIN
       result.z5 = (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
                   - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3])
                   - (astigModel.astig0)*(aoCtrlId->aoScaleFactorVect[3]);
       result.z6 = (g45*f->cos2Theta*(astig45) - g45*f->sin2Theta*(astig0)) 
                   - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4])
                   - (astigModel.astig45)*(aoCtrlId->aoScaleFactorVect[4]);
+#else
+      result.z5 = ( (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
+                  - ((f->null[8])*1000.0)
+                  - (astigModel.astig0) ) * (aoCtrlId->aoScaleFactorVect[3]);
+      result.z6 = ( (g45*f->cos2Theta*(astig45) - g45*f->sin2Theta*(astig0)) 
+                  - ((f->null[9])*1000.0)
+                  - (astigModel.astig45) ) * (aoCtrlId->aoScaleFactorVect[4]);
+#endif
 
       /*result.z5 = (f->cos2Theta*(*(pz+3)) + f->sin2Theta*(*(pz+4))) 
                   - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3])
@@ -922,38 +972,102 @@ STATUS writeWfsToTcs
       /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and 
          (3*r^2 - 2) * r * sin(t) */
 
-      result.z7 = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)));
-      result.z8 = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)));
+#ifdef GAIN
+      result.z7 = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
+                  - (comaModel.comaX)*(aoCtrlId->aoScaleFactorVect[5]);
+
+      result.z8 = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
+                  - (comaModel.comaY)*(aoCtrlId->aoScaleFactorVect[6]);
+#else
+      result.z7 = ( (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
+                  - (comaModel.comaX) ) * (aoCtrlId->aoScaleFactorVect[5]);
+
+      result.z8 = ( (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
+                  - (comaModel.comaY) ) * (aoCtrlId->aoScaleFactorVect[6]);
+#endif
 
       /* spherical: 6*r^4 - 6*r^2 + 1 */
+
+#ifdef GAIN
       result.z9 = (*(pz+7));
+#else
+      result.z9 = (*(pz+7)) * (aoCtrlId->aoScaleFactorVect[7]);
+#endif
 
       /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
+
+#ifdef GAIN
       result.z10 = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
                    - (trefoilModel.costref)*(aoCtrlId->aoScaleFactorVect[8]);
 
       result.z11 = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
                    - (trefoilModel.sintref)*(aoCtrlId->aoScaleFactorVect[9]);
+#else
+      result.z10 = ( (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
+                   - (trefoilModel.costref) ) * 
+                   (aoCtrlId->aoScaleFactorVect[8]);
+
+      result.z11 = ( (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
+                   - (trefoilModel.sintref) ) * 
+                   (aoCtrlId->aoScaleFactorVect[9]);
+#endif
 
       /* (4*r^2-3) * r^2 * cos(2t) and (4*r^2-3) * r^2 * sin(2t) */
+
+#ifdef GAIN
       result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11)));
       result.z13 = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)));
+#else
+      result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11))) 
+                   * (aoCtrlId->aoScaleFactorVect[10]);
+      result.z13 = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)))
+                   * (aoCtrlId->aoScaleFactorVect[11]);
+#endif
 
       /* (10*r^4 -12*r^3 + 3) * r * cos(t) and 
          (10*r^4 -12*r^3 + 3) * r * sin(t) */
+
+#ifdef GAIN
       result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)));
       result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)));
+#else
+      result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)))
+                   * (aoCtrlId->aoScaleFactorVect[12]);
+      result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)))
+                   * (aoCtrlId->aoScaleFactorVect[13]);
+#endif
 
       /* 20*r^6 - 30*r^4 + 12*r^2 - 1 */
+
+#ifdef GAIN
       result.z16 = (*(pz+14));
+#else
+      result.z16 = (*(pz+14)) * (aoCtrlId->aoScaleFactorVect[14]);
+#endif
 
       /* r^4 * cos(4t) and r^4 * sin(4t) */
+
+#ifdef GAIN
       result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)));
       result.z18 = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)));
+#else
+      result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)))
+                   * (aoCtrlId->aoScaleFactorVect[15]);
+      result.z18 = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)))
+                   * (aoCtrlId->aoScaleFactorVect[16]);
+#endif
 
       /* (5*r^2 - 4) * r^3 * cos(3t) and (5*r^2 - 4) * r^3 * cos(3t) */
+
+#ifdef GAIN
       result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)));
       result.z20 = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)));
+#else
+      result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)))
+                   * (aoCtrlId->aoScaleFactorVect[17]);
+      result.z20 = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)))
+                   * (aoCtrlId->aoScaleFactorVect[18]);
+#endif
 
       /* Store the result into pAoVectAfterRot */
 
@@ -1121,9 +1235,21 @@ STATUS writeWfsToSynchro
    {
       /* first rotate the tip and tilt values to the m2 frame of reference */
 
+#ifdef GAIN
       result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) - f->null[5];
       result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) - f->null[6];
       result.z4 = *(pz+2) ;
+#else
+      result.z2 = 
+      ( (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
+        - f->null[5] ) * aoCtrlId->fgScaleFactorVect[0];
+
+      result.z3 = 
+      ( (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) 
+        - f->null[6] ) * aoCtrlId->fgScaleFactorVect[1];
+
+      result.z4 = ( *(pz+2) ) * aoCtrlId->fgScaleFactorVect[2];
+#endif
 
       /*result.z4 = (*(pz+2)) - (pWfs->focusscale * f->null[7]);*/
 
@@ -1569,6 +1695,35 @@ long aoZero
       return(ERROR);
    }
 
+   /* compute coma zero point model */
+
+   if(semTake(accessComaModel, WFS_TIMEOUT) == OK)
+   {
+     if (comaModel.applyModel == 0 )
+     {
+        comaModel.comaX = 0.0;
+        comaModel.comaY = 0.0;
+     }
+     else
+     {
+        comaModel.comaX = 
+        comaModel.a*cos(compositeAngle + comaModel.p*DEGS2RADS) +
+        comaModel.c;
+
+        comaModel.comaY = 
+        comaModel.b*sin(compositeAngle + comaModel.pp*DEGS2RADS) +
+        comaModel.d;
+     }
+
+     semGive (accessComaModel);
+   }
+   else
+   {
+      logMsg("Modify frame - unable to get mutex for comaModel \n", 
+             0, 0, 0, 0 ,0 ,0);
+      return(ERROR);
+   }
+
    /* write sample values to genSub ouputs */
 
    *(double *) pgsub->vala = f->null[0];         /* tSent */ 
@@ -1585,6 +1740,8 @@ long aoZero
    *(double *) pgsub->valh = astigModel.astig45;
    *(double *) pgsub->vali = trefoilModel.costref;
    *(double *) pgsub->valj = trefoilModel.sintref;
+   *(double *) pgsub->valk = comaModel.comaX;
+   *(double *) pgsub->vall = comaModel.comaY;
 
    return (OK);
 }

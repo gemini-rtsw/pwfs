@@ -1,4 +1,4 @@
-# Minimal VxWorks startup script for PWFS2
+# Minimal VxWorks startup script for PWFS1
 #
 
 # Execute Gemini VxWorks script to ensure all users are recognised.

@@ -68,6 +68,9 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   29 May 2001: CB - For guide and focus and ao remove scale factor 
+ *                     multiplication - now scale factor multiplication is 
+ *                     in writeZernikes.c 
  *   29 March 2001: CB - For guide and focus and ao multiply focus per two 
  *                       when binning
  *                       for TT fix bug in rotation matrix
@@ -3289,8 +3292,10 @@ STATUS aoGlobalGuide (
    double       pixelVal;
    double       xCenter;
    double       yCenter;
+#ifdef GAIN
    double       tipScale;
    double       tiltScale;
+#endif
    double       *pTotal;
 
    /* Some initialisations */
@@ -3307,8 +3312,10 @@ STATUS aoGlobalGuide (
             xCenter, yCenter );
 #endif
 
+#ifdef GAIN
    tipScale = aoCtrlId->fgScaleFactorVect[0];
    tiltScale = aoCtrlId->fgScaleFactorVect[1];
+#endif
 
    pTotal = pTotalCountsVect + aoCcdId->subapUsedNb;
 
@@ -3358,6 +3365,7 @@ STATUS aoGlobalGuide (
       *(pGuidesVect) = (x / total) - xCenter;
       *(pGuidesVect + 1) = (y / total) - yCenter;
 
+#ifdef GAIN
       *(pFgVect) = tipScale *
       ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
         aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
@@ -3365,6 +3373,13 @@ STATUS aoGlobalGuide (
       *(pFgVect + 1) = tiltScale *
       ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
+#else
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
+                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
+
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
+                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
+#endif
 
       *(pFgVect + 2) = 0.0;
 
@@ -3497,10 +3512,12 @@ STATUS aoGlobalGuideAndError (
    double       pixelVal;
    double       xCenter;
    double       yCenter;
+#ifdef GAIN
    double       tipScale;
    double       tipScale2;
    double       tiltScale;
    double       tiltScale2;
+#endif
    double       *pTotal;
 
    /* Some initialisations */
@@ -3517,10 +3534,12 @@ STATUS aoGlobalGuideAndError (
             xCenter, yCenter );
 #endif
 
+#ifdef GAIN
    tipScale = aoCtrlId->fgScaleFactorVect[0];
    tipScale2 = tipScale * tipScale;
    tiltScale = aoCtrlId->fgScaleFactorVect[1];
    tiltScale2 = tiltScale * tiltScale;
+#endif
 
    cos2 = aoCtrlId->cosAngleWithM2 * aoCtrlId->cosAngleWithM2;
    sin2 = aoCtrlId->sinAngleWithM2 * aoCtrlId->sinAngleWithM2;
@@ -3582,6 +3601,7 @@ STATUS aoGlobalGuideAndError (
       *(pGuidesVect) = xTemp - xCenter;
       *(pGuidesVect + 1) = yTemp - yCenter;
 
+#ifdef GAIN
       *(pFgVect) = tipScale *
       ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
         aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
@@ -3589,6 +3609,13 @@ STATUS aoGlobalGuideAndError (
       *(pFgVect + 1) = tiltScale *
       ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
+#else
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
+                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
+
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
+                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
+#endif
 
       *(pFgVect + 2) = 0.0;
 
@@ -3600,8 +3627,14 @@ STATUS aoGlobalGuideAndError (
       if ( ySigma < AO_MIN_DOUBLE )
          ySigma = 0.0;
 
+#ifdef GAIN
       *(pFgErrorsVect) = sqrt(tipScale2 * (cos2*xSigma + sin2*ySigma));
       *(pFgErrorsVect + 1) = sqrt(tiltScale2 * (sin2*xSigma + cos2*ySigma));
+#else
+      *(pFgErrorsVect) = sqrt(cos2*xSigma + sin2*ySigma);
+      *(pFgErrorsVect + 1) = sqrt(sin2*xSigma + cos2*ySigma);
+#endif
+
       *(pFgErrorsVect + 2) = 0.0;
 
 #ifdef DEBUG
@@ -4200,7 +4233,9 @@ STATUS aoModeCompute (
    double *     pMaxAo;
    double *     pMaxCent;
    double *     pMat;
+#ifdef GAIN
    double *     pScale;
+#endif
    double *     pTime;
 
    /* Some initialisations */
@@ -4257,7 +4292,9 @@ STATUS aoModeCompute (
          pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
          pMat = aoCtrlId->contMat;
 
+#ifdef GAIN
          pScale = aoCtrlId->aoScaleFactorVect;
+#endif
 
          if ( aoCentroidsCompute ( aoCtrlId->sumVect, aoCcdId, aoCtrlId, 
                                    pTotalCountsVect,
@@ -4280,7 +4317,11 @@ STATUS aoModeCompute (
 	    {
                for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
                {
+#ifdef GAIN
                    *pAo *= (2.0)*(*(pScale ++));
+#else
+                   *pAo *= (2.0);
+#endif
                    *(pErrorAo ++) = 0.0;
                }
 	    }
@@ -4288,7 +4329,9 @@ STATUS aoModeCompute (
 	    {
                for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
                {
+#ifdef GAIN
                    *pAo *= (*(pScale ++));
+#endif
                    *(pErrorAo ++) = 0.0;
                }
 	    }
@@ -5501,9 +5544,11 @@ STATUS aoGuideAndFocus (
    double *     pCent;
    double *     pMat;
    double *     pErrorFg;
+#ifdef GAIN
    double       tipScale;
    double       tiltScale;
    double       focusScale;
+#endif
    double       averageFocus;
    FG_VECT      fg;
 
@@ -5519,9 +5564,11 @@ STATUS aoGuideAndFocus (
 
    pMat = aoCtrlId->fgContMat;
 
+#ifdef GAIN
    tipScale = aoCtrlId->fgScaleFactorVect[0];
    tiltScale = aoCtrlId->fgScaleFactorVect[1];
    focusScale = aoCtrlId->fgScaleFactorVect[2];
+#endif
 
    /* Dark subtraction */
 
@@ -5546,12 +5593,19 @@ STATUS aoGuideAndFocus (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
+#ifdef GAIN
       *(pFgVect) = tipScale * 
                    ( aoCtrlId->cosAngleWithM2 * (*fg) +
                    aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
       *(pFgVect + 1) = tiltScale * 
                        ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
                        aoCtrlId->sinAngleWithM2 * (*fg) );
+#else
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*fg) +
+                   aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
+                       aoCtrlId->sinAngleWithM2 * (*fg) );
+#endif
 
       if ( aoCcdId->binningFlag == TRUE )
 	 *(fg+2) *= 2.0;
@@ -5565,7 +5619,11 @@ STATUS aoGuideAndFocus (
       averageFocus = (aoCtrlId->slidingFocusGain * (*(fg+2))) +
          (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus);
 
+#ifdef GAIN
       *(pFgVect + 2) = focusScale * averageFocus;
+#else
+      *(pFgVect + 2) = averageFocus;
+#endif
 
       aoCtrlId->previousFocus = averageFocus; /* Bug fixed 11 June 2000 - cb */
 
@@ -5666,7 +5724,9 @@ STATUS aoModeAnalyze (
    double *     pMaxAo;
    double *     pMaxCent;
    double *     pMat;
+#ifdef GAIN
    double *     pScale;
+#endif
    double *     pTime;
 
    /* Some initialisations */
@@ -5686,7 +5746,9 @@ STATUS aoModeAnalyze (
    pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
    pMat = aoCtrlId->contMat;
 
+#ifdef GAIN
    pScale = aoCtrlId->aoScaleFactorVect;
+#endif
 
    /* Compute the centroids */
 
@@ -5711,7 +5773,11 @@ STATUS aoModeAnalyze (
       {
          for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
          {
+#ifdef GAIN
              *pAo *= (2.0)*(*(pScale ++));
+#else
+             *pAo *= (2.0);
+#endif
              *(pErrorAo ++) = 0.0;
          }
       }
@@ -5719,7 +5785,9 @@ STATUS aoModeAnalyze (
       {
          for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
          {
+#ifdef GAIN
              *pAo *= (*(pScale ++));
+#endif
              *(pErrorAo ++) = 0.0;
          }
       }

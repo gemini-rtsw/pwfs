@@ -163,3 +163,10 @@ V2-2 23 May 2001 CB:
   - rename detSigInitMod with detSigInitModAst
   - add detSigInitModTref : zero point model for trefoil off axis
   - default cont mat is now theoContMatP1.dat
+
+
+V2-3 29 May 2001 CB:
+--------------------
+  - add detSigInitModComa : zero point model for coma off axis
+  - scale factors for TTF and ao have been removed from aoP1Lib.c and add in
+    writeZernikes.c

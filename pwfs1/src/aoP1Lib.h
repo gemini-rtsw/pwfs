@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 29 May 2001: CB - add COMA_ZP_MODEL_ID structure 
  * 23 May 2001: CB - replace ZP_MODEL_ID by AST_ZP_MODEL_ID structure
  *                   add TREF_ZP_MODEL_ID structure as well
  * 12 April 2001: CB - Add structure ZP_MODEL_ID_STRUCT
@@ -704,6 +705,24 @@ typedef struct
                                        /* TRUE|FALSE                          */
 
 } TREF_ZP_MODEL_ID_STRUCT, *TREF_ZP_MODEL_ID;
+
+/************************* Structure for zero point model for coma off axis ***/
+
+typedef struct
+{
+
+   double   a;                         /* Scale factor of cos (theta)         */
+   double   p;                         /* Phase of cos (theta)                */
+   double   c;                         /* Constant term for comaX             */
+   double   b;                         /* Scale factor of sin (theta)         */
+   double   pp;                        /* Phase of sin (theta)                */
+   double   d;                         /* Constant term for comaY             */
+   double   comaX;                     /* Zero point model for comaX          */
+   double   comaY;                     /* Zero point model for comaY          */
+   int      applyModel;                /* Apply the coma zero point model     */
+                                       /* TRUE|FALSE                          */
+
+} COMA_ZP_MODEL_ID_STRUCT, *COMA_ZP_MODEL_ID;
 
 /**************************************************************** Functions ***/
 

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.22 2001-05-24 04:13:11 cboyer Exp $"};
+   "$Id: detControl.c,v 1.23 2001-05-30 04:21:06 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,7 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- *   23 May 2001: CB - replace command detSigInitMod by detSigInitModAst and 
+ *   29 May 2001: CB - add detSigInitModComa
+ *   23 May 2001: CB - replace command detSComa by detSigInitModAst and 
  *                     add detSigInitModTref
  *   12 Apr 2001: CB - Add command detSigInitMod
  *   02 Apr 2001: CB - Add adc0, adc1, adc2, adc3 sir records
@@ -230,6 +231,12 @@ extern TREF_ZP_MODEL_ID_STRUCT trefoilModel;
 extern SEM_ID accessTrefoilModel;  /* Semaphore Trefoil model defined in      */
                                    /* writeZernikes.c                         */
 
+extern COMA_ZP_MODEL_ID_STRUCT comaModel;
+                                   /* Coma model defined in writeZernikes.c   */
+
+extern SEM_ID accessComaModel;     /* Semaphore Coma model defined in         */
+                                   /* writeZernikes.c                         */
+
 /******************************************************* External functions ***/
 
 extern void ImpMaster ();
@@ -417,6 +424,10 @@ LOCAL uint32 detSigInitModAst (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                                SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32 detSigInitModTref (CAD_CMD_CONTEXT cadCmdContext, 
+                                int commandNumber, SDSU_ID sdsuId, 
+                                OBS_ID obsId);
+
+LOCAL uint32 detSigInitModComa (CAD_CMD_CONTEXT cadCmdContext, 
                                 int commandNumber, SDSU_ID sdsuId, 
                                 OBS_ID obsId);
 
@@ -1999,6 +2010,14 @@ STATUS   detControl
             /* Init zero point model for trefoil off axis */
             errorNumber =
             detSigInitModTref (cadCmdContext, commandNumber, sdsuId, obsId); 
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_COMA_MODEL)
+         {
+
+            /* Init zero point model for coma off axis */
+            errorNumber =
+            detSigInitModComa (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
          else
@@ -20102,6 +20121,129 @@ uint32 detSigInitModTref
       trefoilModel.applyModel = apply;
 
       semGive (accessTrefoilModel);
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitModComa
+ *
+ *   INVOCATION:
+ *   detSigInitModComa (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitModComa command
+ *
+ *   DESCRIPTION:
+ *   This function updates the external structure comaModel
+ * 
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitModComa
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32       errorNumber;      /* Error number reported by task.           */
+
+   double       a;
+   double       p;
+   double       c;
+   double       b;
+   double       pp;
+   double       d;
+   long         apply;
+
+
+   /*
+    * Initialise the error number 
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Get the attributes provided with this command.
+    */
+       
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&a);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&p);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&c);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&b);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&pp);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&d);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&apply);
+
+   /*
+    * Update the comaModel structure
+    */
+
+   if (semTake (accessComaModel, 100) != OK)
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Timeout on mutex acess to comaModel",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   else
+   {
+      comaModel.a = a;
+      comaModel.p = p;
+      comaModel.c = c;
+      comaModel.b = b;
+      comaModel.pp = pp;
+      comaModel.d = d;
+      comaModel.applyModel = apply;
+
+      semGive (accessComaModel);
    }
 
    return (errorNumber);

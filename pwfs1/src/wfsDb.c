@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.19 2001-05-24 04:13:12 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.20 2001-05-30 04:21:07 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  *INDENT-OFF*
+ * 29 May 2001 - cb add detSigInitModComa
  * 23 May 2001 - cb add detSigInitModTref and replace detSigInitMod by 
  *               detSigInitModAst
  * 12 Apr 2001 - cb add detSigInitMod
@@ -687,6 +688,21 @@ CAD_RECORD pWfsDbCadList [] =
   RECORD_NAME ("dc:detSigInitModTref"),
   TASK_NAME ("p1", DET_CONTROL_TASK_NAME),
   DET_CONTROL_CMD_SIGINIT_TREF_MODEL,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  40.0,
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0", {"-360.0","360.0"},
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "0.0", {"-360.0","360.0"},
+  CAD_ATTRIB_F, EPICS_DATA_TYPE_DOUBLE, "0.0", {"-360.0","360.0"},
+  CAD_ATTRIB_G, EPICS_DATA_TYPE_LONG, "0", {"0","1"}
+ },
+ {
+  RECORD_NAME ("dc:detSigInitModComa"),
+  TASK_NAME ("p1", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_SIGINIT_COMA_MODEL,
   STOP_DIRECTIVE_UNSUPPORTED,
   SIMULATION_MODE_SUPPORTED,
   40.0,
