@@ -8,7 +8,7 @@ display {
 	ndyng="0"
 	npc="29"
 	nstr="63"
-	ndynamic="28"
+	ndynamic="27"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -23,19 +23,19 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3952"
-	nwords_sta="972"
+	nwords_dspy="3862"
+	nwords_sta="948"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2074"
+	odyng="2050"
 	osta="1102"
-	odynamic="2074"
-	oplot="3940"
-	ord="3940"
-	oes="3940"
-	okd="3940"
-	opd="3952"
-	opo="3952"
+	odynamic="2050"
+	oplot="3850"
+	ord="3850"
+	oes="3850"
+	okd="3850"
+	opd="3862"
+	opo="3862"
 	opc="68"
 	ostr="504"
 	ocmap="1102"
@@ -52,7 +52,7 @@ display {
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
-	mmht="288"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -434,28 +434,6 @@ display {
 		x="-1"
 		y="1000"
 	}
-}
-"text" {
-	object {
-		x="338"
-		y="172"
-		width="357"
-		height="16"
-		groupid="0"
-	}
-	textix="Threshold above which the gain is"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="338"
-		y="194"
-		width="116"
-		height="16"
-		groupid="0"
-	}
-	textix="increased:"
-	align="horiz. left"
 }
 "message button" {
 	object {
@@ -1651,51 +1629,6 @@ display {
 	}
 	control {
 		chan="$(top)detSigInitAoGain.S"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigInitAoGain.VAL"
-		rulechan[1] = "$(top)detSigInitAoGain.VAL"
-		rulechan[2] = "$(top)detSigInitAoGain.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigInitAoGain"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
-		x="446"
-		y="193"
-		width="110"
-		height="19"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigInitAoGain.T"
 		clr="0"
 		bclr="6"
 		label="none"
