@@ -192,7 +192,8 @@ V2-5 03 December 2001 CB:
 
 newDev equivalent to V2-5
 
-V3-0
+V3-0 24 January 2002 CB:
+------------------------
   - Port to epics 3.13.4
   - Threshold in real time: FG(n) is computed with threshold(n-1), aO(n) is 
     computed with average threshold during N frames
@@ -202,3 +203,5 @@ V3-0
     computed from this time and current exposure time
   - add detPowerOn
   - Check wfsStatus in writeWfsToTcs()
+
+dev equivalent to V3-0
