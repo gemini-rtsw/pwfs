@@ -16,6 +16,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 25 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
  * 13 May 1999 - CB - Original creation
  *
  */
@@ -459,8 +460,8 @@ STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId,
                               int * pWfsStatus);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
-STATUS aoRmsNoiseDarkCompute (float * pDark, AO_CCD_ID aoCcdId, 
-                              double * pRmsNoise);
+STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
+                               double * pRmsNoise);
 STATUS aoThresholdCompute (float * pImage, AO_CCD_ID aoCcdId, double ratePixel, 
                            double * pThreshold);
 STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);

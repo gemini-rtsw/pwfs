@@ -86,4 +86,20 @@ V1-3 25 October 2000 CB:
   - wfsDb.c modify the default values for detSigModeThresh, detSigModeTotal, 
     detSigModeFgFocus, detSigModeFgCoadd, detSigModeSeq
 
-newDev equivalent to V1-3
+V1-4 10 November 2000 CB:
+-------------------------
+  - add guide when computing the threshold (when using the with spots method)
+  - replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
+  - add update scale when computing average flux threshold
+  - add aoSaveCbIm and aoSaveCbCtrl sir records 
+  - add possibility to change butterworth filter parameters when probe arm 
+    guiding
+  - dhsQlRate now is set automatically according the exposure time detControl.c
+  - new files in par: zeroFullP2Dark.fits and zeroBinP2Dark.fits 
+  - in par: defFullP2Dark.fits and defBinP2Dark.fits contain now real dark 
+    for 10ms and 5 ms.
+  - butterworth filter removed on top of focus computation when 
+    writeWfsToSynchro()
+  - remove error when stop an observation not in progress
+
+newDev equivalent to V1-4

@@ -13,6 +13,8 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   30 oct 2000 - cb add cutoffFrequency rateSamplingFrequency
+ *   25 oct 2000 - cb add aoSaveCbIm and aoSaveCbCtrl sir records
  *   13 apr 2000 - cb add parameters to measure the average flux during the 
  *                 sequence closed loop
  *   12 apr 2000 - cb add detType, detId, dataLabel, intTime nexpRQ,
@@ -100,6 +102,14 @@
 #define   DET_CONTROL_AOTOTAL_SIR_NAME        "aoTotal"
                                     /* Name of SIR record containing the      */
                                     /* flux threshold for centroids comp.     */
+
+#define   DET_CONTROL_AOSAVECBIM_SIR_NAME     "aoSaveCbIm"
+                                    /* Name of SIR record containing the      */
+                                    /* ao Save Image CB Flag                  */
+
+#define   DET_CONTROL_AOSAVECBCTRL_SIR_NAME   "aoSaveCbCtrl"
+                                    /* Name of SIR record containing the      */
+                                    /* ao Save Control CB Flag                */
 
 #define   DET_CONTROL_AOPROCESSMODE_SIR_NAME  "aoProcessMode"
                                     /* Name of SIR record containing the      */
@@ -416,6 +426,10 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       rawtEnd;   /* Raw Gemini time at end of observation.          */
    double       exposureTime;
                            /* Current exposure time                           */
+   double       cutoffFrequency;
+                           /* Cuttof frequency (bandwidth ) of the system     */
+   double       rateSamplingFrequency;
+                           /* Rate of sampling frequency (between 0 and 1)    */
    double       exposedRQ; /* Requested total exposure time.                  */
    double       exposed;   /* Actual total exposure time.                     */
 
@@ -490,6 +504,11 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* SIR record.                          */
    DATREC_CONTEXT pAoTotalContext;    /* Context structure for aoTotal SIR    */
                                       /* record.                              */
+   DATREC_CONTEXT pAoSaveCbImContext; /* Context structure for aoSaveCbIm SIR */
+                                      /* record.                              */
+   DATREC_CONTEXT pAoSaveCbCtrlContext; 
+                                      /* Context structure for aoSaveCbCtrl   */
+                                      /* SIR record.                          */
    DATREC_CONTEXT pDataLabelContext ; /* Data Label SIR record context        */
                                       /* structure                            */
    DATREC_CONTEXT pIntTimeContext ;   /* Integration time SIR record context  */
@@ -555,6 +574,7 @@ enum
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
    DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
    DET_CONTROL_CMD_SIGINITGAIN,/* Init FG gains.                              */
+   DET_CONTROL_CMD_SIGINITBW,  /* Init Butterworth filter.                    */
    DET_CONTROL_CMD_SIGMODE_NONE, /* Configure to no signal processing.        */
    DET_CONTROL_CMD_SIGMODE_DARK, /* Configure to dark subtraction only.       */
    DET_CONTROL_CMD_SIGMODE_GG, /* Configure to global guide only.             */

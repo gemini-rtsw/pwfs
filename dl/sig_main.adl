@@ -6,11 +6,11 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="11"
-	nstr="87"
-	ndynamic="8"
+	npc="13"
+	nstr="96"
+	ndynamic="10"
 	nplot="0"
-	nrd="7"
+	nrd="8"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -18,28 +18,28 @@ display {
 	object {
 		x="328"
 		y="298"
-		width="701"
-		height="456"
+		width="754"
+		height="511"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3200"
-	nwords_sta="152"
+	nwords_dspy="3786"
+	nwords_sta="176"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1540"
-	osta="1388"
-	odynamic="1540"
-	oplot="2068"
-	ord="2068"
-	oes="3188"
-	okd="3188"
-	opd="3200"
-	opo="3200"
+	odyng="1834"
+	osta="1658"
+	odynamic="1834"
+	oplot="2494"
+	ord="2494"
+	oes="3774"
+	okd="3774"
+	opd="3786"
+	opo="3786"
 	opc="68"
-	ostr="192"
-	ocmap="1388"
-	ocrules="1388"
+	ostr="218"
+	ocmap="1658"
+	ocrules="1658"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -65,8 +65,8 @@ display {
 "rectangle" {
 	object {
 		x="9"
-		y="296"
-		width="680"
+		y="349"
+		width="737"
 		height="152"
 		groupid="0"
 	}
@@ -97,15 +97,15 @@ display {
 	object {
 		x="9"
 		y="53"
-		width="680"
-		height="239"
+		width="737"
+		height="292"
 		groupid="0"
 	}
 }
 "text" {
 	object {
 		x="17"
-		y="141"
+		y="142"
 		width="365"
 		height="19"
 		groupid="0"
@@ -138,7 +138,7 @@ display {
 "text" {
 	object {
 		x="16"
-		y="304"
+		y="357"
 		width="335"
 		height="22"
 		groupid="0"
@@ -149,63 +149,85 @@ display {
 "text" {
 	object {
 		x="17"
-		y="168"
+		y="167"
 		width="332"
 		height="19"
 		groupid="0"
 	}
-	textix="DARK INITIALIZED:"
+	textix="SKY/DARK INITIALIZED ... ... :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
-		y="193"
-		width="209"
+		y="192"
+		width="331"
 		height="19"
 		groupid="0"
 	}
-	textix="FLAT INITIALIZED:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="16"
-		y="244"
-		width="199"
-		height="19"
-		groupid="0"
-	}
-	textix="THRESHOLD ... ..:"
+	textix="FLAT INITIALIZED ... ... ... :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
-		y="218"
-		width="209"
+		y="242"
+		width="330"
 		height="19"
 		groupid="0"
 	}
-	textix="PROCESSING MODE :"
+	textix="THRESHOLD ... ... ... ... ...:"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="16"
-		y="269"
-		width="199"
+		x="17"
+		y="217"
+		width="345"
 		height="19"
 		groupid="0"
 	}
-	textix="FLUX THRESHOLD .:"
+	textix="PROCESSING MODE ... ... ... .:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="17"
+		y="267"
+		width="334"
+		height="19"
+		groupid="0"
+	}
+	textix="FLUX THRESHOLD ... ... ... ..:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="17"
+		y="292"
+		width="336"
+		height="19"
+		groupid="0"
+	}
+	textix="SAVE IMAGE CIRCULAR BUFFER ..:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="17"
+		y="317"
+		width="338"
+		height="19"
+		groupid="0"
+	}
+	textix="SAVE CONTROL CIRCULAR BUFFER :"
 	align="horiz. left"
 }
 "text update" {
 	object {
-		x="353"
+		x="352"
 		y="139"
-		width="328"
+		width="389"
 		height="21"
 		groupid="0"
 	}
@@ -341,9 +363,9 @@ display {
 }
 "text update" {
 	object {
-		x="211"
-		y="166"
-		width="469"
+		x="352"
+		y="164"
+		width="388"
 		height="21"
 		groupid="0"
 	}
@@ -387,9 +409,9 @@ display {
 }
 "text update" {
 	object {
-		x="211"
-		y="191"
-		width="468"
+		x="352"
+		y="189"
+		width="387"
 		height="21"
 		groupid="0"
 	}
@@ -433,9 +455,9 @@ display {
 }
 "text update" {
 	object {
-		x="211"
+		x="352"
 		y="241"
-		width="125"
+		width="387"
 		height="21"
 		groupid="0"
 	}
@@ -479,9 +501,9 @@ display {
 }
 "text update" {
 	object {
-		x="211"
-		y="216"
-		width="468"
+		x="352"
+		y="214"
+		width="387"
 		height="21"
 		groupid="0"
 	}
@@ -525,9 +547,9 @@ display {
 }
 "text update" {
 	object {
-		x="211"
+		x="352"
 		y="266"
-		width="125"
+		width="387"
 		height="21"
 		groupid="0"
 	}
@@ -569,10 +591,102 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
+"text update" {
+	object {
+		x="352"
+		y="317"
+		width="387"
+		height="22"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoSaveCbCtrl"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="2"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="291"
+		width="387"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoSaveCbIm"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="2"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
 "related display" {
 	object {
 		x="15"
-		y="356"
+		y="410"
 		width="329"
 		height="24"
 		groupid="0"
@@ -584,7 +698,7 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detSigModeNone,car=det"
 	}
 	display[1] {
-		label="DARK SUBTRACTION"
+		label="SKY/DARK SUBTRACTION"
 		name="sig_mode_dark.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeDark,car=det"
 	}
@@ -623,11 +737,11 @@ display {
 		name="sig_mode_fg_focus_coadd.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeFgCoadd,car=det"
 	}
-        display[9] {
-                label="SEQUENCE DARK"
-                name="sig_mode_seq_dark.dl"
-                args="top=$(top),sensor=$(sensor),cad=detSigModeSeqDark,car=det"
-        }
+	display[9] {
+		label="SEQUENCE SKY/DARK"
+		name="sig_mode_seq_dark.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeSeqDark,car=det"
+	}
 	display[10] {
 		label="SEQUENCE CLOSED LOOP"
 		name="sig_mode_seq.dl"
@@ -705,8 +819,8 @@ display {
 }
 "related display" {
 	object {
-		x="351"
-		y="330"
+		x="368"
+		y="410"
 		width="330"
 		height="22"
 		groupid="0"
@@ -840,7 +954,7 @@ display {
 "related display" {
 	object {
 		x="15"
-		y="330"
+		y="383"
 		width="329"
 		height="21"
 		groupid="0"
@@ -974,7 +1088,7 @@ display {
 "related display" {
 	object {
 		x="15"
-		y="386"
+		y="440"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1107,8 +1221,8 @@ display {
 }
 "related display" {
 	object {
-		x="351"
-		y="356"
+		x="368"
+		y="440"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1241,8 +1355,8 @@ display {
 }
 "related display" {
 	object {
-		x="351"
-		y="386"
+		x="368"
+		y="469"
 		width="330"
 		height="23"
 		groupid="0"
@@ -1375,8 +1489,8 @@ display {
 }
 "related display" {
 	object {
-		x="15"
-		y="415"
+		x="368"
+		y="381"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1505,6 +1619,140 @@ display {
 	clr="0"
 	bclr="6"
 	menu_title="SAVE CIRCULAR BUFFER"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="15"
+		y="469"
+		width="329"
+		height="23"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="INIT BUTTERWORTH FILTER"
+		name="sig_initBW.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitBW,car=det"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="INIT BUTTERWORTH FILTER"
 	decorate="none"
 }
 "kill display" {
