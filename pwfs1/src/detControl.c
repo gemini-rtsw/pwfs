@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.18 2001-02-26 19:21:38 cboyer Exp $"};
+   "$Id: detControl.c,v 1.19 2001-03-24 03:30:03 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   05 Mar 2001: CB - Fix bug dhsQlRate when only 1 frame
  *   20 Feb 2001: CB - add detDhsConnected flag and dhsCon sir record
  *   09 Feb 2001: CB - ADC offset now for bin and no bin
  *   26 Jan 2001: CB - read the detector init file according to the site
@@ -3159,10 +3160,30 @@ uint32 detExposure
     * Update the dhsQlRate
     */
 
-   if ( obsId->exposureTime <= 1.0 )
-      obsId->dhsQlRate = (int)(1.0 / obsId->exposureTime);
+   if ( obsId->continuous == TRUE )
+   {
+      if ( obsId->exposureTime <= 1.0 )
+         obsId->dhsQlRate = (int)(1.0 / obsId->exposureTime);
+      else
+         obsId->dhsQlRate = 1;
+   }
    else
-      obsId->dhsQlRate = 1;
+   {
+      if ( obsId->totalFrames == 1 )
+         obsId->dhsQlRate = 1;
+      else
+      {
+         if ( obsId->exposureTime <= 1.0 )
+         {
+            if ( obsId->totalFrames > (int)(1.0 / obsId->exposureTime) )
+               obsId->dhsQlRate = (int)(1.0 / obsId->exposureTime);
+            else
+               obsId->dhsQlRate = obsId->totalFrames;
+         }
+         else
+            obsId->dhsQlRate = 1;
+      }
+   }
 
 #ifdef DEBUG
    printf ( "dhsQlRate = %d\n", obsId->dhsQlRate );
@@ -5184,10 +5205,30 @@ uint32 detObserveStart
           * Update the dhsQlRate
           */
 
-         if ( obsId->exposureTime <= 1.0 )
-            obsId->dhsQlRate = (int)(1.0 / obsId->exposureTime);
+         if ( obsId->continuous == TRUE )
+         {
+            if ( obsId->exposureTime <= 1.0 )
+               obsId->dhsQlRate = (int)(1.0 / obsId->exposureTime);
+            else
+               obsId->dhsQlRate = 1;
+         }
          else
-            obsId->dhsQlRate = 1;
+         {
+            if ( obsId->totalFrames == 1 )
+               obsId->dhsQlRate = 1;
+            else
+            {
+               if ( obsId->exposureTime <= 1.0 )
+               {
+                  if ( obsId->totalFrames > (int)(1.0 / obsId->exposureTime) )
+                     obsId->dhsQlRate = (int)(1.0 / obsId->exposureTime);
+                  else
+                     obsId->dhsQlRate = obsId->totalFrames;
+               }
+               else
+                  obsId->dhsQlRate = 1;
+            }
+         }
 
 #ifdef DEBUG
          printf ( "dhsQlRate = %d\n", obsId->dhsQlRate );

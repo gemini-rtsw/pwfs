@@ -137,5 +137,10 @@ V1-8 26 February 2001 CB:
     remove detDhsSem leftover when we have one detControl for 3 WFS
   - Now startupCP.vws and startupMK.vws
 
-newDev equivalent to V1-8
+V1-9 23 March 2001 CB:
+----------------------
+  - fix a bug with dhsQlRate when only 1 frame
+  - wfsControl: add a dhsErrno=0 before doing the dhsExit() and increase the 
+    delay before doing the reboot
 
+newDev equivalent to V1-9

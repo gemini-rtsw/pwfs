@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsControl.c,v 1.5 2001-02-26 19:21:38 cboyer Exp $"};
+   "$Id: wfsControl.c,v 1.6 2001-03-24 03:30:03 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -343,6 +343,7 @@ STATUS   wfsControl (void)
 
             dhsErrno = 0;
             dhsEventLoopEnd (&dhsErrno);
+            dhsErrno = 0;
             dhsExit ( &dhsErrno );
          }
 
@@ -350,7 +351,7 @@ STATUS   wfsControl (void)
           * Wait a short time so the changes made to the state are visible.
           */
 
-         taskDelay (2 * sysClkRateGet());
+         taskDelay (5 * sysClkRateGet());
 
          /*
           * Now reboot
