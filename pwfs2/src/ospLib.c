@@ -319,6 +319,7 @@ int /*STATUS*/ ospChangeGeometry(struct OSP_GEOMETRY * ospGeom,
                                  wfsSpecific->ospxraster*wfsSpecific->ospxbin);
         wfsSpecific->yframesize=(wfsSpecific->ospysubap * wfsSpecific->sectors/2
                                  *wfsSpecific->ospyraster*wfsSpecific->ospybin);
+        wfsSpecific->buffsize = wfsSpecific->xframesize * wfsSpecific->yframesize;
 
     }
     else
@@ -345,6 +346,7 @@ int /*STATUS*/ ospChangeGeometry(struct OSP_GEOMETRY * ospGeom,
 	    fprintf(stderr,"setting framesizeflag to 1\n");
 	    wfsSpecific->framesizeflag = 1;
 	}
+        wfsSpecific->buffsize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     }
     
     /*
@@ -1400,6 +1402,11 @@ int /* STATUS*/ ospFrameScramble
 					 * different from the order of arrival
 					 */
 
+                                        if ( *ps1 < (float)(0.0) ) *ps1 = (float)(0.0) ;
+                                        if ( *ps2 < (float)(0.0) ) *ps2 = (float)(0.0) ;
+                                        if ( *ps3 < (float)(0.0) ) *ps3 = (float)(0.0) ;
+                                        if ( *ps4 < (float)(0.0) ) *ps4 = (float)(0.0) ;
+
 					*ptr++ = (unsigned short int) *ps1++;
 					*ptr++ = (unsigned short int) *ps2--;
 					*ptr++ = (unsigned short int) *ps3--;
@@ -2247,9 +2254,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  *                 char *pDarkFileName , char *pFlatFileName ,
  *                 double threshold , double angle , 
  *                 double refX , double refY ,
- *                 double tipGain , double tiltGain ,
- *                 char *pRefFileName , 
- *                 double focusGain , double gainAverageFocus )
+ *                 char *pRefFileName , int binFlag ) 
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
@@ -2258,10 +2263,8 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * (>) threshold (double) Threshold for centroid computation
  * (>) angle (double) between CCD and telescope
  * (>) refX, refY (double) ideal coord for whole CCD
- * (>) tipGain, tiltGain (double) Gain for tip and tilt mode computation
  * (>) pRefFileName (char *) Name of file containing ideal centers for 2x2
- * (>) focusGain (double) Gain for focus mode computation
- * (>) gainAverageFocus (double) Gain for sliding focus averaging
+ * (>) binFlag (int) TRUE or FALSE if binning or not
  *
  * FUNCTION VALUE:
  * (int) return value OK or ERROR
@@ -2271,6 +2274,8 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  *
  * DESCRIPTION:
  * Added by cb - 15April1999
+ * modified by cb - 01 nov 99 remove gains
+ * modified by cb - 02 nov 99 add binFlag
  *
  * EXTERNAL VARIABLES:
  * None
@@ -2291,11 +2296,8 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 double threshold , 
                 double angle , 
                 double refX , double refY ,
-                double tipGain , 
-                double tiltGain ,
                 char *pRefFileName , 
-                double focusGain , 
-                double gainAverageFocus )
+                int binFlag ) 
 {
 
 int status ;
@@ -2317,130 +2319,180 @@ if ( wfsSpecific == NULL )
 	
 /******************************************************* Update wfsSpecific ***/
 
-strncpy ( wfsSpecific->subfile, pDarkFileName, OSP_MAXSTR ) ;
-strncpy ( wfsSpecific->multfile, pFlatFileName, OSP_MAXSTR ) ;
-strncpy ( wfsSpecific->nullfile, pRefFileName, OSP_MAXSTR ) ;
-
-wfsSpecific->thresh = (float)threshold ; 
-wfsSpecific->tipscale = (float)tipGain ; 
-wfsSpecific->tiltscale = (float)tiltGain ; 
-wfsSpecific->focusscale = (float)focusGain ; 
-wfsSpecific->angle = angle ; 
-wfsSpecific->cosAngle = (float)cos(angle) ; 
-wfsSpecific->sinAngle = (float)sin(angle) ; 
-wfsSpecific->xcenter = (float)(refX) ; 
-wfsSpecific->ycenter = (float)(refY) ; 
-wfsSpecific->gainFocus = (float)(gainAverageFocus) ; 
-wfsSpecific->one_gainFocus = 1.0 - (float)(gainAverageFocus) ; 
-
-/********************************************************* Init Dark buffer ***/
-
-if ( ospReadFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
-			 wfsSpecific->buffsize) == ERROR )
+if ( binFlag == FALSE )
 {
-   fprintf ( stderr,
-             "Failed to read %s, the FITS file of subtractive offsets\n",
-             wfsSpecific->subfile ) ;
-   fprintf ( stderr,
-             "- initialising with frame of zeroes, and writing to file\n" ) ;
+   strncpy ( wfsSpecific->subfile, pDarkFileName, OSP_MAXSTR ) ;
+   strncpy ( wfsSpecific->multfile, pFlatFileName, OSP_MAXSTR ) ;
+   strncpy ( wfsSpecific->nullfile, pRefFileName, OSP_MAXSTR ) ;
 
-   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
-       wfsSpecific->ffsubbuff[i] = 0.0 ;
+   wfsSpecific->thresh = (float)threshold ; 
+   wfsSpecific->angle = angle ; 
+   wfsSpecific->cosAngle = (float)cos(angle) ; 
+   wfsSpecific->sinAngle = (float)sin(angle) ; 
+   wfsSpecific->xcenter = (float)(refX) ; 
+   wfsSpecific->ycenter = (float)(refY) ; 
 
-   ospWriteFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
-                        wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
-   status = ERROR ;
-}
-else
-{
-   fprintf ( stdout, "Reading %s, the FITS file of subtractive offsets\n",
-             wfsSpecific->subfile ) ;
-}
+   /****************************************************** Init Dark buffer ***/
 
-if ( wfsSpecific->framesizeflag == 1 )
-{
-   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
-       wfsSpecific->redsubbuff[i] = wfsSpecific->ffsubbuff[i] ;
-}
-else
-{
-   if ( ospReduceFrame (wfsSpecific->ffsubbuff, wfsSpecific->redsubbuff,
-                        wfsSpecific, 
-                        wfsSpecific->xframesize*wfsSpecific->yframesize)
-        == ERROR )
-   {
-      fprintf ( stderr, "ospReduceFrame failed for subtractive offsets\n" ) ;
-      status = ERROR ;
-   };
-}
-
-/********************************************************* Init Flat buffer ***/
-
-if ( ospReadFloatImage ( wfsSpecific->ffmultbuff, wfsSpecific->multfile,
-			 wfsSpecific->buffsize) == ERROR )
-{
-   fprintf ( stderr,
-             "Failed to read %s, the FITS file of multiplicative offsets\n",
-             wfsSpecific->multfile ) ;
-   fprintf ( stderr,
-             "- initialising with frame of ones, and writing to file\n" ) ;
-
-   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
-       wfsSpecific->ffmultbuff[i] = 1.0 ;
-
-   ospWriteFloatImage ( wfsSpecific->ffmultbuff, wfsSpecific->multfile,
-                        wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
-   status = ERROR ;
-}
-else
-{
-   fprintf ( stdout, "Reading %s, the FITS file of multiplicative offsets\n",
-             wfsSpecific->multfile ) ;
-}
-
-if ( wfsSpecific->framesizeflag == 1 )
-{
-   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
-       wfsSpecific->redmultbuff[i] = wfsSpecific->ffmultbuff[i];
-}
-else
-{
-   if ( ospReduceFrame ( wfsSpecific->ffmultbuff, wfsSpecific->redmultbuff,
-                         wfsSpecific,
-                         wfsSpecific->xframesize*wfsSpecific->yframesize)
-        == ERROR )
+   if ( ospReadFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
+      			    wfsSpecific->buffsize) == ERROR )
    {
       fprintf ( stderr,
-                "ospReduceFrame failed for multiplicative offsets\n" ) ;
-      status = ERROR;
+                "Failed to read %s, the FITS file of subtractive offsets\n",
+                wfsSpecific->subfile ) ;
+      fprintf ( stderr,
+                "- initialising with frame of zeroes, and writing to file\n" ) ;
+
+      for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+          wfsSpecific->ffsubbuff[i] = 0.0 ;
+
+      ospWriteFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
+                           wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
+      status = ERROR ;
+   }
+   else
+   {
+      fprintf ( stdout, "Reading %s, the FITS file of subtractive offsets\n",
+                wfsSpecific->subfile ) ;
+   }
+
+   if ( wfsSpecific->framesizeflag == 1 )
+   {
+      for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+          wfsSpecific->redsubbuff[i] = wfsSpecific->ffsubbuff[i] ;
+   }
+   else
+   {
+      if ( ospReduceFrame (wfsSpecific->ffsubbuff, wfsSpecific->redsubbuff,
+                           wfsSpecific, 
+                           wfsSpecific->xframesize*wfsSpecific->yframesize)
+           == ERROR )
+      {
+         fprintf ( stderr, "ospReduceFrame failed for subtractive offsets\n" ) ;
+         status = ERROR ;
+      };
+   }
+
+   /****************************************************** Init Flat buffer ***/
+
+   if ( ospReadFloatImage ( wfsSpecific->ffmultbuff, wfsSpecific->multfile,
+   			    wfsSpecific->buffsize) == ERROR )
+   {
+      fprintf ( stderr,
+                "Failed to read %s, the FITS file of multiplicative offsets\n",
+                wfsSpecific->multfile ) ;
+      fprintf ( stderr,
+                "- initialising with frame of ones, and writing to file\n" ) ;
+
+      for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+          wfsSpecific->ffmultbuff[i] = 1.0 ;
+
+      ospWriteFloatImage ( wfsSpecific->ffmultbuff, wfsSpecific->multfile,
+                           wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
+      status = ERROR ;
+   }
+   else
+   {
+      fprintf ( stdout, "Reading %s, the FITS file of multiplicative offsets\n",
+                wfsSpecific->multfile ) ;
+   }
+
+   if ( wfsSpecific->framesizeflag == 1 )
+   {
+      for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+          wfsSpecific->redmultbuff[i] = wfsSpecific->ffmultbuff[i];
+   }
+   else
+   {
+      if ( ospReduceFrame ( wfsSpecific->ffmultbuff, wfsSpecific->redmultbuff,
+                            wfsSpecific,
+                            wfsSpecific->xframesize*wfsSpecific->yframesize)
+           == ERROR )
+      {
+         fprintf ( stderr,
+                   "ospReduceFrame failed for multiplicative offsets\n" ) ;
+         status = ERROR;
+      }
+   }
+
+   /************************************************************ Init Nulls ***/
+
+   if ( (ospReadNulls (wfsSpecific->nullfile,wfsSpecific)) == ERROR )
+   {
+       fprintf ( stderr, "Error in call to ospReadNulls during ospUpdate:\n" ) ;
+       fprintf ( stderr, "...filename used was %s\n", wfsSpecific->nullfile ) ;
+       status = ERROR ;
+   }
+
+   if ( (ospCalculateSubaps(wfsSpecific)) == ERROR )
+   {
+      fprintf ( stderr, "Error in ospCalculateSubaps\n" ) ;
+      status = ERROR ;
+   }
+
+   if ( wfsSpecific->centres[0] == 0 ) 
+   {
+      fprintf ( stderr, "Apparently no centres data to be read \n" ) ; 
+      status = ERROR ;
+   }
+
+   if ( ((int)(wfsSpecific->centres[0]) % 4) != 0 )
+   {
+      fprintf ( stderr, "Incomplete centres data read \n" ) ; 
+      status = ERROR ;
    }
 }
-
-/*************************************************************** Init Nulls ***/
-
-if ( (ospReadNulls (wfsSpecific->nullfile,wfsSpecific)) == ERROR )
+else
 {
-    fprintf ( stderr, "Error in call to ospReadNulls during ospUpdate:\n" ) ;
-    fprintf ( stderr, "...filename used was %s\n", wfsSpecific->nullfile ) ;
-    status = ERROR ;
-}
+   strncpy ( wfsSpecific->subfile, pDarkFileName, OSP_MAXSTR ) ;
 
-if ( (ospCalculateSubaps(wfsSpecific)) == ERROR )
-{
-   fprintf ( stderr, "Error in ospCalculateSubaps\n" ) ;
-   status = ERROR ;
-}
+   wfsSpecific->thresh = (float)threshold ; 
+   wfsSpecific->angle = angle ; 
+   wfsSpecific->cosAngle = (float)cos(angle) ; 
+   wfsSpecific->sinAngle = (float)sin(angle) ; 
+   wfsSpecific->xcenter = (float)(refX) ; 
+   wfsSpecific->ycenter = (float)(refY) ; 
 
-if ( wfsSpecific->centres[0] == 0 ) 
-{
-   fprintf ( stderr, "Apparently no centres data to be read \n" ) ; 
-   status = ERROR ;
-}
+   /****************************************************** Init Dark buffer ***/
 
-if ( ((int)(wfsSpecific->centres[0]) % 4) != 0 )
-{
-   fprintf ( stderr, "Incomplete centres data read \n" ) ; 
-   status = ERROR ;
+   if ( ospReadFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
+      			    wfsSpecific->buffsize) == ERROR )
+   {
+      fprintf ( stderr,
+                "Failed to read %s, the FITS file of subtractive offsets\n",
+                wfsSpecific->subfile ) ;
+      fprintf ( stderr,
+                "- initialising with frame of zeroes, and writing to file\n" ) ;
+
+      for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+          wfsSpecific->ffsubbuff[i] = 0.0 ;
+
+      ospWriteFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
+                           wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
+      status = ERROR ;
+   }
+   else
+   {
+      fprintf ( stdout, "Reading %s, the FITS file of subtractive offsets\n",
+                wfsSpecific->subfile ) ;
+   }
+
+   if ( wfsSpecific->framesizeflag == 1 )
+   {
+      for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+          wfsSpecific->redsubbuff[i] = wfsSpecific->ffsubbuff[i] ;
+   }
+   else
+   {
+      if ( ospReduceFrame (wfsSpecific->ffsubbuff, wfsSpecific->redsubbuff,
+                           wfsSpecific, 
+                           wfsSpecific->xframesize*wfsSpecific->yframesize)
+           == ERROR )
+      {
+         fprintf ( stderr, "ospReduceFrame failed for subtractive offsets\n" ) ;
+         status = ERROR ;
+      };
+   }
 }
 
 /******************************************************************************/
@@ -7056,8 +7108,8 @@ int ospFGCentroidWrapper ( float * buffp,
 	       for (ii = 0; ii < wfsSpecific->side;ii++)
 	       {
 		   indxy = ii + rowinc;
-		   pixval = *indxy ;
-		   if(pixval > threshold)
+		   pixval = *indxy - threshold ;
+		   if(pixval > (float)(0.0))
 		   {		
 		       itotal += pixval ;
 		       ireptotal = ireptotal + (1.0 / fabs(*indxy));
@@ -7107,8 +7159,8 @@ int ospFGCentroidWrapper ( float * buffp,
 	       for (ii = 0; ii < wfsSpecific->side;ii++)
 	       {
 		   indxy = ii + rowinc;
-		   pixval = *indxy ;
-		   if(pixval > wfsSpecific->thresh)
+		   pixval = *indxy - wfsSpecific->thresh ;
+		   if(pixval > (float)(0.0))
 		   {		
 		       itotal += pixval ;
 		       ireptotal = ireptotal + (1.0 / fabs(*indxy));
@@ -7291,9 +7343,10 @@ int ospTracking ( float * buffp ,
     {
 	for ( i = 0 ; i < wfsSpecific->xframesize ; i ++)
 	{   
-            pixval = *(localp + wfsSpecific->xframesize*j + i) ;
+            pixval = (*(localp + wfsSpecific->xframesize*j + i)) - 
+                     wfsSpecific->thresh;
 
-            if ( pixval > wfsSpecific->thresh )
+            if ( pixval > (float)(0.0) )
             {
                x += pixval*(i+1) ;
                y += pixval*(j+1) ;
@@ -7857,11 +7910,12 @@ int ospTrackingAndFocus ( float * buffp ,
  * ospNewTrackingAndFocus 
  *
  * INVOCATION:
- * ospNewTrackingAndFocus ( buffp , wfsSpecific )
+ * ospNewTrackingAndFocus ( buffp , wfsSpecific , binFlag )
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * (>) buffp (float *) buffer which contains pixel data
  * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ * (>) binFlag (int) TRUE or FALSE if binning or not
  *
  * FUNCTION VALUE:
  * status returned OK or ERROR
@@ -7871,6 +7925,7 @@ int ospTrackingAndFocus ( float * buffp ,
  *
  * DESCRIPTION:
  * Added by cb 8 April 1999
+ * modified by cb 02 nov 1999, add binFlag
  *
  * EXTERNAL VARIABLES:
  * None
@@ -7886,13 +7941,15 @@ int ospTrackingAndFocus ( float * buffp ,
  */
 
 int ospNewTrackingAndFocus ( float * buffp , 
-                             struct OSP_CONTEXT * wfsSpecific )
+                             struct OSP_CONTEXT * wfsSpecific ,
+                             int binFlag )
 {
     int    buffSize ;
     int    i, j ;
     int    offset ;
     float  focus ;
     float  meanFocus ;
+    float  pixFloat ;
     float  *p ;
     float  *minp, *maxp ;
     float  *redsubp ;
@@ -7922,9 +7979,12 @@ int ospNewTrackingAndFocus ( float * buffp ,
          wfsSpecific->cb_2_pixel_index = 0 ;*/
 
     /*printf ( "buffp=%x, maxp=%x, redsubp=%x\n" , buffp, maxp, redsubp) ;*/
+
+    /*printf ( "subtract dark\n" ) ;*/
+
     for ( p = buffp ; p < maxp ; p ++ )
     {
-	*p = (*(p) - *(redsubp ++)) ;
+        *p = (*(p) - *(redsubp ++)) ;
     } 
 
     /*********************************************** Threshold and centroid ***/
@@ -7939,8 +7999,17 @@ int ospNewTrackingAndFocus ( float * buffp ,
     xs = (double)(0.0) ;
     ys = (double)(0.0) ;
     totals = (double)(0.0) ;
-    xdiff = (double)(wfsSpecific->centres[2] + 1.0) ;
-    ydiff = (double)(wfsSpecific->centres[4] + 1.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[2] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[4] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "first subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
 
     for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
     {
@@ -7951,9 +8020,10 @@ int ospNewTrackingAndFocus ( float * buffp ,
         /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
         for ( p = minp ; p < maxp ; p ++)
         {
-            if ( *p > wfsSpecific->thresh )
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
             {
-               pixel = (double)(*p) ;
+               pixel = (double)(pixFloat) ;
                xs += pixel*j ;
                ys += pixel*i ;
                totals += pixel ;
@@ -8032,8 +8102,17 @@ int ospNewTrackingAndFocus ( float * buffp ,
     xs = (double)(0.0) ;
     ys = (double)(0.0) ;
     totals = (double)(0.0) ;
-    xdiff = (double)(wfsSpecific->centres[6] + 1.0) ;
-    ydiff = (double)(wfsSpecific->centres[8] + 1.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[6] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[8] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "second subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
 
     for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
     {
@@ -8044,9 +8123,10 @@ int ospNewTrackingAndFocus ( float * buffp ,
         /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
         for ( p = minp ; p < maxp ; p ++)
         {
-            if ( *p > wfsSpecific->thresh )
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
             {
-               pixel = (double)(*p) ;
+               pixel = (double)(pixFloat) ;
                xs += pixel*j ;
                ys += pixel*i ;
                totals += pixel ;
@@ -8123,8 +8203,17 @@ int ospNewTrackingAndFocus ( float * buffp ,
     xs = (double)(0.0) ;
     ys = (double)(0.0) ;
     totals = (double)(0.0) ;
-    xdiff = (double)(wfsSpecific->centres[10] + 1.0) ;
-    ydiff = (double)(wfsSpecific->centres[12] + 1.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[10] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[12] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "third subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
 
     offset = wfsSpecific->ospyraster*wfsSpecific->xframesize ;
 
@@ -8137,9 +8226,10 @@ int ospNewTrackingAndFocus ( float * buffp ,
         /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
         for ( p = minp ; p < maxp ; p ++)
         {
-            if ( *p > wfsSpecific->thresh )
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
             {
-               pixel = (double)(*p) ;
+               pixel = (double)(pixFloat) ;
                xs += pixel*j ;
                ys += pixel*i ;
                totals += pixel ;
@@ -8215,8 +8305,17 @@ int ospNewTrackingAndFocus ( float * buffp ,
     xs = (double)(0.0) ;
     ys = (double)(0.0) ;
     totals  = (double)(0.0) ;
-    xdiff = (double)(wfsSpecific->centres[14] + 1.0) ;
-    ydiff = (double)(wfsSpecific->centres[16] + 1.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[14] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[16] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "last subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
     offset = wfsSpecific->ospyraster*wfsSpecific->xframesize +
              wfsSpecific->ospxraster ;
 
@@ -8228,9 +8327,10 @@ int ospNewTrackingAndFocus ( float * buffp ,
         /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
         for ( p = minp ; p < maxp ; p ++)
         {
-            if ( *p > wfsSpecific->thresh )
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
             {
-               pixel = (double)(*p) ;
+               pixel = (double)(pixFloat) ;
                xs += (pixel*j) ;
                ys += (pixel*i) ;
                totals += (pixel) ;

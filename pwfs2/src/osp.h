@@ -257,11 +257,8 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 double threshold ,
                 double angle ,
                 double refX , double refY ,
-                double tipGain ,
-                double tiltGain ,
                 char *pRefFileName ,
-                double focusGain ,
-                double gainAverageFocus );
+                int binFlag);
 struct OSP_HRCONTEXT * ospInitHr(char * hrwfsName);
 int /*STATUS*/ ospMeasure(float * buffp, struct OSP_CONTEXT * wfsSpecific);
 int /*STATUS*/ ospCalibrate(char * calibpath,struct OSP_CONTEXT * wfsSpecific);
@@ -323,7 +320,7 @@ int ospTracking ( float *buffp ,
 int ospTrackingAndFocus ( float *buffp , int N ,
                   struct OSP_CONTEXT *wfsSpecific );
 int ospNewTrackingAndFocus ( float *buffp , 
-                  struct OSP_CONTEXT *wfsSpecific );
+                  struct OSP_CONTEXT *wfsSpecific , int binFlag );
 
 int ospCalibrateRefVector ( float *buffp , int N ,
                   struct OSP_CONTEXT *wfsSpecific );
