@@ -73,5 +73,9 @@ V1-1 24 July 2000 CB:
   - sumVect in aoCtrlContextInit was not completely set to zero (2xSUBAP_NB) 
     instead of CCD_SIZE
 
-newDev 
-  - equivalent to V1-1
+V1-2 11 August 2000 CB:
+----------------------- 
+  - Gain for focus set to -0.001 and sequence closed loop now by default 
+    compute threshold and total.
+
+newDev equivalent to V1-2
