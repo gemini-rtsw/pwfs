@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.23 2000-12-18 22:27:00 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.24 2000-12-18 22:34:32 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -73,10 +73,12 @@ mbec	mbec
 #M	pcstest	Jmaclean Runtime version of the PCS
 pcstest	mbec/pcstest
 #M	comcon	Components Controller
-#D	niri	niri software
+#D	niri	Gemini NIRI Software
 niri	niri
 #M	test	test area
 test	niri/test
+#M	gn.4-mv167	Detector Controller (1fps coadder)
+gn.4-mv167	niri/gn.4-mv167
 
 #D	scs	Gemini Secondary Control System
 #M	scs	Gemini Secondary Control System
