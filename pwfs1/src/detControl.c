@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.33 2003-02-05 03:02:54 cboyer Exp $"};
+   "$Id: detControl.c,v 1.34 2004-05-28 01:50:49 aaguayo Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   19 May 2004: AA - Default FG gains from file, 
+ * 		       add detInitSigModeSeq
+ *   24 May 2004: AA - Add detInitSigModeSeqDark
  *   04 Feb 2003: CB - Add proportional gain for aO
  *   30 Jan 2003: CB - Fix a little bug in detSigInit
  *   17 Oct 2002: CB - remove error in detObserveStart when starting an 
@@ -14103,6 +14106,8 @@ uint32 detFrameSize
    double       thresh;
    double       totalThresh;
    double       aoThreshold;
+   double       fgGain[3];
+   double       slidingFocusGain;
 
    /*
     * Parameters to update the ADC offset
@@ -14257,7 +14262,8 @@ uint32 detFrameSize
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1, 
-                               &aoThreshold) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain ) 
+	      == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -14396,7 +14402,8 @@ uint32 detFrameSize
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1, 
-                               &aoThreshold) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain ) 
+	      == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -19728,6 +19735,8 @@ STATUS detInitSigInit
    double rms;
    double totalThresh;
    double aoThreshold;
+   double fgGain[3];
+   double slidingFocusGain;
 
 
    if ( detObsIdP1 == NULL )
@@ -19759,7 +19768,8 @@ STATUS detInitSigInit
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1,
-                               &aoThreshold) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain ) 
+	      == ERROR )
          {
             printf ("Failed to read ao control file parameters\n");
             return (ERROR);
@@ -19776,6 +19786,10 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->vali, aoImFileName );
          strcpy ( (char *)pgsub->valj, aoCmFileName );
          strcpy ( (char *)pgsub->valk, fgCmFileName );
+         *(double *)pgsub->valo = fgGain[0];
+         *(double *)pgsub->valp = fgGain[1];
+         *(double *)pgsub->valq = fgGain[2];
+         *(double *)pgsub->valr = slidingFocusGain;
 
          *(long *)pgsub->valu = 0; /* no binning: 0 */
       }
@@ -19800,7 +19814,8 @@ STATUS detInitSigInit
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1,
-                               &aoThreshold) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain ) 
+	      == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
             return (ERROR);
@@ -19817,6 +19832,10 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->vali, aoImFileName );
          strcpy ( (char *)pgsub->valj, aoCmFileName );
          strcpy ( (char *)pgsub->valk, fgCmFileName );
+         *(double *)pgsub->valo = fgGain[0];
+         *(double *)pgsub->valp = fgGain[1];
+         *(double *)pgsub->valq = fgGain[2];
+         *(double *)pgsub->valr = slidingFocusGain;
 
          *(long *)pgsub->valu = 1; /* binning: 1 */
       }
@@ -23059,4 +23078,125 @@ uint32 detPowerOff
    }
 
    return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitSigModeSeq
+ *
+ *   INVOCATION:
+ *   detInitSigModeSeq (struct genSubRecord *pgsub)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) pgsub (struct genSubRecord *) Pointer to initSigModeSeq gsub record
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Init the detSigModeSeq input fields
+ *
+ *   DESCRIPTION:
+ *   For this record, I have decided to use Epics facilities and not
+ *   epToVxLib.
+ *
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   external variables: detObsIdP2
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detInitSigModeSeq
+   (
+   struct genSubRecord * pgsub   /* Pointer to "initSigModeSeq" gensub record */
+   )
+
+{
+   *(double *)pgsub->vala = *(double *)pgsub->a;
+   *(long *)pgsub->valb = *(long *)pgsub->b;
+   *(long *)pgsub->valc = *(long *)pgsub->c;
+   *(double *)pgsub->vald = *(double *)pgsub->d;
+   *(long *)pgsub->vale = *(long *)pgsub->e;
+   *(long *)pgsub->valf = *(long *)pgsub->f;
+   *(double *)pgsub->valg = *(double *)pgsub->g;
+   *(long *)pgsub->valh = *(long *)pgsub->h;
+   *(double *)pgsub->vali = *(double *)pgsub->i;
+   *(long *)pgsub->valj = *(long *)pgsub->j;
+   *(double *)pgsub->valk = *(double *)pgsub->k;
+   *(long *)pgsub->vall = *(long *)pgsub->l;
+   *(double *)pgsub->valm = *(double *)pgsub->m;
+   strcpy ( (char *)pgsub->valn, (char *)pgsub->n );
+   *(long *)pgsub->valo = *(long *)pgsub->o;
+   *(long *)pgsub->valp = *(long *)pgsub->p;
+   *(long *)pgsub->valq = *(long *)pgsub->q;
+   *(double *)pgsub->valr = *(double *)pgsub->r;
+   *(double *)pgsub->vals = *(double *)pgsub->s;
+   *(long *)pgsub->valt = *(long *)pgsub->t;
+
+   return (OK);
+}
+
+
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitSigModeSeqDark
+ *
+ *   INVOCATION:
+ *   detInitSigModeSeqDark (struct genSubRecord *pgsub)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) pgsub (struct genSubRecord *) Pointer to initSigModeSeqDark gsub record
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Init the detSigModeSeqDark input fields
+ *
+ *   DESCRIPTION:
+ *   For this record, I have decided to use Epics facilities and not
+ *   epToVxLib.
+ *
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   external variables: detObsIdP2
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detInitSigModeSeqDark
+   (
+   struct genSubRecord * pgsub   /* Pointer to "initSigModeSeqDark" gensub record */
+   )
+
+{
+   *(long *)pgsub->vala = *(long *)pgsub->a;
+   strcpy ( (char *)pgsub->valb, (char *)pgsub->b );
+   strcpy ( (char *)pgsub->valc, (char *)pgsub->c );
+   *(long *)pgsub->vald = *(long *)pgsub->d;
+   *(double *)pgsub->vale = *(double *)pgsub->e;
+
+   return (OK);
 }

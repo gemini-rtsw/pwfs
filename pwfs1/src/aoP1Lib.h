@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 18 May 2004:AA - Read default TTF gains from file
  * 04 Feb 2003: CB - Add aoThreshold to aoCtrlId
  * 08 Feb 2002: CB - Implement threshold per sub-aperture and in real time
  * 21 Dec 2001: CB - add automatic init of zero point models from par file
@@ -898,7 +899,8 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        char * pAoCmFileName, char * pFgCmFileName,
                        double * pRms, double * pThresh, double * pTotalThresh,
                        double * pAngleM2, double * pAngleM1, 
-                       double * pAoThreshold);
+                       double * pAoThreshold,
+                       double *pFgGain, double * pSlidingFocusGain);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
                   FOCUS_ZP_MODEL_ID focModelId);

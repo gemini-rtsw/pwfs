@@ -75,6 +75,8 @@
  *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   25 May 2004: AA - Update aoTotalThresholdCompute routine with new FR's fit 
+ *   18 May 2004: AA - Read default TTF gains from file
  *   04 Feb 2003: CB - Implement proportional law for aO
  *   12 Jun 2002: CB - aoModeCompute(): add imageStatus in invocation to check
  *                     wether to coadd the image or not
@@ -6483,7 +6485,7 @@ STATUS aoDarkUpdate (
  *   aoCtrlFileRead (pInitFileName, pPath, pDarkFileName, pFlatFileName, 
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName, 
  *                   pFgCmFileName, pRms, pThresh, pTotalThresh, pAngleM2, 
- *                   pAngleM1, pAoThreshold)
+ *                   pAngleM1, pAoThreshold, pFgGain, pSlidingFocusGain)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName (char *)   Pointer to the AO init file name 
@@ -6502,6 +6504,8 @@ STATUS aoDarkUpdate (
  *   (<) pAngleM2      (double *) Pointer to the angle with M2
  *   (<) pAngleM1      (double *) Pointer to the angle with M1
  *   (<) pAoThreshold  (double *) Pointer to the aO threshold
+ *   (<) pFgGain           (double *) Pointer to array of gain (TTF)
+ *   (<) pSlidingFocusGain (double *) Pointer to the focus sliding gain
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK if successful, ERROR if unsuccessful
@@ -6542,12 +6546,16 @@ STATUS aoCtrlFileRead (
    double * pTotalThresh,
    double * pAngleM2,
    double * pAngleM1,
-   double * pAoThreshold
+   double * pAoThreshold,
+   double * pFgGain,
+   double * pSlidingFocusGain
    )
 {
    FILE *     pFile;
    char       comment [STRING_SIZE];
    int        i;
+   double     value;
+
 
    /* Open the file in read mode */
 
@@ -6892,10 +6900,12 @@ STATUS aoCtrlFileRead (
    printf ( "aoCtrlFileRead(): FG CM file name: %s\n", pFgCmFileName );
 #endif
 
-   /* Skip the next lines of comments */
+  /* Read the FG gains */
 
-   for ( i = 0 ; i < 8 ; i ++ )
+   for ( i = 0 ; i < 3 ; i ++ )
    {
+       /* Skip the next line of comment */
+
       if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
       {
          printf ( 
@@ -6909,7 +6919,56 @@ STATUS aoCtrlFileRead (
       printf ( "aoCtrlFileRead(): %s\n", comment );
 #endif
 
+
+      /* Read FG gain */
+
+      if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
+      {
+         ERROR_SET2 ( 0,
+               "Failed to read FG gain [%d] from the AO init file %s",
+               ERROR_LOG_SAVE, i, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+      *(pFgGain + i) = value;
+
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): FG gain [%d] = %f\n", i, *(pFgGain + i) );
+#endif
+
    }
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read sliding focus gain */
+
+   if ( (fscanf (pFile, "%lf\n", pSlidingFocusGain)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read sliding focus gain from the AO init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): sliding focus gain = %f\n", *pSlidingFocusGain );
+#endif
+
 
    /* Skip the next line of comment */
 
@@ -8656,10 +8715,10 @@ STATUS aoThresholdPerSubapCompute (
 
 /*+
  *   FUNCTION NAME:
- *   aoTotalThresholdCompute
+ *   aoTotalThresholdCompute_old
  *
  *   INVOCATION:
- *   aoTotalThresholdCompute (aoCcdId, aoCtrlId)
+ *   aoTotalThresholdCompute_old (aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
@@ -8693,7 +8752,7 @@ STATUS aoThresholdPerSubapCompute (
  *-
  */
 
-double aoTotalThresholdCompute (
+double aoTotalThresholdCompute_old (
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId
    )
@@ -8762,4 +8821,111 @@ double aoTotalThresholdCompute (
 
    return ( totalThreshold );
 }
+
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoTotalThresholdCompute
+ *
+ *   INVOCATION:
+ *   aoTotalThresholdCompute (aoCcdId, aoCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                               structure
+ *   (>) aoCtrlId   (AO_CTRL_ID) Pointer to the control context structure
+ *
+ *   FUNCTION VALUE:
+ *   (double) totalThreshold
+ *
+ *   PURPOSE:
+ *   To compute the threshold for the total count (not implemented yet)
+ *
+ *   DESCRIPTION:
+ *   This routine computes for the threshold for the total count according to
+ *   complex formula :
+ *   totalThreshold = [ c * Npix + 4.5 * sqrt(c*Npix) ] * rms
+ *   with c = 0.4 * exp ( -N^1.6)/(1+N)^0.75
+ *   with N <= 2.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+double aoTotalThresholdCompute (
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId
+   )
+{
+   double a;
+   double b;
+   double c;
+   double d;
+   double e;
+   double f;
+   double N;
+   double Npix;
+   double totalThreshold;
+
+   /* Some init */
+
+   a = -1.0;
+   b = 4.5;
+   d = 0.4;
+   e = 1.6;
+   f = 0.75;
+
+   N = aoCtrlId->thresholdMultCoeff;
+   Npix = aoCcdId->pixelsNb;
+
+   /* Check range of N */
+
+   if ( N > 2.0 )
+   {
+#ifdef DEBUG
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+#endif
+      N = 2;
+   };
+
+   if ( N < 0.0 )
+   {
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+      N = 0;
+   };
+
+   /* Compute the total threshold */
+
+   c = d * exp ( a * pow (N, e) ) / pow ( 1+N, f);
+
+   totalThreshold = (c * Npix + b*sqrt(c * Npix)) * aoCtrlId->rms;
+
+/*#ifdef DEBUG */
+   printf ( "c = %f\n" , c);
+   printf ( "totalThreshold = %f\n" , totalThreshold );
+/*#endif */
+
+   /* Return it */
+
+   return ( totalThreshold );
+}
+
+
+
+
+
+
 

@@ -98,7 +98,7 @@ MAN1	=
 DOCS	=
 
 # DATA are installed in INSTALL_DATA
-DATA	= ../pwfs1.pv
+DATA	= ../pwfs1.pv  ../pwfs1SetDefCommandMK.pv ../pwfs1SetDefCommandCP.pv
 
 # Any extra targets can be placed in a TARGETS macro (the build target
 # builds only pre_build, LIBNAME, TARGETS and PROD, not SCRIPTS, INC etc)
