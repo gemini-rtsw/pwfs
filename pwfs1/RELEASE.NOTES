@@ -249,7 +249,7 @@ V4-4 10 July 2003 CB:
   - Implement proportional law for aO gains
   - startupCP.vws fix address of reggie
 
-V4-4-dev 17 May 2004 AAG:
+V4-5.dev 17 May 2004 AAG:
 ------------------------
 
   * read default gains from .dat file when pressing the default button
@@ -281,11 +281,4 @@ V4-4-dev 17 May 2004 AAG:
   * aoTotalThresholdCompute(): New fit similar as pwfs2
   - src/aoP1Lib.c modified
 
-  --- NOT IN CVS --- only as a record
-  Clamp ao commands above a max threshold? -> Confirm if needed
-  (following changes are only locally in /home/aaguayo/CURRENTLY_MOD/pwfs1/)
-  - capfast/wfsCadMore.sch.clamp: Added detSigInitAoThresh record
-  - capfast/wfsGensub1.sch.clamp: Added initSigInitAoThresh record 
-  - adl/detSigInitAoThresh.adl.clamp: added
-  - adl/sig_main.adl.clamp: Added detSigInitAoThresh option
-
+- pwfs1Unsetup: modified
