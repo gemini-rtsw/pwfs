@@ -1,0 +1,34 @@
+# pvload defaults to commands for PWFS2 Detector Controller
+
+#
+# Set up defaults for detSigModeSeq CAD commands
+#
+
+group {
+double $(top)$(wfs)initSigModeSeq.A = 1.0 ;
+int $(top)$(wfs)initSigModeSeq.B = 1 ;
+int $(top)$(wfs)initSigModeSeq.C = 100 ;
+double $(top)$(wfs)initSigModeSeq.D = 15.0 ;
+int $(top)$(wfs)initSigModeSeq.E = 1 ;
+int $(top)$(wfs)initSigModeSeq.F = 100 ;
+double $(top)$(wfs)initSigModeSeq.G = 10.0 ;
+int $(top)$(wfs)initSigModeSeq.H = 0 ;
+double $(top)$(wfs)initSigModeSeq.I = 40.0 ;
+int $(top)$(wfs)initSigModeSeq.J = 0 ;
+double $(top)$(wfs)initSigModeSeq.K = 60.0 ;
+int $(top)$(wfs)initSigModeSeq.L = 0 ;
+double $(top)$(wfs)initSigModeSeq.M = 0.1 ;
+string $(top)$(wfs)initSigModeSeq.N = "." ;
+int $(top)$(wfs)initSigModeSeq.O = 1 ;
+int $(top)$(wfs)initSigModeSeq.P = 1 ;
+int $(top)$(wfs)initSigModeSeq.Q = 1 ;
+double $(top)$(wfs)initSigModeSeq.R = 15.0 ;
+double $(top)$(wfs)initSigModeSeq.S = 2.5 ;
+int $(top)$(wfs)initSigModeSeq.T = 1 ;
+};
+
+#
+# Init the defaults at startup
+#
+
+int $(top)$(wfs)initSigModeSeq.PROC = 1 ;
