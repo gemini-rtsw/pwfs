@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.58 2001-08-16 23:03:37 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.59 2001-08-16 23:04:16 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -161,8 +161,8 @@ jcs	jcs
 ocssupport	ocssupport
 #M	ocsacqcam	Acquisition Camera
 ocsacqcam	ocssupport/acqcam
-#M	dhshdr	DHS fits header
-dhshdr	ocssupport/dhshdr
+#M	ocsdhshdr	DHS fits header
+ocsdhshdr	ocssupport/dhshdr
 #M	ocsgmos	GMOS
 ocsgmos	ocssupport/gmos
 #M	ocsniri	NIRI
