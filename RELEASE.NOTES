@@ -140,4 +140,9 @@ V1-7 20 February 2001 CB:
     remove detDhsSem leftover when we have one detControl for 3 WFS
   - Now startupCP.vws and startupMK.vws
 
-newDev equivalent to V1-7
+V1-8 23 March 2001 CB:
+----------------------
+  - fix a bug with dhsQlRate when only 1 frame
+  - install timboot.asm.V3.3
+
+newDev equivalent to V1-8
