@@ -1,0 +1,10 @@
+V0-5 4 Nov 1999 CB:
+-------------------
+Modification toward V0-4  
+  - version for PPC
+  - WCS + Ra and Dec implemeneted
+  - Fits header improved
+  - new observe command
+  - comments from CM
+  - TELESCOP and OBSERVAT are now updated from the tcs:name
+  - New TIM boot codes
