@@ -7,8 +7,8 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="23"
-	nstr="61"
-	ndynamic="21"
+	nstr="66"
+	ndynamic="22"
 	nplot="0"
 	nrd="1"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="704"
-		height="681"
+		height="704"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3692"
-	nwords_sta="1120"
+	nwords_dspy="3852"
+	nwords_sta="1132"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2114"
-	osta="994"
-	odynamic="2114"
-	oplot="3520"
-	ord="3520"
-	oes="3680"
-	okd="3680"
-	opd="3692"
-	opo="3692"
+	odyng="2208"
+	osta="1076"
+	odynamic="2208"
+	oplot="3680"
+	ord="3680"
+	oes="3840"
+	okd="3840"
+	opd="3852"
+	opo="3852"
 	opc="68"
 	ostr="370"
-	ocmap="994"
-	ocrules="994"
+	ocmap="1076"
+	ocrules="1076"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="6"
 		y="38"
 		width="690"
-		height="631"
+		height="655"
 		groupid="0"
 	}
 }
@@ -246,31 +246,31 @@ display {
 }
 "text" {
 	object {
-		x="10"
-		y="260"
-		width="201"
+		x="12"
+		y="307"
+		width="224"
 		height="16"
 		groupid="0"
 	}
-	textix="Angle in radians ..:"
+	textix="FG Angle in radians :"
 	align="horiz. left"
 }
 "line" {
 	object {
-		x="8"
-		y="296"
+		x="7"
+		y="266"
 		width="688"
 		height="0"
 		groupid="0"
 	}
 	npoints="2"
 	point[0] {
-		x="8"
-		y="296"
+		x="7"
+		y="266"
 	}
 	point[1] {
-		x="696"
-		y="296"
+		x="695"
+		y="266"
 	}
 	orgpoint[0] {
 		x="0"
@@ -283,8 +283,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="303"
+		x="10"
+		y="276"
 		width="279"
 		height="22"
 		groupid="0"
@@ -327,8 +327,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="539"
+		x="11"
+		y="562"
 		width="331"
 		height="16"
 		groupid="0"
@@ -338,8 +338,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="483"
+		x="11"
+		y="506"
 		width="326"
 		height="16"
 		groupid="0"
@@ -375,8 +375,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="511"
+		x="11"
+		y="534"
 		width="331"
 		height="16"
 		groupid="0"
@@ -386,8 +386,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="567"
+		x="11"
+		y="590"
 		width="340"
 		height="16"
 		groupid="0"
@@ -397,8 +397,8 @@ display {
 }
 "text" {
 	object {
-		x="9"
-		y="595"
+		x="11"
+		y="618"
 		width="334"
 		height="16"
 		groupid="0"
@@ -408,8 +408,8 @@ display {
 }
 "text" {
 	object {
-		x="11"
-		y="636"
+		x="26"
+		y="663"
 		width="107"
 		height="16"
 		groupid="0"
@@ -419,13 +419,24 @@ display {
 }
 "text" {
 	object {
-		x="454"
-		y="541"
+		x="456"
+		y="564"
 		width="107"
 		height="16"
 		groupid="0"
 	}
 	textix="Rate :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="11"
+		y="478"
+		width="322"
+		height="16"
+		groupid="0"
+	}
+	textix="AO Angle in radians ... ... ...:"
 	align="horiz. left"
 }
 "message button" {
@@ -939,8 +950,8 @@ display {
 }
 "text entry" {
 	object {
-		x="214"
-		y="258"
+		x="224"
+		y="306"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1119,8 +1130,8 @@ display {
 }
 "text entry" {
 	object {
-		x="334"
-		y="537"
+		x="336"
+		y="560"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1164,8 +1175,8 @@ display {
 }
 "text entry" {
 	object {
-		x="334"
-		y="481"
+		x="336"
+		y="504"
 		width="345"
 		height="19"
 		groupid="0"
@@ -1209,8 +1220,8 @@ display {
 }
 "text entry" {
 	object {
-		x="334"
-		y="509"
+		x="336"
+		y="532"
 		width="345"
 		height="19"
 		groupid="0"
@@ -1254,8 +1265,8 @@ display {
 }
 "text entry" {
 	object {
-		x="334"
-		y="565"
+		x="336"
+		y="588"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1299,8 +1310,8 @@ display {
 }
 "text entry" {
 	object {
-		x="334"
-		y="593"
+		x="336"
+		y="616"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1344,8 +1355,8 @@ display {
 }
 "valuator" {
 	object {
-		x="517"
-		y="536"
+		x="519"
+		y="559"
 		width="134"
 		height="22"
 		groupid="0"
@@ -1390,10 +1401,55 @@ display {
 	sendMode="send on motion"
 	increment="0.1"
 }
+"text entry" {
+	object {
+		x="336"
+		y="474"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.N"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
 "related display" {
 	object {
-		x="123"
-		y="633"
+		x="138"
+		y="660"
 		width="148"
 		height="22"
 		groupid="0"

@@ -7,39 +7,39 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="45"
-	nstr="101"
+	nstr="60"
 	ndynamic="44"
 	nplot="0"
 	nrd="0"
-	nes="0"
+	nes="22"
 	nkd="1"
 	npd="0"
 	npo="0"
 	object {
 		x="328"
 		y="298"
-		width="514"
+		width="652"
 		height="797"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="4674"
+	nwords_dspy="7902"
 	nwords_sta="368"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1758"
-	osta="1390"
-	odynamic="1758"
-	oplot="4662"
-	ord="4662"
-	oes="4662"
-	okd="4662"
-	opd="4674"
-	opo="4674"
+	odyng="1510"
+	osta="1142"
+	odynamic="1510"
+	oplot="4414"
+	ord="4414"
+	oes="4414"
+	okd="7890"
+	opd="7902"
+	opo="7902"
 	opc="68"
 	ostr="600"
-	ocmap="1390"
-	ocrules="1390"
+	ocmap="1142"
+	ocrules="1142"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -88,7 +88,7 @@ display {
 	object {
 		x="11"
 		y="41"
-		width="485"
+		width="631"
 		height="147"
 		groupid="0"
 	}
@@ -141,7 +141,7 @@ display {
 	object {
 		x="11"
 		y="196"
-		width="485"
+		width="630"
 		height="593"
 		groupid="0"
 	}
@@ -2012,7 +2012,7 @@ display {
 "text update" {
 	object {
 		x="324"
-		y="643"
+		y="644"
 		width="160"
 		height="21"
 		groupid="0"
@@ -2423,9 +2423,2935 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
+"execute script" {
+	object {
+		x="459"
+		y="101"
+		width="144"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool tipConfig.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="459"
+		y="128"
+		width="144"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool tiltConfig.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="459"
+		y="156"
+		width="144"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool focusConfig.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="250"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z1Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="277"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z2Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="302"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z3Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="329"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z4Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="356"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z5Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="383"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z6Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="412"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z7Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="441"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z8Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="471"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z9Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="500"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z10Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="529"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z11Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="558"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z12Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="588"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z13Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="617"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z14Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="645"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z15Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="673"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z16Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="700"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z17Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="729"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z18Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="501"
+		y="757"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z19Config.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
 "kill display" {
 	object {
-		x="426"
+		x="571"
 		y="10"
 		width="70"
 		height="23"
