@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.18 2001-11-29 03:59:44 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.19 2001-12-03 19:47:59 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 30 Nov 2001 - cb add writeToRm parameter to GG and FG CADs
  * 22 Aug 2001 - cb Major modifications to have aO correction with pwfs2
  * 02 Apr 2001 - cb add adc0, adc1, adc2, adc3
  * 20 February 2001 - cb - add dhsCon sir record
@@ -483,7 +484,8 @@ CAD_RECORD pWfsDbCadList [] =
   DET_CONTROL_CMD_SIG_MODE_GG,
   STOP_DIRECTIVE_UNSUPPORTED,
   SIMULATION_MODE_SUPPORTED,
-  40.0
+  40.0,
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeFgFocus"),
@@ -492,7 +494,8 @@ CAD_RECORD pWfsDbCadList [] =
   STOP_DIRECTIVE_UNSUPPORTED,
   SIMULATION_MODE_SUPPORTED,
   40.0,
-  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "4"}
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "4"},
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeAo"),
@@ -512,7 +515,8 @@ CAD_RECORD pWfsDbCadList [] =
   SIMULATION_MODE_SUPPORTED,
   40.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "6000", {"1", NO_HI_LIMIT},
-  CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "0", {"0", "4"}
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "0", {"0", "4"},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeFgFocusAo"),
@@ -522,7 +526,8 @@ CAD_RECORD pWfsDbCadList [] =
   SIMULATION_MODE_SUPPORTED,
   40.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "6000", {"1", NO_HI_LIMIT},
-  CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "0", {"0", "4"}
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "0", {"0", "4"},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeCoadd"),
@@ -545,7 +550,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "4"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_STRING, DET_CONTROL_PAR_FILE_PATH, {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_D, EPICS_DATA_TYPE_STRING, "coadd.fits", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_STRING, "coadd.fits", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeThresh"),
@@ -558,7 +564,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "5", {"0.0", NO_HI_LIMIT},
-  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "50", {"0.0", "65536.0"}
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "50", {"0.0", "65536.0"},
+  CAD_ATTRIB_F, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeGgCoadd"),
@@ -569,7 +576,8 @@ CAD_RECORD pWfsDbCadList [] =
   40.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_STRING, DET_CONTROL_PAR_FILE_PATH, {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_C, EPICS_DATA_TYPE_STRING, "coadd.fits", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_STRING, "coadd.fits", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeSeq"),
@@ -592,7 +600,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_L, EPICS_DATA_TYPE_LONG, "0", {"0", "1"},
   CAD_ATTRIB_M, EPICS_DATA_TYPE_DOUBLE, "0.1", {"0.1", NO_HI_LIMIT},
   CAD_ATTRIB_N, EPICS_DATA_TYPE_STRING, DET_CONTROL_DATA_FILE_PATH, {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_O, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
+  CAD_ATTRIB_O, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
+  CAD_ATTRIB_P, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeTotal"),
@@ -604,7 +613,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "1"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.0", {"0.0", NO_HI_LIMIT},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
-  CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "10.0", {"0.0", "100.0"}
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "10.0", {"0.0", "100.0"},
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigSaveCb"),

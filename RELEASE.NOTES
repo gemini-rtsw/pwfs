@@ -186,4 +186,8 @@ V2-4 28 November 2001 CB:
 -------------------------
   - TT guide values x 2 when binning. Gains for TT divided by 2 in par files.
 
-newDev equivalent to V2-4
+V2-5 03 December 2001 CB:
+-------------------------
+  - add writeToRm flag when doing guiding
+
+newDev equivalent to V2-5
