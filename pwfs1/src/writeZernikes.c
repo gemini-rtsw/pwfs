@@ -70,6 +70,8 @@
  * 26-Nov-1999: cb - modify writeWfsToSynchro to update interval as for P2
  * 24-Apr-2000: cb - Majpr modifications new aoP1Lib library
  * 08-Dec-2000: cb - New routine for the butterworth filtering
+ * 02-Feb-2001: cb - Add a vector in circular buffers control and fg control
+ *                   to contain the modes after rotation
  *
  */
 /* INDENT ON */
@@ -738,14 +740,17 @@ long gensubToTcsAo
  * double *pTime
  * long   STATUS;
  *
- * STATUS writeWfsToTcs(AO_CTRL_ID aoCtrlId, double *pAoVect,
- *                      double *pAoErrorsVect, double *pTime
+ * STATUS writeWfsToTcs(AO_CTRL_ID aoCtrlId, double *pAoVect, 
+ *                      double *pAoVectAfterRot, double *pAoErrorsVect, 
+ *                      double *pTime
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
- * > AO_CTRL_ID aoCtrlId    - Pointer to the AO control context structure
- * > double * pAoVect       - Vector containing the zernike modes
- * > double * pAoErrorsVect - Vector containing the associated errors
- * > double * pTime         - Pointer to the associated time stamp value
+ * > AO_CTRL_ID aoCtrlId      - Pointer to the AO control context structure
+ * > double * pAoVect         - Vector containing the zernike modes
+ * > double * pAoVectAfterRot - Vector containing the zernike modes after 
+ *                              rotation
+ * > double * pAoErrorsVect   - Vector containing the associated errors
+ * > double * pTime           - Pointer to the associated time stamp value
 
  *
  * FUNCTION VALUE:
@@ -783,6 +788,7 @@ STATUS writeWfsToTcs
    (
    AO_CTRL_ID aoCtrlId,
    double     *pAoVect,
+   double     *pAoVectAfterRot,
    double     *pAoErrorsVect,
    double     *pTime
    )
@@ -859,6 +865,28 @@ STATUS writeWfsToTcs
       result.z19 = (f->cos3Theta*(*(pz+17)) - f->sin3Theta*(*(pz+18)));
       result.z20 = (f->sin3Theta*(*(pz+17)) + f->cos3Theta*(*(pz+18)));
 
+      /* Store the result into pAoVectAfterRot */
+
+      *(pAoVectAfterRot) = result.z2;
+      *(pAoVectAfterRot+1) = result.z3;
+      *(pAoVectAfterRot+2) = result.z4;
+      *(pAoVectAfterRot+3) = result.z5;
+      *(pAoVectAfterRot+4) = result.z6;
+      *(pAoVectAfterRot+5) = result.z7;
+      *(pAoVectAfterRot+6) = result.z8;
+      *(pAoVectAfterRot+7) = result.z9;
+      *(pAoVectAfterRot+8) = result.z10;
+      *(pAoVectAfterRot+9) = result.z11;
+      *(pAoVectAfterRot+10) = result.z12;
+      *(pAoVectAfterRot+11) = result.z13;
+      *(pAoVectAfterRot+12) = result.z14;
+      *(pAoVectAfterRot+13) = result.z15;
+      *(pAoVectAfterRot+14) = result.z16;
+      *(pAoVectAfterRot+15) = result.z17;
+      *(pAoVectAfterRot+16) = result.z18;
+      *(pAoVectAfterRot+17) = result.z19;
+      *(pAoVectAfterRot+18) = result.z20;
+
       semGive(f->access);
    }
    else
@@ -930,13 +958,16 @@ STATUS writeWfsToTcs
  * long       STATUS;
  *
  * STATUS writeWfsToSynchro(AO_CTRL_ID aoCtrlId, double *pFgVect,
- *                          double *pFgErrorsVect, double *pTime)
+ *                          double *pFgVectAfterRot, double *pFgErrorsVect, 
+ *                          double *pTime)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
- * > AO_CTRL_ID aoCtrlId      - Pointer to the AO control context structure
- * > double *   pFgVect       - Vector containing the zernike modes
- * > double *   pFgErrorsVect - Vector containing the associated errors
- * > double *   pTime         - Pointer to the associated time stamp value
+ * > AO_CTRL_ID aoCtrlId        - Pointer to the AO control context structure
+ * > double *   pFgVect         - Vector containing the zernike modes
+ * > double *   pFgVectAfterRot - Vector containing the zernikes modes after
+ * >                              rotation
+ * > double *   pFgErrorsVect   - Vector containing the associated errors
+ * > double *   pTime           - Pointer to the associated time stamp value
  *
  * FUNCTION VALUE:
  * long  Status value returned to calling routine, a non-zero value indicates
@@ -979,6 +1010,7 @@ STATUS writeWfsToSynchro
    (
    AO_CTRL_ID aoCtrlId,
    double     *pFgVect,
+   double     *pFgVectAfterRot,
    double     *pFgErrorsVect,
    double     *pTime
    )
@@ -1003,6 +1035,12 @@ STATUS writeWfsToSynchro
       result.z4 = *(pz+2) ;
 
       /*result.z4 = (*(pz+2)) - (pWfs->focusscale * f->null[7]);*/
+
+      /* store the vector after rotation into pFgVectAfterRot */
+
+      *pFgVectAfterRot = result.z2;
+      *(pFgVectAfterRot + 1) = result.z3;
+      *(pFgVectAfterRot + 2) = result.z4;
 
       semGive(f->access);
    }

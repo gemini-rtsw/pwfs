@@ -112,4 +112,14 @@ V1-5 28 January 2001 CB:
     temp, ADC offsets and SN of the CCD
   - replace the button X, Y X 2 per YES in det_frameSize.dl
 
-newDev equivalent to V1-5
+V1-6 06 February 2001 CB:
+-------------------------
+  - Temp, offset not updated according to the site in detInit and detReset. 
+    I have to move all the DATREC_CONTEXT structures to obsId, I have created
+    detGetSirContext() and detWriteDefSirContext() and fix the bug.
+    There is still an issue when using detInit, need to do detSigInit after (if
+    not the ref for the centers of the subapertures are messed)
+  - Bug in aoModeCompute() fixed. Centroids were computed on the instantaneous 
+    data and not on the average image...
+  - Add a button "CLEAR ERRORS" on main screen
+  - Save FG and AO vect after rotation

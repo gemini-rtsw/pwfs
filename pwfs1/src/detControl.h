@@ -13,6 +13,8 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   31 Jan 2001: CB - Move all the DATREC_CONTEXT structures into the obsId 
+ *                     structure
  *   26 Jan 2001: CB - Add DET_CONTROL_PWFS1_CP_INIT_FILE
  *                         DET_CONTROL_PWFS1_MK_INIT_FILE
  *                     Replace/add DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE
@@ -105,13 +107,13 @@
                                     /* Name of SIR record containing the init */
                                     /* state of the flat buffer               */
 
-#define   DET_CONTROL_AOCONTMATINIT_SIR_NAME  "aoContMatInit"
-                                    /* Name of SIR record containing the init */
-                                    /* state of the control matrix            */
-
 #define   DET_CONTROL_AOINTMATINIT_SIR_NAME   "aoIntMatInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the interaction matrix        */
+
+#define   DET_CONTROL_AOCONTMATINIT_SIR_NAME  "aoContMatInit"
+                                    /* Name of SIR record containing the init */
+                                    /* state of the control matrix            */
 
 #define   DET_CONTROL_AOFGCONTMATINIT_SIR_NAME "aoFgContMatInit"
                                     /* Name of SIR record containing the init */
@@ -141,6 +143,7 @@
 #define   DET_CONTROL_AOPROCESSMODE_SIR_NAME  "aoProcessMode"
                                     /* Name of SIR record containing the      */
                                     /* processing mode                        */
+
 #define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
                                     /* Name of SIR record containing    */
                                     /* the number of ouputs             */
@@ -546,8 +549,24 @@ typedef   struct      /* Context structure used to describe an observation.   */
 
                            /* SAD information                                 */
                            /* ---------------                                 */
+
+   DATREC_CONTEXT pStateContext;      /* Context structure for state SIR      */
+                                      /* record                               */
+   DATREC_CONTEXT pDetInitContext;    /* Context structure for initialising   */
+                                      /* state SIR record.                    */
+   DATREC_CONTEXT pDetInitStatusContext;
+                                      /* Context structure for SDSU           */
+                                      /* initialisation status SIR record.    */
+   DATREC_CONTEXT pDetTestContext;    /* Context structure for                */
+                                      /* testing state SIR record.            */
+   DATREC_CONTEXT pTestResultsContext;
+                                      /* Context structure for SDSU test      */
+                                      /* results SIR record.                  */
+   DATREC_CONTEXT pDetPrimReplyContext;
+                                      /* Context structure for SDSU           */
+                                      /* primitive reply string SIR record.   */
    DATREC_CONTEXT pDetObservingContext;
-                           /* Observing record context.                       */
+                                      /* Observing record context.            */
    DATREC_CONTEXT pDetMeasuringContext;
                                       /* Measuring record context.            */
    DATREC_CONTEXT pOutputsContext ;   /* Number of outputs SIR record         */
@@ -576,6 +595,19 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* structure                            */
    DATREC_CONTEXT pYbinContext ;      /* Y binning factor SIR  record context */
                                       /* structure                            */
+   DATREC_CONTEXT pAoCtrlInitContext; /* Context structure for aoCtrlInit     */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pAoFlatInitContext; /* Context structure for aoFlatInit     */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pAoContMatInitContext;
+                                      /* Context structure for                */
+                                      /* aoContMatInit SIR record.            */
+   DATREC_CONTEXT pAoIntMatInitContext; 
+                                      /* Context structure for                */
+                                      /* aoIntMatInit SIR record.             */
+   DATREC_CONTEXT pAoFgContMatInitContext;
+                                      /* Context structure for                */
+                                      /* aoFgContMatInit SIR record.          */
    DATREC_CONTEXT pAoDarkInitContext; /* Context structure for aoDarkInit     */
                                       /* SIR record.                          */
    DATREC_CONTEXT pAoThreshContext;   /* Context structure for aoThresh SIR   */
@@ -593,6 +625,12 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT pAoSaveCbFgCtrlContext;
                                       /* Context structure for aoSaveCbFgCtrl */
                                       /* SIR record.                          */
+   DATREC_CONTEXT pDetTypeContext;    /* Context structure for detector       */
+                                      /* controller type.                     */
+   DATREC_CONTEXT pDetIdContext;      /* Context structure for detector       */
+                                      /* Id or SN                             */
+   DATREC_CONTEXT pBunitContext ;     /* Data unit SIR record context         */
+                                      /* structure                            */
    DATREC_CONTEXT pDataLabelContext ; /* Data Label SIR record context        */
                                       /* structure                            */
    DATREC_CONTEXT pIntTimeContext ;   /* Integration time SIR record context  */

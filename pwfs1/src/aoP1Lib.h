@@ -17,6 +17,8 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 02 Feb 2001: CB - Add aoVectAfterRot and fgVectAfterRot vectors in the 
+ *                   circular buffers AO_CB_CTRL_ID and AO_CB_FG_CTRL_ID
  * 31 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
  * 13 May 1999 - CB - Original creation
  *
@@ -440,7 +442,12 @@ typedef struct                         /* Definition of the aO control        */
                                        /* the centroids computation           */
 
    AO_VECT      aoVect;                /* Vector which contains the zernikes  */
-                                       /* modes to send to M1                 */
+                                       /* modes to send to M1 after a&g and   */
+                                       /* cass rotator rotation               */
+
+   AO_VECT      aoVectAfterRot;        /* Vector which contains the zernikes  */
+                                       /* modes to send to M1 after a&g and   */
+                                       /* cass rotator rotation               */
 
    AO_VECT      aoErrorsVect;          /* Vector which contains the errors    */
                                        /* associated with the zernikes modes  */
@@ -506,7 +513,12 @@ typedef struct                         /* Definition of the FG control        */
                                        /* the centroids computation           */
 
    FG_VECT      fgVect;                /* Vector which contains the zernikes  */
-                                       /* modes to send to M2                 */
+                                       /* modes to send to M2 before a&G and  */
+                                       /* cass rotator rotation               */
+
+   FG_VECT      fgVectAfterRot;        /* Vector which contains the zernikes  */
+                                       /* modes to send to M2 after a&g and   */
+                                       /* cass rotator rotation               */
 
    FG_VECT      fgErrorsVect;          /* Vector which contains the errors    */
                                        /* associated with the zernikes modes  */
@@ -676,13 +688,13 @@ STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
 STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels, int yPixels);
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       double * pTotalCountsVect, double * pGuidesVect, 
-                      double * pFgVect, double * pFgErrorsVect, double * pTime,
-                      int * pWfsStatus);
+                      double * pFgVect, double * pFgVectAfterRot, 
+                      double * pFgErrorsVect, double * pTime, int * pWfsStatus);
 STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId, 
                               AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
                               double * pGuidesVect, double * pFgVect, 
-                              double * pFgErrorsVect, double * pTime, 
-                              int * pWfsStatus);
+                              double * pFgVectAfterRot, double * pFgErrorsVect, 
+                              double * pTime, int * pWfsStatus);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
 STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
@@ -707,7 +719,8 @@ STATUS aoCbFgCtrlSave (char * pCbFgCtrlSave, AO_CCD_ID aoCcdId,
 STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                         double *pTotalCountsVect, double *pCentroidsVect,
                         double *pErrorCentroidsVect, double *pFgVect,
-                        double *pFgErrorsVect, double *pTime, int *pWfsStatus);
+                        double *pFgVectAfterRot, double *pFgErrorsVect, 
+                        double *pTime, int *pWfsStatus);
 STATUS aoModeAnalyze (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       AO_CB_CTRL_ID aoCbCtrlId);
 STATUS aoCentroidsWrite (char * pCentroidsFileName, double * pCentroids, 

@@ -68,6 +68,9 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   02 February 2001: CB - Add aoVectAfterRot and fgVectAfterRot vectors in the
+ *                          circular buffers AO_CB_CTRL_ID and AO_CB_FG_CTRL_ID
+ *   01 February 2001: CB - Fix a bug in aoModeCompute()
  *   31 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
  *   21 April 2000: CB - original creation
  *INDENT-ON*
@@ -3213,7 +3216,7 @@ STATUS aoDarkSubtract (
  *
  *   INVOCATION:
  *   aoGlobalGuide (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, pGuidesVect,
- *                  pFgVect, pFgErrorsVect, pTime, pWfsStatus)
+ *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3225,6 +3228,8 @@ STATUS aoDarkSubtract (
  *   (<) pGuidesVect      (double *)   Pointer to the guides vector
  *   (<) pFgVect          (double *)   Pointer to the zernikes vector to send 
  *                                     to M2
+ *   (<) pFgVectAfterRot  (double *)   Pointer to the zernikes vector to send 
+ *                                     to M2 after rotation
  *   (<) pFgErrorsVect    (double *)   Pointer to the associated errors vector
  *   (<) pTime            (double *)   Pointer to the time associated to the
  *                                     vectors
@@ -3264,6 +3269,7 @@ STATUS aoGlobalGuide (
    double *     pTotalCountsVect,
    double *     pGuidesVect,
    double *     pFgVect,
+   double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
    int *        pWfsStatus
@@ -3390,7 +3396,8 @@ STATUS aoGlobalGuide (
       return (ERROR);
    };
 
-   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
+                          pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -3419,6 +3426,8 @@ STATUS aoGlobalGuide (
  *   (<) pTotalCountsVect (double *)   Pointer to the total counts vector
  *   (<) pGuidesVect      (double *)   Pointer to the centroids vector
  *   (<) pFgVect          (double *)   Pointer to the zernikes vector
+ *   (<) pFgVectAfterRot  (double *)   Pointer to the zernikes vector after
+ *                                     rotation
  *   (<) pFgErrorsVect    (double *)   Pointer to the associated errors vector
  *   (<) pTime            (double *)   Pointer to the time associated to the
  *                                     vectors
@@ -3460,6 +3469,7 @@ STATUS aoGlobalGuideAndError (
    double *     pTotalCountsVect,
    double *     pGuidesVect,
    double *     pFgVect,
+   double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
    int *        pWfsStatus
@@ -3618,7 +3628,8 @@ STATUS aoGlobalGuideAndError (
       return (ERROR);
    };
 
-   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
+                          pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -4178,6 +4189,7 @@ STATUS aoModeCompute (
    double *     pCentroidsVect;
    double *     pErrorCentroidsVect;
    double *     pAoVect;
+   double *     pAoVectAfterRot;
    double *     pAoErrorsVect; 
    double *     pAo;
    double *     pErrorAo;
@@ -4232,6 +4244,7 @@ STATUS aoModeCompute (
          pErrorCentroidsVect = 
          aoCbCtrlId->cbCtrlRecord[indexCtrl].errorCentroidsVect;
          pAoVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVect;
+         pAoVectAfterRot = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVectAfterRot;
          pAoErrorsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoErrorsVect; 
          pWfsStatus = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus); 
          pTime = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].time); 
@@ -4242,7 +4255,8 @@ STATUS aoModeCompute (
          pMat = aoCtrlId->contMat;
          pScale = aoCtrlId->aoScaleFactorVect;
 
-         if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
+         if ( aoCentroidsCompute ( aoCtrlId->sumVect, aoCcdId, aoCtrlId, 
+                                   pTotalCountsVect,
                                    pCentroidsVect, pErrorCentroidsVect,
                                    pWfsStatus) == ERROR )
          {
@@ -4281,7 +4295,8 @@ STATUS aoModeCompute (
             return (ERROR);
          };
 
-         if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoErrorsVect, pTime) != OK )
+         if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect, 
+                            pTime) != OK )
          {
             ERROR_SET ( 0, "Failed to write data to the TCS", ERROR_LOG_SAVE);
             return (ERROR);
@@ -4717,6 +4732,7 @@ STATUS aoCbCtrlZero
        for ( i = 0 ; i < MODE_NB ; i ++ )
        {
            aoCbCtrlId->cbCtrlRecord[index].aoVect[i] = 0.0;
+           aoCbCtrlId->cbCtrlRecord[index].aoVectAfterRot[i] = 0.0;
            aoCbCtrlId->cbCtrlRecord[index].aoErrorsVect[i] = 0.0;
        }
    }
@@ -4793,6 +4809,7 @@ STATUS aoCbFgCtrlZero
        for ( i = 0 ; i < FG_MODE_NB ; i ++ )
        {
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgVect[i] = 0.0;
+           aoCbFgCtrlId->cbFgCtrlRecord[index].fgVectAfterRot[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgErrorsVect[i] = 0.0;
        }
    }
@@ -5392,7 +5409,8 @@ STATUS aoCbFgCtrlSave
  *   INVOCATION:
  *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                    pCentroidsVect, *pErrorCentroidsVect,
- *                    pFgVect, pFgErrorsVect, pTime, pWfsStatus)
+ *                    pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, 
+ *                    pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the float buffer which 
@@ -5404,6 +5422,8 @@ STATUS aoCbFgCtrlSave
  *   (<) pErrorCentroidsVect (double *)   Pointer to the guides vector
  *   (<) pFgVect             (double *)   Pointer to the zernikes vector to 
  *                                        send to M2
+ *   (<) pFgVectAfterRot     (double *)   Pointer to the zernikes vector to 
+ *                                        send to M2 after rotation
  *   (<) pFgErrorsVect       (double *)   Pointer to the associated errors 
  *                                        vector
  *   (<) pTime               (double *)   Pointer to the time associated to the
@@ -5450,6 +5470,7 @@ STATUS aoGuideAndFocus (
    double        *pCentroidsVect,
    double        *pErrorCentroidsVect,
    double        *pFgVect,
+   double        *pFgVectAfterRot,
    double        *pFgErrorsVect,
    double        *pTime,
    int           *pWfsStatus
@@ -5552,7 +5573,8 @@ STATUS aoGuideAndFocus (
       return (ERROR);
    };
 
-   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgErrorsVect, pTime) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
+                          pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -5617,6 +5639,7 @@ STATUS aoModeAnalyze (
    double *     pCentroidsVect;
    double *     pErrorCentroidsVect;
    double *     pAoVect;
+   double *     pAoVectAfterRot;
    double *     pAoErrorsVect; 
    double *     pAo;
    double *     pErrorAo;
@@ -5634,6 +5657,7 @@ STATUS aoModeAnalyze (
    pCentroidsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].centroidsVect;
    pErrorCentroidsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].errorCentroidsVect;
    pAoVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVect;
+   pAoVectAfterRot = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVectAfterRot;
    pAoErrorsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoErrorsVect; 
    pWfsStatus = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus); 
    pTime = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].time); 
@@ -5687,7 +5711,8 @@ STATUS aoModeAnalyze (
       return (ERROR);
    };
 
-   if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoErrorsVect, pTime) != OK )
+   if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect, 
+                      pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the TCS", ERROR_LOG_SAVE);
       return (ERROR);
