@@ -55,7 +55,6 @@ APPLSRCS.c	= \
 	../sdsuRead.c \
 	../strcasecmp.c\
 	../fpscr.c\
-	../testFPE.c\
 	../test_sharedmem.c
 
 SRCS.c	= $(LIBSRCS.c) $(APPLSRCS.c)
