@@ -61,3 +61,7 @@ V1-1 10 July 2000 CB:
   - button full/bin in detSigInit + detFrameSize -> automatic download of the
     default configuration (full/bin) for signal processing
   - threshold computation in seq closed loop
+
+V1-2 11 July 2000 CB:
+---------------------
+  - minor bug : testKit.c
