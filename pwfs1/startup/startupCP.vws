@@ -1,4 +1,4 @@
-# $Id: startupCP.vws,v 1.10 2004-07-20 19:30:15 gemvx Exp $
+# $Id: startupCP.vws,v 1.11 2004-08-20 21:42:29 gemvx Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -111,7 +111,6 @@ iocInit ("$(version)/data/resource.def")
 
 # Configure the initial state of the system
 pvload "$(version)/data/pwfs1.pv","top=pwfs1:, sadtop=pwfs1:, wfs=dc:"
-pvload "$(version)/data/pwfs1SetDefCommandCP.pv","top=pwfs1:, wfs=dc:"
 
 # Initialise the database records not initialised by iocInit.
 epToVxCaInitRecords ()
@@ -155,6 +154,9 @@ taskSpawn ("wfsResMonitor", 255, 0x8, 4000, wfsResourceMonitor, 10000000, 200000
 
 # Do not allow to use D64 cycles on the bus
 *0xfd050128 &= 0xffffbfff
+
+# More database initializations
+pvload "$(version)/data/pwfs1SetDefCommandCP.pv","top=pwfs1:, wfs=dc:"
 
 # Start sequences
 seq &timeSeq, "sys=pwfs1:"
