@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.27 2002-07-04 03:43:07 cboyer Exp $"};
+   "$Id: detControl.c,v 1.28 2002-11-05 00:38:07 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,7 +31,12 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- *   18 Jun 2002: CB - Implement seeing computation
+ *   17 Oct 2002: CB - modify detInit to initialize correctly signal processing,
+ *                     butterworth filters and zero point models
+ *   08 Oct 2002: CB - add detPowerOff command
+ *   25 Sep 2002: CB - Implement seeing computation according FR's method
+ *   16 Sep 2002: CB - Fix small bug: reset seeing counter
+ *   18 Jun 2002: CB - Implement seeing computation according BE's method
  *   12 Jun 2002: CB - aoModeCompute modified to reject raw frame with status
  *                     AO_SH_OFF (purpose:aO + chopping)
  *   22 May 2002: CB - Modify detSigInitFgGain to reinit defFocusScale100Hz
@@ -339,6 +344,9 @@ LOCAL uint32   detPrimitive (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 
 LOCAL uint32   detPowerOn (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                            SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detPowerOff (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                            SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detMode   (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                           SDSU_ID sdsuId, OBS_ID obsId);
@@ -1395,6 +1403,16 @@ STATUS   detControl
          }
       }
 
+      if ( aoCtrlId->seeingCoeffVectInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->seeingCoeffVectFileName, 
+                              obsId->pSeeingCoeffVectInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
+         }
+      }
+
       if (epToVxPipeWrite (NULL, (char *)(int)& (aoCtrlId->rms),
                            obsId->pAoRmsContext) == ERROR)
       {
@@ -2033,6 +2051,15 @@ STATUS   detControl
 
             errorNumber =
             detPowerOn (cadCmdContext, commandNumber, sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_POWER_OFF)
+         {
+
+            /* Execute SDSU POWER OFF primitive command. */
+
+            errorNumber =
+            detPowerOff (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_MODE)
@@ -5142,9 +5169,13 @@ uint32 detObserveStart
 
       if ( obsId->observing )
       {
+/*
          ERROR_SET (S_detControl_BUSY, 
                     "Observation already in progress", ERROR_LOG_NOW);
          errorNumber = S_detControl_BUSY;
+*/
+         MESSAGE_LOG (MSG_LOG, "Observation already in progress" );
+         errorNumber = 0;
          return (errorNumber);
       }
 
@@ -5178,6 +5209,7 @@ uint32 detObserveStart
          obsId->aoCtrlId->coaddCounter = 0;
          obsId->aoCtrlId->focusCounter = 0;
          obsId->aoCtrlId->previousFocus = 0.0;
+         obsId->aoCtrlId->seeingCounter = 0;
       }
 
       /* Init the position of the circular buffers */
@@ -7131,6 +7163,26 @@ uint32 detInit
    char         detContInitFileName [ STRING_SIZE ] ;
                                  /* Full Name of the detector controller      */
                                  /* init file                                 */
+   char         aoInitFileName [ STRING_SIZE ] ;
+                                 /* Full Name of the signal processing        */
+                                 /* structure init file                       */
+   char         detBwInitFileName [ STRING_SIZE ] ;
+                                 /* Full Name of the BW init file             */
+   char         modInitFileName [ STRING_SIZE ] ;
+                                 /* Name of the model init file               */
+
+   AST_ZP_MODEL_ID_STRUCT   tempAstModel;
+   TREF_ZP_MODEL_ID_STRUCT  tempTrefModel;
+   COMA_ZP_MODEL_ID_STRUCT  tempComaModel;
+   FOCUS_ZP_MODEL_ID_STRUCT tempFocModel;
+
+   long         nExp;               /* Number of exposure                     */
+   long         outOption;          /* Output option                          */
+   double       expTime;            /* Exposure time                          */
+   double       cutoffFreqTT;       /* Cutoff frequency for fast TT           */
+   double       cutoffFreqFoc;      /* Cutoff frequency for fast Focus        */
+
+
    
    /*
     * Initialise the error number.
@@ -7263,6 +7315,13 @@ uint32 detInit
    {
       ERROR_LOG (
       "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->seeingCoeffVectInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pSeeingCoeffVectInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
    }
 
    /*
@@ -7919,6 +7978,388 @@ uint32 detInit
    }
 
    /*
+    * Init the AO control context structure
+    */
+
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+#endif
+
+#ifdef TIM_EEPROM_PROGRAM
+   if ( strcmp (defFileName, "NONE") != 0 )
+   {
+      strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( aoInitFileName , "/" ) ;
+      strcat ( aoInitFileName , defFileName ) ;
+
+      if ( aoCtrlContextInit ( aoInitFileName, obsId->aoCcdId, obsId->aoCtrlId )
+           == ERROR )
+      {
+         ERROR_LOG ("Failed to init ao control context structure on startup");
+      }
+
+      if ( obsId->aoCtrlId->initFlag == TRUE )
+      {
+         angleWithM1 = obsId->aoCtrlId->angleWithM1;
+         angleWithM2 = obsId->aoCtrlId->angleWithM2;
+         obsId->defFocusScale100Hz = obsId->aoCtrlId->fgScaleFactorVect[2];
+
+         if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext)
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->darkInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->darkFileName,
+                              obsId->pAoDarkInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->flatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->flatFileName,
+                              obsId->pAoFlatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->aoIntMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->aoIntMatFileName,
+                              obsId->pAoIntMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->aoContMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->aoContMatFileName,
+                              obsId->pAoContMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->fgContMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->fgContMatFileName,
+                              obsId->pFgContMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->seeingCoeffMatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->seeingCoeffMatFileName,
+                              obsId->pSeeingCoeffMatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->seeingCoeffVectInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->seeingCoeffVectFileName,
+                              obsId->pSeeingCoeffVectInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record")
+;
+         }
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->rms),
+                           obsId->pAoRmsContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_AO_RMS_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
+                           obsId->pAoThreshContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                           obsId->pAoTotalContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                    (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[0]),
+                    obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                    (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[1]),
+                    obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                    (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                    obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->aoCtrlId->seeingScaleFactor),
+                           obsId->pSeeingGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_SEEING_GAIN_SIR_NAME record");
+      }
+
+#ifdef DEBUG
+      aoCtrlContextShow (obsId->aoCcdId, obsId->aoCtrlId, FALSE);
+#endif
+   }
+   else
+   {
+      MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
+   }
+#endif
+
+   /*
+    * Read the default settings from the BW init file
+    */
+
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_CP_INIT_FILE);
+#endif
+
+   printf ( "defFileName =%s\n", defFileName);
+
+   if ( strcmp (defFileName, "NONE") != 0 )
+   {
+      strcpy ( detBwInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( detBwInitFileName , "/" ) ;
+      strcat ( detBwInitFileName , defFileName ) ;
+
+      if ( detInitBwDef ( detBwInitFileName, &cutoffFreqTT, &cutoffFreqFoc)
+           == ERROR )
+      {
+         MESSAGE_LOG ( MSG_LOG,
+           "Failed to read BW default settings from file");
+
+         /* Set the focus cutoff frequency to 0.0167Hz anyway (1mn convergence
+            time) and cutoff TT frequency to 10Hz */
+
+         cutoffFreqFoc = 0.0167; /* in Hz */
+         cutoffFreqTT = 10.0;    /* in Hz */
+      }
+   }
+   else
+   {
+      /* Set the focus cutoff frequency to 0.0167Hz anyway (1mn convergence
+         time) and cutoff TT frequency to 10Hz */
+
+      cutoffFreqFoc = 0.0167; /* in Hz */
+      cutoffFreqTT = 10.0;    /* in Hz */
+   }
+
+   /*
+    * Mode is no processing, init the fields of the observe CAD record
+    */
+
+   obsId->sigMode = AO_MODE_NONE;
+
+   MESSAGE_LOG (MSG_LOG, "Switching signal processing off");
+   if (epToVxPipeWrite (NULL, "No processing",
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
+   }
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   obsId->exposureTime = expTime;
+   obsId->cutoffFrequencyTipTilt = cutoffFreqTT;
+   obsId->cutoffFrequencyFocus = cutoffFreqFoc;
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to init fields of observe record");
+   }
+
+   if ( detComputeCoeffButterworth ( obsId->exposureTime,
+                                     &(obsId->cutoffFrequencyTipTilt),
+                                     &(obsId->cutoffFrequencyFocus)) == ERROR )
+   {
+      ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus),
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
+   }
+
+   /*
+    * Init the ao zero point models
+    */
+
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE);
+#endif
+
+   if ( strcmp (defFileName, "NONE") != 0 )
+   {
+      strcpy ( modInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( modInitFileName , "/" ) ;
+      strcat ( modInitFileName , defFileName ) ;
+
+      if ( aoModInit ( modInitFileName, &tempAstModel, &tempTrefModel,
+                       &tempComaModel, &tempFocModel ) == ERROR )
+      {
+         ERROR_LOG ( "Failed to init zero point models on startup" );
+      }
+
+      /* Now init the real models */
+
+      if (semTake (accessAstigModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+      {
+         ERROR_LOG ( "Timeout on mutex acess to astigModel" );
+      }
+      else
+      {
+         astigModel.a1 = tempAstModel.a1;
+         astigModel.a2 = tempAstModel.a2;
+         astigModel.a3 = tempAstModel.a3;
+         astigModel.p1 = tempAstModel.p1;
+         astigModel.p2 = tempAstModel.p2;
+         astigModel.p3 = tempAstModel.p3;
+         astigModel.c = tempAstModel.c;
+         astigModel.b1 = tempAstModel.b1;
+         astigModel.b2 = tempAstModel.b2;
+         astigModel.b3 = tempAstModel.b3;
+         astigModel.pp1 = tempAstModel.pp1;
+         astigModel.pp2 = tempAstModel.pp2;
+         astigModel.pp3 = tempAstModel.pp3;
+         astigModel.d = tempAstModel.d;
+         astigModel.applyModel = tempAstModel.applyModel;
+         astigModel.gain0 = tempAstModel.gain0;
+         astigModel.gain45 = tempAstModel.gain45;
+         astigModel.offsetAstig0 = tempAstModel.offsetAstig0;
+         astigModel.offsetAstig45 = tempAstModel.offsetAstig45;
+
+         semGive (accessAstigModel);
+      }
+
+      if (semTake (accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+      {
+         ERROR_LOG ( "Timeout on mutex acess to trefoilModel" );
+      }
+      else
+      {
+         trefoilModel.a = tempTrefModel.a;
+         trefoilModel.p = tempTrefModel.p;
+         trefoilModel.c = tempTrefModel.c;
+         trefoilModel.b = tempTrefModel.b;
+         trefoilModel.pp = tempTrefModel.pp;
+         trefoilModel.d = tempTrefModel.d;
+         trefoilModel.applyModel = tempTrefModel.applyModel;
+
+         semGive (accessTrefoilModel);
+      }
+
+      if (semTake (accessComaModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+      {
+         ERROR_LOG ( "Timeout on mutex acess to comaModel" );
+      }
+      else
+      {
+         comaModel.a = tempComaModel.a;
+         comaModel.p = tempComaModel.p;
+         comaModel.c = tempComaModel.c;
+         comaModel.b = tempComaModel.b;
+         comaModel.pp = tempComaModel.pp;
+         comaModel.d = tempComaModel.d;
+         comaModel.applyModel = tempComaModel.applyModel;
+
+         semGive (accessComaModel);
+      }
+
+      if (semTake (accessFocusModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+      {
+         ERROR_LOG ( "Timeout on mutex acess to focusModel" );
+      }
+      else
+      {
+         focusModel.a1 = tempFocModel.a1;
+         focusModel.a2 = tempFocModel.a2;
+         focusModel.p1 = tempFocModel.p1;
+         focusModel.p2 = tempFocModel.p2;
+         focusModel.c = tempFocModel.c;
+         focusModel.applyModel = tempFocModel.applyModel;
+
+         semGive (accessFocusModel);
+      }
+   }
+   else
+   {
+      MESSAGE_LOG ( MSG_LOG, "aO zero point model not initialized");
+   }
+
+
+   /*
     * If the error number is good after initialisation the health of
     * the controller can be restored to "GOOD".
     *
@@ -8138,6 +8579,13 @@ uint32 detReset
    {
       ERROR_LOG (
       "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->seeingCoeffVectInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pSeeingCoeffVectInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
    }
 
    /*
@@ -12137,9 +12585,9 @@ void detObserveEnd
 #ifdef DEBUG
                      (void)timeNow (&t1);
 #endif
-                     if ( aoSeeingCompute (pCentroids, pWfsStatus, 
-                                           obsId->aoCcdId, obsId->aoCtrlId,
-                                           nCoadds) == ERROR )
+                     if ( aoNewSeeingCompute (pCentroids, pWfsStatus, 
+                                              obsId->aoCcdId, obsId->aoCtrlId,
+                                              nCoadds) == ERROR )
                      {
                         ERROR_LOG ("Failed to compute seeing correction");
                      }
@@ -12149,6 +12597,20 @@ void detObserveEnd
                      {
                         ERROR_LOG (
                         "Failed to init DET_CONTROL_SEEING_SIR_NAME record");
+                     }
+                     if (epToVxPipeWrite (NULL, 
+                                   (char *)(int)& (obsId->aoCtrlId->r0),
+                                   obsId->pR0Context) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_R0_SIR_NAME record");
+                     }
+                     if (epToVxPipeWrite (NULL, 
+                                   (char *)(int)& (obsId->aoCtrlId->jitter),
+                                   obsId->pJitterContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_JITTER_SIR_NAME record");
                      }
 #ifdef DEBUG
                      (void)timeNow (&t2);
@@ -13782,6 +14244,8 @@ uint32 detFrameSize
    char         fullFgCmFileName[STRING_SIZE];
    char         seeingCmFileName[STRING_SIZE];
    char         fullSeeingCmFileName[STRING_SIZE];
+   char         seeingCvFileName[STRING_SIZE];
+   char         fullSeeingCvFileName[STRING_SIZE];
    char         defFileName[STRING_SIZE];
    char         aoInitFileName[STRING_SIZE];
    double       angleM2;
@@ -13934,6 +14398,13 @@ uint32 detFrameSize
          ERROR_LOG (
          "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
       }
+      obsId->aoCtrlId->seeingCoeffVectInitFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized",
+                           obsId->pSeeingCoeffVectInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
+      }
 
       /* Read default parameters from par file */
 
@@ -13952,8 +14423,8 @@ uint32 detFrameSize
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName,
                                aoCmFileName, fgCmFileName, seeingCmFileName,
-                               &rms, &thresh, &totalThresh, &angleM2, &angleM1,
-                               &seeingGain ) == ERROR )
+                               seeingCvFileName, &rms, &thresh, &totalThresh, 
+                               &angleM2, &angleM1, &seeingGain ) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -13965,6 +14436,7 @@ uint32 detFrameSize
          sprintf ( fullAoCmFileName, "%s/%s", path, aoCmFileName );
          sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
          sprintf ( fullSeeingCmFileName, "%s/%s", path, seeingCmFileName );
+         sprintf ( fullSeeingCvFileName, "%s/%s", path, seeingCvFileName );
 
          updateAoCtrlFlag = TRUE;
       }
@@ -14081,6 +14553,13 @@ uint32 detFrameSize
          ERROR_LOG (
          "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
       }
+      obsId->aoCtrlId->seeingCoeffVectInitFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized",
+                           obsId->pSeeingCoeffVectInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
+      }
 
       /* Read default parameters from par file */
 
@@ -14099,8 +14578,8 @@ uint32 detFrameSize
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName,
                                aoCmFileName, fgCmFileName, seeingCmFileName,
-                               &rms, &thresh, &totalThresh, &angleM2, &angleM1,
-                               &seeingGain ) == ERROR )
+                               seeingCvFileName, &rms, &thresh, &totalThresh, 
+                               &angleM2, &angleM1, &seeingGain ) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -14112,6 +14591,7 @@ uint32 detFrameSize
          sprintf ( fullAoCmFileName, "%s/%s", path, aoCmFileName );
          sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
          sprintf ( fullSeeingCmFileName, "%s/%s", path, seeingCmFileName );
+         sprintf ( fullSeeingCvFileName, "%s/%s", path, seeingCvFileName );
 
          updateAoCtrlFlag = TRUE;
       }
@@ -14380,9 +14860,9 @@ uint32 detFrameSize
       if (aoCtrlContextUpdate ( fullDarkFileName, fullFlatFileName,
                                 fullRefFileName, fullAoImFileName, 
                                 fullAoCmFileName, fullFgCmFileName,
-                                fullSeeingCmFileName, refX, refY, 
-                                angleM2, angleM1, seeingGain, obsId->aoCcdId, 
-                                obsId->aoCtrlId ) == ERROR )
+                                fullSeeingCmFileName, fullSeeingCvFileName,
+                                refX, refY, angleM2, angleM1, seeingGain, 
+                                obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
       {
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       }
@@ -14494,6 +14974,16 @@ uint32 detFrameSize
          {
             ERROR_LOG (
             "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->aoCtrlId->seeingCoeffVectInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->seeingCoeffVectFileName,
+                              obsId->pSeeingCoeffVectInitContext) == ERROR)
+         {
+            ERROR_LOG (
+           "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
          }
       }
 
@@ -15443,28 +15933,30 @@ uint32 detSigInit
    OBS_ID          obsId                  /* Observation context structure    */
    )
 {
-   uint32   errorNumber;      /* Error number reported by task.           */
+   uint32  errorNumber;      /* Error number reported by task.           */
 
-   char     pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files.                         */
-   char     pDarkFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pFlatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pRefFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pAoIntMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pAoContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pFgContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pSeeingCoeffMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char     pFullDarkFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char     pFullFlatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char     pFullRefFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char     pFullAoIntMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char     pFullAoContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char     pFullFgContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char     pFullSeeingCoeffMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   double   refX, refY;
-   double   angleWithM2;
-   double   angleWithM1;
-   double   seeingGain;
+   char    pDarkFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pFlatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pRefFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pAoIntMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pAoContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pFgContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pSeeingCoeffMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pSeeingCoeffVectFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char    pFullDarkFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullFlatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullRefFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullAoIntMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullAoContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullFgContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullSeeingCoeffMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char    pFullSeeingCoeffVectFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   double  refX, refY;
+   double  angleWithM2;
+   double  angleWithM1;
+   double  seeingGain;
 
    /*
     * Initialise the error number and get the attributes provided with this
@@ -15489,6 +15981,8 @@ uint32 detSigInit
                           (char *)&seeingGain);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12, 
                           pSeeingCoeffMatFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, 
+                          pSeeingCoeffVectFileName);
 
    /*
     * Check there are valid context structures.
@@ -15558,6 +16052,8 @@ uint32 detSigInit
                EPICS_MAX_BYTES_STRING_ATTRIB);
       strncpy (pFullSeeingCoeffMatFileName, pSeeingCoeffMatFileName, 
                EPICS_MAX_BYTES_STRING_ATTRIB);
+      strncpy (pFullSeeingCoeffVectFileName, pSeeingCoeffVectFileName, 
+               EPICS_MAX_BYTES_STRING_ATTRIB);
    }
    else
    {
@@ -15569,6 +16065,8 @@ uint32 detSigInit
       sprintf (pFullFgContMatFileName, "%s/%s", pFilePath, pFgContMatFileName);
       sprintf (pFullSeeingCoeffMatFileName, "%s/%s", pFilePath, 
                pSeeingCoeffMatFileName);
+      sprintf (pFullSeeingCoeffVectFileName, "%s/%s", pFilePath, 
+               pSeeingCoeffVectFileName);
    }
 
    MESSAGE_LOG (MSG_LOG, "Initialising signal processing ...");
@@ -15580,7 +16078,8 @@ uint32 detSigInit
    if (aoCtrlContextUpdate ( pFullDarkFileName, pFullFlatFileName,
                              pFullRefFileName, pFullAoIntMatFileName,
                              pFullAoContMatFileName, pFullFgContMatFileName,
-                             pFullSeeingCoeffMatFileName, refX, refY, 
+                             pFullSeeingCoeffMatFileName, 
+                             pFullSeeingCoeffVectFileName, refX, refY, 
                              angleWithM2, angleWithM1, seeingGain,
                              obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
    {
@@ -15724,6 +16223,25 @@ uint32 detSigInit
       {
          ERROR_LOG (
          "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
+      }
+   }
+
+   if ( obsId->aoCtrlId->seeingCoeffVectInitFlag == TRUE )
+   {
+      if (epToVxPipeWrite (NULL, obsId->aoCtrlId->seeingCoeffVectFileName, 
+                           obsId->pSeeingCoeffVectInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
+      }
+   }
+   else
+   {
+      if (epToVxPipeWrite (NULL, "Not initialized", 
+                           obsId->pSeeingCoeffVectInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
       }
    }
 
@@ -19489,6 +20007,7 @@ STATUS detInitSigInit
    char aoCmFileName[STRING_SIZE];
    char fgCmFileName[STRING_SIZE];
    char seeingCmFileName[STRING_SIZE];
+   char seeingCvFileName[STRING_SIZE];
    char defFileName[STRING_SIZE];
    char aoInitFileName[STRING_SIZE];
    double angleM2;
@@ -19528,8 +20047,8 @@ STATUS detInitSigInit
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, seeingCmFileName,
-                               &rms, &thresh, &totalThresh, &angleM2, &angleM1,
-                               &seeingGain) == ERROR )
+                               seeingCvFileName, &rms, &thresh, &totalThresh, 
+                               &angleM2, &angleM1, &seeingGain) == ERROR )
          {
             printf ("Failed to read ao control file parameters\n");
             return (ERROR);
@@ -19548,6 +20067,7 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->valk, fgCmFileName );
          *(double *)pgsub->vall = seeingGain;
          strcpy ( (char *)pgsub->valm, seeingCmFileName );
+         strcpy ( (char *)pgsub->valn, seeingCvFileName );
 
          *(long *)pgsub->valu = 0; /* no binning: 0 */
       }
@@ -19571,8 +20091,8 @@ STATUS detInitSigInit
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, aoImFileName, 
                                aoCmFileName, fgCmFileName, seeingCmFileName,
-                               &rms, &thresh, &totalThresh, &angleM2, &angleM1,
-                               &seeingGain) == ERROR )
+                               seeingCvFileName, &rms, &thresh, &totalThresh, 
+                               &angleM2, &angleM1, &seeingGain) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
             return (ERROR);
@@ -19591,6 +20111,7 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->valk, fgCmFileName );
          *(double *)pgsub->vall = seeingGain;
          strcpy ( (char *)pgsub->valm, seeingCmFileName );
+         strcpy ( (char *)pgsub->valn, seeingCvFileName );
 
          *(long *)pgsub->valu = 1; /* binning: 1 */
       }
@@ -20906,6 +21427,18 @@ uint32 detGetSirContext
       errorNumber = ERROR;
    }
 
+   /* Get the context of the "seeingCoeffVectInit" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pSeeingCoeffVectInitContext),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to get DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME SIR context");
+      errorNumber = ERROR;
+   }
+
    /* Get the context of the "seeingGain" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
@@ -20927,6 +21460,30 @@ uint32 detGetSirContext
    {
       ERROR_LOG (
       "Failed to get DET_CONTROL_SEEING_SIR_NAME SIR context");
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "r0" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_R0_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pR0Context), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to get DET_CONTROL_R0_SIR_NAME SIR context");
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "jitter" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_JITTER_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pJitterContext), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to get DET_CONTROL_JITTER_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
@@ -21397,6 +21954,16 @@ uint32 detWriteDefSirContext
    {
       ERROR_LOG (
       "Failed to init DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME record");
+      errorNumber = ERROR;
+   }
+
+   /* Init the "seeingCoeffVectInit" sir record */
+
+   if (epToVxPipeWrite (NULL, "Not initialized", 
+                        obsId->pSeeingCoeffVectInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -22809,3 +23376,81 @@ uint32 detInitBwDef
    return (OK) ;
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detPowerOff
+ *
+ *   INVOCATION:
+ *   detPowerOff (cadCmdContext, commandNumber, sdsuId, obsId) 
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext        (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber        (int)             Command number
+ *   (>) sdsuId               (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId                (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detPowerOff command
+ *
+ *   DESCRIPTION:
+ *   This function executes POWER OFF command for the Bob Leach controller
+ *
+ *   EXTERNAL VARIABLES:
+ *   NONE
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detPowerOff
+   (
+   CAD_CMD_CONTEXT cadCmdContext,  /* CAD command context structure.          */
+   int             commandNumber,  /* Command number.                         */
+   SDSU_ID         sdsuId,         /* SDSU context structure.                 */
+   OBS_ID          obsId           /* Observation context structure.          */
+   )
+{
+   uint32          errorNumber;     /* Error number reported by task.         */
+
+   /*
+    * Initialise the error number.
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU context structure.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Issue the primitive commands to the SDSU controller.
+    */
+
+   if (sdsuPrimitive (sdsuId, "POF", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to turn off the power of UTILITY with POF command");
+      errorNumber = S_detControl_SDSU_ERROR;
+   }
+
+   return (errorNumber);
+}

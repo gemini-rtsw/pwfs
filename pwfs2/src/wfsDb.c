@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.25 2002-07-04 03:43:08 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.26 2002-11-05 00:38:08 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 08 Oct 2002 - cb add detPowerOff
+ * 24 Sep 2002 - cb Implement seeing computation according FR's method (add r0,
+ *                  jitter + seeingCoeffVectInit SIR records, detSigInit 
+ *                  modified)
  * 18 Jun 2002 - cb Implement seeing computation (seeing SIR record, detSigInit
  *                  modified)
  * 24 Apr 2002 - cb add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
@@ -382,6 +386,14 @@ CAD_RECORD pWfsDbCadList [] =
   40.0
  },
  {
+  RECORD_NAME ("dc:detPowerOff"),
+  TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_POWER_OFF,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  40.0
+ },
+ {
   RECORD_NAME ("dc:detSigReset"),
   TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
   DET_CONTROL_CMD_SIG_RESET,
@@ -409,7 +421,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_J, EPICS_DATA_TYPE_STRING, "defAoContMatP2MK.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_K, EPICS_DATA_TYPE_STRING, "defFgContMatP2MK.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_L, EPICS_DATA_TYPE_DOUBLE,  "1.0", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_M, EPICS_DATA_TYPE_STRING, "defSeeingCoeffMatP2MK.dat", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_M, EPICS_DATA_TYPE_STRING, "defSeeingCoeffMatP2MK.dat", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_N, EPICS_DATA_TYPE_STRING, "defSeeingCoeffVectP2MK.dat", {NO_ATTRIBUTE_LIMITS}
  },
 #else
  {
@@ -431,7 +444,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_J, EPICS_DATA_TYPE_STRING, "defAoContMatP2CP.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_K, EPICS_DATA_TYPE_STRING, "defFgContMatP2CP.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_L, EPICS_DATA_TYPE_DOUBLE,  "1.0", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_M, EPICS_DATA_TYPE_STRING, "defSeeingCoeffMatP2CP.dat", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_M, EPICS_DATA_TYPE_STRING, "defSeeingCoeffMatP2CP.dat", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_N, EPICS_DATA_TYPE_STRING, "defSeeingCoeffVectP2CP.dat", {NO_ATTRIBUTE_LIMITS}
  },
 #endif
  {
@@ -471,7 +485,7 @@ CAD_RECORD pWfsDbCadList [] =
   180.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0003", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0002", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0003", {NO_ATTRIBUTE_LIMITS}
  },
 #else
@@ -1059,11 +1073,23 @@ SIR_RECORD pWfsDbSirList [] =
   EPICS_DATA_TYPE_DOUBLE
  },
  {
+  RECORD_NAME ("dc:r0"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:jitter"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
   RECORD_NAME ("dc:seeingGain"),
   EPICS_DATA_TYPE_DOUBLE
  },
  {
   RECORD_NAME ("dc:seeingCoeffMatInit"),
+  EPICS_DATA_TYPE_STRING
+ },
+ {
+  RECORD_NAME ("dc:seeingCoeffVectInit"),
   EPICS_DATA_TYPE_STRING
  },
  {

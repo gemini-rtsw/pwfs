@@ -13,6 +13,8 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   08 Oct 2002 - cb Add detPowerOff
+ *   25 Sep 2002 - cb Implement seeing computation according to FR's method
  *   22 May 2002 - cb Add fgFocusGain100 
  *   24 Apr 2002 - cb Add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
  *                    cfTipTiltBw sir records
@@ -184,6 +186,14 @@
                                     /* Name of SIR record containing the      */
                                     /* current seeing                         */
 
+#define   DET_CONTROL_R0_SIR_NAME             "r0"
+                                    /* Name of SIR record containing the      */
+                                    /* current r0                             */
+
+#define   DET_CONTROL_JITTER_SIR_NAME         "jitter"
+                                    /* Name of SIR record containing the      */
+                                    /* current jitter                         */
+
 #define   DET_CONTROL_SEEING_GAIN_SIR_NAME    "seeingGain"
                                     /* Name of SIR record containing the      */
                                     /* seeing scale factor                    */
@@ -191,6 +201,10 @@
 #define   DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME    "seeingCoeffMatInit"
                                     /* Name of SIR record containing the      */
                                     /* init state of the seeing coeff matrix  */
+
+#define   DET_CONTROL_SEEING_COEFF_VECT_INIT_SIR_NAME   "seeingCoeffVectInit"
+                                    /* Name of SIR record containing the      */
+                                    /* init state of the seeing coeff vector  */
 
 #define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
                                     /* Name of SIR record containing the      */
@@ -748,11 +762,17 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* record.                              */
    DATREC_CONTEXT pSeeingContext;     /* Context structure for seeing SIR     */
                                       /* record.                              */
+   DATREC_CONTEXT pR0Context;         /* Context structure for r0 SIR record  */
+   DATREC_CONTEXT pJitterContext;     /* Context structure for jitter SIR     */
+                                      /* record.                              */
    DATREC_CONTEXT pSeeingGainContext; /* Context structure for seeingGain SIR */
                                       /* record.                              */
    DATREC_CONTEXT pSeeingCoeffMatInitContext; 
                                       /* Context structure for                */
                                       /* seeingCoeffMatInit SIR record.       */
+   DATREC_CONTEXT pSeeingCoeffVectInitContext; 
+                                      /* Context structure for                */
+                                      /* seeingCoeffVectInit SIR record.      */
    DATREC_CONTEXT pDetTypeContext;    /* Context structure for detector       */
                                       /* controller type.                     */
    DATREC_CONTEXT pDetIdContext;      /* Context structure for detector Id or */
@@ -891,6 +911,7 @@ enum
    DET_CONTROL_CMD_GEOMETRY,   /* Set detector readout geometry.              */
    DET_CONTROL_CMD_PRIMITIVE,  /* Execute SDSU primitive command.             */
    DET_CONTROL_CMD_POWER_ON,   /* Execute POWER ON primitive command.         */
+   DET_CONTROL_CMD_POWER_OFF,  /* Execute POWER OFF primitive command.        */
    DET_CONTROL_CMD_MODE,       /* Set detector readout mode.                  */
    DET_CONTROL_CMD_OFFSET,     /* Set detector ADC offsets.                   */
    DET_CONTROL_CMD_TEMP        /* Define temperature control params.          */
