@@ -1,0 +1,16 @@
+#!/bin/sh -f
+#
+# Install script for Gemini PWFS1 system
+#
+
+applSetup -T mv167 -s Makefile.subdirs -I docs -I dspsrc -I par -X sys -X ar \
+          -depends /gemini/astlib -depends /gemini/slalib \
+          -depends /gemini/timelib -depends /gemini/cfitsio \
+          -depends /gemini/dhs $1 > pwfs1Build.log 2>&1
+
+applSetup  >> pwfs1Build.log 2>&1
+
+gmake >> pwfs1Build.log 2>&1
+
+exit 0
+
