@@ -1,7 +1,8 @@
 [schematic2]
-uniq 105
+uniq 108
 [tools]
 [detail]
+w -348 1851 100 2 n#107 hwin.hwin#105.in -352 1856 -352 1856 egenSub.ttfZero.INPC
 w 388 1979 100 2 n#103 hwin.hwin#98.in 384 1984 384 1984 egenSub.aoZero.INPA
 w -348 1979 100 2 n#102 hwin.hwin#96.in -352 1984 -352 1984 egenSub.ttfZero.INPA
 s 112 2224 500 0 PWFS2 - WFS genSub records
@@ -12,10 +13,13 @@ s -896 2080 100 0 port C is a fundge rotation angle (degrees)
 [cell use]
 use hwin -544 1943 100 0 hwin#96
 xform 0 -448 1984
-p -560 2016 100 0 -1 val(in):ag:p2:angle
+p -560 2016 100 0 -1 val(in):ag:p2:tableAngle
 use hwin 192 1943 100 0 hwin#98
 xform 0 288 1984
 p 176 2016 100 0 -1 val(in):ag:p2:angle
+use hwin -544 1815 100 0 hwin#105
+xform 0 -448 1856
+p -560 1888 100 0 -1 val(in):ag:p2:armAngle
 use egenSubC 384 7 100 0 fgDiag
 xform 0 528 432
 p 384 -48 100 0 1 DESC:Display ao Diagnostics
@@ -80,10 +84,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 1 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-05-19 00:04:35 $
-p 2592 2304 200 0 -1 id:$Id: wfsGensub.sch,v 1.1.1.1 1999-05-19 00:04:35 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 1999-06-04 01:16:54 $
+p 2592 2304 200 0 -1 id:$Id: wfsGensub.sch,v 1.2 1999-06-04 01:16:54 cboyer Exp $
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.1.1.1 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.2 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor genSub Records
 use notes 3552 -281 100 0 notes#13
 xform 0 3808 -96
