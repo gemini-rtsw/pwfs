@@ -1,9 +1,0 @@
-;
-; Example World Coordinate System calibration for PWFS1
-;
-; Pixel i, Pixel j, Focal plane x, Focal plane y
-   1.0      1.0      -7.5            -7.5
-  80.0      1.0       7.5            -7.5
-   1.0     80.0      -7.5             7.5
-  80.0     80.0       7.5             7.5
-  40.0     40.0       0.0             0.0

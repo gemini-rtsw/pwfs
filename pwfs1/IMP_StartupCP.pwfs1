@@ -1,9 +1,0 @@
-# USAGE:
-#  Log startup sequence
-#  Use port {n} [for {machine}]
-#  Connect at startup to {machine}
-#  Check connections to {machine} every {time spec}
-
-Log startup sequence
-Use port 54322
-Pulse connections to 10.2.2.14 every 30 seconds
