@@ -1,13 +1,36 @@
        COMMENT *
-Gemini WFS Timing Board Application Code
+SDSU2 Timing Board Application Code
+Instrument: Gemini WFS
 CCD: EEV CCD39
-Controller: SDSU2
-Revision: 1.20   (must agree with T_SW_ID in Y: memory table)
+Revision: 1.25   (must agree with T_SW_ID in Y: memory table)
 (This code is adapted from timEEV written by Dr. Bob Leach at SDSU)
 
 This is the high-speed version of the timing board code. It does not 
 allow arbitrary binning in the X (serial) direction, and there is no bias 
 subtraction or checksum calculation (CHECKSUM = 0).
+
+    (c) 2002				(c) 2002
+    National Research Council		Conseil national de recherches
+    Ottawa, Canada, K1A 0R6 		Ottawa, Canada, K1A 0R6
+    All rights reserved			Tous droits reserves
+
+    NRC disclaims any warranties,	Le CNRC denie toute garantie
+    expressed, implied, or statu-	enoncee, implicite ou legale,
+    tory, of any kind with respect	de quelque nature que se soit,
+    to the software, including		concernant le logiciel, y com-
+    without limitation any war-		pris sans restriction toute
+    ranty of merchantability or		garantie de valeur marchande
+    fitness for a particular pur-	ou de pertinence pour un usage
+    pose.  NRC shall not be liable	particulier.  Le CNRC ne
+    in any event for any damages,	pourra en aucun cas etre tenu
+    whether direct or indirect,		responsable de tout dommage,
+    special or general, consequen-	direct ou indirect, particul-
+    tial or incidental, arising		ier ou general, accessoire ou
+    from the use of the software.	fortuit, resultant de l'utili-
+					sation du logiciel.
+
+
+Modifications:
 
 97/07/25 BML -initial coding
 
@@ -121,7 +144,18 @@ subtraction or checksum calculation (CHECKSUM = 0).
               the beginning of the readout.
 98/09/10 TDH -made the ADC input offsets parameters
              -added an assembler directive for IMO/non-IMO clocking
- 
+98/11/13 TDH -fixed bug in on-the-fly command processing: needed extra 
+              command buffer pointer increment
+             -fixed bug in ABORT function: changed to use stored constant
+              (X:<ONE) instead of immediate value (#1)
+98/12/04 TDH -implemented infinite series readout (if T_NFRAME=0)
+             -changed abort function so that it sends an empty frame
+              (no pixel data) as the last frame
+             -made the minimum exposure time one tick (81.92 us)
+99/06/07 TDH -changed USCAN read to always use unbinned waveform
+2001/02/06 TDH -added bin x4 waveform
+2002/01/10 TDH -changes to make the code work as an EEPROM application
+
 
 Assembler directives:
 
@@ -140,10 +174,10 @@ Assembler directives:
 	OPT	CEX	; print DC evaluations
 
 ; Define a section name so it doesn't conflict with other application programs
-	SECTION	TIM
+	SECTION	TIMAPPL0
 	INCLUDE 'timhead.asm'
 
-APL_NUM	EQU	1	; Application number from 1 to 10
+APL_NUM	EQU	0	; Application number from 0 to 3
 
 ;**************************************************************************
 ;                   	                                                  *
@@ -166,7 +200,7 @@ APL_NUM	EQU	1	; Application number from 1 to 10
 	IF	DOWNLOAD
 	ORG	P:APL_ADR,P:APL_ADR		; Download address
 	ELSE
-	ORG     P:APL_ADR,P:(2*APL_NUM-1)*$100	; EEPROM generation
+	ORG	P:APL_ADR,P:APL_ROM+APL_NUM*N_W_APL/3	; EEPROM generation
 	ENDIF
 
 
@@ -221,9 +255,6 @@ RDCCD	BCLR    #IDLING,Y:<T_STATUS	; Revise status
 
 ; Start exposure
 EXPOSE	BSET	#EXPING,Y:<T_STATUS	; Set status to expose
-	MOVE	Y:<T_EXP_TMR,A	; check exposure timer
-	TST	A
-	JEQ	<ST_READ	; if exposure timer is zero, start readout
 	MOVEP	#$800,X:TCR	; timer counts to zero every 81.92us
 	MOVEP	#1,X:TCSR	; enable hardware timer in mode 0
 CHK_COM	JSR	<GET_RCV	; check for another command and reset WDT
@@ -237,7 +268,7 @@ CHK_TMR	JCLR	#TMR_ST,X:TCSR,CHK_COM	; check hardware timer
 	JNE	<CHK_COM	; if exposure timer is not zero, loop back
 
 ; End of exposure, start readout
-ST_READ	BCLR	#EXPING,Y:<T_STATUS	; clear expose status
+	BCLR	#EXPING,Y:<T_STATUS	; clear expose status
 	BCLR	#TMR_EN,X:TCSR	; disable hardware timer
 	BSET	#RDING,Y:<T_STATUS	; set status to readout
 	BSET	#WW,X:PBD	; Set word width = 1 for 16-bit image data
@@ -296,6 +327,9 @@ XMT_PID	MOVEP	A1,Y:WRFO	; transmit parameter ID
 
 	ENDIF
 
+; Skip readout if abort command received
+	JSET	#ABT_EXP,Y:<T_STATUS,END_RD	; skip readout if aborted
+
 ; Clear checksum
 	CLR	B		; clear checksum
 
@@ -348,7 +382,7 @@ LYBIN
 
 ; Read the underscan pixels
 	DO	Y:<T_USCAN,LUSCN
-	MOVE	Y:SERIAL,R1
+	MOVE	#SERIAL1,R1		; use unbinned waveform
 	MOVE	#(END_SERIAL1-SERIAL1-1),X0	; waveform entries per pixel
 	MOVE    Y:(R1)+,A       ; Start the pipeline
 	REP	X0		; Repeat X0 times
@@ -476,7 +510,7 @@ LYSUB	; End of all Y subapertures
 	MOVEP	B1,Y:WRFO	; transmit (zero) checksum
 	ENDIF
 
-	BCLR	#RDING,Y:<T_STATUS	; clear readout status
+END_RD	BCLR	#RDING,Y:<T_STATUS	; clear readout status
 	BSET	#TIO,X:PBD	; TIO = 1
 	BCLR	#TMR_EN,X:TCSR	; disable hardware timer
 	CLR	A
@@ -486,22 +520,31 @@ LYSUB	; End of all Y subapertures
 	REP	#11		; divide by 2048 = 2^11
 	ASR	B
 	SUB	B,A		; subtract
-	JPL	CONT
+	JGT	CONT
  	BSET	#E_OVR,Y:<T_ERROR	; flag exposure overrun error
-	CLR	A		; set exposure time to zero
-CONT	MOVE	A0,Y:<T_EXP_TMR	; copy to exposure timer
+	MOVE	X:<ONE,A0		; set exposure time to one
+CONT	MOVE	A0,Y:<T_EXP_TMR		; copy to exposure timer
+	JSET	#INF_FRM,Y:T_STATUS,EXPOSE	; if inf. series, do next exp.
 	CLR	A
 	MOVE	Y:<T_FRAMEC,A0	; get frame counter
 	DEC	A
 	MOVE	A0,Y:<T_FRAMEC
 	JNE	EXPOSE
 	MOVE	Y:<T_NFRAME,A
-	MOVE	A,Y:<T_FRAMEC	; reset frame counter
+	TST	A			; check if infinite series is requested
+	JNE	<RST_FRC		; skip if not
+	BSET	#INF_FRM,Y:<T_STATUS	; set bit for infinite series
+RST_FRC	MOVE	A,Y:<T_FRAMEC		; reset frame counter
 	JCLR	#RDSYNC,Y:<T_STATUS,RDCDON	; if no new RDC, finish
 	BCLR	#RDSYNC,Y:<T_STATUS	; Clear RDC sync request
 	JMP	EXPOSE
 RDCDON	BCLR	#WW,X:PBD	; Clear word width for 32-bit commands
 	BCLR	#FMODE,X:PBD	; Disable sync bit
+	BCLR	#INF_FRM,Y:<T_STATUS	; Clear infinite series request
+	JCLR	#ABT_EXP,Y:<T_STATUS,START	; finished if no ABT request
+	BCLR	#ABT_EXP,Y:<T_STATUS	; Clear ABT request
+	MOVE	Y:NP_SAV,A		; get saved copy of N_PIXEL
+	MOVE	A,Y:<N_PIXEL		; reset N_PIXEL
 	JMP	<START		; reset command buffer and return to idling
 
 
@@ -528,10 +571,16 @@ LFT1
 LFLUSH0
 
 ; Setup frame counter and exposure timer
-	MOVE	Y:<T_NFRAME,A	; copy number of frames to frame counter
-	MOVE	A,Y:<T_FRAMEC
-	MOVE	Y:<T_EXP_TIM,A	; copy exposure time to exposure timer
-	MOVE	A,Y:<T_EXP_TMR
+	MOVE	Y:<T_NFRAME,A	; get number of frames
+	TST	A			; check if infinite series is requested
+	JNE	<SET_FRC		; skip if not
+	BSET	#INF_FRM,Y:<T_STATUS	; set bit for infinite series
+SET_FRC MOVE	A,Y:<T_FRAMEC	; copy number of frames to frame counter
+	MOVE	Y:<T_EXP_TIM,A	; get exposure time
+	TST	A		; check if zero
+	JGT	<SET_ET		; skip if greater than zero
+	MOVE	X:<ONE,A	; minimum exposure timer count is one	
+SET_ET	MOVE	A,Y:<T_EXP_TMR	; set exposure timer
 
 	JMP	<EXPOSE		; begin first exposure
 
@@ -601,7 +650,7 @@ CHK_DST	MOVE	X:(R4),X0	; Get header
 SSI_LP	
 	JMP	<RET_EXP	; go back to exposure
 
-;  Transmit words to the host computer over the fiber optics link
+; Transmit words to the host computer over the fiber optics link
 XMT_FO	DO	X:<NWORDS,DON_FO 	; Transmit all the words in the command
 	DO	#40,DLY_FO		; Delay for the serial transmitter
         NOP
@@ -614,8 +663,9 @@ DON_FO
 	JNE	<CMD_ERR	; If not timing board command, ignore
 	ENDIF
 
-;  Process the receiver entry - is it a valid comand during exposure ?
-LKP_CMD	MOVE    X:(R4)+,A       ; Get the command buffer entry
+; Process the receiver entry - is it a valid comand during exposure ?
+LKP_CMD	MOVE	(R4)+		; increment past header
+	MOVE    X:(R4)+,A       ; Get the command buffer entry
 	MOVE    Y:ABT,X1	; Compare to 'ABT'
 	CMP     X1,A
 	JEQ	ABORT		; If 'ABT' go to ABORT
@@ -644,10 +694,16 @@ RET_EXP	MOVE	#<RCV_BUF,R3
 ; to a value of one. This will halt the exposure on the next timer tick and
 ; force the readout to finish when the current frame is complete.
 
-ABORT	MOVE	#1,A
+ABORT	MOVE	X:<ONE,A
 	MOVE	A,Y:T_EXP_TMR	; Force exposure timer to end
 	MOVE	A,Y:T_FRAMEC	; Force frame count to end
-	JMP	<RET_EXP	; Finish readout
+	MOVE	Y:<N_PIXEL,A	; get number of pixels
+	MOVE	A,Y:NP_SAV	; save number of pixels
+	CLR	A
+	MOVE	A,Y:<N_PIXEL		; set number of pixels to zero
+	BCLR	#INF_FRM,Y:<T_STATUS	; clear request for infinite series 
+	BSET	#ABT_EXP,Y:<T_STATUS	; set flag that abort command received 
+	JMP	<RET_EXP		; Finish readout
 
 
 ; *****  Synchronize readouts  *****
@@ -655,7 +711,11 @@ ABORT	MOVE	#1,A
 ; frame set is aborted and a new one started immediately.
 
 SYNC	BSET	#RDSYNC,Y:<T_STATUS	; Set flag to request RDC sync
-	JMP	<ABORT			; Abort readout of current frame
+	MOVE	X:<ONE,A
+	MOVE	A,Y:T_EXP_TMR	; Force exposure timer to end
+	MOVE	A,Y:T_FRAMEC	; Force frame count to end
+	BCLR	#INF_FRM,Y:<T_STATUS	; clear request for infinite series 
+	JMP	<RET_EXP	; Finish readout
 
 
 ; *****  Write parameter (on-the-fly changes)  *****
@@ -699,11 +759,13 @@ LOADP	MOVE    #<P_BUF,R0	; address of parameter table
 LDPLP
 
 ; Calculate numbers for high-efficiency serial code
-	CLR	A Y:<XBIN,Y0	; check for binning
-	MOVE	#1,A1
-	CMP	Y0,A
-	JEQ	BIN1
+	JCLR	#2,Y:<XBIN,BIN2	; check if binning < 4
+	MOVE	#(END_SERIAL4-SERIAL4-1),M1	; Modulo addressing (bin*4)
+	MOVE	#(END_SERIAL4-SERIAL4),X0	; Waveform entries per pixel
+	MOVE	#SERIAL4,Y0			; select waveform
+	JMP	WF_CALC
 
+BIN2	JCLR	#1,Y:<XBIN,BIN1	; check if binning < 2
 	MOVE	#(END_SERIAL2-SERIAL2-1),M1	; Modulo addressing (bin*2)
 	MOVE	#(END_SERIAL2-SERIAL2),X0	; Waveform entries per pixel
 	MOVE	#SERIAL2,Y0			; select waveform
@@ -727,11 +789,13 @@ WF_CALC	CLR	A Y:<XRAS,X1	; Requested pixels per subaperture (X direction)
 	OR	Y0,A1		; insert new integration time
 	MOVE	A1,Y:INT_RST	; update waveform entry (bin*1)
 	MOVE	A1,Y:INT_R2	; update waveform entry (bin*2)
+	MOVE	A1,Y:INT_R4	; update waveform entry (bin*4)
 	MOVE	Y:INT_SIG,A	; signal integration waveform entry
 	AND	Y1,A1		; mask out old integration time
 	OR	Y0,A1		; insert new integration time
 	MOVE	A1,Y:INT_SIG	; update waveform entry (bin*1)
 	MOVE	A1,Y:INT_S2	; update waveform entry (bin*2)
+	MOVE	A1,Y:INT_S4	; update waveform entry (bin*4)
 
 	JSET	#EXPING,Y:<T_STATUS,RET_EXP	; return to exposure
 
@@ -763,7 +827,11 @@ L_ADCOS
 
 	JSR	<SER_UTL	; Return SSI to utility board communication
 
+	IF	CCDTOOL
+	JMP	<FINISH		; send DON
+	ELSE
 	JMP	<START		; reset command buffer and return to idling
+	ENDIF
 
 
 ; *****  Initialize  *****
@@ -840,6 +908,7 @@ STP     BCLR    #IDLM,X:<STAT
 	ENDIF
 
 
+
 ;  *************************    Subroutines    ***************************
 
 ; Enable serial communication to the analog boards
@@ -873,6 +942,12 @@ DLY	NOP
         WARN    'Application P: program is too large!'
 	ENDIF
 
+; Check for overflow in the EEPROM case
+	IF !DOWNLOAD
+		IF	@CVS(N,@LCV(L))>APL_ROM+APL_NUM*N_W_APL/3+APL_LEN
+	WARN    'EEPROM overflow!'	; Make sure application will not
+		ENDIF			;  be overwritten by X/Y data
+	ENDIF
 
 ; ******************************   X Data   *******************************
 
@@ -880,12 +955,13 @@ DLY	NOP
 	IF	DOWNLOAD 	; Memory offsets for downloading code
 	ORG	X:COM_TBL,X:COM_TBL
 	ELSE			; Memory offsets for generating EEPROMs
-        ORG     P:COM_TBL,P:(2*APL_NUM-1)*$100+APL_LEN
+	ORG	X:COM_TBL,P:APL_ROM+APL_NUM*N_W_APL/3+APL_LEN
 	ENDIF
 
+	DC	'ABT',START	; Ignore
 	DC	'RDC',RDCCD 	; Begin CCD readout    
 	DC	'INI',INIT 	; Initialize
-  	DC	'DON',START	; Ignore
+	DC	'DON',START	; Ignore
 	DC	'LDP',LOADP	; Load new parameter set
 	DC	'WRP',WRITEP	; Write parameter
 
@@ -895,18 +971,25 @@ DLY	NOP
 	DC	'IDL',IDL	; Set to IDLE mode (timboot/CCDtool compat.)
 	DC	'STP',STP	; Unset from IDLE mode (CCDtool compatibility)
 	DC	'SBV',INIT	; Initialize (CCDtool/utilappl compatibility)
+	DC	0,START,0,START	; Fill up table with null commands
+	DC	0,START,0,START
+	DC	0,START,0,START
 	ELSE
 	DC	'IDL',FINISH	; Do nothing (timboot compatibility)
+	DC	0,START,0,START	; Fill up table with null commands
+	DC	0,START,0,START
+	DC	0,START,0,START
+	DC	0,START,0,START
 	ENDIF
 
 
 
 ; *****************   Y Data (Defined in ICD 1.6/1.10)   ******************
 
-	IF	DOWNLOAD
-	ORG	Y:0,Y:0		; Download address
-	ELSE
-	ORG     Y:0,P:		; EEPROM address continues from P: above
+	IF	DOWNLOAD 	; Memory offsets for downloading code
+	ORG	Y:0,Y:0
+	ELSE			; Memory offsets for generating EEPROMs
+	ORG	Y:0,P:APL_ROM+APL_NUM*N_W_APL/3+APL_LEN+32
 	ENDIF
 
 	IF	CCDTOOL
@@ -918,7 +1001,7 @@ DUM2	DC      0		; Not used (for compatibility with CCDtool)
 
 ; ***** Status values *****
 
-T_SW_ID		DC	$012001		; Software version number 01.20 (CCD39)
+T_SW_ID		DC	$012501		; Software version number 01.25 (CCD39)
 
 T_STATUS	DC	0	; Status word
 ; Bit definitions
@@ -926,6 +1009,8 @@ IDLING  	EQU     0	; Set if idling
 EXPING		EQU	1	; Set if exposing
 RDING		EQU	2	; Set if reading out
 RDSYNC		EQU	3	; Set if RDC received during exposure
+INF_FRM		EQU	4	; Set if infinite series of frames is requested
+ABT_EXP		EQU	5	; Set if abort command received
 
 T_ERROR		DC	0	; Error word
 ; Bit definitions
@@ -1016,7 +1101,7 @@ YBIN		DC	1	; Number of Y pixels per super-pixel
 XTAIL		DC	0	; Remaining pixels per row per output
 N_PIXEL		DC	6400	; Total number of pixels
 
-INT_TIM	DC	$2E0000		; CDI integration time = 1us
+INT_TIM		DC	$2E0000		; CDI integration time = 1us
 
 
 ; ***** Clock waveforms *****
@@ -1114,10 +1199,10 @@ END_WAVE1
 
 ; The fast serial code with the circulating address register must start on
 ;    a boundary that is a multiple of the address register modulus. 
-	IF	DOWNLOAD
-	ORG	Y:$80,Y:$80		; Download address
-	ELSE
-	ORG     Y:$80,P:(2*APL_NUM-1)*$100+APL_LEN+$A0	; EEPROM address
+	IF	DOWNLOAD 	; Memory offsets for downloading code
+	ORG	Y:$80,Y:$80
+	ELSE			; Memory offsets for generating EEPROMs
+	ORG	Y:$80,P:APL_ROM+APL_NUM*N_W_APL/3+APL_LEN+32+$80
 	ENDIF
 
 ; Define switch state bits for the video boards
@@ -1183,10 +1268,10 @@ END_SERIAL1
 
 ; The fast serial code with the circulating address register must start on
 ;    a boundary that is a multiple of the address register modulus. 
-	IF	DOWNLOAD
-	ORG	Y:$A0,Y:$A0		; Download address
-	ELSE
-	ORG     Y:$A0,P:(2*APL_NUM-1)*$100+APL_LEN+$A0	; EEPROM address
+	IF	DOWNLOAD 	; Memory offsets for downloading code
+	ORG	Y:$A0,Y:$A0
+	ELSE			; Memory offsets for generating EEPROMs
+	ORG	Y:$A0,P:APL_ROM+APL_NUM*N_W_APL/3+APL_LEN+32+$A0
 	ENDIF
 
 	IF IMOCLK
@@ -1236,6 +1321,93 @@ INT_S2	DC	VIDSS+$2E0000+%0001011  ; Integrate video level for t_int
 	DC	VIDSS+$000000+%0011011  ; Stop integrate, A/D is sampling
 	DC	VIDSS+$000000+%1110100  ; start conversion n and transfer n-2
 END_SERIAL2
+
+	ENDIF
+
+; Check for waveform table overlap
+        IF	@CVS(N,*)>$C0
+        WARN    'Waveform tables overlap at Y:$C0.' 
+	ENDIF						  
+
+; The fast serial code with the circulating address register must start on
+;    a boundary that is a multiple of the address register modulus. 
+	IF	DOWNLOAD 	; Memory offsets for downloading code
+	ORG	Y:$C0,Y:$C0
+	ELSE			; Memory offsets for generating EEPROMs
+	ORG	Y:$C0,P:APL_ROM+APL_NUM*N_W_APL/3+APL_LEN+32+$C0
+	ENDIF
+
+	IF IMOCLK
+; IMO combined one pixel serial transfer and end of cycle digitization (bin*4)
+SERIAL4	DC	CLK+S_DELAY+SR1+SR2+000+RR+RL+TST
+	DC	CLK+S_DELAY+000+SR2+000+00+00+TST
+	DC	CLK+S_DELAY+000+SR2+SR3+00+00+TST
+	DC	CLK+S_DELAY+000+000+SR3+00+00+TST
+	DC	CLK+0000000+SR1+000+SR3+00+00+TST
+	DC	VIDSS+$000000+%0010111  ; remove integ. reset and dc-restore
+	DC	SXMIT                   ; Transmit A/D data (n-3) to host
+INT_R4	DC	VIDSS+$2E0000+%0000111  ; Integrate reset level for t_int
+	DC	VIDSS+$000000+%0011011  ; stop integrating and change polarity
+	DC	CLK+S_DELAY+SR1+000+000+00+00+000 ; transfer pixel #1 to output
+	DC	CLK+S_DELAY+SR1+SR2+000+00+00+000
+	DC	CLK+S_DELAY+000+SR2+000+00+00+000
+	DC	CLK+S_DELAY+000+SR2+SR3+00+00+000
+	DC	CLK+S_DELAY+000+000+SR3+00+00+000
+	DC	CLK+S_DELAY+SR1+000+SR3+00+00+000
+	DC	CLK+S_DELAY+SR1+000+000+00+00+000 ; transfer pixel #2 to output
+	DC	CLK+S_DELAY+SR1+SR2+000+00+00+000
+	DC	CLK+S_DELAY+000+SR2+000+00+00+000
+	DC	CLK+S_DELAY+000+SR2+SR3+00+00+000
+	DC	CLK+S_DELAY+000+000+SR3+00+00+000
+	DC	CLK+S_DELAY+SR1+000+SR3+00+00+000
+	DC	CLK+S_DELAY+SR1+000+000+00+00+000 ; transfer pixel #3 to output
+	DC	CLK+S_DELAY+SR1+SR2+000+00+00+000
+	DC	CLK+S_DELAY+000+SR2+000+00+00+000
+	DC	CLK+S_DELAY+000+SR2+SR3+00+00+000
+	DC	CLK+S_DELAY+000+000+SR3+00+00+000
+	DC	CLK+S_DELAY+SR1+000+SR3+00+00+000
+	DC	CLK+0000000+SR1+000+000+00+00+000 ; transfer pixel #4 to output
+	DC	VIDSS+$000000+%0011011  ; Delay for signal to settle
+INT_S4	DC	VIDSS+$2E0000+%0001011  ; Integrate video level for t_int
+	DC	VIDSS+$000000+%0011011  ; Stop integrate, A/D is sampling
+	DC	VIDSS+$000000+%1110100  ; start conversion n and transfer n-2
+END_SERIAL4
+
+	ELSE
+; non-IMO combined one pixel serial transfer & end of cycle digitization (bin*4)
+SERIAL4	DC	CLK+S_DELAY+I2+S2+SR1+SR2+000+RR+RL+TST
+	DC	CLK+S_DELAY+I2+S2+000+SR2+000+00+00+TST
+	DC	CLK+S_DELAY+I2+S2+000+SR2+SR3+00+00+TST
+	DC	CLK+S_DELAY+I2+S2+000+000+SR3+00+00+TST
+	DC	CLK+0000000+I2+S2+SR1+000+SR3+00+00+TST
+	DC	VIDSS+$000000+%0010111  ; remove integ. reset and dc-restore
+	DC	SXMIT                   ; Transmit A/D data (n-3) to host
+INT_R4	DC	VIDSS+$2E0000+%0000111  ; Integrate reset level for t_int
+	DC	VIDSS+$000000+%0011011  ; stop integrating and change polarity
+	DC	CLK+S_DELAY+I2+S2+SR1+000+000+00+00+000 ; xfer pxl #1 to output
+	DC	CLK+S_DELAY+I2+S2+SR1+SR2+000+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+SR2+000+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+SR2+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+000+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+SR1+000+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+SR1+000+000+00+00+000 ; xfer pxl #2 to output
+	DC	CLK+S_DELAY+I2+S2+SR1+SR2+000+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+SR2+000+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+SR2+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+000+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+SR1+000+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+SR1+000+000+00+00+000 ; xfer pxl #3 to output
+	DC	CLK+S_DELAY+I2+S2+SR1+SR2+000+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+SR2+000+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+SR2+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+000+000+SR3+00+00+000
+	DC	CLK+S_DELAY+I2+S2+SR1+000+SR3+00+00+000
+	DC	CLK+0000000+SR1+000+000+00+00+000 ; transfer pixel #4 to output
+	DC	VIDSS+$000000+%0011011  ; Delay for signal to settle
+INT_S4	DC	VIDSS+$2E0000+%0001011  ; Integrate video level for t_int
+	DC	VIDSS+$000000+%0011011  ; Stop integrate, A/D is sampling
+	DC	VIDSS+$000000+%1110100  ; start conversion n and transfer n-2
+END_SERIAL4
 
 	ENDIF
 
@@ -1353,6 +1525,9 @@ RDC	DC	'RDC'
 WRP	DC	'WRP'
 LDP	DC	'LDP'
 
+; Temporary store of N_PIXEL
+NP_SAV	DC	6400
+
 
 ; Check for Y: data memory overflow
         IF	@CVS(N,*)>$20000
@@ -1361,7 +1536,7 @@ LDP	DC	'LDP'
 
 ; Check for overflow in the EEPROM case
 	IF !DOWNLOAD
-		IF	@CVS(N,@LCV(L))>(2*APL_NUM+1)*$100
+		IF	@CVS(N,@LCV(L))>APL_ROM+(APL_NUM+1)*N_W_APL/3
 	WARN    'EEPROM overflow!'	; Make sure next application
 		ENDIF			;  will not be overwritten
 	ENDIF

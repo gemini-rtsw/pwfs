@@ -194,10 +194,17 @@ V3-0 10 January 2002 CB:
   - Port to epics3.13.4
   - add detPowerOn
 
-V3-1 07 February 2001 CB:
+V3-1 07 February 2002 CB:
 -------------------------
   - check wfsStatus in writeWfsToTcs()
   - detInit and detReset: reset to FALSE signal processing and reject command 
     detObserveStart if signal processing not initialized
 
-dev equivalent to V3-1
+V4-0 27 March 2002 CB:
+----------------------
+  - startup: use now dhs compiled with tornado2.0
+  - major modifications to have the timing and utility code downloaded from
+    EEPROMs
+  - remove from the user interface the detReset command
+
+dev-eeprom equivalent to V4-0

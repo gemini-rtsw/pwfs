@@ -835,24 +835,24 @@ display {
 		args="top=$(top),wfs=$(wfs),sensor=$(sensor),cad=init,car=init"
 	}
 	display[1] {
-		label="RESET"
-		name="det_reset.dl"
-		args="top=$(top)$(wfs),sensor=$(sensor),cad=detReset,car=det"
-	}
-	display[2] {
 		label="TEST"
 		name="det_test.dl"
 		args="top=$(top),wfs=$(wfs),sensor=$(sensor),cad=test,car=test"
 	}
-	display[3] {
+	display[2] {
 		label="REBOOT"
 		name="cad0.dl"
 		args="top=$(top),label=$(sensor),cad=reboot,car=reboot"
 	}
-	display[4] {
+	display[3] {
 		label="PARK"
 		name="cad0.dl"
 		args="top=$(top),label=$(sensor),cad=park,car=park"
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
 	}
 	display[5] {
 		label=""

@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   20 Mar 2002: CB - Major modification to download the code from EEPROMS
  *   09 Jan 2001: CB - Add detPowerOn
  *   21 Dec 2001: CB - add automatic init of zero point models from par file
  *   06 Jun 2001: CB - add detSigInitModFoc
@@ -358,10 +359,10 @@
 #define   DET_CONTROL_OMF_VME_FILE            "vme-39.lod"
                                     /* OMF file to download to VME DSP.       */
 
-#define   DET_CONTROL_GBD_OMF_TIM_FILE        "tim-39.lod"
+#define   DET_CONTROL_GBD_OMF_TIM_FILE        "timrom.lod"
                                     /* OMF file to download to TIMING DSP     */
 
-#define   DET_CONTROL_OMF_UTL_FILE            "util.lod"
+#define   DET_CONTROL_OMF_UTL_FILE            "utilrom.lod"
                                     /* OMF file to download to UTILITY DSP    */
 
 #define   DET_CONTROL_PAR_FILE_PATH           "./data"
