@@ -10314,12 +10314,16 @@ STATUS aoThresholdPerSubapCompute (
               for ( i = index1 ; i < index2 ; i ++ )
                   averageThresh += (double)(*(pn + i));
 
+/*
               if (averageThresh < 0.0)
                  averageThresh = 0.0;
+*/
 
               *(pThreshold + m) = (averageThresh / (double)(index2-index1)) + 
               (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
 
+              if ( *(pThreshold + m) < 0.0)
+                 *(pThreshold + m) = 0.0;
 #ifdef DEBUG
               printf ( "index1 = %d, index2 = %d\n", index1, index2);
               printf ( "threshold[%d] = %f\n" , m , *(pThreshold + m));
