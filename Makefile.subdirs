@@ -5,3 +5,4 @@ DIRS += src
 DIRS += dspsrc
 DIRS += par
 DIRS += startup
+DIRS += docs
