@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="6"
-	npc="29"
-	nstr="118"
-	ndynamic="10"
+	npc="20"
+	nstr="72"
+	ndynamic="11"
 	nplot="0"
 	nrd="4"
 	nes="0"
@@ -18,28 +18,28 @@ display {
 	object {
 		x="0"
 		y="0"
-		width="803"
-		height="332"
+		width="1026"
+		height="351"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3558"
-	nwords_sta="176"
-	nwords_cmap="0"
-	nwords_crules="0"
-	odyng="1926"
-	osta="1750"
-	odynamic="2246"
-	oplot="2906"
-	ord="2906"
-	oes="3546"
-	okd="3546"
-	opd="3558"
-	opo="3558"
+	nwords_dspy="3844"
+	nwords_sta="188"
+	nwords_cmap="120"
+	nwords_crules="820"
+	odyng="2146"
+	osta="1958"
+	odynamic="2466"
+	oplot="3192"
+	ord="3192"
+	oes="3832"
+	okd="3832"
+	opd="3844"
+	opo="3844"
 	opc="68"
-	ostr="422"
-	ocmap="1750"
-	ocrules="1750"
+	ostr="304"
+	ocmap="1018"
+	ocrules="1138"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -48,11 +48,1172 @@ display {
 	precision="-1"
 	clrrule="alarm"
 	pv=""
-	cmap="colors.dl"
+	cmap=""
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
 	mmht="289"
+}
+"<<color map>>" {
+	ncolors="29"
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="0"
+		b="0"
+		inten="255"
+		blink="on"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="0"
+		inten="255"
+		blink="on"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="0"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="191"
+		g="191"
+		b="191"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="193"
+		g="156"
+		b="128"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="138"
+		g="138"
+		b="138"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="205"
+		g="132"
+		b="64"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="255"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="128"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="218"
+		b="185"
+		inten="251"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="255"
+		blink="on"
+	}
+	dl_color {
+		r="131"
+		g="112"
+		b="255"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="191"
+		g="191"
+		b="191"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="0"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+}
+"<<color rules>>" {
+	nrules="8"
+	dl_color_rule {
+		name="alarm"
+		info[0] {
+			chan="$(C).SEVR"
+			value="MAJOR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[1] {
+			chan="$(C).SEVR"
+			value="MINOR"
+			connector="use"
+			comparator="equals"
+			clr="3"
+		}
+		info[2] {
+			chan="$(C).SEVR"
+			value="INVALID"
+			connector="use"
+			comparator="equals"
+			clr="14"
+		}
+		info[3] {
+			chan="$(C).SEVR"
+			value="NO_ALARM"
+			connector="use"
+			comparator="equals"
+			clr="4"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="health"
+		info[0] {
+			chan="$(C).VAL"
+			value="BAD"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="WARNING"
+			connector="use"
+			comparator="equals"
+			clr="3"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="GOOD"
+			connector="use"
+			comparator="equals"
+			clr="4"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="limit"
+		info[0] {
+			chan="$(C).VAL"
+			value="$(L)"
+			connector="use"
+			comparator="less than"
+			clr="2"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="$(H)"
+			connector="use"
+			comparator="greater than"
+			clr="2"
+		}
+		info[2] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="flashifbusy"
+		info[0] {
+			chan="$(C).VAL"
+			value="UNAVAILABLE"
+			connector="use"
+			comparator="equals"
+			clr="11"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="ERR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="BUSY"
+			connector="use"
+			comparator="equals"
+			clr="14"
+		}
+		info[3] {
+			chan="$(C).VAL"
+			value="PAUSED"
+			connector="use"
+			comparator="equals"
+			clr="15"
+		}
+		info[4] {
+			chan="$(C).VAL"
+			value="IDLE"
+			connector="use"
+			comparator="equals"
+			clr="16"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="greyifbusy"
+		info[0] {
+			chan="$(C).VAL"
+			value="UNAVAILABLE"
+			connector="use"
+			comparator="equals"
+			clr="11"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="ERR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="BUSY"
+			connector="use"
+			comparator="equals"
+			clr="18"
+		}
+		info[3] {
+			chan="$(C).VAL"
+			value="PAUSED"
+			connector="use"
+			comparator="equals"
+			clr="15"
+		}
+		info[4] {
+			chan="$(C).VAL"
+			value="IDLE"
+			connector="use"
+			comparator="equals"
+			clr="16"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="greyifnotbusy"
+		info[0] {
+			chan="$(C).VAL"
+			value="UNAVAILABLE"
+			connector="use"
+			comparator="equals"
+			clr="11"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="ERR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="BUSY"
+			connector="use"
+			comparator="equals"
+			clr="0"
+		}
+		info[3] {
+			chan="$(C).VAL"
+			value="PAUSED"
+			connector="use"
+			comparator="equals"
+			clr="15"
+		}
+		info[4] {
+			chan="$(C).VAL"
+			value="IDLE"
+			connector="use"
+			comparator="equals"
+			clr="18"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="wfs"
+		info[0] {
+			chan="$(C).VAL"
+			value="0"
+			connector="use"
+			comparator="equals"
+			clr="4"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="32767"
+			connector="use"
+			comparator="equals"
+			clr="26"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="65536"
+			connector="use"
+			comparator="equals"
+			clr="23"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="user2"
+		info[0] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[1] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[2] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
 }
 "<<basic attribute>>" {
 	attr {
@@ -64,8 +1225,8 @@ display {
 }
 "text" {
 	object {
-		x="155"
-		y="20"
+		x="252"
+		y="23"
 		width="525"
 		height="26"
 		groupid="0"
@@ -83,8 +1244,8 @@ display {
 }
 "text" {
 	object {
-		x="370"
-		y="54"
+		x="528"
+		y="57"
 		width="156"
 		height="18"
 		groupid="0"
@@ -94,8 +1255,8 @@ display {
 }
 "text" {
 	object {
-		x="419"
-		y="203"
+		x="547"
+		y="228"
 		width="177"
 		height="19"
 		groupid="0"
@@ -106,7 +1267,7 @@ display {
 "text" {
 	object {
 		x="28"
-		y="203"
+		y="228"
 		width="239"
 		height="19"
 		groupid="0"
@@ -118,25 +1279,25 @@ display {
 	object {
 		x="15"
 		y="48"
-		width="774"
-		height="143"
+		width="996"
+		height="169"
 		groupid="0"
 	}
 }
 "rectangle" {
 	object {
 		x="15"
-		y="197"
-		width="384"
+		y="222"
+		width="512"
 		height="120"
 		groupid="0"
 	}
 }
 "rectangle" {
 	object {
-		x="405"
-		y="197"
-		width="384"
+		x="533"
+		y="222"
+		width="479"
 		height="120"
 		groupid="0"
 	}
@@ -154,8 +1315,8 @@ display {
 }
 "text" {
 	object {
-		x="604"
-		y="265"
+		x="732"
+		y="290"
 		width="63"
 		height="13"
 		groupid="0"
@@ -165,8 +1326,8 @@ display {
 }
 "text" {
 	object {
-		x="604"
-		y="291"
+		x="732"
+		y="316"
 		width="64"
 		height="13"
 		groupid="0"
@@ -187,8 +1348,8 @@ display {
 }
 "text" {
 	object {
-		x="603"
-		y="223"
+		x="731"
+		y="248"
 		width="58"
 		height="13"
 		groupid="0"
@@ -198,8 +1359,8 @@ display {
 }
 "text" {
 	object {
-		x="20"
-		y="134"
+		x="21"
+		y="166"
 		width="93"
 		height="19"
 		groupid="0"
@@ -209,8 +1370,8 @@ display {
 }
 "text" {
 	object {
-		x="20"
-		y="157"
+		x="21"
+		y="189"
 		width="100"
 		height="18"
 		groupid="0"
@@ -227,6 +1388,17 @@ display {
 		groupid="0"
 	}
 	textix="STATE:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="20"
+		y="134"
+		width="184"
+		height="18"
+		groupid="0"
+	}
+	textix="MEASURING:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -311,7 +1483,7 @@ display {
 "oval" {
 	object {
 		x="27"
-		y="268"
+		y="293"
 		width="19"
 		height="19"
 		groupid="0"
@@ -351,7 +1523,7 @@ display {
 "text" {
 	object {
 		x="70"
-		y="270"
+		y="295"
 		width="100"
 		height="17"
 		groupid="0"
@@ -392,8 +1564,8 @@ display {
 }
 "oval" {
 	object {
-		x="608"
-		y="238"
+		x="736"
+		y="263"
 		width="19"
 		height="19"
 		groupid="0"
@@ -432,8 +1604,8 @@ display {
 }
 "oval" {
 	object {
-		x="632"
-		y="238"
+		x="760"
+		y="263"
 		width="19"
 		height="19"
 		groupid="0"
@@ -473,7 +1645,7 @@ display {
 "oval" {
 	object {
 		x="48"
-		y="268"
+		y="293"
 		width="19"
 		height="19"
 		groupid="0"
@@ -481,9 +1653,9 @@ display {
 }
 "text update" {
 	object {
-		x="675"
-		y="259"
-		width="110"
+		x="803"
+		y="284"
+		width="202"
 		height="21"
 		groupid="0"
 	}
@@ -527,9 +1699,9 @@ display {
 }
 "text update" {
 	object {
-		x="674"
-		y="287"
-		width="110"
+		x="802"
+		y="312"
+		width="203"
 		height="21"
 		groupid="0"
 	}
@@ -573,8 +1745,8 @@ display {
 }
 "text update" {
 	object {
-		x="534"
-		y="55"
+		x="692"
+		y="58"
 		width="250"
 		height="20"
 		groupid="0"
@@ -619,8 +1791,8 @@ display {
 }
 "text update" {
 	object {
-		x="534"
-		y="80"
+		x="692"
+		y="83"
 		width="250"
 		height="20"
 		groupid="0"
@@ -665,9 +1837,9 @@ display {
 }
 "text update" {
 	object {
-		x="138"
+		x="135"
 		y="79"
-		width="163"
+		width="166"
 		height="20"
 		groupid="0"
 	}
@@ -711,9 +1883,9 @@ display {
 }
 "text update" {
 	object {
-		x="122"
-		y="135"
-		width="331"
+		x="123"
+		y="167"
+		width="441"
 		height="19"
 		groupid="0"
 	}
@@ -757,9 +1929,9 @@ display {
 }
 "text update" {
 	object {
-		x="455"
-		y="135"
-		width="330"
+		x="567"
+		y="167"
+		width="442"
 		height="19"
 		groupid="0"
 	}
@@ -804,8 +1976,8 @@ display {
 "text update" {
 	object {
 		x="123"
-		y="158"
-		width="330"
+		y="191"
+		width="442"
 		height="19"
 		groupid="0"
 	}
@@ -849,10 +2021,10 @@ display {
 }
 "text update" {
 	object {
-		x="455"
-		y="158"
-		width="330"
-		height="19"
+		x="567"
+		y="191"
+		width="442"
+		height="20"
 		groupid="0"
 	}
 	monitor {
@@ -895,7 +2067,7 @@ display {
 }
 "text update" {
 	object {
-		x="136"
+		x="135"
 		y="104"
 		width="166"
 		height="21"
@@ -939,10 +2111,56 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
+"text update" {
+	object {
+		x="135"
+		y="131"
+		width="166"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)measuring"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
 "related display" {
 	object {
-		x="419"
-		y="237"
+		x="547"
+		y="262"
 		width="180"
 		height="21"
 		groupid="0"
@@ -1209,8 +2427,8 @@ display {
 }
 "related display" {
 	object {
-		x="419"
-		y="274"
+		x="547"
+		y="299"
 		width="180"
 		height="21"
 		groupid="0"
@@ -1344,7 +2562,7 @@ display {
 "related display" {
 	object {
 		x="28"
-		y="238"
+		y="263"
 		width="143"
 		height="21"
 		groupid="0"
@@ -1353,7 +2571,7 @@ display {
 	display[0] {
 		label="PWFS-2 Detector Controller"
 		name="det_main.dl"
-		args="top=$(top)dc:,sensor=PWFS-2"
+		args="top=$(top),wfs=dc:,sensor=PWFS-2"
 	}
 	display[1] {
 		label="PWFS-2 Signal Processor"
@@ -1368,7 +2586,7 @@ display {
 	display[3] {
 		label=""
 		name=""
-		args="t"
+		args=""
 	}
 	display[4] {
 		label=""
@@ -1477,7 +2695,7 @@ display {
 }
 "kill display" {
 	object {
-		x="716"
+		x="940"
 		y="21"
 		width="72"
 		height="22"

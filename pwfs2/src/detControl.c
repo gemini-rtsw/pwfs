@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.4 2000-02-03 01:56:29 cboyer Exp $"};
+   "$Id: detControl.c,v 1.5 2000-07-10 21:47:32 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -9,24 +9,20 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   detControl.c
  *
  *   PURPOSE:
- *   Detector controller application code for a wavefront sensor
+ *   Detector controller application code for PWFS2
  *
  *   DESCRIPTION:
- *   This file contains the detector controller application code for a single
- *   wavefront sensor. The code runs in a VxWorks task. A separate copy of the
- *   task needs to be spawned for each wavefront sensor, and can run either on
- *   the MV167 or on a Baja processor.
+ *   This file contains the detector controller application code for PWFS2.
+ *   The code runs in a VxWorks task.
  *
  *   PRIOR REQUIREMENTS:
- *   The VME network, multi-process pipe driver and EPICS interface should
- *   already have been initialised before the detector control task is spawned.
  *
  *   INCLUDE FILES:
  *   detControl.h
+ *   aoP2Lib.h
  *   gemTypes.h
  *   wfsLib.h
  *   epToVxLib.h
- *   mpPipeDrv.h
  *   sdsuLib.h
  *   errorLib.h
  *
@@ -35,15 +31,35 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- *   22 Nov 99: CB - Now telescope name is read from TCS ie TELESCOP and OBSERVAT
- *   2 Nov 99: CB - debug detGeometry, allow binning x2,y2
- *                  modify ospUpdate, ospNewTrackingAndFocus
- *   1 Nov 99: CB - Create detCreateFileName -> combine path and file
- *                  name and remove .fits at the end
- *                  New observe command + new DHS I/F + new signal
- *                  processing commands
- *   13 Oct 99: CB - Download the DSP until it works
- *   9 Apr 99: CB - simplified version for PWFS2 only
+ *   07 Jun 2000: CB - add detSigModeSeqDark + detSigModeFgCoadd
+ *                     rename fast guide by global guide...
+ *                     add directory for save CB
+ *   14 Apr 2000: CB - add detDhsDisplay
+ *   12 Apr 2000: CB - add detType, detId, dataLabel, intTime, nexpRQ,
+ *                     nexp, nframes, bunit, exposedRQ, exposed, utstart, 
+ *                     utend, elapsed sir records
+ *   11 Apr 2000: CB - replace detSigMode by several detSigModexxx cad
+ *   04 Apr 2000: CB - 2 cb + save cb + coadd file name
+ *   03 Apr 2000: CB - Add detDhsReconnect command 
+ *                     Add temp at -20C per default, add detHeadTempGet()
+ *                     Add readout mode per default to NONE
+ *   30 Mar 2000: CB - Add detFrameSize command + 3 SIR records for state of 
+ *                     signal processing
+ *   28 Mar 2000: CB - DHS tasks started by dhs and not WFS are running with 
+ *                     priority 1. For now do not use the WFS DHS task
+ *   23 Mar 2000: CB - Major modification: Create a DHS task
+ *   16 Mar 2000: CB - Major modification: Include aoPwfs2Lib and remove ospLib
+ *   13 Mar 2000: CB - Replace dc:testResults per testResults
+ *   22 Nov 1999: CB - Now telescope name is read from TCS ie TELESCOP and
+ *                     OBSERVAT
+ *   02 Nov 1999: CB - debug detGeometry, allow binning x2,y2
+ *                     modify ospUpdate, ospNewTrackingAndFocus
+ *   01 Nov 1999: CB - Create detCreateFileName -> combine path and file
+ *                     name and remove .fits at the end
+ *                     New observe command + new DHS I/F + new signal
+ *                     processing commands
+ *   13 Oct 1999: CB - Download the DSP until it works
+ *   09 Apr 1999: CB - simplified version for PWFS2 only
  *INDENT-ON*
  *-
  */
@@ -61,6 +77,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <stdlib.h>
 #include <sysLib.h>
 #include <taskLib.h>
+#include <usrLib.h>
 #include <semLib.h>
 #include <timers.h>
 #include <float.h>
@@ -68,6 +85,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <selectLib.h>
 #include <ppc.h>
 #include "car.h"
+#include <sirRecord.h>
 
 #include "dhs.h"
 
@@ -75,9 +93,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "slalib.h"
 #include "astLib.h"
 
-#ifdef USE_CFITSIO  /* Caused memory corruption problem - reverted to old code*/
-#include "fitsio.h"                                        /* cFitsIo library */
-#endif
+#include "fitsio.h"
 
 #include "gemTypes.h"
 #include "timeoutLib.h"
@@ -86,20 +102,22 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "wfsWcs.h"
 #include "errorLib.h"
 #include "sdsuLib.h"
-#include "osp.h"
+#include "aoP2Lib.h"
 #include "synchroMap.h"
-/*#include "xycom.h"*/
-
+#include "wfsControl.h"
+#include "wfsDb.h"
+#include "cicsLib.h"
 #include "detControl.h"
+/*#include "xycom.h"*/
 
 /****************************************************************** Defines ***/
 
-/*#define DEBUG*/                   /* Define this macro to enable debug messages */
+/*#define DEBUG*/               /* Define this macro to enable debug messages */
 
 #define DEBUG_DOWNLOAD          /* Define this macro to enable debug messages */
                                 /* when downloading DSP code                  */
 
-#define DHS_WAIT_TIMEOUT   3600 /* Timeout waiting for DHS semaphore 60s      */
+#define DHS_WAIT_TIMEOUT   3600 /* Timeout waiting for DHS semaphores 60s     */
 
 #define OBS_WAIT_TIMEOUT   1200 /* Timeout waiting for obs sync semaphore 20s */
 
@@ -109,152 +127,251 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 
 /********************************************************* Global variables ***/
 
-char    pDetDhsClientName [EPICS_MAX_BYTES_STRING_ATTRIB + 1] = "NONE";
+char        pDetDhsClientName [EPICS_MAX_BYTES_STRING_ATTRIB + 1] = "NONE";
                                    /* Name of DHS client = Instrument name.   */
                                    /* Assumed the same for all WFSs on CPU.   */
 
-char    pDetDhsHostName [EPICS_MAX_BYTES_STRING_ATTRIB + 1] = "NONE";
+char        pDetDhsHostName [EPICS_MAX_BYTES_STRING_ATTRIB + 1] = "NONE";
                                    /* Name of host running DHS data server.   */
                                    /* Assumed the same for all WFSs.          */
 
-char    pDetDhsServerName [EPICS_MAX_BYTES_STRING_ATTRIB + 1] = "NONE";
+char        pDetDhsServerName [EPICS_MAX_BYTES_STRING_ATTRIB + 1] = "NONE";
                                    /* Name of DHS data server.                */
                                    /* Assumed the same for all WFSs.          */
 
-BOOL    detDhsInitialised = FALSE; /* Flag to determine whether the DHS       */
+BOOL        detDhsInitialised = FALSE; 
+                                   /* Flag to determine whether the DHS       */
                                    /* library has been initialised.           */
 
-SEM_ID  detDhsSem = NULL;          /* Semaphore to control access to DHS.     */
+int         detDhsTaskId = 0;      /* Task Id of the dhs task                 */
 
-SDSU_ID detSdsuIdP2 = NULL;        /* SDSU context structure for PWFS2.       */
+DHS_CONNECT detDhsConnection;      /* DHS connection ID                       */
 
-OBS_ID  detObsIdP2 = NULL;         /* Observation context structure for PWFS2 */
+SEM_ID      detDhsSem = NULL;      /* Semaphore to control acess to DHS       */
 
-uint32  detControlStop = 0x0;      /* This bit mask provides a way of aborting*/
+SEM_ID      detDhsStartSem = NULL; /* Semaphore to start DHS when starting a  */
+                                   /* new observation                         */
+
+SDSU_ID     detSdsuIdP2 = NULL;    /* SDSU context structure for PWFS2.       */
+
+OBS_ID      detObsIdP2 = NULL;     /* Observation context structure for PWFS2 */
+
+uint32      detControlStop = 0x0;  /* This bit mask provides a way of aborting*/
                                    /* the detector control task(s) cleanly.   */
-                                   /* Each task will keep running until it    */
-                                   /* sees its own bit in this mask set.      */
+
+int         readTempReadyFlag=FALSE;   
+                                   /* Flag used by detHeadTempGet() to check  */
+                                   /* if we are ready to read temperature from*/
+                                   /* SDSU controller                         */
 
 /***************************************************** External global data ***/
 
-extern struct OSP_CONTEXT *wfsAoAddr[MAX_WFS_SOURCES];
-extern struct OSP_CONTEXT *wfsFgAddr[MAX_WFS_SOURCES];
+extern int sdsuFrameLost ;         /* Defined in sdsuLib.c                    */
+extern wfs *ptrPwfs2 ;             /* Pointer to the reflective memory page   */
+                                   /* defined in writeZernikes.c              */
+extern AO_CCD_ID aoCcdIdP2;        /* Pointer to the geometry context         */
+                                   /* structure defined in writeZernikes.c    */
+extern AO_CB_CTRL_ID aoCbCtrlIdP2; /* Pointer to the control circular buffer  */
+                                   /* defined in writeZernikes.c              */
+extern AO_CB_IM_ID aoCbImIdP2;     /* Pointer to the image circular buffer    */
+                                   /* defined in writeZernikes.c              */
+/*extern int swapFlag ;*/              /* Variables for benchmarking              */
+/*extern xycomCard *xycom_ptr ;*/
 
-extern int sdsuFrameLost ;
+/******************************************************* External functions ***/
 
-extern wfs *ptr[MAX_WFS_SOURCES] ;
+extern void ImpMaster ();
 
-/*************************** Definition of variables for xycom benchmarking ***/
+/******************************************************** Private functions ***/
 
-/*extern int swapFlag ;
-extern xycomCard *xycom_ptr ;*/
+STATUS detReadDefaultDspCcdGeometry (SDSU_ID sdsuId, AO_CCD_ID aoCcdId);
 
-/********************************* Private functions - one for each command ***/
+LOCAL uint32   detChop (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSetup (const char * pWfsName, const char * pRecordPrefix, 
-                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                         SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detChop  (const char * pWfsName, const char * pRecordPrefix, 
-                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                         SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detExposure (const char * pWfsName, const char * pRecordPrefix, 
-                            CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+LOCAL uint32   detExposure (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                             SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detObstype (const char * pWfsName, const char * pRecordPrefix, 
-                           CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+
+LOCAL uint32   detObstype ( CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                            SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detSetWcs (const char * pWfsName, const char * pRecordPrefix, 
-                          CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+
+LOCAL uint32   detSetWcs (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                           SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detObserveStart (const char * pWfsName, 
-                                const char * pRecordPrefix, 
+
+LOCAL uint32   detObserveStart (CAD_CMD_CONTEXT cadCmdContext,
+                                int commandNumber, SDSU_ID sdsuId,
+                                OBS_ID obsId, AO_CCD_ID aoCcdId, 
+                                AO_CTRL_ID aoCtrlId, AO_CB_IM_ID aoCbImId,
+                                AO_CB_CTRL_ID aoCbCtrlId);
+
+LOCAL uint32   detStop (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detAbort (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                         SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detInit (const char * pWfsName, const char * pRecordPrefix,
+                        CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID * pSdsuId, OBS_ID obsId, uint32 * pVmeAddress,
+                        int * pMaxFrames, DATREC_CONTEXT pDetInitContext,
+                        DATREC_CONTEXT pDetInitStatusContext,
+                        DATREC_CONTEXT pStateContext, AO_CCD_ID aoCcdId);
+
+LOCAL uint32   detReset (const char * pWfsName, const char * pRecordPrefix,
+                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                         SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detTest (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID sdsuId, OBS_ID obsId,
+                        DATREC_CONTEXT pTestResultsContext,
+                        DATREC_CONTEXT pDetTestContext);
+
+LOCAL uint32   detSave (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detGeometry (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                            SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
+                            AO_CTRL_ID aoCtrlId, 
+                            DATREC_CONTEXT pAoCtrlInitContext, 
+                            DATREC_CONTEXT pAoFlatInitContext);
+
+LOCAL uint32   detPrimitive (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                             SDSU_ID sdsuId, OBS_ID obsId,
+                             DATREC_CONTEXT pDetPrimReplyContext);
+
+LOCAL uint32   detMode (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detOffset (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                          SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detTemp (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                        SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detSigInit (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                           SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
+                           AO_CTRL_ID aoCtrlId,
+                           DATREC_CONTEXT pAoCtrlInitContext,
+                           DATREC_CONTEXT pAoFlatInitContext);
+
+LOCAL uint32   detSigInitGain (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                               SDSU_ID sdsuId, OBS_ID obsId, 
+                               AO_CTRL_ID aoCtrlId); 
+
+LOCAL uint32   detSigModeNone (const char * pRecordPrefix, 
+                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                               SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detSigModeDark (const char * pRecordPrefix, 
+                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                               SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detSigModeGg (const char * pRecordPrefix, 
+                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                             SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detSigModeFgFocus (const char * pRecordPrefix,
+                                  CAD_CMD_CONTEXT cadCmdContext, 
+                                  int commandNumber, SDSU_ID sdsuId, 
+                                  OBS_ID obsId);
+
+LOCAL uint32   detSigModeCoadd (const char * pRecordPrefix, 
+                                CAD_CMD_CONTEXT cadCmdContext, 
+                                int commandNumber, SDSU_ID sdsuId, 
+                                OBS_ID obsId);
+
+LOCAL uint32   detSigModeThresh (const char * pRecordPrefix, 
+                                 CAD_CMD_CONTEXT cadCmdContext, 
+                                 int commandNumber, SDSU_ID sdsuId, 
+                                 OBS_ID obsId);
+
+LOCAL uint32   detSigModeGgCoadd (const char * pRecordPrefix, 
+                                  CAD_CMD_CONTEXT cadCmdContext, 
+                                  int commandNumber, SDSU_ID sdsuId, 
+                                  OBS_ID obsId);
+
+LOCAL uint32   detSigModeSeq (const char * pRecordPrefix, 
+                              CAD_CMD_CONTEXT cadCmdContext, 
+                              int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detSigModeTotal (const char * pRecordPrefix,
+                                CAD_CMD_CONTEXT cadCmdContext, 
+                                int commandNumber, SDSU_ID sdsuId, 
+                                OBS_ID obsId);
+
+LOCAL uint32   detSigInitCB (CAD_CMD_CONTEXT cadCmdContext, 
+                             int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32 detFrameSize (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                           SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId, 
+                           AO_CTRL_ID aoCtrlId, 
+                           DATREC_CONTEXT pAoCtrlInitContext,
+                           DATREC_CONTEXT pAoFlatInitContext);
+
+LOCAL uint32 detDhsReconnect (CAD_CMD_CONTEXT cadCmdContext, 
+                              int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32 detDhsDisplay (CAD_CMD_CONTEXT cadCmdContext, 
+                            int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32 detSigModeSeqDark (const char * pRecordPrefix, 
                                 CAD_CMD_CONTEXT cadCmdContext,
                                 int commandNumber, SDSU_ID sdsuId, 
                                 OBS_ID obsId);
-LOCAL uint32   detStop (const char * pWfsName, const char * pRecordPrefix, 
-                        CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                        SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detAbort (const char * pWfsName, const char * pRecordPrefix, 
-                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                         SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detInit (const char * pWfsName, const char * pRecordPrefix, 
-                        CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                        SDSU_ID * pSdsuId, OBS_ID obsId, uint32 * pVmeAddress, 
-                        int * pxMax, int * pyMax, int * pxPixels, 
-                        int * pyPixels, int * pMaxFrames,
-                        DATREC_CONTEXT pDetInitContext, 
-                        DATREC_CONTEXT pDetInitStatusContext);
-LOCAL uint32   detReset (const char * pWfsName, const char * pRecordPrefix, 
-                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                         SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detTest (const char * pWfsName, const char * pRecordPrefix, 
-                        CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                        SDSU_ID sdsuId, OBS_ID obsId, 
-                        DATREC_CONTEXT pTestResultsContext);
-LOCAL uint32   detSave (const char * pWfsName, const char * pRecordPrefix, 
-                        CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                        SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detGeometry (const char * pWfsName, const char * pRecordPrefix, 
-                            CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                            SDSU_ID sdsuId, OBS_ID obsId, int * pxPixels, 
-                            int * pyPixels);
-LOCAL uint32   detPrimitive (const char * pWfsName, const char * pRecordPrefix ,
-                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                             SDSU_ID sdsuId, OBS_ID obsId, 
-                             DATREC_CONTEXT pDetPrimReplyContext);
-LOCAL uint32   detDownload (const char * pWfsName, const char * pRecordPrefix,
-                            CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                            SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detMode  (const char * pWfsName, const char * pRecordPrefix, 
-                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                         SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detOffset (const char * pWfsName, const char * pRecordPrefix, 
-                          CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                          SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detTemp  (const char * pWfsName, const char * pRecordPrefix, 
-                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                         SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detSigInit   (const char * pWfsName, const char * pRecordPrefix, 
-                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                             SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detSigInitGain (const char * pWfsName, const char * pRecordPrefix, 
-                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                               SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detSigMode   (const char * pWfsName, const char * pRecordPrefix, 
-                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                             SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32 detSigModeFgCoadd (const char * pRecordPrefix,
+                                CAD_CMD_CONTEXT cadCmdContext,
+                                int commandNumber, SDSU_ID sdsuId,
+                                OBS_ID obsId);
+
+LOCAL uint32 detInitObserveRecord (const char * pRecordPrefix, long * pNExp, 
+                                   double * pExpTime, long * pOutOption);
 
 /******************************************* Plus some additional functions ***/
 
-STATUS detDownloadDefault (const char * pWfsName, const char * pRecordPrefix, 
+OBS_ID detObsContextCreate (void);
+
+STATUS detDownloadDefault (const char * pWfsName, const char * pRecordPrefix,
                            SDSU_ID sdsuId);
-STATUS detCheckGeometry (const char * pWfsName, SDSU_ID sdsuId, int * pxMax,
-                         int * pyMax, int * pxPixels, int * pyPixels);
-STATUS detCopyGeometry (const char * pWfsName, SDSU_ID sdsuId,
-                        struct OSP_GEOMETRY * ospGeometry);
-STATUS detSimulateData (const int xPixels, const int yPixels, const int option,
-                        SDSU_FRAME *pFrameBuffer);
-STATUS detFrameUnscramble (const int xPixels, const int yPixels, 
-                           const int outputs, SDSU_FRAME * inFrame, 
-                           float * outBuffer );
-STATUS detFrameScramble (const int xPixels, const int yPixels, 
-                         const int outputs, float * inBuffer, 
-                         uint16 * outBuffer );
-STATUS detWriteFits (char * filename, OBS_ID obsId, int xPixels, int yPixels,
-                     float * pFrameBuffer);
-STATUS detWriteFitsUint16 (char * filename, OBS_ID obsId, int xPixels, 
-                           int yPixels, uint16 * pFrameBuffer);
-OBS_ID detObsContextCreate( void );
-void   detPacketCallback(SDSU_ID sdsuId, void * obsIdIn, SDSU_FRAME * pFrame );
-void   detFrameCallback(SDSU_ID sdsuId, void * obsIdIn, SDSU_FRAME * pFrame );
-void   detObserveEnd (SDSU_ID sdsuId, void * obsIdIn, SDSU_FRAME * pFrame );
-void   detObserveTimeout (timer_t timeId, int obsIdInt);
-STATUS detDhsConnect (const char * pWfsName, DHS_CONNECT * pDhsConnection);
+
+STATUS detDhsConnect ();
+
+STATUS detDhsTaskOpen ();
+
+void detDhsTask ();
+
 void   detDhsCheckErrno (const DHS_STATUS dhsErrno, const int line,
                          const char * filename);
+
 STATUS detDhsCheckCmdStatus (const DHS_TAG dhsTag);
 
-void   detPokeObserving (OBS_ID obsId, BOOL newValue);
+void   detObserveEnd (SDSU_ID sdsuId, void * obsIdIn, SDSU_FRAME * pFrame );
+
+STATUS detFrameUnscramble (const int xPixels, const int yPixels,
+                           const int outputs, SDSU_FRAME * inFrame,
+                           float * outBuffer );
+
+STATUS detFrameScramble (const int xPixels, const int yPixels,
+                         const int outputs, float * inBuffer,
+                         uint16 * outBuffer );
+void   detObserveTimeout (timer_t timeId, int obsIdInt);
+
+STATUS detSimulateData (const int xPixels, const int yPixels, const int option,
+                        SDSU_FRAME *pFrameBuffer);
+
+STATUS detReadFitsHeaderInt (char * fileName, int nKey, char ** keyName,
+                             int * keyVal);
+
+STATUS detReadFitsImageUint16 (uint16 * pImageBuffer, char * fileName,
+                               int buffSize);
+
+STATUS detCreateFileName (char * pFilePath, char * pOutFileName, 
+                          char * pFullOutFileName);
+
+STATUS detWriteFits (char * filename, OBS_ID obsId, int xPixels, int yPixels,
+                     float * pFrameBuffer);
+
+uint32 detSimulateImage (int xPixels, int yPixels, float * pImage);
 
 /* -------------------------------------------------------------------------- */
 
@@ -266,7 +383,7 @@ STATUS   detControl
 {
    /* Variables associated with VxWorks environment. */
 
-   int     taskOptions;         
+   int     taskOptions;
    STATUS  (* pipeCreate) ();       /* Pointer to appropriate pipeCreate func */
 
    /* Variables associated with CAD/CAR/genSub command protocol. */
@@ -283,16 +400,21 @@ STATUS   detControl
 
    /* Variables associated with genSub records. */
 
-   GSUB_DATA_CONTEXT   dataUpdateContext;  /* Data update context structure.  */
+   GSUB_DATA_CONTEXT dataUpdateContext;    /* Data update context structure.  */
 
-   /* Variables associated with SDSU controller SIR records. */
+   /* Variables associated with SIR records. */
 
-   DATREC_CONTEXT      pDetInitContext;    /* Context structure for           */
+   DATREC_CONTEXT   pStateContext;         /* Context structure for state SIR */
+                                           /* record                          */
+   DATREC_CONTEXT   pDetInitContext;       /* Context structure for           */
                                            /* initialising state SIR record.  */
 
-   DATREC_CONTEXT      pDetInitStatusContext;  /* Context structure for SDSU  */
+   DATREC_CONTEXT   pDetInitStatusContext;     /* Context structure for SDSU  */
                                                /* initialisation status SIR   */
                                                /* record.                     */
+
+   DATREC_CONTEXT   pDetTestContext;       /* Context structure for           */
+                                           /* testing state SIR record.       */
 
    DATREC_CONTEXT   pTestResultsContext;  /* Context structure for SDSU test  */
                                           /* results SIR record               */
@@ -303,12 +425,26 @@ STATUS   detControl
    DATREC_CONTEXT   pDetObservingContext; /* Context structure for observing  */
                                           /* state SIR record.                */
 
+   DATREC_CONTEXT   pAoCtrlInitContext;   /* Context structure for aoCtrlInit */
+                                          /* SIR record.                      */
+
+   DATREC_CONTEXT   pAoFlatInitContext;   /* Context structure for aoFlatInit */
+                                          /* SIR record.                      */
+   DATREC_CONTEXT   pDetTypeContext;      /* Context structure for detector   */
+                                          /* controller type.                 */
+
+   DATREC_CONTEXT   pDetIdContext;        /* Context structure for detector   */
+                                          /* Id or SN                         */
+
+   DATREC_CONTEXT   pBunitContext ;       /* Data unit SIR record context     */
+                                          /* structure                        */
+
    /* Variables associated with the SDSU controller. */
 
-   uint32         vmeAddress = 0;   /* VME address of SDSU controller. (Set to*/
+   uint32       vmeAddress = 0;     /* VME address of SDSU controller. (Set to*/
                                     /* 0 if the controller is not installed   */
                                     /* and is to be simulated).               */
-   BOOL           simulate;         /* TRUE if controller is to be simulated. */
+   BOOL         simulate;           /* TRUE if controller is to be simulated. */
 
    BOOL         initFailed=FALSE;   /* Set TRUE if a significant but non fatal*/
                                     /* error occurs during initialisation.    */
@@ -324,19 +460,29 @@ STATUS   detControl
 
    uint32       detControlStopMask; /* Mask for detecting which detControlStop*/
                                     /* bit refers to this detector controller.*/
-
    uint32       tryDownload ;       /* Counter to stop attempt for downloading*/
                                     /* DSP code                               */
+   uint32       tempCode;           /* Target temperature code                */
+   uint32       tempCoeff;          /* Coefficient for temperature control    */
+   /*long         mode;*/               /* Readout mode parameter.                */
+
+
+   /* Variables associated with active optics */
+
+   AO_CCD_ID    aoCcdId = NULL;     /* AO CCD geometry context structure      */
+   AO_CTRL_ID   aoCtrlId = NULL;    /* AO control context structure           */
+   AO_CB_IM_ID  aoCbImId = NULL;    /* AO image circular buffer context       */
+                                    /* structure                              */
+   AO_CB_CTRL_ID aoCbCtrlId = NULL; /* AO control circular buffer context     */
+                                    /* structure                              */
+
+   char         aoInitFileName [ STRING_SIZE ] ;
+                                    /* Name of the ao control structure init  */
+                                    /* file                                   */
 
    /* Variables used to define the buffer to be used for storing data.   */
 
-   int          xPixels, yPixels;   /* Current size of data array in pixels.  */
-   int          xMax, yMax;         /* Maximum size of data array in pixels.  */
    int          maxFrames;          /* Maximum number of frames in data buffer*/
-
-   /* Variables associated with the Gemini Data Handling System */
-
-   DHS_CONNECT  dhsConnection = NULL; /* DHS connection ID for this controller*/
 
    /* Timer variables. */
 
@@ -349,17 +495,18 @@ STATUS   detControl
 
    char         pStatusString [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                                     /* Status string.                         */
+   long         nExp;               /* Number of exposure                     */
+   long         outOption;          /* Output option                          */
+   double       expTime;            /* Exposure time                          */
 
-   /* Turn off floating point exception errors */
-   
-   setFPE() ;
-
-   /* Initialize xycom board used dor benchmarking purposes */
+   /* Initialize xycom board for benchmarking */
 
    /*xycomInit () ;
-#ifdef DEBUG
-   printf ( "xycom board initialize, xycom_ptr = %p\n" , xycom_ptr ) ;
-#endif*/
+   printf ( "xycom board initialize, xycom_ptr = %p\n" , xycom_ptr ) ;*/
+
+   /* Turn off floating point exception errors */
+
+   setFPE() ;
 
    /* Create and initialise an error context structure for this task */
 
@@ -383,7 +530,7 @@ STATUS   detControl
       return (ERROR);
    }
 
-   pipeCreate = pipeDevCreate; 
+   pipeCreate = pipeDevCreate;
 
    /*
     * Use the wavefront sensor name provided as a function argument to
@@ -398,10 +545,6 @@ STATUS   detControl
    {
       vmeAddress = DET_CONTROL_PWFS2_SDSU_ADRS_VME;
       detControlStopMask = DET_CONTROL_PWFS2_MASK;
-      xMax = DET_CONTROL_PWFS2_XSIZE;
-      yMax = DET_CONTROL_PWFS2_YSIZE;
-      xPixels = xMax;
-      yPixels = yMax;
       maxFrames = DET_CONTROL_PWFS2_MAX_FRAMES;
    }
    else
@@ -422,7 +565,7 @@ STATUS   detControl
    }
 
 #ifdef DEBUG
-   printf ("detControl:%s: Alarm timer initialised. Timer ID = %d\n", 
+   printf ("detControl:%s: Alarm timer initialised. Timer ID = %d\n",
            pWfsName, (int) timeId);
 #endif
 
@@ -447,13 +590,13 @@ STATUS   detControl
    widthSelect = cadCmdContext->cadPipeFd + 1;
 
    /*
-    * Get the genSub data update context structure (using the appropriate pipe 
-    * driver), which is used subsequently as a handle for the genSub data 
-    * update routines. Each time a new largest file descriptor is found, 
+    * Get the genSub data update context structure (using the appropriate pipe
+    * driver), which is used subsequently as a handle for the genSub data
+    * update routines. Each time a new largest file descriptor is found,
     * update the "widthSelect" variable to be used by "select()" later.
     */
 
-   if ((dataUpdateContext = epToVxUpdateInit (pWfsName, NULL, pipeCreate)) == 
+   if ((dataUpdateContext = epToVxUpdateInit (pWfsName, NULL, pipeCreate)) ==
         NULL)
    {
       ERROR_LOG ("Error getting genSub data update context");
@@ -468,11 +611,20 @@ STATUS   detControl
    /*
     * Get the context structures for the SIR records that are maintained by this
     * task. Each SIR is referenced by its name: first get the name of each SIR,
-    * then call epToVxRecContextGet() in order to look-up the context structure 
-    * that has previously been assigned to the SIR during initialisation of 
-    * the local record data-base. If necessary, the SIR records are loaded 
+    * then call epToVxRecContextGet() in order to look-up the context structure
+    * that has previously been assigned to the SIR during initialisation of
+    * the local record data-base. If necessary, the SIR records are loaded
     * with their default values.
+    * Warning some of them have the pRecordPrefix prefix, some as state have
+    * not.
     */
+
+   sprintf (pRecordName, "%s", WFS_CONTROL_STATE_SIR_NAME );
+   if (epToVxRecContextGet (pRecordName, & pStateContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get WFS_CONTROL_STATE_SIR_NAME SIR context");
+      return (ERROR);
+   }
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix, DET_CONTROL_INIT_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & pDetInitContext, NULL) == ERROR)
@@ -481,24 +633,44 @@ STATUS   detControl
       return (ERROR);
    }
 
-   /* As soon as we have the SIR record context, set the "initialising" flag. */
+   /*
+    * As soon as we have the SIR record context, set the "initialising" flag
+    * and the system state to INITIALIZING
+    */
+
    initState = CAR_BUSY;
    if (epToVxPipeWrite (NULL, (char *) &initState, pDetInitContext) == ERROR)
    {
       ERROR_LOG ("Failed to set initialisation state to BUSY");
    }
 
-   sprintf (pRecordName, "%s:%s", pRecordPrefix, 
+   if (epToVxPipeWrite (NULL, "INITIALIZING", pStateContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set state to INITIALIZING");
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
             DET_CONTROL_INIT_STATUS_SIR_NAME);
-   if (epToVxRecContextGet (pRecordName, & pDetInitStatusContext, NULL) == 
+   if (epToVxRecContextGet (pRecordName, & pDetInitStatusContext, NULL) ==
        ERROR)
    {
       ERROR_LOG ("Failed to get DET_CONTROL_INIT_STATUS SIR context");
       return (ERROR);
    }
 
-   sprintf (pRecordName, "%s:%s", pRecordPrefix, 
-            DET_CONTROL_TEST_RESULTS_SIR_NAME);
+   sprintf (pRecordName, "%s:%s", pRecordPrefix, DET_CONTROL_TEST_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & pDetTestContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_TEST_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   /*
+    * Get the testResults SIR record, which is into the system database,
+    * no prefix
+    */
+
+   sprintf (pRecordName, "%s", DET_CONTROL_TEST_RESULTS_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & pTestResultsContext, NULL) == ERROR)
    {
       ERROR_LOG ("Failed to get DET_CONTROL_TEST_RESULTS_SIR_NAME SIR context");
@@ -510,7 +682,7 @@ STATUS   detControl
       "Failed to initialise DET_CONTROL_TEST_RESULTS_SIR_NAME record");
    }
 
-   sprintf (pRecordName, "%s:%s", pRecordPrefix, 
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
             DET_CONTROL_PRIM_REPLY_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & pDetPrimReplyContext, NULL) == ERROR)
    {
@@ -526,6 +698,82 @@ STATUS   detControl
       return (ERROR);
    }
 
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AOCTRLINIT_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & pAoCtrlInitContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AOCTRLINIT_SIR_NAME SIR context");
+      return (ERROR);
+   }
+   if (epToVxPipeWrite (NULL, "Not initialized", pAoCtrlInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AOFLATINIT_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & pAoFlatInitContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AOFLATINIT_SIR_NAME SIR context");
+      return (ERROR);
+   }
+   if (epToVxPipeWrite (NULL, "Not initialized", pAoFlatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+   }
+
+   /*
+    * Init the pDetTypeContext pDetIdContext structures
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_DETTYPE_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & pDetTypeContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_DETTYPE_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, DET_TYPE, pDetTypeContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set default detector type");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_DETID_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & pDetIdContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_DETID_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, DET_CCD_SN, pDetIdContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set default detector type");
+      return (ERROR);
+   }
+
+   /*
+    * Init the pBunitContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_BUNIT_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & pBunitContext, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_BUNIT_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, DET_BUNIT, pBunitContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set default detector type");
+      return (ERROR);
+   }
+
    /*
     * Create an observation context structure.
     */
@@ -537,251 +785,762 @@ STATUS   detControl
       return (ERROR);
    }
 
+   /* Initialise the type and SN of the CCD */
+
+   strcpy ( obsId->detType , DET_TYPE ) ;
+   strcpy ( obsId->detId , DET_CCD_SN ) ;
+
    /* Initialise the "observing" flag and number of frames. */
 
    obsId->observing = FALSE;
    obsId->totalFrames = 1;
+   obsId->saveCbIm = FALSE;
+   obsId->saveCbCtrl = FALSE;
+   obsId->sigMode = AO_MODE_NONE;
+   obsId->dhsQlRate = 100;
 
    /*
-    * If the WFS has control over the SDSU hardware, attempt to initialise 
-    * sdsuLib using the VME address obtained above (which involves establishing 
-    * communications with the SDSU hardware), remembering to call sdsuReset() 
-    * immediately after sdsuContextCreate() to ensure a "Set Reply Address" 
+    * Create the AO CCD context structure geometry 
+    */
+
+   aoCcdId = aoCcdContextCreate();
+   if ( aoCcdId == NULL )
+   {
+      ERROR_LOG ("Failed to create AO CCD geometry structure on startup");
+      return (ERROR);
+   }
+
+   obsId->aoCcdId = aoCcdId;
+   aoCcdIdP2 = aoCcdId;
+
+   /* 
+    * Create the AO control context structure and the circular buffer 
+    */
+
+   aoCtrlId = aoCtrlContextCreate();
+   
+   if ( aoCtrlId == NULL )
+   {
+      ERROR_LOG ("Failed to create AO control context structure on startup");
+      return (ERROR);
+   };
+
+   obsId->aoCtrlId = aoCtrlId;
+
+   aoCbImId = aoCbImContextCreate();
+
+   if ( aoCbImId == NULL )
+   {
+      ERROR_LOG ("Failed to create AO image circular buffer on startup");
+      return (ERROR);
+   };
+
+   obsId->aoCbImId = aoCbImId;
+   aoCbImIdP2 = aoCbImId;
+
+   aoCbCtrlId = aoCbCtrlContextCreate();
+
+   if ( aoCbCtrlId == NULL )
+   {
+      ERROR_LOG ("Failed to create AO control circular buffer on startup");
+      return (ERROR);
+   };
+
+   obsId->aoCbCtrlId = aoCbCtrlId;
+   aoCbCtrlIdP2 = aoCbCtrlId;
+
+   /* 
+    * Init all the context structures for the geometry SIR records
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AODARKINIT_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pAoDarkInitContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AODARKINIT_SIR_NAME SIR context");
+      return (ERROR);
+   }
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext) 
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_OUTPUTS_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pOutputsContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_OUTPUTS_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_DETXSIZE_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pDetXsizeContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_DETXSIZE_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_DETYSIZE_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pDetYsizeContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_DETYSIZE_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_XSUBAP_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pXsubapContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_XSUBAP_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_YSUBAP_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pYsubapContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_YSUBAP_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_XSTART_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pXstartContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_XSTART_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_YSTART_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pYstartContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_YSTART_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_XRASTER_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pXrasterContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_XRASTER_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_YRASTER_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pYrasterContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_YRASTER_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_XSPACE_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pXspaceContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_XSPACE_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_YSPACE_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pYspaceContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_YSPACE_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_XBIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pXbinContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_XBIN_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_YBIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pYbinContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_YBIN_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AOTHRESH_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pAoThreshContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AOTHRESH_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AOTOTAL_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pAoTotalContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AOTOTAL_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AOPROCESSMODE_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pAoProcessModeContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AOPROCESSMODE_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   sprintf (pRecordName, "%s", DET_CONTROL_MEAS_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pDetMeasuringContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_MEAS_SIR_NAME SIR context");
+      return (ERROR);
+   }
+
+   /* Init aoProcessMode sir record - note sigMode = AO_MODE_NONE */
+
+   if (epToVxPipeWrite (NULL, "No processing", obsId->pAoProcessModeContext) 
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /* Init the pDataLabelContext structure */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_DATALABEL_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pDataLabelContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_DATALABEL_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pIntTimeContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_INTTIME_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pIntTimeContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_INTTIME_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pNExpRQContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_NEXPRQ_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pNExpRQContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_NEXPRQ_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pNExpContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_NEXP_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pNExpContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_NEXP_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pNFramesContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_NFRAMES_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pNFramesContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_NFRAMES_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pUTstartContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_UTSTART_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pUTstartContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_UTSTART_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pUTendContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_UTEND_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pUTendContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_UTEND_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pExposedContext and pExposedRQContext structures
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_EXPOSED_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pExposedContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_EXPOSED_SIR_NAME SIR context");
+   }
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_EXPOSEDRQ_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pExposedRQContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_EXPOSEDRQ_SIR_NAME SIR context");
+   }
+
+   /*
+    * Init the pElapsedContext structure
+    */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_ELAPSED_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pElapsedContext), NULL) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_ELAPSED_SIR_NAME SIR context");
+   }
+
+   /*
+    * If the WFS has control over the SDSU hardware, attempt to initialise
+    * sdsuLib using the VME address obtained above (which involves establishing
+    * communications with the SDSU hardware), remembering to call sdsuReset()
+    * immediately after sdsuContextCreate() to ensure a "Set Reply Address"
     * command is issued.
     *
-    * If the VME address is zero this indicates the SDSU controller for this 
+    * If the VME address is zero this indicates the SDSU controller for this
     * WFS is not installed and should be simulated.
     *
     * A message describing the status of this initialisation is written to the
     * DET_CONTROL_INIT_STATUS_SIR_NAME record.
     *
-    * Note: The task does not abort if the SDSU context structure could not be 
-    * created because another attempt can be made by issuing the detInit 
+    * Note: The task does not abort if the SDSU context structure could not be
+    * created because another attempt can be made by issuing the detInit
     * command.
     */
 
-    if (vmeAddress == 0)
-    {
-       simulate = TRUE;
-    }
-    else
-    {
-       simulate = FALSE;
-    }
-
-    sdsuId = sdsuContextCreate (vmeAddress, simulate);
-    if ( (sdsuId == NULL) ||
-         (sdsuReset (sdsuId, SDSU_RESET_VME | SDSU_RESET_CONTROLLER) == ERROR)
-       )
-    {
-       /*
-        * The SDSU controller could not be initialised. Issue an error message
-        * and also write a message to the DET_CONTROL_INIT_STATUS_SIR_NAME 
-        * record.
-        */
-
-       ERROR_LOG ("Failed to initialise SDSU controller");
-       initFailed = TRUE;
-
-       /*
-        * Note. When epToVxPipeWrite has a NULL record name argument, as it 
-        * does below, the record name is extracted from the 
-        * "pDetInitStatusContext" structure.
-        */
-
-       if (epToVxPipeWrite (NULL, 
-           "WARNING: SDSU Not Initialised", pDetInitStatusContext)
-           == ERROR)
-       {
-          ERROR_LOG (
-          "Also failed to write warning message to SDSU status pipe.");
-       }
-    }
-    else
-    {
-       if ( simulate )
-       {
-          sprintf (pStatusString, "SDSU SIMULATED: ID = 0x%-8x", (int) sdsuId);
-       }
-       else
-       {
-          sprintf (pStatusString, "SDSU Initialised OK: ID = 0x%-8x", 
-                   (int) sdsuId);
-       }
-
-       MESSAGE_LOG2 (MSG_LOG, "%s: %s", pWfsName, pStatusString);
-
-       if (epToVxPipeWrite (NULL, pStatusString, pDetInitStatusContext) == 
-           ERROR)
-       {
-          ERROR_LOG (
-          "Failed to write initialisation message to SDSU status pipe.");
-       }
-
-       /*
-        * Update the global variables used to remember the SDSU and observing 
-        * contexts, as an aid to engineering.
-        */
-
-       sdsuId->fastCamera = TRUE;
-       detSdsuIdP2 = sdsuId;
-       detObsIdP2 = obsId;
-    }
-
-    /*
-     * Download the default OMF code to the SDSU controller automatically on 
-     * startup. The health is set to WARNING if this fails
-     */
-
-#ifdef DEBUG_DOWNLOAD
-    sdsuPrintRepBuf (sdsuId) ;
-#endif
-
-    tryDownload = 0 ;
-    while ( (detDownloadDefault (pWfsName, pRecordPrefix, sdsuId) == ERROR) 
-            && (tryDownload < 10) )
-    {
-          /* RESET REP BUFFER, VME and CONTROLLER */
-#ifdef DEBUG_DOWNLOAD
-          sdsuPrintRepBuf (sdsuId) ;
-#endif
-          if ( sdsu_initRepBuf (sdsuId) == ERROR )
-             ERROR_LOG ("Failed to reset to zero the reply buffer ");
-#ifdef DEBUG_DOWNLOAD
-          sdsuPrintRepBuf (sdsuId) ;
-#endif
-          if ( sdsuReset (sdsuId, SDSU_RESET_VME | SDSU_RESET_CONTROLLER) == ERROR )
-             ERROR_LOG ("Failed to reset SDSU interface and controller");
-#ifdef DEBUG_DOWNLOAD
-          sdsuPrintRepBuf (sdsuId) ;
-#endif
-
-          tryDownload ++ ;
-    }
-
-    if ( tryDownload == 10 )
-    {
-       ERROR_LOG ("Failed to download default DSP code on startup");
-       initFailed = TRUE;
-    }
-
-    /*
-     * Compare the default detector geometry contained in the DSP code with 
-     * the values written to xPixels and yPixels from the DET_CONTROL 
-     * software constants. (The DSP code describes what the detector 
-     * controller is capable of and the DET_CONTROL constants are used to 
-     * define the default parameter limits of CAD commands). After calling
-     * detCheckGeometry, xMax and yMax should contain the maximum possible 
-     * data array size, allowing a data buffer of a suitable size to be 
-     * allocated.
-     *
-     */
-
-    if (detCheckGeometry (pWfsName, sdsuId, &xMax, &yMax, &xPixels, &yPixels) 
-        == ERROR)
-    {
-       ERROR_LOG (
-       "Error while checking default detector geometry on startup");
-       initFailed = TRUE;
-    }
-
-    obsId->binningFlag = FALSE ;
-
-    /*
-     * Create data buffer to hold several frames of data, using the xPixels 
-     * and yPixels determined above.
-     */
-
-    if (sdsuBufferCreate (sdsuId, (xMax * yMax), maxFrames) == ERROR)
-    {
-       ERROR_LOG ("Failed to create data buffer on startup");
-       initFailed = TRUE;
-    }
-
-    /*
-     * Initialise the readout process with our frame callback.
-     * There is no packet callback in this version of the code.
-     * INTERRUPTS DISABLED. SWITCH TO SIMPLE VERSION.
-     */
-   
-    if (sdsuSimpleReadoutOpen (sdsuId, NULL, detObserveEnd, 0, TRUE) 
-        == ERROR)
-    {
-       ERROR_LOG ("Failed to start readout task on startup");
-       initFailed = TRUE;
-    }
-
-    /*
-     * Create a signal processing geometry structure and initialise it with
-     * the default detector geometry.
-     */
-
-    obsId->ospGeometry = 
-    (struct OSP_GEOMETRY *) calloc (1, sizeof(struct OSP_GEOMETRY));
-    if ( obsId->ospGeometry == NULL )
-    {
-       ERROR_SET (0, "Failed to create OSP geometry structure on startup", 
-                  ERROR_LOG_NOW);
-       initFailed = TRUE;
-    }
-
-    if ( !sdsuId->simulate )
-    {
-       if (detCopyGeometry (pWfsName, sdsuId, obsId->ospGeometry) == ERROR)
-       {
-          ERROR_LOG (
-          "Error while copying default detector geometry on startup");
-          initFailed = TRUE;
-       }
-
-       strcpy (obsId->pWfsName, "PWFS2");
-    }
-    else
-    {
-       /* In simulation mode use default values for the parameters. */
-
-       obsId->ospGeometry->sectors =     4;
-       obsId->ospGeometry->xstart =      0;
-       obsId->ospGeometry->ystart =      0;
-       obsId->ospGeometry->xbin =        1;
-       obsId->ospGeometry->ybin =        1;
-       obsId->ospGeometry->xraster =     xPixels / 2;
-       obsId->ospGeometry->yraster =     yPixels / 2;
-       obsId->ospGeometry->xspace =      0;
-       obsId->ospGeometry->yspace =      0;
-       obsId->ospGeometry->xsubap =      1;
-       obsId->ospGeometry->ysubap =      1;
-       obsId->ospGeometry->xarraysize =  xPixels;
-       obsId->ospGeometry->yarraysize =  yPixels;
-       obsId->ospGeometry->framesizeflag = 1;
-
-       strcpy (obsId->pWfsName, "PWFS2");
-    }
-
-   /*
-    * Create a signal processing context structure appropriate for the given 
-    * WFS, specifying the initial geometry, unless the initialisation file for 
-    * that WFS is defined to be "NONE".
-    */
-
-   if ( strcmp (DET_CONTROL_PWFS2_OSPFGINI_FILE, "NONE") != 0 )
+   if (vmeAddress == 0)
    {
-      obsId->ospFGContext = 
-      ospInit (DET_CONTROL_PAR_FILE_PATH "/" DET_CONTROL_PWFS2_OSPFGINI_FILE,
-               obsId->ospGeometry);
-      if (obsId->ospFGContext == NULL)
-      {
-         ERROR_LOG (
-         "Failed to initialise FG signal processing context on startup");
-         return (ERROR);
-      }
-      obsId->sigMode = OSP_MODE_NONE; 
-      obsId->nCoaddFrames = 1;       
-      obsId->coaddCounter = 0;
+      simulate = TRUE;
    }
    else
    {
-      MESSAGE_LOG (MSG_LOG, "PWFS2 - FG signal processing not initialised");
+      simulate = FALSE;
+   }
+
+   sdsuId = sdsuContextCreate (vmeAddress, simulate);
+   if ((sdsuId == NULL) ||
+       (sdsuReset (sdsuId, SDSU_RESET_VME | SDSU_RESET_CONTROLLER) == ERROR))
+   {
+      /*
+       * The SDSU controller could not be initialised. Issue an error message
+       * and also write a message to the DET_CONTROL_INIT_STATUS_SIR_NAME
+       * record.
+       */
+
+      ERROR_LOG ("Failed to initialise SDSU controller");
+      initFailed = TRUE;
+
+      /*
+       * When epToVxPipeWrite has a NULL record name argument, as it
+       * does below, the record name is extracted from the
+       * "pDetInitStatusContext" structure.
+       */
+
+      if (epToVxPipeWrite (NULL,
+          "WARNING: SDSU Not Initialised", pDetInitStatusContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Also failed to write warning message to SDSU status pipe.");
+      }
+   }
+   else
+   {
+      if ( simulate )
+      {
+         sprintf (pStatusString, "SDSU SIMULATED: ID = 0x%-8x", (int) sdsuId);
+      }
+      else
+      {
+         sprintf (pStatusString, "SDSU Initialised OK: ID = 0x%-8x",
+                  (int) sdsuId);
+      }
+
+      MESSAGE_LOG2 (MSG_LOG, "%s: %s", pWfsName, pStatusString);
+
+      if (epToVxPipeWrite (NULL, pStatusString, pDetInitStatusContext) ==
+          ERROR)
+      {
+         ERROR_LOG (
+         "Failed to write initialisation message to SDSU status pipe.");
+      }
+
+       /*
+       * Update the global variables used to remember the SDSU and observing
+       * contexts, as an aid to engineering.
+       */
+
+      sdsuId->fastCamera = TRUE;
+      detSdsuIdP2 = sdsuId;
+   }
+
+   detObsIdP2 = obsId;
+   obsId->sdsuId = sdsuId;
+
+   /*
+    * Download the default OMF code to the SDSU controller automatically on
+    * startup. The health is set to WARNING if this fails
+    */
+
+#ifdef DEBUG_DOWNLOAD
+   sdsuPrintRepBuf (sdsuId) ;
+#endif
+
+   tryDownload = 0 ;
+   while ( (detDownloadDefault (pWfsName, pRecordPrefix, sdsuId) == ERROR)
+           && (tryDownload < 10) )
+   {
+       /* Reset REP BUFFER, VME and CONTROLLER */
+#ifdef DEBUG_DOWNLOAD
+       sdsuPrintRepBuf (sdsuId) ;
+#endif
+       if ( sdsu_initRepBuf (sdsuId) == ERROR )
+          ERROR_LOG ("Failed to reset to zero the reply buffer ");
+#ifdef DEBUG_DOWNLOAD
+       sdsuPrintRepBuf (sdsuId) ;
+#endif
+       if ( sdsuReset (sdsuId, SDSU_RESET_VME | SDSU_RESET_CONTROLLER) == 
+            ERROR )
+          ERROR_LOG ("Failed to reset SDSU interface and controller");
+#ifdef DEBUG_DOWNLOAD
+       sdsuPrintRepBuf (sdsuId) ;
+#endif
+
+       tryDownload ++ ;
+   }
+
+   if ( tryDownload == 10 )
+   {
+      ERROR_LOG ("Failed to download default DSP code on startup");
+      initFailed = TRUE;
+   }
+
+   /*
+    * Initialize aoCcdId with the default detector geometry.
+    */
+
+   if (detReadDefaultDspCcdGeometry (sdsuId, aoCcdId) == ERROR)
+   {
+      ERROR_LOG ( "Error while init default detector geometry on startup");
+      initFailed = TRUE;
+   }
+
+   /*
+    * Create data buffer to frames of data, using the aoCcdId->xMax
+    * and aoCcdId->yMax determined above.
+    */
+
+   if (sdsuBufferCreate (sdsuId, (aoCcdId->xMax * aoCcdId->yMax), maxFrames) == 
+       ERROR)
+   {
+      ERROR_LOG ("Failed to create data buffer on startup");
+      initFailed = TRUE;
+   }
+
+   /*
+    * Initialise the readout process with our frame callback.
+    * There is no packet callback in this version of the code.
+    */
+
+   if (sdsuSimpleReadoutOpen (sdsuId, NULL, detObserveEnd, 0, TRUE)
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to start readout task on startup");
+      initFailed = TRUE;
+   }
+
+   strcpy (obsId->pWfsName, "PWFS2");
+
+   /*
+    * Set the default temperature to -20
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_LOG ("Failed to set CCD default temperature");
+      initFailed = TRUE;
+   }
+   else
+   {
+      tempCode = (uint32)1282 ;
+      tempCoeff = (uint32)128 ;
+
+      MESSAGE_LOG2 (MSG_LOG,
+                    "Defining temperature control parameters: %#lx %#lx",
+                    tempCode, tempCoeff);
+
+      if ( (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
+            == ERROR) ||
+           (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
+            == ERROR) )
+      {
+         ERROR_LOG ("Error setting temperasture control parameters");
+         initFailed = TRUE;
+      }
+      readTempReadyFlag = TRUE ;
+   }
+
+   /*
+    * Set the readout mode per default to NONE - "T_MODE" parameter
+    */
+
+   /*if ( sdsuId == NULL )
+   {
+      ERROR_LOG ("Failed to set readout mode of the CCD per default");
+      initFailed = TRUE;
+   }
+   else
+   {
+      mode = 0 ;
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_MODE", (uint32) mode ) ==
+           ERROR )
+      {
+         ERROR_LOG ("Error setting readout mode parameter");
+         initFailed = TRUE;
+      }
+      else
+      {
+         if ( sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) 
+              == ERROR )
+         {
+            ERROR_LOG (
+                 "Failed to activate TIMING DSP parameters with LDP command");
+            initFailed = TRUE;
+         }
+      }
+   }*/
+
+   /*
+    * Now init all the geometry SIR records
+    */
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->outputsNb) ,
+                        obsId->pOutputsContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init outputs sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSize) ,
+                        obsId->pDetXsizeContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init x size sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySize) ,
+                        obsId->pDetYsizeContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ysize sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xStart) ,
+                        obsId->pXstartContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xstart sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yStart) ,
+                        obsId->pYstartContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ystart sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSubapNb) ,
+                        obsId->pXsubapContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xsubap sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySubapNb) ,
+                        obsId->pYsubapContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init Ysubap sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xRaster) ,
+                        obsId->pXrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yRaster) ,
+                        obsId->pYrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSpace) ,
+                        obsId->pXspaceContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xspace sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySpace) ,
+                        obsId->pYspaceContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yspace sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xBin) ,
+                        obsId->pXbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xbin sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yBin) ,
+                        obsId->pYbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ybin sad record");
+      return (ERROR);
+   }
+
+   /* 
+    * Init the AO control context structure
+    */
+
+   if ( strcmp (DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+   {
+      strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( aoInitFileName , "/" ) ;
+      strcat ( aoInitFileName , DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE ) ;
+
+      if ( aoCtrlContextInit ( aoInitFileName, aoCcdId, aoCtrlId ) == ERROR )
+      {
+         ERROR_LOG ("Failed to init ao control context structure on startup");
+         initFailed = TRUE;
+      }
+
+      if ( aoCtrlId->initFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, "Initialized", pAoCtrlInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->darkInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->darkFileName, 
+                              obsId->pAoDarkInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->flatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->flatFileName, pAoFlatInitContext) 
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         }
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (aoCtrlId->threshold), 
+                           obsId->pAoThreshContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (aoCtrlId->totalThreshold), 
+                           obsId->pAoTotalContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+      }
+
+      aoCtrlContextShow (aoCcdId, aoCtrlId);
+   }
+   else
+   {
+      MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
+   }
+
+   /* 
+    * Mode is no processing, init the fields of the observe CAD record 
+    */
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
    }
 
    /*
@@ -790,11 +1549,19 @@ STATUS   detControl
 
    if (detDhsInitialised)
    {
-      if ( detDhsConnect (pWfsName, &dhsConnection) == ERROR )
+      if ( detDhsConnect () == ERROR )
       {
          ERROR_LOG ("Failed to connect to DHS");
          initWarning = TRUE;
-      }      
+      }
+      /*else   
+      { 
+         if ( detDhsTaskOpen () == ERROR )
+         {
+            ERROR_LOG ("Failed to open the DHS task");
+            initWarning = TRUE;
+         }
+      }*/
    }
    else
    {
@@ -802,8 +1569,8 @@ STATUS   detControl
    }
 
    /*
-    * Initialise the health of this detector control task to "GOOD" if 
-    * successful or "BAD" if a significant problem occurred during the 
+    * Initialise the health of this detector control task to "GOOD" if
+    * successful or "BAD" if a significant problem occurred during the
     * initialisation.
     */
 
@@ -830,7 +1597,9 @@ STATUS   detControl
       }
    }
 
-   /* Finally, reset the "initialising" flag. */
+   /* Finally, reset the "initialising" flag and set the system state to
+    * RUNNING
+    */
 
    initState = CAR_IDLE;
    if (epToVxPipeWrite (NULL, (char *) &initState, pDetInitContext) == ERROR)
@@ -838,26 +1607,29 @@ STATUS   detControl
       ERROR_LOG ("Failed to set initialisation state to IDLE");
    }
 
+   if (epToVxPipeWrite (NULL, "RUNNING", pStateContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set state to RUNNING");
+   }
+
    /*
-    * The task has been successfully initialised, so it can now go into a loop 
-    * waiting for commands. The detector controller task can be terminated by 
-    * setting the "detControlStop" variable from the console. The task will 
-    * stop when it discovers its bit set. All the tasks can be stopped at 
-    * once by setting "detControlStop" to 0xf.
+    * The task has been successfully initialised, so it can now go into a loop
+    * waiting for commands. The detector controller task can be terminated by
+    * setting the "detControlStop" variable from the console. The task will
+    * stop when it discovers its bit set. 
     */
 
    MESSAGE_LOG3 (MSG_MINDEBUG,
-   "Entering loop waiting for commands... pWfsName=%s, pRecordPrefix=%s pCmdPacket=%#x",
+   "Entering loop waiting for commands... pWfsName=%s, pRecordPrefix=%s pCmdPacket =%#x",
    pWfsName, pRecordPrefix, (int) cadCmdContext->pCmdPacket);
 
    while ( (detControlStop & detControlStopMask) == 0 )
    {
-
       /*
        * Zero all the bits in the file descriptor read structure and then
        * set each bit corresponding to the file descriptors of the data
-       * update pipes of all the wavefront sensors being monitored by this
-       * task. Also set the bit corresponding to the pipe used to receive CAD 
+       * update pipes of the wavefront sensor being monitored by this
+       * task. Also set the bit corresponding to the pipe used to receive CAD
        * commands.
        */
 
@@ -875,7 +1647,7 @@ STATUS   detControl
 
       if (select (widthSelect, & updateFds, NULL, NULL, NULL) == ERROR)
       {
-         ERROR_SET (0, "File descriptor selection function, select(), failed", 
+         ERROR_SET (0, "File descriptor selection function, select(), failed",
                     ERROR_LOG_NOW );
          return (ERROR);
       }
@@ -886,11 +1658,10 @@ STATUS   detControl
 
       if (FD_ISSET (cadCmdContext->cadPipeFd, & updateFds))
       {
-
          /*
-          * Initialise the error number and then read the command number from 
-          * the pipe communicating CAD commands. The epToVxCmdRead() call will 
-          * block until a command becomes available. The detControl task is 
+          * Initialise the error number and then read the command number from
+          * the pipe communicating CAD commands. The epToVxCmdRead() call will
+          * block until a command becomes available. The detControl task is
           * aborted if it fails to read a command.
           */
 
@@ -904,7 +1675,7 @@ STATUS   detControl
 
          /* Log a message each time a command is received. */
 
-         MESSAGE_LOG1 (MSG_FULLDEBUG, "CAD command %d received.", 
+         MESSAGE_LOG1 (MSG_FULLDEBUG, "CAD command %d received.",
                        commandNumber);
 
          /* Process the command.
@@ -921,83 +1692,89 @@ STATUS   detControl
              * response from the command.
              */
 
-            MESSAGE_LOG1 (MSG_LOG, 
+            MESSAGE_LOG1 (MSG_LOG,
             "Command %d received in simulation mode... no action taken",
             commandNumber);
-         }
-
-         else if (commandNumber == DET_CONTROL_CMD_SETUP)
-         {
-            /* Setup SDSU controller params. */
-
-            errorNumber = 
-            detSetup (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                      sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_CHOP)
          {
             /* Specify chop states. */
 
-            errorNumber = 
-            detChop (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     sdsuId, obsId);
+            errorNumber =
+            detChop (cadCmdContext, commandNumber, sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_FRAME_SIZE)
+         {
+            /* Specify frame size. */
+
+            errorNumber =
+            detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
+                          aoCtrlId, pAoCtrlInitContext, pAoFlatInitContext);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_DHS_RECONNECT)
+         {
+            /* Set dhs connection. */
+
+            errorNumber = detDhsReconnect (cadCmdContext, commandNumber, 
+                                           sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_DHS_DISPLAY)
+         {
+            /* Set dhs display parameters. */
+
+            errorNumber = detDhsDisplay (cadCmdContext, commandNumber, 
+                                         sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_EXPOSURE)
          {
             /* Define exposure parameters. */
 
-            errorNumber = 
-            detExposure (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                         sdsuId, obsId);
+            errorNumber =
+            detExposure (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_OBSTYPE)
          {
             /* Define observation type. */
 
-            errorNumber = 
-            detObstype(pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                       sdsuId, obsId);
+            errorNumber =
+            detObstype(cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SETWCS)
          {
             /* Define World Coordinate System parameters. */
 
-            errorNumber = 
-            detSetWcs(pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                      sdsuId, obsId);
+            errorNumber =
+            detSetWcs(cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_OBSERVE)
          {
             /*
-             * Make observation. Before starting the observation, load up the 
+             * Make observation. Before starting the observation, load up the
              * observation ID structure.
              */
 
             obsId->sdsuId = sdsuId;
             obsId->timeId = timeId;
             obsId->pDetObservingContext = pDetObservingContext;
-            obsId->xPixels = xPixels;
-            obsId->yPixels = yPixels;
-            obsId->dhsConnection = dhsConnection;
-            obsId->coaddCounter = 0;
-            obsId->updateGain = FALSE;
-            /*printf ( "detControl : updateGain = %d\n" , obsId->updateGain );*/
 
-            errorNumber = 
-            detObserveStart (pWfsName, pRecordPrefix, cadCmdContext, 
-                             commandNumber, sdsuId, obsId);
+            errorNumber =
+            detObserveStart (cadCmdContext, commandNumber, sdsuId, obsId,
+                             aoCcdId, aoCtrlId, aoCbImId, aoCbCtrlId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_PAUSE)
          {
             /* Pause observation (not supported by SDSU controller). */
 
-            ERROR_SET (S_detControl_BAD_COMMAND, 
+            ERROR_SET (S_detControl_BAD_COMMAND,
                        "Pause observation command not supported",
                        ERROR_LOG_NOW);
             errorNumber = S_detControl_BAD_COMMAND;
@@ -1007,47 +1784,44 @@ STATUS   detControl
          {
             /* Continue observation (not supported by SDSU controller). */
 
-            ERROR_SET (S_detControl_BAD_COMMAND, 
+            ERROR_SET (S_detControl_BAD_COMMAND,
                        "Continue observation command not supported",
                        ERROR_LOG_NOW);
             errorNumber = S_detControl_BAD_COMMAND;
          }
-
          else if (commandNumber == DET_CONTROL_CMD_STOP)
          {
             /* Stop observation and keep the data. */
 
-            errorNumber = 
-            detStop (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     sdsuId, obsId);
+            errorNumber =
+            detStop (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_ABORT)
          {
             /* Abort observation and throw away the data. */
 
-            errorNumber = 
-            detAbort( pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                      sdsuId, obsId);
+            errorNumber =
+            detAbort(cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_INITIALISE)
          {
             /* Initialise SDSU context and redownload DSP code. */
 
-            errorNumber = 
-            detInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     &sdsuId, obsId, &vmeAddress, &xMax, &yMax, &xPixels, 
-                     &yPixels,
-                     &maxFrames, pDetInitContext, pDetInitStatusContext);
+            errorNumber =
+            detInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
+                     &sdsuId, obsId, &vmeAddress, 
+                     &maxFrames, pDetInitContext, pDetInitStatusContext,
+                     pStateContext, aoCcdId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_RESET)
          {
             /* Reset SDSU controller and redownload DSP code. */
 
-            errorNumber = 
-            detReset (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
+            errorNumber =
+            detReset (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
                       sdsuId, obsId);
          }
 
@@ -1055,54 +1829,51 @@ STATUS   detControl
          {
             /* Test SDSU controller. */
 
-            errorNumber = 
-            detTest (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     sdsuId, obsId, pTestResultsContext);
+            errorNumber =
+            detTest (cadCmdContext, commandNumber, sdsuId, obsId, 
+                     pTestResultsContext, pDetTestContext);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SAVE)
          {
             /* Save SDSU control parameters. */
 
-            errorNumber = 
-            detSave (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     sdsuId, obsId);
+            errorNumber =
+            detSave (cadCmdContext, commandNumber, sdsuId, obsId);
          }
-
          else if (commandNumber == DET_CONTROL_CMD_GEOMETRY)
          {
             /* Set readout geometry. */
 
-            errorNumber = 
-            detGeometry (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                         sdsuId, obsId, &xPixels, &yPixels);
+            errorNumber =
+            detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId,
+                         aoCtrlId, pAoCtrlInitContext, 
+                         pAoFlatInitContext);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_PRIMITIVE)
          {
             /* Execute SDSU primitive command. */
 
-            errorNumber = 
-            detPrimitive (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                          sdsuId, obsId, pDetPrimReplyContext);
+            errorNumber =
+            detPrimitive (cadCmdContext, commandNumber, sdsuId, obsId, 
+                          pDetPrimReplyContext);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_MODE)
          {
             /* Set SDSU readout mode. */
 
-            errorNumber = 
-            detMode (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     sdsuId, obsId);
+            errorNumber =
+            detMode (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_OFFSET)
          {
             /* Set SDSU ADC offsets. */
 
-            errorNumber = 
-            detOffset (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                       sdsuId, obsId);
+            errorNumber =
+            detOffset (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_TEMP)
@@ -1110,41 +1881,151 @@ STATUS   detControl
 
             /* Define SDSU temperature control parameters. */
 
-            errorNumber = 
-            detTemp (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     sdsuId, obsId);
+            errorNumber =
+            detTemp (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGINIT)
          {
 
-            /* Initialise signal processing. */
+            /* Initialise AO control structure. */
 
-            errorNumber = 
-            detSigInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                        sdsuId, obsId);
+            errorNumber =
+            detSigInit (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId,
+                        aoCtrlId, pAoCtrlInitContext, pAoFlatInitContext);
          }
+
          else if (commandNumber == DET_CONTROL_CMD_SIGINITGAIN)
          {
 
             /* Update closed loop gains when closed loop */
 
-            errorNumber = 
-            detSigInitGain (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                          sdsuId, obsId);
+            errorNumber =
+            detSigInitGain (cadCmdContext, commandNumber, sdsuId, obsId, 
+                            aoCtrlId);
          }
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE)
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_NONE)
          {
 
-            /* Define signal processing mode. */
+            /* Set to no processing the processig mode */
 
-            errorNumber = 
-            detSigMode (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                        sdsuId, obsId);
+            errorNumber =
+            detSigModeNone (pRecordPrefix, cadCmdContext, commandNumber, 
+                            sdsuId, obsId);
          }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_DARK)
+         {
+
+            /* Set to dark subtraction the signal processing */
+
+            errorNumber =
+            detSigModeDark (pRecordPrefix, cadCmdContext, commandNumber, 
+                            sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG)
+         {
+
+            /* Set to global guide the signal processing */
+
+            errorNumber =
+            detSigModeGg (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+                          obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS)
+         {
+
+            /* Set to fast guide and focus the signal processing */
+
+            errorNumber =
+            detSigModeFgFocus (pRecordPrefix, cadCmdContext, commandNumber, 
+                               sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_COADD)
+         {
+
+            /* Set to coadd the signal processing */
+
+            errorNumber =
+            detSigModeCoadd (pRecordPrefix, cadCmdContext, commandNumber, 
+                             sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_THRESH)
+         {
+
+            /* Set to threshold computation the signal processing */
+
+            errorNumber =
+            detSigModeThresh (pRecordPrefix, cadCmdContext, commandNumber, 
+                              sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG_COADD)
+         {
+
+            /* Set to global guide and coadd the signal processing */
+
+            errorNumber =
+            detSigModeGgCoadd (pRecordPrefix, cadCmdContext, commandNumber, 
+                               sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_SEQ)
+         {
+
+            /* Set to sequence closed loop the signal processing */
+
+            errorNumber =
+            detSigModeSeq (pRecordPrefix, cadCmdContext, commandNumber, 
+                           sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_TOTAL)
+         {
+
+            /* Set to average flux computation the signal processing */
+
+            errorNumber =
+            detSigModeTotal (pRecordPrefix, cadCmdContext, commandNumber, 
+                             sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_SEQ_DARK)
+         {
+
+            /* Sequence dark mode */
+            errorNumber =
+            detSigModeSeqDark (pRecordPrefix, cadCmdContext, commandNumber, 
+                               sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS_COADD)
+         {
+
+            /* Set to FG and focus and coadd the signal processing */
+
+            errorNumber =
+            detSigModeFgCoadd (pRecordPrefix, cadCmdContext, commandNumber, 
+                               sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_CB)
+         {
+
+            /* Init parameters for saving circular buffers */
+
+            errorNumber =
+            detSigInitCB (cadCmdContext, commandNumber, sdsuId, obsId);
+         }
+
          else
          {
-            ERROR_SET1 (S_detControl_BAD_COMMAND, 
+            ERROR_SET1 (S_detControl_BAD_COMMAND,
                         "Command %d not currently implemented",
                         ERROR_LOG_NOW, commandNumber);
             errorNumber = S_detControl_BAD_COMMAND;
@@ -1164,13 +2045,14 @@ STATUS   detControl
        * data updates from the genSub records.
        */
 
+
       if ( (dataUpdateContext != NULL) &&
            (FD_ISSET (dataUpdateContext->gensubPipeFd, & updateFds)) )
       {
 
          /*
           * A message has arrived on the genSub data update pipe.
-          * Read the message from the pipe and check it has been read 
+          * Read the message from the pipe and check it has been read
           * successfully.
           */
 
@@ -1181,7 +2063,7 @@ STATUS   detControl
 
          /* Log a message each time a data update is received. */
 
-         MESSAGE_LOG3 (MSG_FULLDEBUG, 
+         MESSAGE_LOG3 (MSG_FULLDEBUG,
             "%s - data update %d received. Packet=%#x",
             pWfsName, updateNumber, (int) dataUpdateContext->pUpdatePacket);
       }
@@ -1193,7 +2075,7 @@ STATUS   detControl
 
    if (sdsuId != NULL) sdsuContextDelete (sdsuId);
 
-   MESSAGE_LOG1 (MSG_WARNING, 
+   MESSAGE_LOG1 (MSG_WARNING,
                  "Detector Control task for WFS %s stopped.", pWfsName);
    epToVxSetHealth( pWfsName, "BAD" );
 
@@ -1210,29 +2092,22 @@ STATUS   detControl
 
 /*+
  *   FUNCTION NAME:
- *   detSetup
+ *   detObsContextCreate
  *
  *   INVOCATION:
- *   detSetup (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *             obsId)
+ *   detObsContextCreate (void)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
- *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
- *   (>) commandNumber (int)             Command number
- *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
- *   (>) obsId         (OBS_ID)          Observation context structure
+ *   None
  *
  *   FUNCTION VALUE:
- *   (uint32)   Error number. 0 if command successful.
+ *   (OBS_ID)   Pointer to observation ID, or NULL if unsuccessful.
  *
  *   PURPOSE:
- *   Execute detSetup command
+ *   Create an observation ID structure
  *
  *   DESCRIPTION:
- *   This function sets up the SDSU controller by downloading a set of 
- *   parameters from a file.
+ *   This function creates and initialises an observation ID structure.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -1248,108 +2123,543 @@ STATUS   detControl
  *-
  */
 
-uint32 detSetup
-   (
-   const char *      pWfsName,      /* Name of wavefront sensor.              */
-   const char *      pRecordPrefix, /* Record name prefix.                    */
-   CAD_CMD_CONTEXT   cadCmdContext, /* CAD command context structure.         */
-   int               commandNumber, /* Command number.                        */
-   SDSU_ID           sdsuId,        /* SDSU context structure.                */
-   OBS_ID            obsId          /* Observation context structure.         */
-   )
+OBS_ID detObsContextCreate (void)
 {
-   uint32      errorNumber;         /* Error number reported by task.         */
+   OBS_ID   obsId;
 
-   long        destId;              /* Destination DSP ID.                    */
-
-   char        pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                                    /* Path name for file.                    */
-   char        pParamFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                                    /* Name of file of SDSU parameter values  */
-   char        pFullParamFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-                                    /* Combined path name and file name.      */
-
-   /*
-    * Initialise the error number and obtain the attributes provided with the 
-    * command.
+   /* Allocate memory for the observation ID structure, initialising its
+    * contents to zero.
     */
 
-   errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pFilePath);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pParamFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *) & destId);
+#ifdef DEBUG
+  printf (
+  "detObsContextCreate: Allocating %d bytes of memory for OBS_ID structure.\n",
+  sizeof (OBS_ID_STRUCT));
+#endif /* DEBUG */
+
+   if ((obsId = (OBS_ID) calloc ((size_t) 1, sizeof (OBS_ID_STRUCT))) == NULL)
+   {
+      ERROR_SET (0,"Memory allocation for observation context failed",
+                 ERROR_LOG_SAVE);
+      return (NULL);
+   }
+
+   /* Create a binary semaphore for synchronising observation threads. */
+
+   obsId->syncSem = semBCreate( SEM_Q_FIFO, SEM_EMPTY );
+   if ( obsId->syncSem == NULL )
+   {
+      ERROR_SET (0, "Failed to create observation synchronisation semaphore",
+                 ERROR_LOG_SAVE);
+      cfree ((char *) obsId);
+      return (NULL);
+   }
+
+   return (obsId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDownloadDefault
+ *
+ *   INVOCATION:
+ *   detDownloadDefault (pWfsName, pRecordPrefix, sdsuId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pWfsName      (const char *) Name of wavefront sensor p2
+ *   (>) pRecordPrefix (const char *) Record Name prefix
+ *   (>) sdsuId        (SDSU_ID)      Current SDSU context structure
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Download default OMF files
+ *
+ *   DESCRIPTION:
+ *   This function downloads DSP code from the default OMF files. Executed on 
+ *   startup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detDownloadDefault
+   (
+   const char *   pWfsName,         /* Name of wavefront sensor.              */
+   const char *   pRecordPrefix,    /* Record Name prefix                     */
+   SDSU_ID        sdsuId            /* SDSU context structure.                */
+   )
+{
+   char           pFullOmfFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+                             /* Combined path name and file name.             */
+   /* 
+    * Variables associated with "Download OMF file" command.
+    * (omfPath, vmeFile, timFile and utlFile use general filename parameters)
+    */
+
+   BOOL           limitAdrsRange;      
+                             /* Flag for limiting address range in DSP memory */
 
    /*
-    * Check there are valid SDSU and observation context structures.
+    * Check there is a valid SDSU context structure.
     */
 
    if ( sdsuId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
                  ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-
-   if ( obsId == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
+      return (ERROR);
    }
 
    /*
-    * The command can only be used when an observation is not in progress.
+    * Download default OMF code to the VME DSP, unless the default file name is
+    * "NONE" or blank. If the code could not be downloaded, the controller 
+    * health is set "BAD", since it cannot do anything until this code is 
+    * downloaded.
     */
 
-   if ( obsId->observing )
+   if ( (strcmp (DET_CONTROL_OMF_VME_FILE, "") != 0) &&
+       (strcmp (DET_CONTROL_OMF_VME_FILE, "NONE") != 0)
+      )
    {
-      ERROR_SET (S_detControl_BUSY,
-                 "Observation in progress - abort observation and try again", 
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_BUSY;
-      return (errorNumber);
+
+      /* The ability to limit the address range is ignored. It is rarely needed
+       * and can only be done by executing sdsuFileDnload at the console (since
+       * sdsuFileDnload expects to prompt for the values).
+       */
+
+      limitAdrsRange = 0;
+
+      sprintf (pFullOmfFileName, "%s/%s", 
+               DET_CONTROL_OMF_FILE_PATH, DET_CONTROL_OMF_VME_FILE);
+      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to VME DSP...", 
+                    pFullOmfFileName);
+
+      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_VME, 
+                          limitAdrsRange) == ERROR)
+      {
+         ERROR_LOG ("Failed to download default OMF file to VME DSP");
+         epToVxSetHealth( pRecordPrefix, "BAD" );
+         return (ERROR);
+      }
    }
 
    /*
-    * Combine the path and file names together, and append the string ".par" 
-    * to the file name
-    * if it is not already present. Ignore the file path if not provided.
+    * Download default OMF code to the TIMING DSP, unless the default file 
+    * name is "NONE" or blank. If the code could not be downloaded, the 
+    * controller health is set "BAD", since it cannot do anything until this 
+    * code is downloaded. 
     */
 
-   if ( strcmp (pFilePath, "") == 0 )
+
+   if ( (strcmp (DET_CONTROL_GBD_OMF_TIM_FILE, "") != 0) &&
+        (strcmp (DET_CONTROL_GBD_OMF_TIM_FILE, "NONE") != 0)
+      )
    {
-      strncpy (pFullParamFileName, pParamFileName, 
-               EPICS_MAX_BYTES_STRING_ATTRIB);
+
+      /* The ability to limit the address range is ignored. It is rarely needed
+       * and can only be done by executing sdsuFileDnload at the console (since
+       * sdsuFileDnload expects to prompt for the values).
+       */
+
+      limitAdrsRange = 0;
+
+      sprintf (pFullOmfFileName, "%s/%s", DET_CONTROL_OMF_FILE_PATH,
+               DET_CONTROL_GBD_OMF_TIM_FILE);
+      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to TIMING DSP...", 
+                    pFullOmfFileName);
+
+      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_TIM, 
+                          limitAdrsRange) == ERROR)
+      {
+         ERROR_LOG ("Failed to download default OMF file to TIMING DSP");
+         epToVxSetHealth( pRecordPrefix, "BAD" );
+         return (ERROR);
+      }
+   }
+
+   /*
+    * Download default OMF code to the UTILITY DSP, unless the default file 
+    * name is "NONE" or blank. If the code could not be downloaded, the 
+    * controller health is set "BAD", since it cannot do anything until this 
+    * code is downloaded.
+    */
+
+   if ( (strcmp (DET_CONTROL_OMF_UTL_FILE, "") != 0) &&
+       (strcmp (DET_CONTROL_OMF_UTL_FILE, "NONE") != 0)
+      )
+   {
+
+      /* The ability to limit the address range is ignored. It is rarely needed
+       * and can only be done by executing sdsuFileDnload at the console (since
+       * sdsuFileDnload expects to prompt for the values).
+       */
+
+      limitAdrsRange = 0;
+
+      sprintf (pFullOmfFileName, "%s/%s", DET_CONTROL_OMF_FILE_PATH, 
+               DET_CONTROL_OMF_UTL_FILE);
+      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to UTILITY DSP...", 
+               pFullOmfFileName);
+
+      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_UTL, 
+               limitAdrsRange) == ERROR)
+      {
+         ERROR_LOG ("Failed to download default OMF file to UTILITY DSP");
+         epToVxSetHealth( pRecordPrefix, "BAD" );
+         return (ERROR);
+      }
+   }
+
+   if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE", 160) == ERROR)
+   {
+      ERROR_LOG ("Failed to increase the PWFS packet size");
+   }
+
+   /*
+    * After successfully downloading new OMF code, the controller must be 
+    * reinitialised by sending an "INI" command to the utility DSP and a 
+    * "LDP" command to the timing DSP.
+    */
+
+   if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to initialise UTILITY DSP with INI command");
+      epToVxSetHealth( pRecordPrefix, "BAD" );
+      return (ERROR);
+   }
+   if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
+      epToVxSetHealth( pRecordPrefix, "BAD" );
+      return (ERROR);
+   }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detReadDefaultDspCcdGeometry
+ *
+ *   INVOCATION:
+ *   detReadDefaultDspCcdGeometry (sdsuId, aoCcdId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) sdsuId   (SDSU_ID)      Current SDSU context structure
+ *   (<) aoCcdId  (AO_CCD_ID)    AO CCD geometry context structure
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the default configuration for the AO CCD geometry from the DSP code.
+ *
+ *   DESCRIPTION:
+ *   This function read all the CCD geometry parameters from the DSP code. 
+ *   Executed on startup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   aoP2Lib.h
+ *   sdsuLib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detReadDefaultDspCcdGeometry
+   (
+   SDSU_ID       sdsuId,          /* SDSU context structure.                  */
+   AO_CCD_ID     aoCcdId          /* AO CCD geometry context structure.       */
+   )
+{
+   uint32        xSdsuRas;        /* SDSU parameter (T_XRAS).                 */
+   uint32        ySdsuRas;        /* SDSU parameter (T_YRAS).                 */
+   uint32        xSdsuSubap;      /* SDSU parameter (T_XSUBAP).               */
+   uint32        ySdsuSubap;      /* SDSU parameter (T_YSUBAP).               */
+   uint32        sdsuOutputs;     /* SDSU parameter (T_OUTPUTS).              */
+   uint32        xSdsuChip;       /* SDSU parameter (T_XSIZE).                */
+   uint32        ySdsuChip;       /* SDSU parameter (T_YSIZE).                */
+   uint32        pSizeSdsu;       /* SDSU parameter (V_PSIZE).                */
+   uint32        uscanSdsu;       /* SDSU parameter (T_USCAN)                 */
+   uint32        xSdsuStart;      /* SDSU parameter (T_XSTART).               */
+   uint32        ySdsuStart;      /* SDSU parameter (T_YSTART).               */
+   uint32        xSdsuBin;        /* SDSU parameter (T_XBIN).                 */
+   uint32        ySdsuBin;        /* SDSU parameter (T_YBIN).                 */
+   uint32        xSdsuSpace;      /* SDSU parameter (T_XSPACE).               */
+   uint32        ySdsuSpace;      /* SDSU parameter (T_YSPACE).               */
+   uint32        xSdsuTail;       /* SDSU parameter (T_XTAIL).                */
+
+   int           xPixelsOutput;   /* Number of X super pixels per output.     */
+   int           yPixelsOutput;   /* Number of Y super pixels per output.     */
+   int           dspxPixels;      /* Number of X pixels expected by DSP code. */
+   int           dspyPixels;      /* Number of Y pixels expected by DSP code. */
+   int           dspxMax;         /* Maximum X pixels expected by DSP code.   */
+   int           dspyMax;         /* Maximum Y pixels expected by DSP code.   */
+   int           i;               /* index                                    */
+
+   /*
+    * Check there is a valid SDSU context structure.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+                 ERROR_LOG_NOW);
+      return (ERROR);
+   }
+
+   /*
+    * In simulation mode no DSP code will have been downloaded, and nothing
+    * will be downloaded
+    */
+
+   if ( !sdsuId->simulate )
+   {
+      /*
+       * Initialise xMax and yMax of the aoCcdId structure 
+       */
+
+      aoCcdId->xMax = CCD_XSIZE;
+      aoCcdId->yMax = CCD_YSIZE;
+
+      /*
+       * Initialise xPixels and yPixels of the aoCcdId structure 
+       */
+
+      aoCcdId->xPixels = aoCcdId->xMax;
+      aoCcdId->yPixels = aoCcdId->yMax;
+
+      /*
+       * Obtain the xSdsuChip, ySdsuChip, xSdsuRas, ySdsuRas, xSdsuSubap, 
+       * ySdsuSubap and number of outputs parameters from the SDSU controller 
+       * and use these to calculate the default size expected by the DSP code.
+       */
+
+      if ( (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSIZE", &xSdsuChip) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSIZE", &ySdsuChip) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XRAS", &xSdsuRas) == 
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YRAS", &ySdsuRas) == 
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSUBAP", &xSdsuSubap) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSUBAP", &ySdsuSubap) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_OUTPUTS", &sdsuOutputs) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_VME, "V_PSIZE", &pSizeSdsu) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_USCAN", &uscanSdsu) == 
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSTART", &xSdsuStart) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSTART", &ySdsuStart) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XBIN", &xSdsuBin) == 
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YBIN", &ySdsuBin) == 
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSPACE", &xSdsuSpace) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSPACE", &ySdsuSpace) ==
+            ERROR) ||
+           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XTAIL", &xSdsuTail) ==
+            ERROR)
+         )
+      {
+         ERROR_SET (0, "Failed to read SDSU parameters", ERROR_LOG_SAVE);
+         return (ERROR);
+      }
+
+      aoCcdId->xSize = xSdsuChip;
+      aoCcdId->ySize = ySdsuChip;
+      aoCcdId->outputsNb = sdsuOutputs;
+      aoCcdId->packetSize = pSizeSdsu;
+      aoCcdId->uscanNb = (int)uscanSdsu;
+      aoCcdId->xSubapNb = xSdsuSubap;
+      aoCcdId->ySubapNb = ySdsuSubap;
+      aoCcdId->xRaster = xSdsuRas;
+      aoCcdId->yRaster = ySdsuRas;
+      aoCcdId->xStart = xSdsuStart;
+      aoCcdId->yStart = ySdsuStart;
+      aoCcdId->xBin = xSdsuBin;
+      aoCcdId->yBin = ySdsuBin;
+      aoCcdId->xSpace = xSdsuSpace;
+      aoCcdId->ySpace = ySdsuSpace;
+      aoCcdId->xTail = xSdsuTail;
+      
+      /*
+       * xPixelsOutput=(xSdsuRas*xSdsuSubap) and 
+       * yPixelsOutput=(ySdsuRas*ySdsuSubap) represent the number of pixels 
+       * per output. The arrangement depends on the number of outputs.
+       * In our case, there are 4 outputs the sectors generated from each 
+       * output are arranged like this
+       *
+       *   0----->------+-----<------0
+       *   |  sector 4  |  sector 3  |
+       *   +------------+------------+
+       *   |  sector 1  |  sector 2  |
+       *   0----->------+-----<------0
+       *
+       * "0" shows the origin of each sector and ">" the direction of readout.
+       */
+
+      xPixelsOutput = (int) (xSdsuRas * xSdsuSubap);
+      yPixelsOutput = (int) (ySdsuRas * ySdsuSubap);
+
+      dspxPixels = xPixelsOutput * 2;
+      dspyPixels = yPixelsOutput * 2;
+      dspxMax = (int) xSdsuChip * 2;
+      dspyMax = (int) ySdsuChip * 2;
+
+      /*
+       * Compare the default detector size downloaded in the DSP code with
+       * xMax and yMax and increase if necessary. Replace the current xPixels
+       * and yPixels with that found in the DSP code.
+       */
+
+      if ( dspxMax > aoCcdId->xMax )
+      {
+         MESSAGE_LOG2 (MSG_LOG, 
+            "Maximum number of X pixels increased from %d to %d\n",
+            aoCcdId->xMax, dspxMax);
+         aoCcdId->xMax = dspxMax;
+      }
+
+      if ( dspyMax > aoCcdId->yMax )
+      {
+         MESSAGE_LOG2 (MSG_LOG, 
+            "Maximum number of Y pixels increased from %d to %d\n",
+            aoCcdId->yMax, dspyMax);
+         aoCcdId->yMax = dspyMax;
+      }
+
+      if ( dspxPixels != aoCcdId->xPixels )
+      {
+         MESSAGE_LOG2 (MSG_LOG, 
+            "Default number of X pixels changed from %d to %d\n",
+            aoCcdId->xPixels, dspxPixels);
+         aoCcdId->xPixels = dspxPixels;
+      }
+
+      if ( dspyPixels != aoCcdId->yPixels )
+      {
+         MESSAGE_LOG2 (MSG_LOG, 
+            "Default number of Y pixels changed from %d to %d\n",
+            aoCcdId->yPixels, dspyPixels);
+         aoCcdId->yPixels = dspyPixels;
+      }
+
+      aoCcdId->pixelsNb = (aoCcdId->xPixels) * (aoCcdId->yPixels) ;
+      
+      /*
+       * Update the expected number of packets per frame using the number of
+       * pixels read from the controller.
+       */
+
+      if ( pSizeSdsu > 0 )
+      {
+         aoCcdId->packetNb = 
+         (int)ceil ( (double) (sdsuOutputs * xPixelsOutput * yPixelsOutput) / 
+         (double) pSizeSdsu );
+      }
+      else
+      {
+         aoCcdId->packetNb = 1;
+      }
+
+      sdsuId->packetsPerFrame = aoCcdId->packetNb;
+
+      /*
+       * Set the binningFlag. Only binning is implemented.
+       */
+
+      if ( ( aoCcdId->xBin != 1 ) || ( aoCcdId->yBin != 1) )
+         aoCcdId->binningFlag = TRUE;
+      else
+         aoCcdId->binningFlag = FALSE;
+
+      /*
+       * By default all subapertures are used 
+       */
+
+      aoCcdId->subapNb = aoCcdId->xSubapNb * aoCcdId->ySubapNb * 
+                         aoCcdId->outputsNb;
+      aoCcdId->subapNotUsedNb = 0;
+      aoCcdId->subapUsedNb = aoCcdId->subapNb - aoCcdId->subapNotUsedNb;
+      aoCcdId->centroidsNb = 2 * aoCcdId->subapUsedNb;
+
+      for ( i = 0 ; i < aoCcdId->subapNb ; i ++ )
+          aoCcdId->subapUsedVect[i] = TRUE;
    }
    else
    {
-      sprintf (pFullParamFileName, "%s/%s", pFilePath, pParamFileName );
+      /* Simulation mode */
+   
+      aoCcdId->outputsNb = 4;
+      aoCcdId->xSize = CCD_XSIZE / 2;
+      aoCcdId->ySize = CCD_YSIZE / 2;
+      aoCcdId->xMax = CCD_XSIZE;
+      aoCcdId->yMax = CCD_YSIZE;
+      aoCcdId->xStart = 0;
+      aoCcdId->yStart = 0;
+      aoCcdId->xBin = 1;
+      aoCcdId->yBin = 1;
+      aoCcdId->xRaster = CCD_XSIZE / 2;
+      aoCcdId->yRaster = CCD_YSIZE / 2;
+      aoCcdId->xSpace = 0;
+      aoCcdId->ySpace = 0;
+      aoCcdId->xSubapNb = 1;
+      aoCcdId->ySubapNb = 1;
+      aoCcdId->subapNb = aoCcdId->xSubapNb * aoCcdId->ySubapNb * 
+                         aoCcdId->outputsNb;
+      aoCcdId->subapNotUsedNb = 0;
+      aoCcdId->subapUsedNb = aoCcdId->subapNb - aoCcdId->subapNotUsedNb;
+      aoCcdId->centroidsNb = 2 * aoCcdId->subapUsedNb;
+      for ( i = 0 ; i < aoCcdId->subapNb ; i ++ )
+          aoCcdId->subapUsedVect[i] = TRUE;
+      aoCcdId->xPixels = aoCcdId->xMax;
+      aoCcdId->yPixels = aoCcdId->yMax;
+      aoCcdId->pixelsNb = aoCcdId->xPixels * aoCcdId->yPixels;
+      aoCcdId->uscanNb = 4;
+      aoCcdId->xTail = 0;
+      aoCcdId->packetSize = CCD_XSIZE * CCD_YSIZE ;
+      aoCcdId->packetNb = 1;
+      aoCcdId->binningFlag = FALSE;
+
+      sdsuId->packetsPerFrame = 1;
    }
 
-   if (strstr (pFullParamFileName, ".par") == NULL)
-      strncat (pFullParamFileName, ".par", EPICS_MAX_BYTES_STRING_ATTRIB);
+   aoCcdContextShow ( aoCcdId ) ;
 
-   /*
-    * Download SDSU parameters from the specified file to the specified DSP.
-    * (If the DSP is specified as "-1" the parameters will be written to
-    * their corresponding DSP automatically).
-    */
-
-   MESSAGE_LOG1 (MSG_LOG, 
-                 "Downloading SDSU parameters from %s", pFullParamFileName);
-
-   if ( sdsuParamDnload( sdsuId, pFullParamFileName, (uint32) destId) == ERROR )
-   {
-      ERROR_LOG ("Failed to download SDSU parameter file");
-      errorNumber = S_detControl_SDSU_ERROR;
-      return (errorNumber);
-   }
-
-   return (errorNumber);
+   return (OK);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -1358,12 +2668,9 @@ uint32 detSetup
  *   detChop
  *
  *   INVOCATION:
- *   detChop (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *            obsId)
+ *   detChop (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -1394,8 +2701,6 @@ uint32 detSetup
 
 uint32 detChop
    (
-   const char *    pWfsName,        /* Name of wavefront sensor.              */
-   const char *    pRecordPrefix,   /* Record name prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -1452,7 +2757,6 @@ uint32 detChop
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -1460,12 +2764,9 @@ uint32 detChop
  *   detExposure
  *
  *   INVOCATION:
- *   detExposure (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                sdsuId, obsId)
+ *   detExposure (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -1496,8 +2797,6 @@ uint32 detChop
 
 uint32 detExposure
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
@@ -1507,10 +2806,13 @@ uint32 detExposure
    uint32          errorNumber;   /* Error number reported by task.           */
 
    long            nframe;        /* Number of frames.                        */
+   long            nframePerDataset; /* Number of frames per dataset          */
    double          exposure;      /* Exposure time in seconds.                */
 
    uint32          sdsuNframe;    /* Value for SDSU parameter NFRAME.         */
    uint32          sdsuTexp;      /* Value for SDSU parameter T_EXP.          */
+
+   int             nexp;          /* Number of exposure/dataset               */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -1580,12 +2882,23 @@ uint32 detExposure
       return (errorNumber);
    }
 
+   if (epToVxPipeWrite( NULL, (char *)(int)&exposure, obsId->pIntTimeContext ) 
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to set integration time SIR record");
+   }
+
+   obsId->exposureTime = exposure;
+   sdsuId->readMethod = 1;
+
    if ( nframe == -1 )
    {
       MESSAGE_LOG1 (MSG_LOG, 
          "Setting up for an infinite series of exposures of %f seconds each",
          exposure);
-      nframe = 0;      /* DSP code assumes 0 means infinite number of frames. */
+
+      nframePerDataset = nframe ;
+
 
       /* BUG WORK AROUND: THE SDSU CONTROLLER RETURNS FRAME COUNT=1 WHEN ASKED 
        * FOR AN INFINITE
@@ -1595,6 +2908,7 @@ uint32 detExposure
        * IS INFINITE.
        */
 
+      nframe = 0;      /* DSP code assumes 0 means infinite number of frames. */
       obsId->continuous = TRUE;
 
    }
@@ -1603,7 +2917,8 @@ uint32 detExposure
       MESSAGE_LOG1 (MSG_LOG, "Setting up for one exposure of %f seconds", 
                     exposure);
 
-      /* BUG WORK AROUND */
+      nframePerDataset = nframe ;
+
       obsId->continuous = FALSE;
    }
    else
@@ -1611,7 +2926,8 @@ uint32 detExposure
       MESSAGE_LOG2 (MSG_LOG, 
       "Setting up for %ld exposures of %f seconds each", nframe, exposure);
 
-      /* BUG WORK AROUND */
+      nframePerDataset = 1 ;
+
       obsId->continuous = FALSE;
    }
 
@@ -1619,13 +2935,7 @@ uint32 detExposure
     * timing DSP Also define the total number of frames in the observation 
     * context structure. */
 
-   /* BUG WORK AROUND: DRIVE SDSU CONTROLLER IN ONE-SHOT MODE.
-    * SET THE NUMBER OF SDSU FRAMES TO 1 REGARDLESS. SMB - 16 JAN 99.
-    */
-
    sdsuNframe = (uint32) nframe;
-   /*sdsuNframe = (uint32) 1;*/
-
    obsId->totalFrames = nframe;
 
 #ifdef DEBUG
@@ -1658,16 +2968,50 @@ uint32 detExposure
    /* Update the requested total exposure time in the observation context 
     * structure. */
 
-   obsId->exposedRQ = nframe * exposure;
+   obsId->exposedRQ = 1 * exposure;
    sdsuId->exposureTicks = (int) (exposure * sysClkRateGet());
    /*printf ( "exposureTicks =%d\n" , sdsuId->exposureTicks ) ;*/
 
 #ifdef DEBUG
    printf ("detExposure: Setting exposureTicks to %d\n", sdsuId->exposureTicks);
 #endif /* DEBUG */
+
+   /*
+    * Set up the requested and actual number of exposure/dataset.
+    * Always 1 for the moment
+    */
+   nexp = 1 ;
+   if (epToVxPipeWrite( NULL, (char *) &nexp, obsId->pNExpRQContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init Number exp/dataset SIR record");
+   }
+   if (epToVxPipeWrite( NULL, (char *) &nexp, obsId->pNExpContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init Number exp/dataset SIR record");
+   }
+
+   /*
+    * Set up the the total integration time requested
+    */
+
+   if (epToVxPipeWrite( NULL, (char *)(int)(&obsId->exposedRQ), 
+                        obsId->pExposedRQContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init total integration time requested SIR record");
+   }
+
+   /*
+    * Set up the the number of frames per dataset
+    */
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&nframePerDataset, 
+                        obsId->pNFramesContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set number of frames SIR record");
+   }
+
    return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -1676,12 +3020,9 @@ uint32 detExposure
  *   detObstype
  *
  *   INVOCATION:
- *   detObstype (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *               sdsuId, obsId)
+ *   detObstype (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -1712,8 +3053,6 @@ uint32 detExposure
 
 uint32 detObstype
    (
-   const char *    pWfsName,        /* Name of wavefront sensor.              */
-   const char *    pRecordPrefix,   /* Record name prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
@@ -1773,7 +3112,6 @@ uint32 detObstype
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -1781,12 +3119,9 @@ uint32 detObstype
  *   detSetWcs
  *
  *   INVOCATION:
- *   detSetWCs (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *              obsId)
+ *   detSetWCs (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -1817,8 +3152,6 @@ uint32 detObstype
 
 uint32 detSetWcs
    (
-   const char *    pWfsName,         /* Name of wavefront sensor.             */
-   const char *    pRecordPrefix,    /* Record name prefix.                   */
    CAD_CMD_CONTEXT cadCmdContext,    /* CAD command context structure.        */
    int             commandNumber,    /* Command number.                       */
    SDSU_ID         sdsuId,           /* SDSU context structure.               */
@@ -1976,6 +3309,981 @@ uint32 detSetWcs
    return (errorNumber);
 }
 
+/* -------------------------------------------------------------------------- */
+
+void detDhsErrorCallback         /* DHS error callback function.              */
+   (
+   DHS_CONNECT     connect,      /* DHS connection ID for connection causing  */
+                                 /* error.                                    */
+   DHS_STATUS      errorNum,     /* DHS error number.                         */
+   DHS_ERR_LEVEL   errorLev,     /* DHS error level.                          */
+   char *          msg,          /* DHS error message string.                 */
+   DHS_TAG         tag,          /* DHS command tag of the error.             */
+   void *          userData      /* Pointer to user data (if any).            */
+   )
+{
+   printErr ("DHS error callback: connection=%d errNum=%d level=%d \"%s\"\n",
+             (int) connect, (int) errorNum, (int) errorLev, msg);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsInit
+ *
+ *   INVOCATION:
+ *   detDhsInit (pClientName, numConnect, pHostName, pSeverName)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pClientName  (const char *)  Unique name for DHS client.
+ *   (>) numConnect   (const int)     Maximum number of DHS connections.
+ *   (>) pHostName    (const char *)  Name of DHS data server host.
+ *   (>) pServerName  (const char *)  Name of DHS data server.
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Initialise the DHS library and define DHS server information
+ *
+ *   DESCRIPTION:
+ *   This function initialises the DHS library and sets up the DHS server 
+ *   information used by the detector controller.
+ *
+ *   EXTERNAL VARIABLES:
+ *   (<) detDhsInitialised (BOOL)   DHS initialised flag.
+ *   (<) detDhsSem         (SEM_ID) DHS semaphore
+ *   (<) detDhsStartSem    (SEM_ID) DHS semaphore
+ *   (<) pDetDhsClientName (char *) Current name of DHS client= Instrument name.
+ *   (<) pDetDhsHostName   (char *) Current name of DHS server host.
+ *   (<) pDetDhsServerName (char *) Current name of DHS server.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   dhs.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *
+ *-
+ */
+
+STATUS detDhsInit
+   (
+   const char *   pClientName,      /* Unique name of DHS client.             */
+   const int      numConnect,       /* Maximum number of DHS connections.     */
+   const char *   pHostName,        /* Name of data server host.              */
+   const char *   pServerName       /* Name of server.                        */
+   )
+{
+   DHS_STATUS     dhsErrno;         /* DHS error number.                      */
+   DHS_THREAD     dhsThreadId;      /* DHS thread ID.                         */
+
+   /* Initialise the DHS error number. */
+
+   dhsErrno = DHS_S_SUCCESS;        /* <--- DHS error number initialised here.*/
+
+   /*
+    * Check the DHS library has not already been initialised.
+    */
+
+   if (detDhsInitialised)
+   {
+      ERROR_SET (S_detControl_DHS_ERROR, "DHS already initialised", 
+                 ERROR_LOG_NOW);
+      return (ERROR);
+   }
+
+   /* Create the DHS semaphore and take it, ensuring that only one task 
+    * attempts to initialise the DHS and update the DHS global variables.
+    */
+
+   detDhsSem = semMCreate( SEM_Q_FIFO | SEM_DELETE_SAFE );
+   if ( (detDhsSem == NULL) || (semTake (detDhsSem, NO_WAIT) == ERROR) )
+   {
+      ERROR_SET (0, "Failed to create and take DHS semaphore", ERROR_LOG_NOW);
+      semGive (detDhsSem);
+      return (ERROR);
+   }
+
+   /*
+    * Initialise the DHS, specifying a unique name and maximum number of 
+    * connections.
+    */
+
+#ifdef DEBUG
+   printf ("detDhsInit: dhsInit pClientName=%s numConnect=%d\n", 
+           pClientName, numConnect);
+#endif /* DEBUG */
+
+   dhsInit (pClientName, numConnect, &dhsErrno);
+   CHECK_DHS (dhsErrno);
+
+   if (dhsErrno != DHS_S_SUCCESS)
+   {
+      ERROR_SET1 (S_detControl_DHS_ERROR, 
+                  "Failed to initialise DHS (dhsErrno=%d)",
+                  ERROR_LOG_SAVE, dhsErrno);
+      semGive (detDhsSem);
+      return (ERROR);
+   }
+
+   /* Set up callbacks. */
+
+#ifdef DEBUG
+   printf (
+   "detDhsInit: dhsCallbackSet DHS_CBT_ERROR=%d detDhsErrorCallback=%p\n",
+   DHS_CBT_ERROR, detDhsErrorCallback);
+#endif /* DEBUG */
+
+   dhsCallbackSet (DHS_CBT_ERROR, detDhsErrorCallback, &dhsErrno);
+   CHECK_DHS (dhsErrno);
+
+   if (dhsErrno != DHS_S_SUCCESS)
+   {
+      ERROR_SET1 (S_detControl_DHS_ERROR, 
+         "Failed to set up DHS error callback (dhsErrno=%d)",
+         ERROR_LOG_SAVE, dhsErrno);
+      semGive (detDhsSem);
+      return (ERROR);
+   }
+
+   /*
+    * Start the DHS event loop.
+    */
+
+#ifdef DEBUG
+   printf ("detDhsInit: dhsEventLoop DHS_ELT_THREADED=%d ... ", 
+           DHS_ELT_THREADED);
+#endif /* DEBUG */
+
+   dhsEventLoop (DHS_ELT_THREADED, &dhsThreadId, &dhsErrno);
+   CHECK_DHS (dhsErrno);
+
+#ifdef DEBUG
+   printf ("dhsThreadId=%d dhsErrno=%d\n", dhsThreadId, dhsErrno);
+#endif /* DEBUG */
+
+   if (dhsErrno != DHS_S_SUCCESS)
+   {
+      ERROR_SET1 (S_detControl_DHS_ERROR, 
+         "Failed to start DHS event loop (dhsErrno=%d)",
+         ERROR_LOG_SAVE, dhsErrno);
+      semGive (detDhsSem);
+      return (ERROR);
+   }
+
+   /* Store the given client name, host name and server name in global 
+    * variables.
+    */
+
+   strncpy (pDetDhsClientName, pClientName, EPICS_MAX_BYTES_STRING_ATTRIB);
+   strncpy (pDetDhsHostName, pHostName, EPICS_MAX_BYTES_STRING_ATTRIB);
+   strncpy (pDetDhsServerName, pServerName, EPICS_MAX_BYTES_STRING_ATTRIB);
+
+   /* Create the start DHS semaphores */
+
+   detDhsStartSem = semBCreate( SEM_Q_FIFO, SEM_EMPTY );
+   if ( detDhsStartSem == NULL )
+   {
+      ERROR_SET (0, "Failed to create start DHS semaphore", ERROR_LOG_NOW);
+      return (ERROR);
+   }
+
+   /* Finally, set the detDhsInitialised flag and return the semaphore. */
+
+   detDhsInitialised = TRUE;
+   semGive (detDhsSem);
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsTaskOpen
+ *
+ *   INVOCATION:
+ *   detDhsTaskOpen ()
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Start a dhs task for PWFS2
+ *
+ *   DESCRIPTION:
+ *   This routine will start a DHS task. This routine uses global variables. 
+ *   Executed on startup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   (!) detDhsTaskId (int) Task Id of the dhs task
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detDhsTaskOpen
+   (
+   )
+{
+   char *       dhsName;
+   const char * myName;
+
+   /* Complain if the dhs task already exists */
+
+   if ( detDhsTaskId != 0 )
+   {
+      ERROR_SET (0, "Dhs task already exists", ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   /*
+    * Create the name of the task: name of the current task and append an
+    * extra 5 bytes ":dhs" 
+    */
+
+   myName = taskName(0);
+
+   if ((dhsName = (char *) malloc(strlen(myName) + 5)) == NULL)
+   {
+      ERROR_SET (0, "Memory allocation for dhs task name failed",
+                 ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   strcpy ( dhsName, myName ) ;
+   strcat ( dhsName, ":dhs" ) ;
+
+   /* Taskspawn the dhs task */
+
+   detDhsTaskId = taskSpawn (dhsName, DET_DHS_TASK_PRIORITY, VX_FP_TASK, 
+                             DET_DHS_TASK_STACK_SIZE, (FUNCPTR) detDhsTask, 
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+   if ( detDhsTaskId == ERROR )
+   {
+      ERROR_SET1 (0, "Failed to spawn dhs task %s\n", 
+                  ERROR_LOG_SAVE, dhsName );
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "taskSpawn ( %s, %d, %x, %x, detDhsTask, ...) ok\n" , 
+            dhsName, DET_DHS_TASK_PRIORITY, VX_FP_TASK, 
+            DET_DHS_TASK_STACK_SIZE);
+#endif
+
+   /* Free the temporary name buffer. */
+
+   free (dhsName);
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsTaskClose
+ *
+ *   INVOCATION:
+ *   detDhsTaskClose ()
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Shut down the dhs task for PWFS2
+ *
+ *   DESCRIPTION:
+ *   This routine will stop the DHS task. This routine uses global variables. 
+ *   Executed on startup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   (!) detDhsTask (int) Task Id of the dhs task
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detDhsTaskClose
+   (
+   )
+{
+
+   /* if the dhs task already exists do nothing */
+
+   if ( detDhsTaskId == 0 )
+   {
+      return (OK);
+   }
+
+   /* Delete the task */
+
+   if ( taskDelete (detDhsTaskId) == ERROR )
+   {
+      ERROR_SET (0, "Failed to delete the dhs task \n", ERROR_LOG_SAVE );
+      return (ERROR);
+   }
+
+   detDhsTaskId = 0;
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsConnect
+ *
+ *   INVOCATION:
+ *   detDhsConnect ()
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Initialise connection to DHS 
+ *
+ *   DESCRIPTION:
+ *   This function initialises the connection to the DHS.
+ *
+ *   EXTERNAL VARIABLES:
+ *   (>)   detDhsInitialised   (BOOL)        DHS initialised flag
+ *   (>)   pDetDhsHostName     (char *)      DHS server host name
+ *   (>)   pDetDhsServerName   (char *)      DHS server name
+ *   (!)   detDhsConnection    (DHS_CONNECT) DHS connection Id
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The DHS library should already have been initialised by calling detDhsInit.
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   dhs.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detDhsConnect
+   (
+   )
+{
+   DHS_STATUS     dhsErrno;           /* DHS error number.                    */
+
+
+   /* Initialise the DHS error number. */
+
+   dhsErrno = DHS_S_SUCCESS;
+
+   /*
+    * Check the DHS library has been initialised.
+    */
+
+   if (!detDhsInitialised)
+   {
+      ERROR_SET (S_detControl_DHS_ERROR, "DHS not initialised", ERROR_LOG_NOW);
+      return (ERROR);
+   }
+
+   /*
+    * Take the DHS semaphore, so that only one WFS attempts to connect to the
+    * DHS and access the pDetDhsHostName and pDetDhsServerName global variables
+    * at any one time.
+    */
+
+#ifdef DEBUG
+   printf ("detDhsConnect: Taking DHS semaphore for PWFS2...\n");
+#endif /* DEBUG */
+
+   if ( semTake (detDhsSem, DHS_WAIT_TIMEOUT) == ERROR )
+   {
+      ERROR_SET (0, "Failed to take DHS semaphore", ERROR_LOG_NOW);
+      semGive (detDhsSem);
+      return (ERROR);
+   }
+
+   /*
+    * Connect to the DHS server. There is no user data to be supplied
+    * (hence NULL).
+    */
+
+   MESSAGE_LOG2 (MSG_LOG, "Connecting to DHS server %s on host %s",
+      pDetDhsServerName, pDetDhsHostName);
+
+   detDhsConnection = dhsConnect (pDetDhsHostName, pDetDhsServerName, NULL,
+                                  &dhsErrno);
+   CHECK_DHS (dhsErrno);
+
+#ifdef DEBUG
+   printf ("dhsConnect: dhsConnection=%ld dhsErrno=%d\n", detDhsConnection,
+           dhsErrno);
+#endif /* DEBUG */
+
+   if (dhsErrno != DHS_S_SUCCESS)
+   {
+      ERROR_SET3 (S_detControl_DHS_ERROR,
+         "Failed to connect to DHS server %s on %s (dhsErrno=%d)",
+         ERROR_LOG_SAVE, pDetDhsServerName, pDetDhsHostName, dhsErrno);
+      semGive (detDhsSem);
+      return (ERROR);
+   }
+
+   /* Finally, return the semaphore. */
+
+   semGive (detDhsSem);
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsCheckErrno
+ *
+ *   INVOCATION:
+ *   detDhsCheckErrno (dhsErrno, line, filename)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) dhsErrno   (const DHS_STATUS)  DHS error number (unchanged)
+ *   (>) line       (const int)         Line number to report
+ *   (>) filename   (const char *)      File name to report
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Check DHS error number and report any error messages
+ *
+ *   DESCRIPTION:
+ *   This function checks the DHS error number provided. If the status suggests
+ *   an error has occurred, the dhsMessage() functions are used to extract
+ *   information from the DHS message stack.
+ *   This function should be called after every DHS function to ensure all the
+ *   relevant DHS errors are reported.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   dhs.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *
+ *   BUGS:
+ *   This function appears to cause problems with the DHS.
+ *   For the time being its contents are commented out and replaced by a
+ *   trivial report. SMB - 17 Jan 1999.
+ *-
+ */
+
+void detDhsCheckErrno
+   (
+   const DHS_STATUS  dhsErrno,        /* DHS error number.                    */
+   const int         line,            /* Line number.                         */
+   const char *      filename         /* File name.                           */
+   )
+{
+
+   /*
+    * If the DHS error number is ok, this function will return without doing
+    * anything.
+    */
+
+   if ( dhsErrno != DHS_S_SUCCESS )
+   {
+      errorSet ( line, filename, 0, "DHS error detected", ERROR_LOG_NOW );
+   }
+
+   return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsCheckCmdStatus
+ *
+ *   INVOCATION:
+ *   detDhsCheckCmdStatus (dhsTag)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>)   dhsTag   (const DHS_TAG)      DHS command tag (unchanged)
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Check and reports DHS command status
+ *
+ *   DESCRIPTION:
+ *   This function checks the DHS command status and reports a message if the
+ *   status is not DHS_CS_DONE.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   dhs.h
+ *
+ *   DEFICIENCIES:
+ *   The DHS allocates a buffer to store the command status message. It would
+ *   be more sensible if the buffer was allocated here and provided to the DHS,
+ *   as there would then be more control over the buffer. At the moment the
+ *   buffer has to be explicitly freed because the DHS does not do this.
+ *   SMB - 17 Jan 1998.
+ *-
+ */
+
+STATUS detDhsCheckCmdStatus
+   (
+   const DHS_TAG   dhsTag            /* DHS command tag.                      */
+   )
+{
+   DHS_CMD_STATUS  sendStatus;       /* DHS command status.                   */
+   DHS_STATUS      dhsErrno;         /* DHS error number.                     */
+   char            *msg = NULL;      /* Command status message.               */
+
+
+   /* Initialise the DHS error number */
+
+   dhsErrno = DHS_S_SUCCESS;
+
+   /*
+    * Query the command status associated with the tag.
+    * Note that the DHS allocates a buffer to hold the command status message
+    * and returns a pointer to this buffer in "msg".
+    */
+
+#ifdef DEBUG
+   printf ("detDhsCheckCmdStatus: dhsStatus\n");
+#endif /* DEBUG */
+
+   /*sendStatus = dhsStatus (dhsTag, &msg, &dhsErrno);
+   CHECK_DHS (dhsErrno);*/
+
+   sendStatus = DHS_CS_DONE ;
+
+   /*
+    * Check that the query worked and report an error if it didn't.
+    * If the query returned DHS_CS_DONE nothing more needs to be done.
+    * Any other command status is reported as an error.
+    */
+
+   if ( dhsErrno != DHS_S_SUCCESS )
+   {
+
+      ERROR_SET2 (0,
+         "Failed to query DHS command status for tag %ld, (dhsErrno=%d)",
+         ERROR_LOG_SAVE, dhsTag, dhsErrno);
+
+      /* Free the message buffer if allocated. */
+      if ( msg != NULL ) free (msg);
+      return (ERROR);
+   }
+   else if ( sendStatus != DHS_CS_DONE )
+   {
+      switch (sendStatus)
+      {
+         case (DHS_CS_IDLE):
+
+            ERROR_SET1 (0,
+               "Command still waiting to execute, %s", ERROR_LOG_SAVE, msg);
+            break;
+
+         case (DHS_CS_BUSY):
+
+            ERROR_SET1 (0,
+               "Command is still executing, %s", ERROR_LOG_SAVE, msg);
+            break;
+
+         case (DHS_CS_ERROR):
+
+            ERROR_SET1 (0, "Command completed with error, %s",
+                       ERROR_LOG_SAVE, msg);
+            break;
+
+         case (DHS_CS_ABORTED):
+
+            ERROR_SET1 (0, "Command was aborted, %s.", ERROR_LOG_SAVE, msg);
+            break;
+
+         case (DHS_CS_PENDING):
+
+            ERROR_SET1 (0, "Command is still pending, %s", ERROR_LOG_SAVE, msg);
+            break;
+
+         case (DHS_CS_LOST):
+
+            ERROR_SET1 (0, "Connection was lost before command completed, %s",
+                       ERROR_LOG_SAVE, msg);
+            break;
+
+         default:
+            ERROR_SET2 (0,
+               "Unknown command status, %d, %s", ERROR_LOG_SAVE, sendStatus,
+               msg);
+            break;
+      }
+
+      /* Free the message buffer if allocated. */
+      if ( msg != NULL ) free (msg);
+
+      return (ERROR);
+   }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsTask
+ *
+ *   INVOCATION:
+ *   detDhsTask ()
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Dhs task
+ *
+ *   DESCRIPTION:
+ *   
+ *   Executed on startup.
+ *
+ *   EXTERNAL VARIABLES:
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void detDhsTask
+   (
+   )
+{
+   /* Circular buffer variable */
+
+   int         indexCb;
+   int         imageSize;
+   float *     pImage;
+   float *     pi;
+   float *     pc;
+   float *     pMax;
+
+   int         i;
+   
+   double      elapsed;
+
+   /* DHS variables (see dhstests.c) */
+
+   DHS_STATUS  dhsErrno;          /* DHS error number.                        */
+   DHS_STATUS  dummyDhsErrno;     /* DHS error number used for freeing        */
+                                  /* resources.                               */
+   DHS_TAG     putTag;            /* DHS data transfer tag.                   */
+
+   /* Create and initialise an error context structure for this task */
+
+   if (errorInit () == ERROR)
+   {
+      printErr ("detDhsTask: Failed to initialise error context structure.\n");
+      return;
+   }
+
+   /*
+    * Initialise the DHS error number.
+    */
+
+   dhsErrno = DHS_S_SUCCESS;         /* <---- DHS error number is reset here. */
+
+   /* Flush the start semaphore */
+
+   if ( semTake ( detDhsStartSem, NO_WAIT ) == ERROR )
+   {
+      ERROR_SET ( 0, "Failed to flush the DHS start semaphore",
+                  ERROR_LOG_SAVE );
+   }
+   else
+   {
+      MESSAGE_LOG (MSG_FULLDEBUG, "Flush the DHS start semaphore") ;
+   }
+
+   /* Now enter a infinite loop waiting for an observation */
+
+   MESSAGE_LOG ( MSG_LOG , "detDhsTask(): Enter the infinite loop" ) ;
+
+   while ( TRUE )
+   {
+       /* Wait for the start DHS semaphore  */
+
+       if ( detObsIdP2->stopped != TRUE )
+       {
+          if ( semTake ( detDhsStartSem, WAIT_FOREVER ) == ERROR )
+          {
+             ERROR_SET ( 0, "Failed to take the DHS start semaphore",
+                         ERROR_LOG_SAVE );
+             return;
+          }
+
+          MESSAGE_LOG ( MSG_FULLDEBUG, "Take the start DHS semaphore" ); 
+
+          /* Init the address of the image to display */
+
+          indexCb = detObsIdP2->aoCbImId->position;
+
+          while ( ( indexCb == 0 ) && ( detObsIdP2->aoCbImId->counter == 0) )
+                taskDelay(1);
+
+          if ( indexCb != 0 )
+             indexCb -= 1;    
+          else
+             indexCb = CB_IM_RECORD_NB - 1;
+
+          MESSAGE_LOG1 ( MSG_FULLDEBUG, "Position read in the image CB: %d",
+                         indexCb ) ;
+
+          pImage = detObsIdP2->aoCbImId->cbImRecord[indexCb].imageVect;
+
+          /* Copy the image into pCurFrame */
+
+          imageSize = detObsIdP2->aoCcdId->xPixels * 
+                      detObsIdP2->aoCcdId->yPixels;
+          pMax = (float *)((int)pImage + imageSize*sizeof(float));
+          pc = detObsIdP2->pCurFrame ;
+
+          for ( pi = pImage ; pi < pMax ; pi ++ )
+              *(pc ++) = *pi;
+
+          for ( i = 0 ; i < 10 ; i ++ )
+              printf ( "dhs pixel %d= %f\n" , i , 
+                       *(detObsIdP2->pCurFrame + i) );
+       
+          /*
+           * Compute the elapsed time
+           */
+
+          elapsed = detObsIdP2->rawtEnd - detObsIdP2->rawtStart ;
+
+          /* Write some keyworks */
+
+          if ( detObsIdP2->totalFrames == 1 )
+          {
+             /*
+              * Convert the time stamps from Gemini raw time into Universal Time
+              * and construct these into character strings.
+              */
+
+             if (timeThenC( detObsIdP2->rawtEnd, UT1, 2, 
+                            detObsIdP2->timeArrayEnd ) != OK)
+             {
+                ERROR_SET (0,
+                "Failed to convert time stamp at observation end to date/time" ,
+                ERROR_LOG_NOW);
+             }
+             else
+             {
+
+                sprintf (detObsIdP2->utEndString, 
+                         "%04d-%02d-%02d:%02d:%02d:%02d",
+                         detObsIdP2->timeArrayEnd[0], 
+                         detObsIdP2->timeArrayEnd[1], 
+                         detObsIdP2->timeArrayEnd[2], 
+                         detObsIdP2->timeArrayEnd[3], 
+                         detObsIdP2->timeArrayEnd[4], 
+                         detObsIdP2->timeArrayEnd[5]);
+
+                dhsBdAttribAdd (detObsIdP2->dhsDataFrame, "utend", 
+                                DHS_DT_STRING, 0, NULL, 
+                                detObsIdP2->utEndString, &dhsErrno);
+                CHECK_DHS (dhsErrno);
+
+                if (epToVxPipeWrite( NULL, (char *)detObsIdP2->utEndString, 
+                                     detObsIdP2->pUTendContext) == ERROR)
+                {
+                   ERROR_LOG (
+                         "Failed to set UT at end of observation SIR record");
+                }
+
+                if (epToVxPipeWrite( NULL, (char *)(int)&elapsed, 
+                                     detObsIdP2->pElapsedContext ) == ERROR)
+                {
+                   ERROR_LOG ("Failed to set elapsed time SIR record");
+                }
+             }
+          }
+
+#ifdef DEBUG
+          dhsBdDsPrint (detObsIdP2->dhsDataset, &dhsErrno);
+          CHECK_DHS (dhsErrno);
+#endif /* DEBUG */
+
+          /* Send the data to the dhs */
+
+          MESSAGE_LOG3 (MSG_FULLDEBUG, 
+                        "dhsBdPut, dhsConnection=%d, pDataLabel=%s, dataset=%d",
+                        (int) detDhsConnection, detObsIdP2->pDataLabel, 
+                        (int) detObsIdP2->dhsDataset);
+
+          if ( detObsIdP2->dhsOutOptions == 2 ) /* QL only */
+          {
+             if ( detObsIdP2->totalFrames == 1 )
+                putTag = dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
+                                   DHS_BD_PT_DS_QL, DHS_TRUE,
+                                   detObsIdP2->dhsDataset, NULL, &dhsErrno);
+             else
+                putTag = dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
+                                   DHS_BD_PT_DS_QL, DHS_FALSE,
+                                   detObsIdP2->dhsDataset, NULL, &dhsErrno);
+          }
+          else
+          {
+             if ( detObsIdP2->totalFrames == 1 )
+             {
+                putTag =
+                dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
+                          DHS_BD_PT_DS, DHS_TRUE, detObsIdP2->dhsDataset, NULL, 
+                          &dhsErrno);
+             }
+             else
+             {
+                putTag =
+                dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
+                          DHS_BD_PT_DS, DHS_FALSE, detObsIdP2->dhsDataset, NULL,
+                          &dhsErrno);
+             }
+          }
+
+          CHECK_DHS (dhsErrno);
+
+          if (dhsErrno != DHS_S_SUCCESS)
+          {
+             ERROR_SET1 (S_detControl_DHS_ERROR,
+                         "Failed to initiate data transfer (dhsErrno=%d)",
+                         ERROR_LOG_NOW, dhsErrno);
+             dummyDhsErrno = DHS_S_SUCCESS;
+             dhsTagFree (putTag, &dummyDhsErrno);
+             CHECK_DHS (dummyDhsErrno);
+             dummyDhsErrno = DHS_S_SUCCESS;
+             dhsBdDsFree (detObsIdP2->dhsDataset, &dummyDhsErrno);
+             CHECK_DHS (dummyDhsErrno);
+          }
+          else
+          {
+             /* Wait for completion */
+
+             MESSAGE_LOG1 (MSG_FULLDEBUG, "dhsWait putTag=%d ...", 
+                           (int) putTag);
+
+             dhsWait (1, &putTag, &dhsErrno);
+             CHECK_DHS (dhsErrno);
+             if (dhsErrno != DHS_S_SUCCESS)
+             {
+                ERROR_SET1 (S_detControl_DHS_ERROR,
+                            "Error during wait for data transfer (dhsErrno=%d)",
+                            ERROR_LOG_NOW, dhsErrno);
+
+                dummyDhsErrno = DHS_S_SUCCESS;
+                dhsTagFree (putTag, &dummyDhsErrno);
+                CHECK_DHS (dummyDhsErrno);
+                dummyDhsErrno = DHS_S_SUCCESS;
+                dhsBdDsFree (detObsIdP2->dhsDataset, &dummyDhsErrno);
+                CHECK_DHS (dummyDhsErrno);
+             }
+             else
+             {
+
+                MESSAGE_LOG1 (MSG_FULLDEBUG,
+                              "detDhsCheckCmdStatus putTag=%d ...",
+                              (int) putTag);
+
+                if ( detDhsCheckCmdStatus (putTag) == ERROR )
+                {
+                   ERROR_SET (S_detControl_DHS_ERROR, "Data transfer failed",
+                              ERROR_LOG_NOW);
+
+                   dummyDhsErrno = DHS_S_SUCCESS;
+                   dhsTagFree (putTag, &dummyDhsErrno);
+                   CHECK_DHS (dummyDhsErrno);
+                   dummyDhsErrno = DHS_S_SUCCESS;
+                   dhsBdDsFree (detObsIdP2->dhsDataset, &dummyDhsErrno);
+                   CHECK_DHS (dummyDhsErrno);
+                }
+                else
+                {
+
+                   /*
+                    * If the last frame has been received free the DHS dataset.
+                    */
+
+                   MESSAGE_LOG1 (MSG_FULLDEBUG, "dhsTagFree putTag=%d",
+                                (int) putTag);
+
+                   dhsErrno = DHS_S_SUCCESS;
+                   dhsTagFree (putTag, &dhsErrno);
+
+                   if ( (detObsIdP2->totalFrames == 1) || 
+                        (detObsIdP2->stopped) )
+                   {
+                      dhsBdDsFree (detObsIdP2->dhsDataset, &dhsErrno);
+                      CHECK_DHS (dhsErrno);
+                      semFlush (detDhsStartSem) ;
+                      MESSAGE_LOG (MSG_FULLDEBUG, 
+                           "Last frame displayed and flush detDhsStartSem" );
+                   }
+                }
+             }
+          }
+       }
+   }
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -1984,16 +4292,18 @@ uint32 detSetWcs
  *   detObserveStart
  *
  *   INVOCATION:
- *   detObserveStart (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                    sdsuId, obsId)
+ *   detObserveStart (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
+ *                    aoCtrlId, aoCbImId, aoCbCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (!) obsId         (OBS_ID)          Observation context structure
+ *   (>) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
+ *   (>) aoCtrlId      (AO_CTRL_ID)      AO control context structure
+ *   (!) aoCbImId      (AO_CB_IM_ID)     AO image circular buffer 
+ *   (!) aoCbCtrlId    (AO_CB_CTRL_ID)   AO control circular buffer 
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -2005,7 +4315,7 @@ uint32 detSetWcs
  *   This function starts an observation.
  *
  *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
+ *   None. 
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -2016,33 +4326,19 @@ uint32 detSetWcs
  *   DEFICIENCIES:
  *   DHS and WCS code needs tidying up.
  *
- *   BUGS:
- *   dhsErrno keeps having to be reset to DHS_S_SUCCESS. I think this should 
- *   not be necessary, and it reveals a bug or bad design feature in the DHS. 
- *   Resource freeing functions such as dhsBdDsFree should free their resources 
- *   regardless of the value of dhsErrno, since they might be called to tidy up 
- *   after an error. SMB - 2 November 1998.
- *
- *   I have now replaced all the dhsErrno resets with CHECK_DHS. This should 
- *   report if the DHS status is found not to be DHS_S_SUCCESS at any point. 
- *   SMB - 17 November 1998.
- *
- *   The SDSU controller timing board can appear to hang up if the VME board 
- *   thinks it is still waiting to receive data from a previous observation. 
- *   This may cause the parameter reads from the timing board to fail before 
- *   the observation starts. To work around this problem an "ABT" command is 
- *   issued to the SDSU VME board before starting the observation.
  *-
  */
 
 uint32 detObserveStart
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId          /* Observation context data structure.      */
+   OBS_ID          obsId,         /* Observation context data structure.      */
+   AO_CCD_ID       aoCcdId,       /* AO CCD geometry context structure.       */
+   AO_CTRL_ID      aoCtrlId,      /* AO control context structure.            */
+   AO_CB_IM_ID     aoCbImId,      /* AO image circular buffer.                */
+   AO_CB_CTRL_ID   aoCbCtrlId     /* AO control circular buffer.              */
    )
 {
 
@@ -2087,7 +4383,7 @@ uint32 detObserveStart
 
    /* Variables associated with the provision of WCS information. */
 
-   int            wcsStatus;       /* WCS status.                             */
+   int            wcsStatus=0;     /* WCS status.                             */
    double         pixis;           /* x to i scale factor.                    */
    double         pixjs;           /* y to j scale factor.                    */
    double         perp;            /* Non-perpendicularity of i and j axes in */
@@ -2120,14 +4416,12 @@ uint32 detObserveStart
    float          cd2_1Float;      /* Float value of cd2_1                    */
    float          cd2_2Float;      /* Float value of cd2_2                    */
 
-
-   /* Variables associated with the frame buffers. */
-
-   int            nPixels;         /* Total number of pixels.                 */
-
    /* SDSU parameters. */
 
    long           nframe;          /* Number of frames.                       */
+   long           nframePerDataset;/* Number of frames per dataset            */
+   int            nexp;            /* Number of exposure/dataset              */
+
    double         exposure;        /* Exposure time in seconds.               */
 
    uint32         sdsuNframe;      /* Value for SDSU parameter NFRAME.        */
@@ -2142,6 +4436,7 @@ uint32 detObserveStart
     */
 
    long           observingState;  /* Observation status (busy or idle).      */
+   long           measuringState;  /* Continuous mode 1 else 0                */
 
    /*
     * Initialise the error number and DHS error number.
@@ -2151,7 +4446,7 @@ uint32 detObserveStart
    dhsErrno = DHS_S_SUCCESS;       /* <---- DHS error number is reset here.   */
 
    /*
-    * Check there are valid SDSU and observation context structures.
+    * Check there are valid SDSU, observation and AO context structures.
     */
 
    if ( sdsuId == NULL )
@@ -2170,6 +4465,33 @@ uint32 detObserveStart
       return (errorNumber);
    }
 
+   if ( aoCcdId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "AO CCD geometry context not initialised", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   
+   if ( aoCbImId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "AO image circular buffer context not initialised", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   
+   if ( aoCbCtrlId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "AO control circular buffer context not initialised", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   
    /* Determine whether a START or STOP directive has been received. */
 
    if ( EPTOVX_IS_STOP_DIRECTIVE(cadCmdContext) )
@@ -2178,9 +4500,8 @@ uint32 detObserveStart
        * observation. 
        */
 
-      printf ( "ptr[PWFS2]->interval=%f\n" , ptr[PWFS2]->interval ) ;
-      errorNumber = detStop (pWfsName, pRecordPrefix, cadCmdContext, 
-                             commandNumber, sdsuId, obsId);
+      printf ( "ptrPwfs2->interval=%f\n" , ptrPwfs2->interval ) ;
+      errorNumber = detStop (cadCmdContext, commandNumber, sdsuId, obsId);
    }
    else
    {
@@ -2197,18 +4518,38 @@ uint32 detObserveStart
          return (errorNumber);
       }
 
-      /* Reset to zero signal processing data */
+      /* Reset to zero some ao control data */
 
-      ptr[PWFS2]->interval = 0.0 ;
-      printf ( "ptr[PWFS2]->interval=%f\n" , ptr[PWFS2]->interval ) ;
+      obsId->coaddCounter = 0;
+      obsId->dhsCounter = 0;
+      obsId->saveCbCounter = 0;
+      obsId->averageRms = 0.0;
+      obsId->averageFlux = 0.0;
+      obsId->updateScale = FALSE;
+      /*printf ( "detControl : updateScale = %d\n" , 
+                 obsId->updateScale );*/
 
-      if ( obsId->ospFGContext != NULL )
+      ptrPwfs2->interval = 0.0 ;
+      printf ( "ptrPwfs2->interval=%f\n" , ptrPwfs2->interval ) ;
+
+      if ( aoCtrlId != NULL )
       {
-         obsId->ospFGContext->coaddcounter = 0;
-         obsId->ospFGContext->previousFocus = 0.0;
-         /*obsId->ospFGContext->cb_1_pixel_index = 0;
-         obsId->ospFGContext->cb_2_pixel_index = 0;*/
+         aoCtrlId->coaddCounter = 0;
+         aoCtrlId->focusCounter = 0;
+         aoCtrlId->previousFocus = 0.0;
       }
+
+      /* Init the position of the circular buffers */
+
+      (void) aoCbImZero ( aoCbImId );
+      aoCbImId->position = 0 ;
+      aoCbImId->counter = 0 ;
+      aoCbImId->processingMode = obsId->sigMode ;
+
+      (void) aoCbCtrlZero ( aoCbCtrlId );
+      aoCbCtrlId->position = 0 ;
+      aoCbCtrlId->counter = 0 ;
+      aoCbCtrlId->processingMode = obsId->sigMode ;
 
       /* Obtain the attributes */
 
@@ -2229,7 +4570,8 @@ uint32 detObserveStart
 
       if ( (nframe <= 0) && (nframe != -1) )
       {
-         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE, "Invalid number of frames, %ld",
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE, 
+                     "Invalid number of frames, %ld",
                      ERROR_LOG_NOW, nframe);
          errorNumber = S_detControl_BAD_ATTRIBUTE;
          return (errorNumber);
@@ -2251,6 +4593,76 @@ uint32 detObserveStart
          return (errorNumber);
       }
 
+      obsId->exposureTime = exposure;
+      aoCbImId->exposureTime = exposure;
+      aoCbCtrlId->exposureTime = exposure;
+
+      if (epToVxPipeWrite( NULL, (char *)(int)&exposure, 
+                           obsId->pIntTimeContext ) == ERROR)
+      {
+         ERROR_LOG ("Failed to set integration time SIR record");
+      }
+
+      /* 
+       * Init some parameters in the case of the sequence closed loop
+       */
+
+      if ( obsId->sigMode == AO_MODE_TOTAL )
+      {
+         obsId->aoCtrlId->totalThreshold = 0.0;
+         if (epToVxPipeWrite (NULL, 
+                              (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
+                              obsId->pAoTotalContext) == ERROR)
+         {
+            ERROR_LOG ( "Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+         }
+      }
+
+      if ( obsId->sigMode == AO_MODE_CLOSED_LOOP )
+      {
+         if ( obsId->averageFluxFlag == TRUE )
+         {
+            obsId->aoCtrlId->totalThreshold = 0.0;
+            if (epToVxPipeWrite (NULL, 
+                              (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
+                              obsId->pAoTotalContext) == ERROR)
+            {
+               ERROR_LOG ("Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+            }
+         }
+
+         if ( obsId->threshFlag == FALSE )
+            obsId->nAverageDataThreshComp = 0;
+         else
+         {
+            obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+            if (epToVxPipeWrite (NULL, 
+                (char *)(int)& (obsId->aoCtrlId->threshold), 
+                obsId->pAoThreshContext) == ERROR)
+            {
+               ERROR_LOG (
+               "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+            }
+         }
+
+         if ( obsId->fgTime == 0.0 )
+            obsId->fgFrame = 0;
+         else
+            obsId->fgFrame = (int)ceil(obsId->fgTime/exposure);
+
+         printf ( "MODE CLOSED LOOP: FG during %d frames\n" , 
+                  (int)obsId->fgFrame);
+
+         if ( obsId->saveCbCtrlClosedLoopTime == 0.0 )
+            obsId->saveCbCtrlClosedLoop = FALSE;
+         else
+            obsId->saveCbCtrlClosedLoopFrame = 
+            (int)ceil((obsId->saveCbCtrlClosedLoopTime*60.0)/exposure);
+
+         printf ( "MODE CLOSED LOOP: Save CB every %d frames\n" , 
+                  (int)obsId->saveCbCtrlClosedLoopFrame);
+      }
+
       /* Check if the number of frames fits with the dhs output */
       /* Permanent storage should be used with nframe = 1 */
 
@@ -2262,6 +4674,24 @@ uint32 detObserveStart
          errorNumber = S_detControl_BAD_ATTRIBUTE;
          return (errorNumber);
       }
+
+      /*
+       * Determine how to read the CCD
+       * if outOptions = 0 -> CCD in continous mode (readMethod = 1)
+       * else -> serie of 1 frame (readMethod = 0)
+       */
+
+      if ( outOptions == 0 )
+      {
+         sdsuId->readMethod = 1;
+      }
+      else
+      {
+         sdsuId->readMethod = 0;
+      }
+
+      printf ( "outOptions = %d, readMethod = %d\n" , (int)outOptions,
+               (int)sdsuId->readMethod );
 
       /* Combine file and path name for output file name */
 
@@ -2276,20 +4706,10 @@ uint32 detObserveStart
 
       if ( strcmp (pFilePath, "") == 0 )
       {
-        /*strncpy (pFullOutFileName, pOutFileName, EPICS_MAX_BYTES_STRING_ATTRIB);*/
         strncpy (pFullSimFileName, pSimFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
       }
       else
       {
-        /*if ( strcmp(pOutFileName, "NONE") == 0 )
-        {
-           strncpy (pFullOutFileName, pOutFileName, 
-                    EPICS_MAX_BYTES_STRING_ATTRIB);
-        }
-        else
-        {
-           sprintf (pFullOutFileName, "%s/%s", pFilePath, pOutFileName );
-        }*/
 
         if ( strcmp(pSimFileName, "NONE") == 0 )
         {
@@ -2307,26 +4727,23 @@ uint32 detObserveStart
        * name, and the name in question is not "NONE".
        */
 
-      /*if ((strcmp(pFullOutFileName, "NONE") != 0) && 
-          (strstr (pFullOutFileName, ".fits") == NULL))
-         strncat (pFullOutFileName, ".fits", EPICS_MAX_BYTES_STRING_ATTRIB);*/
-
       if ((strcmp(pFullSimFileName, "NONE") != 0) && 
           (strstr (pFullSimFileName, ".fits") == NULL))
          strncat (pFullSimFileName, ".fits", EPICS_MAX_BYTES_STRING_ATTRIB);
 
       /*
-       * Init ccdSec, dataSec, origSec. Because for the moment binning and
-       * windowing are not available, these strings are identical and contain
-       * default values for full frame
+       * Init ccdSec, dataSec, origSec. 
        */
 
+      obsId->xPixelsDhs = aoCcdId->xPixels;
+      obsId->yPixelsDhs = aoCcdId->yPixels;
+
       sprintf ( obsId->dataSec , "[1:%d,1:%d]" ,
-                obsId->xPixels , obsId->yPixels ) ;
+                aoCcdId->xPixels , aoCcdId->yPixels ) ;
       sprintf ( obsId->ccdSec , "[1:%d,1:%d]" ,
-                obsId->xPixels , obsId->yPixels ) ;
+                aoCcdId->xPixels , aoCcdId->yPixels ) ;
       sprintf ( obsId->origSec , "[1:%d,1:%d]" ,
-                obsId->xPixels , obsId->yPixels ) ;
+                aoCcdId->xPixels , aoCcdId->yPixels ) ;
 
       /*
        * If a request has been made to send data to the DHS, check that the 
@@ -2336,8 +4753,8 @@ uint32 detObserveStart
       if ( outOptions == 1 )
       {
          if ( ( !detDhsInitialised ) ||
-              ( obsId->dhsConnection == NULL) ||
-              /* ( dhsIsConnected (obsId->dhsConnection, &dhsErrno) 
+              ( detDhsConnection == NULL) ||
+              /* ( dhsIsConnected (detDhsConnection, &dhsErrno) 
                    != DHS_TRUE ) */ /* DOESN'T WORK */
               ( FALSE )             /* BUG WORK AROUND */)
          {
@@ -2389,7 +4806,7 @@ uint32 detObserveStart
          }
          else
          {
-            pLabelFromDhs = dhsBdName (obsId->dhsConnection, &dhsErrno);
+            pLabelFromDhs = dhsBdName (detDhsConnection, &dhsErrno);
             CHECK_DHS (dhsErrno);
 
             if ( dhsErrno != DHS_S_SUCCESS )
@@ -2425,6 +4842,12 @@ uint32 detObserveStart
       strncpy( obsId->pSimFileName, pFullSimFileName, 
                EPICS_MAX_BYTES_STRING_ATTRIB*2 );
 
+      if (epToVxPipeWrite( NULL, obsId->pDataLabel, obsId->pDataLabelContext ) 
+          == ERROR)
+      {
+         ERROR_LOG ("Failed to init Data label SIR record");
+      }
+
       /*
        * Before starting the observation, query some parameters from the SDSU 
        * controller.
@@ -2448,6 +4871,8 @@ uint32 detObserveStart
             "Setting up for an infinite series of exposures of %f seconds each",
             exposure);
 
+            nframePerDataset = nframe ;
+
             /* BUG WORK AROUND: THE SDSU CONTROLLER RETURNS FRAME COUNT=1
              * WHEN ASKED FOR AN INFINITE
              * NUMBER OF FRAMES, WHICH DETCONTROL THEN ASSUMES MEANS THE
@@ -2456,18 +4881,27 @@ uint32 detObserveStart
              * COUNT IS INFINITE.
              */
 
-            nframe = 0;/* DSP code assumes 0 means infinite number of frames. */
-
-            obsId->continuous = TRUE;
-
-            obsId->totalFrames = nframe;
-
-            sdsuNframe = (uint32) nframe;
+            if ( sdsuId->readMethod == 1 )
+            {
+               nframe = 0;
+               obsId->continuous = TRUE;
+               obsId->totalFrames = nframe;
+               sdsuNframe = (uint32) nframe;
+            }
+            else
+            {
+               nframe = 1;
+               obsId->continuous = TRUE;
+               obsId->totalFrames = 0;
+               sdsuNframe = (uint32) nframe;
+            }
          }
          else if ( nframe == 1 )
          {
             MESSAGE_LOG1 (MSG_LOG,
                     "Setting up for one exposure of %f seconds", exposure);
+
+            nframePerDataset = nframe ;
 
             /* BUG WORK AROUND */
             obsId->continuous = FALSE;
@@ -2482,21 +4916,28 @@ uint32 detObserveStart
             "Setting up for %ld exposures of %f seconds each",
             nframe, exposure);
 
-            /* BUG WORK AROUND */
-            obsId->continuous = FALSE;
-            obsId->totalFrames = nframe;
+            nframePerDataset = 1 ;
 
-            sdsuNframe = (uint32) 0;  /* Modif 01 nov 1999 - cb */
+            /* BUG WORK AROUND */
+            if ( sdsuId->readMethod == 1)
+            {
+               obsId->continuous = FALSE;
+               obsId->totalFrames = nframe;
+
+               sdsuNframe = (uint32) 0;  /* Modif 01 nov 1999 - cb */
+            }
+            else
+            {
+               obsId->continuous = FALSE;
+               obsId->totalFrames = nframe;
+
+               sdsuNframe = (uint32) 1;  
+            }
          }
 
          /* Set the number of frames by writing to the T_NFRAME parameter in the
           * timing DSP Also define the total number of frames in the observation
           * context structure. */
-
-         /*sdsuNframe = (uint32) nframe;*/  /* Modif 23 sept 1999 - cb */
-         /*sdsuNframe = (uint32) 1; */
-
-         /*obsId->totalFrames = nframe;*/
 
 #ifdef DEBUG
          printf ("detExposure: Setting T_NFRAME parameter to %lu\n",
@@ -2531,8 +4972,45 @@ uint32 detObserveStart
           * structure.
           */
 
-         obsId->exposedRQ = nframe * exposure;
+         obsId->exposedRQ = 1 * exposure;
          sdsuId->exposureTicks = (int) (exposure * sysClkRateGet());
+
+         /*
+          * Set up the the total integration time requested
+          */
+
+         if (epToVxPipeWrite( NULL, (char *)(int)(&obsId->exposedRQ), 
+                              obsId->pExposedRQContext ) == ERROR)
+         {
+            ERROR_LOG (
+               "Failed to init total integration time requested SIR record");
+         }
+         /*
+          * Set up the requested and actual number of exposure/dataset.
+          * Always 1 for the moment
+          */
+
+         nexp = 1 ;
+         if (epToVxPipeWrite( NULL, (char *) &nexp, obsId->pNExpRQContext ) 
+             == ERROR)
+         {
+            ERROR_LOG ("Failed to init Number exp/dataset SIR record");
+         }
+         if (epToVxPipeWrite( NULL, (char *) &nexp, obsId->pNExpContext ) 
+             == ERROR)
+         {
+            ERROR_LOG ("Failed to init Number exp/dataset SIR record");
+         }
+
+         /*
+          * Set up the the number of frames per dataset
+          */
+
+         if (epToVxPipeWrite( NULL, (char *)(int)&nframePerDataset, 
+             obsId->pNFramesContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set number of frames SIR record");
+         }
 
          /*
           * BUG WORK AROUND: Before attempting to query parameters from the 
@@ -2574,7 +5052,7 @@ uint32 detObserveStart
          else if (expTim == 0)
          {
             MESSAGE_LOG (MSG_WARNING,
-            "Zero exposure time obtained from SDSU controller. Assuming minimum");
+            "Zero exp time obtained from SDSU controller. Assuming minimum");
             if (obsId->totalFrames > 0)
             {
                obsId->exposed = 
@@ -2605,6 +5083,29 @@ uint32 detObserveStart
          }
       }
 
+      /* Set the measuring state */
+      
+      if ( obsId->totalFrames != 1 )
+         measuringState = 1;           /* case continuous or sevaral frames */
+      else
+         measuringState = 0;           /* case 1 frame only */
+
+      if (epToVxPipeWrite (NULL, (char *) &measuringState, 
+                           obsId->pDetMeasuringContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set measuring state to 1 or 0.");
+      }
+
+      /*
+       * Set up the the total integration time
+       */
+
+      if (epToVxPipeWrite( NULL, (char *)(int)(&obsId->exposed), 
+                           obsId->pExposedContext ) == ERROR)
+      {
+         ERROR_LOG ("Failed to init total integration time SIR record");
+      }
+
       /* Get a timestamp to record the time at which the observation started. */
 
       if ( timeNow (&(obsId->rawtStart)) != OK )
@@ -2618,10 +5119,13 @@ uint32 detObserveStart
               obsId->rawtStart);
 #endif
 
+
       /*
        * Start the readout process. The observation should now start in a 
        * parallel thread.
        */
+
+      sdsuId->frameTimeout = (int) (obsId->exposureTime + 30) * sysClkRateGet();
 
       MESSAGE_LOG2 (MSG_MINDEBUG, 
                     "Starting exposure of %f seconds in %d frames...",
@@ -2639,6 +5143,14 @@ uint32 detObserveStart
                ERROR_LOG ("Also failed to set observing state to ERROR.");
             }
             errorNumber = S_detControl_SDSU_ERROR;
+      
+            measuringState = 0;
+            if (epToVxPipeWrite (NULL, (char *) &measuringState, 
+                                 obsId->pDetMeasuringContext) == ERROR)
+            {
+               ERROR_LOG ("Failed to set measuring state to 0.");
+            }
+
             return (errorNumber);
          }
       }
@@ -2656,6 +5168,14 @@ uint32 detObserveStart
                ERROR_LOG ("Also failed to set observing state to ERROR.");
             }
             errorNumber = S_detControl_SDSU_ERROR;
+
+            measuringState = 0;
+            if (epToVxPipeWrite (NULL, (char *) &measuringState, 
+                                 obsId->pDetMeasuringContext) == ERROR)
+            {
+               ERROR_LOG ("Failed to set measuring state to 0.");
+            }
+
             return (errorNumber);
          }
       }
@@ -2702,12 +5222,6 @@ uint32 detObserveStart
             }
          }
 
-         /* BUG WORK AROUND (FOR INTERRUPT VERSION). Set the frame wait 
-          * timeout. - SMB 16 Jan 99 
-          */
-
-         /* sdsuId->frameTimeout = (int) waitTimeSecs * sysClkRateGet(); */
-
          if ( timeoutAlarmSet (obsId->timeId, waitTimeSecs, 
               detObserveTimeout, (int) obsId) == ERROR )
          {
@@ -2719,6 +5233,13 @@ uint32 detObserveStart
                == ERROR)
             {
                ERROR_LOG ("Also failed to set observing state to ERROR.");
+            }
+            measuringState = 0;
+            if (epToVxPipeWrite (NULL, (char *) &measuringState, 
+                                 obsId->pDetMeasuringContext)
+               == ERROR)
+            {
+               ERROR_LOG ("Also failed to set measuring state to 0.");
             }
             errorNumber = S_detControl_INTERNAL;
             return (errorNumber);
@@ -2775,11 +5296,11 @@ uint32 detObserveStart
           * detector has been defined.
           */
 
-         if ( ( obsId->ospGeometry != NULL ) &&
-              ( ( obsId->ospGeometry->xstart != 0 ) ||
-                ( obsId->ospGeometry->ystart != 0 ) ||
-                ( obsId->ospGeometry->xbin != 1 ) ||
-                ( obsId->ospGeometry->ybin != 1 )
+         if ( ( aoCcdId != NULL ) &&
+              ( ( aoCcdId->xStart != 0 ) ||
+                ( aoCcdId->yStart != 0 ) ||
+                ( aoCcdId->xBin != 1 ) ||
+                ( aoCcdId->yBin != 1 )
               )
             )
          {
@@ -2794,13 +5315,13 @@ uint32 detObserveStart
             {
                obsId->detij[p][0] =
                ((obsId->pixij[p][0] - 0.5 - 
-                 (double) obsId->ospGeometry->xstart) /
-                (double) obsId->ospGeometry->xbin) + 0.5;
+                 (double) aoCcdId->xStart) /
+                (double) aoCcdId->xBin) + 0.5;
 
                obsId->detij[p][1] =
                ((obsId->pixij[p][1] - 0.5 - 
-                (double) obsId->ospGeometry->ystart) /
-                (double) obsId->ospGeometry->ybin) + 0.5;
+                (double) aoCcdId->yStart) /
+                (double) aoCcdId->yBin) + 0.5;
             }
 
             /*
@@ -2980,8 +5501,15 @@ uint32 detObserveStart
             ERROR_LOG_NOW);
       }
       sprintf (obsId->utStartString, "%04d-%02d-%02d:%02d:%02d:%02d",
-               obsId->timeArrayStart[0], obsId->timeArrayStart[1], obsId->timeArrayStart[2],
-               obsId->timeArrayStart[3], obsId->timeArrayStart[4], obsId->timeArrayStart[5]);
+               obsId->timeArrayStart[0], obsId->timeArrayStart[1], 
+               obsId->timeArrayStart[2], obsId->timeArrayStart[3], 
+               obsId->timeArrayStart[4], obsId->timeArrayStart[5]);
+
+      if (epToVxPipeWrite( NULL, (char *)obsId->utStartString, 
+                           obsId->pUTstartContext ) == ERROR)
+      {
+         ERROR_LOG ("Failed to set UT at start of observation SIR record");
+      }
 
 #ifdef DEBUG
       printf ( "obsId->utStartString = %s\n" , obsId->utStartString ) ;
@@ -3015,10 +5543,10 @@ uint32 detObserveStart
           * mode) (see ICD 3).
           */
 
-         /*if ( obsId->totalFrames == 1 )*/                  /* only one exposure */
+         /*if ( obsId->totalFrames == 1 )*/             /* only one exposure */
          if ( dhsOutOptions == 0 )
          {
-            dhsBdCtl(obsId->dhsConnection, DHS_BD_CTL_LIFETIME, 
+            dhsBdCtl(detDhsConnection, DHS_BD_CTL_LIFETIME, 
                      obsId->pDataLabel, DHS_BD_LT_PERMANENT, &dhsErrno);
             MESSAGE_LOG1 (MSG_MINDEBUG,
                "LIFETIME of DHS frame %s set to DHS_BD_LT_PERMANENT", 
@@ -3028,7 +5556,7 @@ uint32 detObserveStart
          }
          else           /* either continuous mode with totalFrames = 0 or > 1 */
          {
-            dhsBdCtl(obsId->dhsConnection, DHS_BD_CTL_LIFETIME, 
+            dhsBdCtl(detDhsConnection, DHS_BD_CTL_LIFETIME, 
                      obsId->pDataLabel, DHS_BD_LT_TRANSIENT, &dhsErrno);
             MESSAGE_LOG1 (MSG_MINDEBUG,
                "LIFETIME of DHS frame %s set to DHS_BD_LT_TRANSIENT", 
@@ -3037,10 +5565,10 @@ uint32 detObserveStart
                "Total Frames is %d", obsId->totalFrames);
          }
          CHECK_DHS (dhsErrno);
-         dhsBdCtl(obsId->dhsConnection, DHS_BD_CTL_CONTRIB, obsId->pDataLabel, 
+         dhsBdCtl(detDhsConnection, DHS_BD_CTL_CONTRIB, obsId->pDataLabel, 
             1, contrib, &dhsErrno);
          CHECK_DHS (dhsErrno);
-         dhsBdCtl(obsId->dhsConnection, DHS_BD_CTL_QLSTREAM, obsId->pDataLabel, 
+         dhsBdCtl(detDhsConnection, DHS_BD_CTL_QLSTREAM, obsId->pDataLabel, 
             1, qlStreams, &dhsErrno);
          CHECK_DHS (dhsErrno);
 
@@ -3074,8 +5602,8 @@ uint32 detObserveStart
          /* Create a frame to contain the data and add the frame header info. */
 
          dims[0] = 2;
-         axisSize[0] = obsId->xPixels;  
-         axisSize[1] = obsId->yPixels;
+         axisSize[0] = obsId->xPixelsDhs;  
+         axisSize[1] = obsId->yPixelsDhs;
          origin[0] = 1;  
          origin[1] = 1;
 
@@ -3092,10 +5620,10 @@ uint32 detObserveStart
                             0, NULL, "Intensity", &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "bunit", DHS_DT_STRING, 
-                            0, NULL, "SDSU ADC units", &dhsErrno);
+                            0, NULL, DET_BUNIT, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "units", DHS_DT_STRING, 
-                            0, NULL, "SDSU ADC units", &dhsErrno);
+                            0, NULL, DET_BUNIT, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "origin", DHS_DT_INT32, 
                             1, dims, origin, &dhsErrno);
@@ -3110,10 +5638,10 @@ uint32 detObserveStart
                             NULL, obsId->pObsType, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "exptime", DHS_DT_DOUBLE, 0,
-                            NULL, obsId->exposed, &dhsErrno);
+                            NULL, obsId->exposureTime, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "darktime", DHS_DT_DOUBLE, 0,
-                            NULL, obsId->exposed, &dhsErrno);
+                            NULL, obsId->exposureTime, &dhsErrno);
             CHECK_DHS (dhsErrno);
 
 
@@ -3159,8 +5687,8 @@ uint32 detObserveStart
                CHECK_DHS (dhsErrno);
             }
 
-            sprintf ( raString , "%lf" , obsId->RA ) ;
-            sprintf ( decString , "%lf" , obsId->Dec ) ;
+            sprintf ( raString , "%f" , obsId->RA ) ;
+            sprintf ( decString , "%f" , obsId->Dec ) ;
 
             dhsBdAttribAdd (obsId->dhsDataFrame, "RA", DHS_DT_STRING, 0, NULL,
                             raString, &dhsErrno);
@@ -3181,10 +5709,10 @@ uint32 detObserveStart
                             0, NULL, &(obsId->mjdobs), &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "xbin", DHS_DT_INT32,
-                            0, NULL, obsId->ospGeometry->xbin, &dhsErrno);
+                            0, NULL, aoCcdId->xBin, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "ybin", DHS_DT_INT32,
-                            0, NULL, obsId->ospGeometry->ybin, &dhsErrno);
+                            0, NULL, aoCcdId->yBin, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "datasec", DHS_DT_STRING,
                             0, NULL, obsId->dataSec, &dhsErrno);
@@ -3198,11 +5726,9 @@ uint32 detObserveStart
             dhsBdAttribAdd (obsId->dhsDataFrame, "utstart", DHS_DT_STRING,
                             0, NULL, obsId->utStartString, &dhsErrno);
             CHECK_DHS (dhsErrno);
-            strcpy ( obsId->detType , "CCD39+SDSUII" ) ;
             dhsBdAttribAdd (obsId->dhsDataFrame, "dettype", DHS_DT_STRING,
                             0, NULL, obsId->detType, &dhsErrno);
             CHECK_DHS (dhsErrno);
-            strcpy ( obsId->detId , "a5207-2-13" ) ;
             dhsBdAttribAdd (obsId->dhsDataFrame, "detid", DHS_DT_STRING,
                             0, NULL, obsId->detId, &dhsErrno);
 
@@ -3222,25 +5748,6 @@ uint32 detObserveStart
       {
          /* The DHS is not being used. */
 
-         /* Calculate the number of pixels and reserve a buffer for the 
-          * unscrambled data. 
-          */
-
-         nPixels = obsId->xPixels * obsId->yPixels;
-
-#ifdef DEBUG
-         printf ("detObserveStart: Allocating frame buffer to hold %d pixels "
-                 "of unscrambled data.\n", nPixels);
-#endif /* DEBUG */
-
-         obsId->pCurFrame = (float *) malloc (nPixels * sizeof(float));
-         /*printf ( "detControl alloc pCurFrame=%x\n" , obsId->pCurFrame) ;*/
-         if ( obsId->pCurFrame == NULL )
-         {
-            ERROR_LOG( "Failed to allocate image buffer for unscrambled data" );
-            errorNumber = S_detControl_INTERNAL;
-            return (errorNumber);
-         }
       }
 
       /*
@@ -3259,1267 +5766,6 @@ uint32 detObserveStart
    return (errorNumber);
 }
 
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detObserveEnd
- *
- *   INVOCATION:
- *   detObserveEnd (sdsuId, obsIdIn, pRawFrame)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) sdsuId    (SDSU_ID) Controller ID
- *   (>) obsIdIn   (void *)  Pointer to observation definition, cast to void *
- *   (>) pRawFrame (SDSU_FRAME *) Pointer to image frame
- *
- *   FUNCTION VALUE:
- *   None
- *
- *   PURPOSE:
- *   Complete observation
- *
- *   DESCRIPTION:
- *   This function ends an observation.
- *
- *   EXTERNAL VARIABLES:
- *   (>)   pDetDhsClientName   (char *)   Name of DHS client = Instrument name
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   UNFINISHED - DHS AND WCS CODE NEEDS FINISHING.
- *
- *   This routine does not check the frame status bits to determine if there
- *   was an error during the data transfer over the fibre.
- *   ANJ - 27 August 1998.
- *
- *   BUGS:
- *   Resource freeing functions such as
- *   dhsBdDsFree should free their resources regardless of the value of 
- *   dhsErrno, since they might be called to tidy up after an error.
- *-
- */
-
-void detObserveEnd
-   (
-   SDSU_ID        sdsuId,         /* SDSU ID                                  */
-   void *         obsIdIn,        /* Pointer to observation ID cast to void * */
-   SDSU_FRAME *   pRawFrame       /* Incoming Image frame                     */
-   )
-{
-   /* Variables describing the observation. */
-
-   OBS_ID         obsId;          /* Pointer to observation ID structure.     */
-
-   /* DHS variables (see dhstests.c) */
-
-   DHS_STATUS      dhsErrno;         /* DHS error number.                     */
-   DHS_STATUS      dummyDhsErrno;    /* DHS error number used for freeing     */
-                                     /* resources.                            */
-   DHS_TAG         putTag;           /* DHS data transfer tag.                */
-
-   /* File names. */
-
-   char         pFileNameString[ (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 + 4];
-                                /* String containing file name.               */
-
-   /* SDSU parameters. */
-
-   uint32       frameCount;        /* SDSU frame counter.                     */
-   BOOL         bufferReserved;    /* TRUE if the SDSU frame buffer been      */
-                                   /* reserved.                               */
-   BOOL         obsAlreadyAborted; /* TRUE if observation already  aborted.   */
-
-   double       readoutTimeout;    /* Readout timeout in seconds.             */
-   double       waitTimeSecs;      /* Wait time in seconds.                   */
-
-   /*int i ;*/
-
-   /*
-    * Signal processing parameters.
-    */
-
-   int           nCoadds;          /* Number of frames per coadd.             */
-   int           frameNb;          /* Number of frame before calibration.     */
- 
-   /* 
-    * Variables associated with "observe" command.
-    * (Label, datapath and filename use general filename parameters)
-    */
-
-   long         observingState;    /* Observation status (busy or idle).      */
-
-
-#ifdef DEBUG
-   printf ("detObserveEnd: %p %p %p\n", sdsuId, obsIdIn, pRawFrame);
-#endif
-
-   bufferReserved = FALSE;
-   obsAlreadyAborted = FALSE;
-
-#ifdef DEBUG
-   /* Check the pointers provided as arguments. */
-
-   if ( obsIdIn == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "NULL observation ID", ERROR_LOG_NOW);
-      return;
-   }
-
-   if ( pRawFrame == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "NULL raw frame pointer", 
-                 ERROR_LOG_NOW);
-      return;
-   }
-#endif
-
-   /* Convert the observation ID pointer provided as an argument. */
-
-   obsId = (OBS_ID) obsIdIn;
-
-   /*
-    * Initialise the DHS error number.
-    */
-
-   dhsErrno = DHS_S_SUCCESS;         /* <---- DHS error number is reset here. */
-
-#ifdef DEBUG
-   /*
-    * This function should only be called when an observation is in progress.
-    */
-
-   if ( !obsId->observing )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "Observation not in progress", 
-                 ERROR_LOG_NOW);
-      return;
-   }
-#endif
-
-   /*
-    * Cancel any observation timer. Failing to cancel this is not a serious 
-    * error. THIS IS NOW ONLY DONE IN SIMULATION MODE.
-    */
-
-   if ( sdsuId->simulate )
-   {
-      if ( obsId->timeId != NULL )
-      {
-         if ( timeoutAlarmCancel( obsId->timeId ) == ERROR )
-         {
-            ERROR_SET (0, "Failed to cancel observation timer", ERROR_LOG_NOW);
-         }
-      }
-   }
-
-   /*
-    * Get a timestamp to record the time at which the observation finished.
-    * Failing to cancel this is not a serious error.
-    */
-
-   if ( timeNow (&(obsId->rawtEnd)) != OK )
-   {
-      ERROR_SET (0, "Failed to get time stamp at observation end", 
-                 ERROR_LOG_NOW);
-   }
-
-#ifdef DEBUG
-   printf ("detObserveEnd: Time at observation end: %f seconds.\n", 
-           obsId->rawtEnd);
-#endif
-
-   /*
-    * Get the frame countdown counter attached to the data and increment 
-    * the frame counter.
-    */
-
-   frameCount = pRawFrame->header.frameCount;
-   obsId->nframes++;
-
-   /* BUG WORK AROUND: THE SDSU CONTROLLER REPORTS FRAME COUNT=1 WHEN AN 
-    * INFINITE NUMBER OF FRAMES ARE BEING RETURNED. IF THE CONTROLLER IS 
-    * RUNNING IN CONTINUOUS MODE, POKE THE FRAME COUNT WITH ZERO. 
-    * (REMOVE WHEN SDSU DSP CODE IS FIXED).
-    */
-
-   if ( obsId->continuous ) frameCount = 0;
-   if ( obsId->totalFrames > 1 ) frameCount = 0;  /* MODIF 01 nov 99 */
-
-   /*
-    * Report the frame counter and the number of frames remaining.
-    */
-
-   if ( obsId->stopped )
-   {
-      if ( frameCount > 1 )
-      {
-         MESSAGE_LOG1 (MSG_MINDEBUG,
-            "... exposure complete and observation stopped. Frame count=%d",
-            obsId->nframes);
-         MESSAGE_LOG1 (MSG_WARNING,
-            "WARNING: Remaining %ld frames will be aborted", (frameCount-1));
-      }
-      else if ( frameCount == 1 )
-      {
-         MESSAGE_LOG1 (MSG_MINDEBUG,
-         "... exposure complete and observation stopped. Frame count=%d (last frame)",
-         obsId->nframes);
-      }
-      else
-      {
-         MESSAGE_LOG1 (MSG_MINDEBUG,
-         "... exposure complete and continuous observation stopped. Frame count=%d",
-         obsId->nframes);
-      }
-   }
-   else
-   {
-      if ( frameCount > 1 )
-      {
-         MESSAGE_LOG2 (MSG_MINDEBUG, 
-         "... exposure complete. Frame count=%d (%ld remaining)",
-         obsId->nframes, (frameCount-1));
-      }
-      else if ( frameCount == 1 )
-      {
-         MESSAGE_LOG1 (MSG_MINDEBUG, 
-            "... exposure complete. Frame count=%d (last frame)",
-            obsId->nframes);
-      }
-      else
-      {
-         MESSAGE_LOG1 (MSG_MINDEBUG, 
-            "... exposure complete. Frame count=%d (continuous)",
-            obsId->nframes);
-      }
-   }
-
-   /*
-    * If this is the first frame, wait for the binary semaphore indicating 
-    * that the code executed at the start of the the observation has 
-    * completed. (This will only matter for very short observations).
-    *
-    * If an error occurs jump to the ERROR_EXIT at the end of this function.
-    * I do not like "goto" statements but they seem to be necessary in this case
-    * where the function is void and I cannot use "return (ERROR)" and have 
-    * the caller set the "observing" flag. The alternative to the "goto" would 
-    * be to fill the rest of the function with "if (!error)" tests, which 
-    * would be even more incomprehensible.
-    * SMB - 11 December 1998.
-    */
-
-   if ( obsId->nframes <= 1 )
-   {
-#ifdef DEBUG
-      printf ("detObserveEnd: Waiting for observation sync semaphore...");
-#endif
-      if ( semTake ( obsId->syncSem, OBS_WAIT_TIMEOUT ) == ERROR )
-      {
-         ERROR_SET (0, 
-         "Failed to take observation synchronisation semaphore", ERROR_LOG_NOW);
-         goto ERROR_EXIT;
-      }
-#ifdef DEBUG
-      printf (" ... got observation sync semaphore...\n");
-#endif
-   }
-
-   /*
-    * Check the status of the frame just received and only process the data 
-    * if the frame has been received successfully.
-    */
-
-   if ( sdsuId->fatal )
-   {
-      ERROR_SET1 (0, "Fatal error at frame %lu - observation abandoned",
-         ERROR_LOG_NOW, frameCount);
-      goto ERROR_EXIT;
-   }
-   /*else if ( (pRawFrame->header.status != 0) &&
-        ( ((pRawFrame->header.status & SDSU_FSTAT_OVERRUN) != 0) ||
-          ((pRawFrame->header.status & SDSU_FSTAT_CHECKSUM) != 0) ||
-          ((pRawFrame->header.status & SDSU_FSTAT_FRAMESYNC) != 0) ||
-          ((pRawFrame->header.status & SDSU_FSTAT_TIMEOUT) != 0)
-        )
-      )*/
-   else if ( pRawFrame->header.status != 0 )
-   {
-      if ((pRawFrame->header.status & SDSU_FSTAT_TIMEOUT) != 0)
-      {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Timeout in frame %lu - frame ignored", frameCount);*/
-      }
-      else if ((pRawFrame->header.status & SDSU_FSTAT_OVERRUN) != 0)
-      {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Data overrun in frame %lu - frame ignored", frameCount);*/
-      }
-      else if ((pRawFrame->header.status & SDSU_FSTAT_FRAMESYNC) != 0)
-      {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Sync error in frame %lu - ignored", frameCount);*/
-      }
-      else if ((pRawFrame->header.status & SDSU_FSTAT_CHECKSUM) != 0)
-      {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Checksum error in frame %lu - ignored", frameCount);*/
-      }
-      else if ((pRawFrame->header.status & SDSU_FSTAT_NOK) != 0)
-      {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Overwritten error in frame %lu - ignored", frameCount);*/
-      }
-   }
-   else
-   {
-      /* Reserve the frame in the SDSU data buffer holding the raw image 
-       * data.
-       */
-
-      /*if (sdsuFrameReserve( sdsuId, pRawFrame ) == ERROR)
-      {
-         ERROR_LOG ("Failed to reserve raw image frame");
-         goto ERROR_EXIT;
-      }
-      bufferReserved = TRUE;*/
-   
-      /*
-       * Unscramble the data. The algorithm used depends on the number of 
-       * detector outputs, obtained earlier.
-       */
-
-      /*if ( swapFlag == 0 )
-      {
-         xycom_ptr->port7 = 0x0 ;
-         swapFlag = 1;
-      }
-      else
-      {
-         xycom_ptr->port7 = 0x1;
-         swapFlag = 0;
-      }*/
-
-      if ( detFrameUnscramble( obsId->xPixels, obsId->yPixels, 
-                               (int) obsId->outputs,
-                               pRawFrame, obsId->pCurFrame )
-           == ERROR )
-      {
-         ERROR_LOG ("Failed to unscramble data");
-         if ( obsId->outOptions == 1 )
-         {
-            dummyDhsErrno = DHS_S_SUCCESS;         
-            dhsBdDsFree ( obsId->dhsDataset, &dummyDhsErrno );
-         }
-         else
-         {
-            free (obsId->pCurFrame);
-            obsId->pCurFrame = NULL;
-         }
-         goto ERROR_EXIT;
-      }
-
-      obsId->outNFrames ++ ;
-#ifdef DEBUG
-      printf ( "outNFrames = %d\n" , obsId->outNFrames ) ;
-#endif
-
-      /*
-       * If a signal processing context has been initialised, process the data.
-       */
-
-         if ( obsId->ospFGContext == NULL ) 
-         {
-            MESSAGE_LOG (MSG_MINDEBUG,
-     "PWFS: Cannot process data - no signal processing data structure defined");
-         }   
-         else
-         {
-            /*
-             * Switch according to the signal processing mode, as defined with 
-             * the detSigMode command, or as defaulted in the detSigInit 
-             * command.
-             */
-
-            switch (obsId->sigMode)
-            {
-               case (OSP_MODE_DARK):
-
-                  /*
-                   * Subtract Dark mode.
-                   */
-#ifdef DEBUG
-                  printf ("ospSubtractFrameFromFrame: %p %p\n", 
-                          obsId->pCurFrame, obsId->ospFGContext);
-#endif
-                  if ( ospSubtractFrameFromFrame (obsId->pCurFrame,
-                       obsId->ospFGContext->redsubbuff, obsId->ospFGContext) 
-                       == ERROR )
-                  {
-                     ERROR_LOG ("Failed to subtract DARK from current frame");
-                  }
-
-                  break;
-
-               case (OSP_MODE_FG):
-
-                  /*
-                   * Fast Guide mode.
-                   */
-#ifdef DEBUG
-                  printf ("ospTracking: %p %p\n", obsId->pCurFrame, 
-                          obsId->ospFGContext);
-#endif
-                  if ( obsId->updateGain == TRUE )
-                  {
-                     /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
-                     obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
-                     obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
-                     obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
-                     obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
-                     obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
-
-                     obsId->updateGain = FALSE ;
-                     /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
-                  };
-
-                  if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
-                       == ERROR )
-                  {
-                     ERROR_LOG ("Failed to run Tracking correction");
-                  };
-
-                  break;
-
-               case (OSP_MODE_FG_COADD):
-
-                  /*
-                   * Fast Guide and Coadd mode.
-                   */
-
-                  if ( obsId->binningFlag == FALSE )
-                  {
-                     nCoadds = (int) obsId->nCoaddFrames;
-#ifdef DEBUG
-                     printf ("ospTracking: %p %p\n", obsId->pCurFrame, 
-                             obsId->ospFGContext);
-#endif
-                     if ( obsId->updateGain == TRUE )
-                     {
-                        /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
-                        obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
-                        obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
-                        obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
-                        obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
-                        obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
-
-                        obsId->updateGain = FALSE ;
-                        /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
-                     };
-
-                     if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
-                          == ERROR )
-                     {
-                        ERROR_LOG ("Failed to run Tracking correction");
-                     }
-#ifdef DEBUG
-                     printf ("ospCoAddOnly: %p %d %p\n", obsId->pCurFrame, 
-                             nCoadds, obsId->ospFGContext);
-#endif
-                     if ( ospCoAddOnly (obsId->pCurFrame, nCoadds,
-                                        obsId->ospFGContext) == ERROR )
-                     {
-                        ERROR_LOG ("Failed to coadd data");
-                     }
-
-                     /*
-                      * Increment the coadd counter and when it reaches nCoadds 
-                      * save the coadded data to disk. Coadded data are only 
-                      * saved once per observation.
-                      */
-
-                     obsId->coaddCounter++;
-                     if ( obsId->coaddCounter == nCoadds )
-                     {
-                        /*
-                         * Make up a file name by adding the string ".coadd.fits" to 
-                         * the given file name. Use a default file name if one 
-                         * has not been given.
-                         */
-
-                        if ( strcmp(obsId->pOutFileName, "") == 0 )
-                        {
-                           strcpy ( pFileNameString, "coadd.fits" );
-                        }
-                        else
-                        {
-                           sprintf( pFileNameString, "%s.coadd.fits", 
-                                    obsId->pOutFileName );
-                        }
-
-                        MESSAGE_LOG1 (MSG_MINDEBUG, 
-                        "Saving coadded data to %s", pFileNameString);
-
-                        if ( detWriteFits (pFileNameString, obsId, 
-                             obsId->xPixels, obsId->yPixels,
-                             obsId->ospFGContext->sumbuff) == ERROR )
-                        {
-                           ERROR_LOG ("Failed to save coadded data to disk");
-                        }
-                     }
-                  }
-                  break;
-
-                  case (OSP_MODE_COADD):
-
-                  /*
-                   * Coadd only mode.
-                   */
-
-                  nCoadds = (int) obsId->nCoaddFrames;
-#ifdef DEBUG
-                  printf ("ospCoAddOnly: %p %d %p\n", obsId->pCurFrame, nCoadds,
-                          obsId->ospFGContext);
-#endif
-                  if ( ospSubtractFrameFromFrame (obsId->pCurFrame,
-                       obsId->ospFGContext->redsubbuff, obsId->ospFGContext) 
-                       == ERROR )
-                  {
-                     ERROR_LOG ("Failed to subtract DARK from current frame");
-                  }
-                  if ( ospCoAddOnly (obsId->pCurFrame, nCoadds,
-                                     obsId->ospFGContext) == ERROR )
-                  {
-                     ERROR_LOG ("Failed to coadd data");
-                  }
-
-                  /*
-                   * Increment the coadd counter and when it reaches nCoadds 
-                   * save the coadded data to disk. Coadded data are only 
-                   * saved once per observation.
-                   */
-
-                  obsId->coaddCounter++;
-                  if ( obsId->coaddCounter == nCoadds )
-                  {
-                     /*
-                      * Make up a file name by adding the string ".coadd.fits" to 
-                      * the given file name. Use a default file name if one 
-                      * has not been given.
-                      */
-
-                     if ( strcmp(obsId->pOutFileName, "") == 0 )
-                     {
-                        strcpy ( pFileNameString, "coadd.fits" );
-                     }
-                     else
-                     {
-                        sprintf( pFileNameString, "%s.coadd.fits", 
-                                 obsId->pOutFileName );
-                     }
-
-                     MESSAGE_LOG1 (MSG_MINDEBUG, 
-                     "Saving coadded data to %s", pFileNameString);
-
-                     if ( detWriteFits (pFileNameString, obsId, 
-                          obsId->xPixels, obsId->yPixels,
-                          obsId->ospFGContext->sumbuff) == ERROR )
-                     {
-                        ERROR_LOG ("Failed to save coadded data to disk");
-                     }
-                  }
-                  break;
-
-               case (OSP_MODE_CALIB_REF):
-
-                  /*
-                   * Calibrate Reference Vector mode.
-                   */
-
-                  if ( obsId->binningFlag == FALSE )
-                  {
-                     nCoadds = (int) obsId->nCoaddFrames;
-                     frameNb = (int) 100;
-
-#ifdef DEBUG
-                     printf ("ospCalibrateRefVector: %p %d %d %p\n", 
-                             obsId->pCurFrame, nCoadds, frameNb,
-                             obsId->ospFGContext);
-#endif
-                     if ( obsId->updateGain == TRUE )
-                     {
-                        /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
-                        obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
-                        obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
-                        obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
-                        obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
-                        obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
-
-                        obsId->updateGain = FALSE ;
-                        /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
-                     } ;
-                     if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
-                          == ERROR )
-                     {
-                        ERROR_LOG ("Failed to run Tracking correction");
-                     };
-
-                     if ( obsId->coaddCounter < frameNb )
-                     {
-                        obsId->coaddCounter++;
-                     }
-                     else
-                     {
-                        if ( ospCalibrateRefVector (obsId->pCurFrame, nCoadds,
-                             obsId->ospFGContext) == ERROR )
-                        {
-                           ERROR_LOG ("Failed to calibrate reference vector");
-                        }
-                     }
-                  }
-                  break;
-
-               case (OSP_MODE_FG_FOCUS):
-
-                  /*
-                   * Fast guide and focus coorection mode.
-                   */
-
-                  nCoadds = (int) obsId->nCoaddFrames;
-#ifdef DEBUG
-                  printf ("ospNewTrackingAndFocus: %p %p %d\n", 
-                          obsId->pCurFrame , obsId->ospFGContext, obsId->binningFlag);
-#endif
-                  if ( obsId->updateGain == TRUE )
-                  {
-                     /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
-                     obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
-                     obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
-                     obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
-                     obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
-                     obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
-
-                     obsId->updateGain = FALSE ;
-                     /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
-                  } ;
-                  if ( ospNewTrackingAndFocus (obsId->pCurFrame ,  
-                       obsId->ospFGContext , obsId->binningFlag ) == ERROR )
-                  {
-                     ERROR_LOG (
-                     "Failed to run Tracking and Focus correction");
-                  }
-                  break;
-
-               default:
-#ifdef DEBUG
-                  printf ("Signal processing switched off\n");
-#endif
-                  break;
-            }
-         }
-
-      /*
-       * Send the data to the DHS, store it to disk or do nothing, 
-       * as appropriate
-       */
-
-      if ( obsId->outOptions == 1 )
-      {
-         MESSAGE_LOG (MSG_MINDEBUG, "Sending data to DHS...");
-
-         if ( obsId->totalFrames == 1 )
-         {
-            /*
-             * Convert the time stamps from Gemini raw time into Universal Time
-             * and construct these into character strings.
-             */
-
-            if (timeThenC( obsId->rawtEnd, UT1, 2, obsId->timeArrayEnd ) != OK)
-            {
-               ERROR_SET (0,
-                  "Failed to convert time stamp at observation end to date/time",
-                  ERROR_LOG_NOW);
-            }
-
-            sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
-                     obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], obsId->timeArrayEnd[2],
-                     obsId->timeArrayEnd[3], obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
-
-            dhsBdAttribAdd (obsId->dhsDataFrame, "utend", DHS_DT_STRING,
-                            0, NULL, obsId->utEndString, &dhsErrno);
-            CHECK_DHS (dhsErrno);
-         }
-
-#ifdef DEBUG
-         dhsBdDsPrint (obsId->dhsDataset, &dhsErrno);
-         CHECK_DHS (dhsErrno);
-#endif /* DEBUG */
-
-         /* Send the data to the dhs */
-
-#ifdef DEBUG
-       printf (
-       "detObserveEnd: dhsBdPut, dhsConnection=%d, pDataLabel=%s, dataset=%d\n",
-       (int) obsId->dhsConnection, obsId->pDataLabel, (int) obsId->dhsDataset);
-#endif /* DEBUG */
-
-         if ( obsId->dhsOutOptions == 2 ) /* QL only */
-         {
-            if ( obsId->totalFrames == 1 )
-               putTag = dhsBdPut (obsId->dhsConnection, obsId->pDataLabel, 
-                                  DHS_BD_PT_DS_QL, DHS_TRUE,
-                                  obsId->dhsDataset, NULL, &dhsErrno);
-            else
-               putTag = dhsBdPut (obsId->dhsConnection, obsId->pDataLabel, 
-                                  DHS_BD_PT_DS_QL, DHS_FALSE,
-                                  obsId->dhsDataset, NULL, &dhsErrno);
-         }
-         else
-         {
-            if ( obsId->totalFrames == 1 )
-            {
-               putTag =
-               dhsBdPut (obsId->dhsConnection, obsId->pDataLabel,
-               DHS_BD_PT_DS, DHS_TRUE, obsId->dhsDataset, NULL, &dhsErrno);
-            }
-            else
-            {
-               putTag =
-               dhsBdPut (obsId->dhsConnection, obsId->pDataLabel,
-                         DHS_BD_PT_DS, DHS_FALSE, obsId->dhsDataset, NULL,
-                         &dhsErrno);
-            }
-         }
-
-         CHECK_DHS (dhsErrno);
-
-         if (dhsErrno != DHS_S_SUCCESS)
-         {
-            ERROR_SET1 (S_detControl_DHS_ERROR, 
-                        "Failed to initiate data transfer (dhsErrno=%d)",
-                        ERROR_LOG_NOW, dhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS;
-            dhsTagFree (putTag, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS; 
-            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
-            goto ERROR_EXIT;
-         }
-
-         /* Wait for completion */
-
-#ifdef DEBUG
-         printf ("detObserveEnd: dhsWait putTag=%d ...\n", (int) putTag);
-#endif /* DEBUG */
-
-         dhsWait (1, &putTag, &dhsErrno);
-         CHECK_DHS (dhsErrno);
-
-         if (dhsErrno != DHS_S_SUCCESS)
-         {
-            ERROR_SET1 (S_detControl_DHS_ERROR, 
-                        "Error during wait for data transfer (dhsErrno=%d)",
-                        ERROR_LOG_NOW, dhsErrno);
-
-            dummyDhsErrno = DHS_S_SUCCESS;         
-            dhsTagFree (putTag, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS;        
-            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
-            goto ERROR_EXIT;
-         }
-
-#ifdef DEBUG
-         printf ("detObserveEnd: detDhsCheckCmdStatus putTag=%d ...\n", 
-                 (int) putTag);
-#endif /* DEBUG */
-         if ( detDhsCheckCmdStatus (putTag) == ERROR )
-         {
-            ERROR_SET (S_detControl_DHS_ERROR, "Data transfer failed", 
-                       ERROR_LOG_NOW);
-
-            dummyDhsErrno = DHS_S_SUCCESS;         
-            dhsTagFree (putTag, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS;        
-            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno); 
-            CHECK_DHS (dummyDhsErrno);
-            goto ERROR_EXIT;
-         }
-
-         /*
-          * If the last frame has been received free the DHS dataset.
-          */
-#ifdef DEBUG
-         printf ("detObserveEnd: dhsTagFree putTag=%d ...\n", (int) putTag);
-#endif /* DEBUG */
-
-         dhsErrno = DHS_S_SUCCESS;         
-         dhsTagFree (putTag, &dhsErrno);
-
-         if ( (frameCount == 1) || (obsId->stopped) )
-         {
-            dhsBdDsFree (obsId->dhsDataset, &dhsErrno);
-            CHECK_DHS (dhsErrno);
-         }
-      }
-      else if ( obsId->outOptions == 2 )
-      {
-         /*
-          * The DHS is not being used and the data will be saved to FITS files.
-          * If this is the first frame of the observation the standard names 
-          * will be used.
-          * Frames 2 onwards have .2, .3, etc... appended to the names.
-          */
-
-         /* Save the unscrambled data to a FITS file. */
-
-         if ( obsId->totalFrames != 1 )
-         {
-            sprintf( pFileNameString, "%s.%d.fits", obsId->pOutFileName,
-                     obsId->outNFrames );
-         }
-         else
-         {
-            sprintf( pFileNameString, "%s.fits", obsId->pOutFileName ); 
-         }
-
-         MESSAGE_LOG2 (MSG_MINDEBUG, 
-         "Saving unscrambled data from %p to directly to file \"%s\"...",
-         obsId->pCurFrame, pFileNameString);
-
-         if (detWriteFits (pFileNameString, obsId, obsId->xPixels, 
-             obsId->yPixels, obsId->pCurFrame)
-             == ERROR)
-         {
-            ERROR_LOG ("Failed to write FITS file");
-            free (obsId->pCurFrame);
-            obsId->pCurFrame = NULL;
-            goto ERROR_EXIT;
-         }
-         MESSAGE_LOG (MSG_MINDEBUG, "... file saved ok");
-      }
-
-      /* If obsId->totalFrames > 1 and obsId->outNFrames = obsId->totalFrames */
-      /* stop the observation */
-
-#ifdef DEBUG
-      printf ( "detObserveEnd : ouNFrames = %d, totalFrames = %d\n" ,
-               obsId->outNFrames , obsId->totalFrames ) ;
-#endif
-      if ( (obsId->totalFrames > 1) && (obsId->outNFrames == obsId->totalFrames) )
-         obsId->stopped = TRUE ;
-   }
-
-   /*
-    * If the DHS is not being used and the last frame has been received,
-    * free the unscrambled data buffer.
-    */
-
-   if ( obsId->outOptions != 1 )
-   {
-      if ( (frameCount == 1) || (obsId->stopped) )
-      {
-         free (obsId->pCurFrame);
-         obsId->pCurFrame = NULL;
-      }
-   }
-
-   /*
-    * Abort any further readouts if the observation was stopped prematurely.
-    */
-
-   if ( obsId->stopped )
-   {
-      /* add 27 sept 99 for slow stop pb */
-      printf ( "detObserveEnd() -> sdsuReadoutAbort()\n" ) ;
-      obsAlreadyAborted = TRUE;
-      if (sdsuReadoutAbort (sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to abort readouts on receipt of STOP instruction");
-         goto ERROR_EXIT;
-      }
-      /* add 27 sept 99 for slow stop pb */
-      printf ( "detObserveEnd() -> sdsuReadoutAbort() done \n" ) ;
-   }
-
-
-/* NORMAL_EXIT: */
-
-   /*
-    * Release the SDSU frame buffer.
-    */
-
-   /*if ( bufferReserved )
-   {
-      sdsuFrameRelease (sdsuId, pRawFrame);
-      bufferReserved = FALSE;
-   }*/
-
-   /*
-    * If the last frame has been received, set the observing flag FALSE
-    * and set the observeC CAR record to IDLE via the "observing" record.
-    * Otherwise set a timeout on the receipt of the next frame.
-    */
-
-   /*printf ( "frameCount=%d, stopped=%d\n" , frameCount , obsId->stopped);*/
-   if ( (frameCount == 1) || (obsId->stopped) )
-   {
-      /*printf ( "sdsuId->frameErrors=%d\n" , sdsuId->frameErrors ) ;*/
-      if ( sdsuId->frameErrors <= 0 )
-      {
-         MESSAGE_LOG1 (MSG_LOG, "Observation completed successfully, frames lost: %d", sdsuFrameLost);
-         /*printf ( "Circular buffer contains :\n" );
-         i=obsId->ospFGContext->cb_1_pixel_index ;
-         printf ( "Index cb 1 %d, Index cb 2 : %d\n" , i ,obsId->ospFGContext->cb_2_pixel_index) ;
-         for ( i = 0 ; i < 500 ; i ++ )
-             printf ( "cb_1_pixel[%d]=%f, cb_2_pixel[%d]=%f\n" , i , obsId->ospFGContext->cb_1_pixel[i], i , 
-                      obsId->ospFGContext->cb_2_pixel[i] ) ;*/
-      }
-      else if ( sdsuId->frameErrors < obsId->nframes )
-      {
-         MESSAGE_LOG2 (MSG_WARNING, "Observation completed with %d frames lost and %d frames with error",
-            sdsuFrameLost , sdsuId->frameErrors);
-      }
-      else
-      {
-         ERROR_LOG ("Observation failed - all frames lost");
-         goto ERROR_EXIT;
-      }
-
-      obsId->observing = FALSE;
-      observingState = CAR_IDLE;
-      if (epToVxPipeWrite (NULL, (char *) &observingState, 
-                           obsId->pDetObservingContext) == ERROR)
-      {
-         ERROR_LOG ("Failed to set observing flag to IDLE");
-      }
-   }
-   else
-   {
-#ifdef DEBUG
-      printf (
-      "detObserveEnd: Further frames are anticipated - observation not finished.\n");
-#endif
-
-      /*
-       * Start an alarm timer which will trigger if the frame sync callback 
-       * never runs.
-       * Set the delay time to the readout timeout plus the largest frame 
-       * exposure time obtained earlier.
-       *
-       * THE TIMEOUT IS NOW ONLY USED IN SIMULATION MODE - SMB 21 JAN 99
-       */
-
-
-      if ( sdsuId->simulate )
-      {
-         readoutTimeout = 5.0;
-         if ( obsId->exposed >= obsId->exposedRQ )
-         {
-            if ( obsId->totalFrames > 0 )
-            {
-               waitTimeSecs = 
-               readoutTimeout + (obsId->exposed / (double) obsId->totalFrames);
-            }
-            else
-            {
-               waitTimeSecs = readoutTimeout + obsId->exposed;
-            }
-         }
-         else
-         {
-            if ( obsId->totalFrames > 0 )
-            {
-               waitTimeSecs = 
-               readoutTimeout + (obsId->exposedRQ/(double) obsId->totalFrames);
-            }
-            else
-            {
-               waitTimeSecs = readoutTimeout + obsId->exposedRQ;
-            }
-         }
-
-         if ( timeoutAlarmSet (obsId->timeId, waitTimeSecs, 
-                               detObserveTimeout, (int) obsId) == ERROR )
-         {
-            ERROR_LOG ("Failed to set alarm timer");
-         }
-      }
-   }
-
-   return;
-
-
-ERROR_EXIT:
-
-   /*
-    * If an error occurred, abort the observation, release the SDSU frame 
-    * buffer (if necessary)
-    * set the observing flag FALSE and set the observeC CAR record to ERROR,
-    * via the "observing" record.
-    */
-
-   /*printf ( "ERROR_EXIT\n" ) ;*/
-   if ( !obsAlreadyAborted )
-   {
-      if (sdsuReadoutAbort (sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to abort readouts after error");
-      }
-      obsAlreadyAborted = TRUE;
-   }
-
-   /*if ( bufferReserved )
-   {
-      sdsuFrameRelease (sdsuId, pRawFrame);
-      bufferReserved = FALSE;
-   }*/
-
-   obsId->observing = FALSE;
-   observingState = CAR_ERROR;
-   if (epToVxPipeWrite (NULL, (char *) &observingState, 
-                        obsId->pDetObservingContext) == ERROR)
-   {
-      ERROR_LOG ("Failed to set observing flag to ERROR");
-   }
-
-   return;
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detObserveTimeout
- *
- *   INVOCATION:
- *   detObserveTimeout (timeId, obsIdInt)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) timeId   (timer_t) Timer ID
- *   (>) obsIdInt (int)     Pointer to observation definition, cast to integer
- *
- *   FUNCTION VALUE:
- *   None
- *
- *   PURPOSE:
- *   Handle an observation timeout.
- *
- *   DESCRIPTION:
- *   Handle the situation when a readout does not complete within the time
- *   when its exposure and readout should have finished.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   UNFINISHED
- *-
- */
-
-void detObserveTimeout
-   (
-   timer_t     timeId,             /* Timer ID.                               */
-   int         obsIdInt            /* Pointer to observation ID cast to int.  */
-   )
-{
-   OBS_ID      obsId = (OBS_ID) obsIdInt;
-   SDSU_ID     sdsuId = (SDSU_ID) obsId->sdsuId;
-
-   char *      mainKeywords[] = {"NAXIS1", "NAXIS2", "SECTORS", "OSP_FSZ"};
-                              /* Main FITS keywords to read from header.      */
-   int         mainValues[4]; /* Values corresponding to main FITS keywords.  */
-
-   /*
-    * The following variables will be used to test additional header items in 
-    * a file of simulated data, but the check has not been implemented yet.
-    */
-
-   long        observingState; /* Observation status (busy or idle).          */
-   int         simOption;      /* Simulation option.                          */
-
-#ifdef DEBUG
-   printf ("detObserveTimeout: Observation timed out.\n");
-#endif
-
-   /*
-    * When sdsuLib is simulating this routine makes the frame look like it has
-    * been read out properly by the controller, and calls the frame ISR.
-    * Simulating the packet ISRs would be a bit tricky...
-    */
-   
-   if (sdsuId->simulate)
-   {
-      SDSU_FRAME *pFrame = sdsuId->readFrame;
-      
-      pFrame->header.packetCount   = 0;
-      pFrame->header.status        = 0;   /* No errors during readout */
-      pFrame->header.parameterId   = 0;   /* Simulated parameter ID   */
-      pFrame->header.frameCount    = 1;   /* Simulate just one frame  */
-
-      if ( strcmp(obsId->pSimFileName, "NONE") == 0 )
-      {
-
-         /*
-          * Simulate the data internally, writing the result to the current 
-          * SDSU frame. Use option 1 (a simple ramp) for large data frames and 
-          * option 2 (simulated Shack-Hartmann spots) for small data frames.
-          */
-
-         MESSAGE_LOG (MSG_LOG, "Simulating data internally");
-
-         if ( (obsId->xPixels > 256) || (obsId->yPixels > 256) )
-         {
-            simOption = 1;
-         }
-         else
-         {
-            simOption = 2;
-         }
-
-         if ( detSimulateData (obsId->xPixels, obsId->yPixels, simOption, 
-                               pFrame) == ERROR )
-         {
-            ERROR_LOG ("Failed to simulate data");
-         }
-      }
-      else
-      {
-
-         /*
-          * Read simulated data from the specified file.
-          * First check the contents of the file correspond to the actual SDSU
-          * setup.
-          */
-
-         MESSAGE_LOG1 (MSG_LOG, 
-           "Reading simulated data from %s\n", obsId->pSimFileName);
-         if (ospReadHeaderInt ( obsId->pSimFileName, 3, mainKeywords, mainValues) 
-             == ERROR )
-         {
-            ERROR_SET (0, "Failed to read simulated data header", 
-                       ERROR_LOG_NOW);
-         }
-
-         if ( (mainValues[0] == obsId->xPixels) && 
-              (mainValues[1] == obsId->yPixels) &&
-              (mainValues[2] == obsId->outputs)
-            )
-         {
-
-            /*
-             * The file is acceptable. Now read its contents.
-             */
-
-            MESSAGE_LOG (MSG_MINDEBUG, "Simulated data header looks OK");
-            if (ospReadUShortImage ((uint16 *)& (pFrame->pixel[0]),  
-                obsId->pSimFileName,
-                (obsId->xPixels)*(obsId->yPixels)) == ERROR )
-            {
-               ERROR_SET (0, "Failed to read simulated data", ERROR_LOG_NOW);
-            }
-         }
-         else
-         {
-            /*
-             * The simulated data contained in the file does not match the 
-             * simulated data required.
-             */
-
-            ERROR_SET4 (S_detControl_BAD_FILE,
-               "Required size is %d x %d, simulated data file contains %d x %d",
-               ERROR_LOG_SAVE, obsId->xPixels, obsId->yPixels,
-               mainValues[0], mainValues[1]);
-            ERROR_SET2 (0, 
-            "%ld detector outputs are required, simulated data file assumes %d",
-               ERROR_LOG_SAVE, obsId->outputs, mainValues[2]);
-            ERROR_LOG ("Mismatch between simulated data file and requirements");
-         }
-      }
-
-      /* Simulate the packet count reaching the desired value. */
-
-      pFrame->header.packetCount   = sdsuId->packetsPerFrame;
-
-      /*
-       * Simulate an SDSU frame sync interrupt. This should cause the 
-       * detObserveEnd callback to be executed.
-       */
-
-/* COMMENTED OUT - ONLY ANY USE WHEN USING INTERRUPTS.
-      if ( sdsuSimulateSimpleSync(sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to simulate frame sync interrupt");
-      }
-*/
-   }
-   else if ( sdsuId->frameIntNum == 0 )
-   {
-      /*
-       * The observation timed out with SDSU frame interrupts disabled.
-       * Assume the data are available in the buffer and simulate an SDSU 
-       * frame sync interrupt.
-       * This should cause the detObserveEnd callback to be executed.
-       */
-
-      MESSAGE_LOG (MSG_MINDEBUG, 
-                   "Observation time completed with interrupts disabled");
-   
-      if ( sdsuSimulateSimpleSync(sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to simulate frame sync interrupt");
-      }
-   }
-   else
-   {
-      /* sysIntDisable(6); */                     /* DEBUG TEST */
-
-      /*
-       * The observation completion was supposed to have been signalled by an 
-       * interrupt and timed out.
-       * Set the observing flag FALSE and set the observeC CAR record to ERROR,
-       * via the "observing" record.
-       */
-
-      MESSAGE_LOG (MSG_WARNING, 
-      "Observation timed out - trying to read data anyway...");
-
-      obsId->observing = FALSE;
-      observingState = CAR_ERROR;
-      if (epToVxPipeWrite (NULL, (char *) &observingState, 
-          obsId->pDetObservingContext) == ERROR)
-      {
-         ERROR_LOG ("Failed to set observing flag to ERROR");
-      }
-
-      /* Try and simulate a frame sync interrupt to force a data readout. 
-       * This may or may not work. 
-       */
-
-      if ( sdsuSimulateSimpleSync (sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to simulate frame sync interrupt");
-      }
-   }
-}
-
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -4527,12 +5773,9 @@ void detObserveTimeout
  *   detStop
  *
  *   INVOCATION:
- *   detStop (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *            obsId)
+ *   detStop (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record Name Prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -4563,8 +5806,6 @@ void detObserveTimeout
 
 uint32 detStop
    (
-   const char *      pWfsName,       /* Name of wavefront sensor.             */
-   const char *      pRecordPrefix,  /* Record Name Prefix.                   */
    CAD_CMD_CONTEXT   cadCmdContext,  /* CAD command context structure.        */
    int               commandNumber,  /* Command number.                       */
    SDSU_ID           sdsuId,         /* SDSU context structure.               */
@@ -4642,6 +5883,130 @@ uint32 detStop
    return (errorNumber);
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detCreateFileName
+ *
+ *   INVOCATION:
+ *   detCreateFileName (pFilePath, pOutFileName, pFullOutFileName)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pFilePath        (char *)  Pointer to the file path name
+ *   (>) pOutFileName     (char *)  Pointer to the output file name
+ *   (<) pFullOutFileName (char *)  Pointer to the combined path and file name
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   always OK
+ *
+ *   PURPOSE:
+ *   Combine path and file name
+ *
+ *   DESCRIPTION:
+ *   Combine path and file name and cancel the .fits at the end if this
+ *   one exists
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detCreateFileName
+   (
+   char *   pFilePath,         /* Pointer to the file path name               */
+   char *   pOutFileName,      /* Pointer to the output file name             */
+   char *   pFullOutFileName   /* Pointer to the combined path and file name  */
+                               /* Size of path and file name is               */
+                               /* EPICS_MAX_BYTES_STRING_ATTRIB + 1           */
+                               /* Size of full file name is                   */
+                               /* 2*(EPICS_MAX_BYTES_STRING_ATTRIB + 1)       */
+   )
+{
+   char     firstPartOutFileName [ EPICS_MAX_BYTES_STRING_ATTRIB + 1 ] ;
+   char     lastCharOutFileName [ EPICS_MAX_BYTES_STRING_ATTRIB + 1 ] ;
+   int      sizeOutFileName ;
+   int      sizeFits ;
+   int      i, j ;
+
+   sizeFits = strlen ( ".fits" ) ;
+
+   /* Check if pOutFileName contains a string */
+
+   if ( strcmp ( pOutFileName, "" ) == 0 )
+   {
+      /* Default file name hrwfs.fits */
+
+      if ( strcmp ( pFilePath, "" ) == 0 )
+         strcpy ( pFullOutFileName, "pwfs1" ) ;
+      else
+         sprintf ( pFullOutFileName, "%s/pwfs1" , pFilePath ) ;
+
+      return ( OK ) ;
+   }
+
+   /* Check if pOutFileName contains the string .fits */
+
+   if ( strstr ( pOutFileName, ".fits" ) != NULL )
+   {
+      sizeOutFileName = strlen ( pOutFileName ) ;
+
+      if ( sizeOutFileName < sizeFits )
+         strncpy ( firstPartOutFileName , pOutFileName ,
+                   EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+      else
+      {
+         /* Check if the last 5 char are .fits */
+         i = 0 ;
+         for ( j = sizeOutFileName - sizeFits ; j < sizeOutFileName ; j ++ )
+         {
+             lastCharOutFileName[i] = pOutFileName[j];
+             i ++ ;
+         }
+         lastCharOutFileName [i] = '\0' ;
+
+         if ( strcmp ( lastCharOutFileName , ".fits" ) == 0 )
+         {
+            /* Read the first part of pOutFileName witout .fits */
+            for ( j = 0 ; j < sizeOutFileName - sizeFits ; j ++ )
+            {
+                firstPartOutFileName[j] = pOutFileName[j];
+            }
+            firstPartOutFileName [j] = '\0' ;
+         }
+         else
+         {
+            strncpy ( firstPartOutFileName , pOutFileName ,
+                      EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+         }
+
+      }
+   }
+   else
+   {
+      strncpy ( firstPartOutFileName , pOutFileName ,
+                EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+   }
+
+   /* Now combine firstPartOutFileName and pFilePath */
+
+   if ( strcmp ( pFilePath , "" ) == 0 )
+      strncpy ( pFullOutFileName, firstPartOutFileName,
+                EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+   else
+      sprintf ( pFullOutFileName, "%s/%s" , pFilePath , firstPartOutFileName ) ;
+
+   return ( OK ) ;
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -4650,12 +6015,9 @@ uint32 detStop
  *   detAbort
  *
  *   INVOCATION:
- *   detAbort (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *             obsId)
+ *   detAbort (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record Name Prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -4668,7 +6030,7 @@ uint32 detStop
  *   Execute detAbort command
  *
  *   DESCRIPTION:
- *   This function aborts an observation. It will send an abort to the SDSU 
+ *   This function aborts an observation. It will send an abort to the SDSU
  *   controller even if an observation appears not to be taking place.
  *
  *   EXTERNAL VARIABLES:
@@ -4686,8 +6048,6 @@ uint32 detStop
  */
 
 uint32 detAbort(
-   const char *      pWfsName,      /* Name of wavefront sensor.              */
-   const char *      pRecordPrefix, /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT   cadCmdContext, /* CAD command context structure.         */
    int               commandNumber, /* Command number.                        */
    SDSU_ID           sdsuId,        /* SDSU context structure.                */
@@ -4697,6 +6057,7 @@ uint32 detAbort(
    uint32         errorNumber;      /* Error number reported by task.         */
 
    int            observingState;   /* Observation status (busy or idle).     */
+   int            measuringState;   /* Measuring status (1 or 0).             */
 
    /*
     * Initialise the error number.
@@ -4710,7 +6071,7 @@ uint32 detAbort(
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -4718,7 +6079,7 @@ uint32 detAbort(
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -4734,7 +6095,7 @@ uint32 detAbort(
    }
    else
    {
-      MESSAGE_LOG (MSG_WARNING, 
+      MESSAGE_LOG (MSG_WARNING,
       "WARNING: Observation not in progress but attempting to abort anyway");
    }
 
@@ -4765,7 +6126,7 @@ uint32 detAbort(
    }
 
    /*
-    * Reset the "observation in progress" flag and set the observeC CAR record 
+    * Reset the "observation in progress" flag and set the observeC CAR record
     * to IDLE, via the "observing" record.
     */
 
@@ -4774,10 +6135,16 @@ uint32 detAbort(
 
       obsId->observing = FALSE;
       observingState = CAR_IDLE;
-      if (epToVxPipeWrite (NULL, (char *) &observingState, 
+      if (epToVxPipeWrite (NULL, (char *) &observingState,
           obsId->pDetObservingContext) == ERROR)
       {
          ERROR_LOG ("Failed to set observing flag to IDLE.");
+      }
+      measuringState = 0;
+      if (epToVxPipeWrite (NULL, (char *) &measuringState,
+          obsId->pDetMeasuringContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set Measuring flag to 0.");
       }
    }
 
@@ -4792,8 +6159,8 @@ uint32 detAbort(
  *
  *   INVOCATION:
  *   detInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, pSdsuId, 
- *            obsId, pVmeAddress, pxMax, pyMax, pxPixels, pyPixels, pmaxFrames, 
- *            pDetInitContext, pDetInitStatusContext)
+ *            obsId, pVmeAddress, pmaxFrames, pDetInitContext, 
+ *            pDetInitStatusContext, pStateContext aoCcdId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
@@ -4805,15 +6172,13 @@ uint32 detAbort(
  *   (>) obsId         (OBS_ID)          Observation context structure
  *   (!) pVmeAddress   (uint32 *)        Pointer to VME address of SDSU 
  *                                       controller
- *   (!) pxMax         (int *)           Pointer to number of X pixels
- *   (!) pyMax         (int *)           Pointer to number of Y pixels
- *   (!) pxPixels      (int *)           Pointer to number of X pixels
- *   (!) pyPixels      (int *)           Pointer to number of Y pixels
  *   (!) pMaxFrames    (int *)           Pointer to max frames in data buffer
  *   (>) pDetInitContext       (DATREC_CONTEXT) Content structure for init 
  *                                              state record
  *   (>) pDetInitStatusContext (DATREC_CONTEXT) Content structure for init 
  *                                              status record
+ *   (<) pStateContext (DATREC_CONTEXT) Content structure for state record 
+ *   (!) aoCcdId (AO_CCD_ID)            AO CCD geometry context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -4853,16 +6218,14 @@ uint32 detInit
    OBS_ID          obsId,            /* Observation context structure.        */
    uint32 *        pVmeAddress,      /* Pointer to VME address of SDSU        */
                                      /* controller.                           */
-   int *           pxMax,            /* Maximum number of X pixels.           */
-   int *           pyMax,            /* Maximum number of Y pixels.           */
-   int *           pxPixels,         /* Current number of X pixels.           */
-   int *           pyPixels,         /* Current number of Y pixels.           */
-   int *           pMaxFrames,       /* Maximum number of frames in buffer.   */
+   int *           pMaxFrames,       /* Pointer to max frames in data buffer  */
    DATREC_CONTEXT  pDetInitContext,  /* Context structure for SDSU            */
                                      /* initialisation state SIR record.      */
-   DATREC_CONTEXT   pDetInitStatusContext
+   DATREC_CONTEXT  pDetInitStatusContext,
                               /* Context structure for SDSU initialisation    */
                               /* status SIR record.                           */
+   DATREC_CONTEXT  pStateContext,    /* Context structure for state SIR record*/
+   AO_CCD_ID       aoCcdId           /* AO CCD geonmetry context structure    */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
@@ -4882,7 +6245,8 @@ uint32 detInit
    int          nPixels;         /* Total number of digitised pixels.         */
    int          newMaxFrames;    /* New maximum number of frames.             */
 
-  /* uint32       mode;*/
+   uint32       tempCode;           /* Target temperature code                */
+   uint32       tempCoeff;          /* Coefficient for temperature control    */
    
    /*
     * Initialise the error number.
@@ -4911,12 +6275,23 @@ uint32 detInit
       return (errorNumber);
    }
 
+   /* Set to FALSE the temperature Flag */
+
+   readTempReadyFlag = FALSE;
+
    /* Set the initialisation state to BUSY. */
 
    initState = CAR_BUSY;
    if (epToVxPipeWrite (NULL, (char *) &initState, pDetInitContext) == ERROR)
    {
       ERROR_LOG ("Failed to set initialisation state to BUSY");
+   }
+
+   /* Set the system state to "INITIALIZING" */
+
+   if (epToVxPipeWrite (NULL, "INITIALIZING", pStateContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set state to INITIALIZING");
    }
 
    /*
@@ -4964,15 +6339,15 @@ uint32 detInit
    {
       if ( simulate )
       {
-         ERROR_SET1 (0, 
-         "WFS %s: Error initialising SDSU controller in simulation mode",
-         ERROR_LOG_NOW, pWfsName);
+         ERROR_SET (0, 
+         "Error initialising SDSU controller in simulation mode",
+         ERROR_LOG_NOW);
       }
       else
       {
-         ERROR_SET2 (0, 
-         "WFS %s: Error initialising SDSU controller at VME address %#lx",
-         ERROR_LOG_NOW, pWfsName, *pVmeAddress);
+         ERROR_SET1 (0, 
+         "Error initialising SDSU controller at VME address %#lx",
+         ERROR_LOG_NOW, *pVmeAddress);
       }
       errorNumber = S_detControl_SDSU_ERROR;
 
@@ -4982,6 +6357,13 @@ uint32 detInit
       if (epToVxPipeWrite (NULL, (char *) &initState, pDetInitContext) == ERROR)
       {
          ERROR_LOG ("Failed to set initialisation state to ERROR");
+      }
+
+      /* Set the system state to "RUNNING" even if init fails */
+
+      if (epToVxPipeWrite (NULL, "RUNNING", pStateContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set state to RUNNING");
       }
 
       /*
@@ -5218,32 +6600,28 @@ uint32 detInit
    if ( newMaxFrames > 0 ) *pMaxFrames = newMaxFrames;
 
    /*
-    * Compare the default detector geometry contained in the DSP code with the 
-    * current values for xPixels and yPixels. After calling detCheckGeometry, 
-    * *pxMax and *pyMax should contain the maximum possible data array size, 
-    * allowing a data buffer of suitable size to be allocated.
+    * Initialize aoCcdId with the default detector geometry.
     */
 
-   if (detCheckGeometry (pWfsName, *pSdsuId, pxMax, pyMax, pxPixels, pyPixels) 
-       == ERROR)
+   if (detReadDefaultDspCcdGeometry (*pSdsuId, aoCcdId) == ERROR)
    {
-      ERROR_LOG ("Error while checking default detector geometry");
-      /* This is not a serious error. Do not change the error number or health*/
+      ERROR_LOG ( "Error while init default detector geometry ");
    }
 
    /*
     * Allocate a buffer capable of holding several frames of data, using the 
-    * *pxMax and *pyMax determined above. If this fails, the controller will 
-    * not be able to store data, so the health must be set WARNING.
+    * aoCcdId->xMax and aoCcdId->yMax determined above. If this fails, the 
+    * controller will not be able to store data, so the health must be set 
+    * WARNING.
     */
 
 #ifdef DEBUG
    printf (
    "detInit: Creating new data buffer to hold %d frames of (%d x %d) pixels.\n",
-   *pMaxFrames, *pxMax, *pyMax);
+   *pMaxFrames, aoCcdId->xMax, aoCcdId->yMax);
 #endif /* DEBUG */
 
-   nPixels = (*pxMax) * (*pyMax);
+   nPixels = (aoCcdId->xMax) * (aoCcdId->yMax);
    if (sdsuBufferCreate (*pSdsuId, nPixels, *pMaxFrames) == ERROR)
    {
       ERROR_LOG ("Failed to create frame data buffers on initialisation");
@@ -5272,6 +6650,25 @@ uint32 detInit
    }
 
    /*
+    * Set the default temperature to -20
+    */
+
+   tempCode = (uint32)1282 ;
+   tempCoeff = (uint32)128 ;
+
+   MESSAGE_LOG2 (MSG_LOG,
+                 "Defining temperature control parameters: %#lx %#lx",
+                 tempCode, tempCoeff);
+
+   if ( (sdsuParamWrite (*pSdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
+         == ERROR) ||
+        (sdsuParamWrite (*pSdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
+         == ERROR) )
+   {
+      ERROR_LOG ("Error setting temperasture control parameters");
+   }
+
+   /*
     * If the error number is good after initialisation the health of
     * the controller can be restored to "GOOD".
     *
@@ -5288,6 +6685,10 @@ uint32 detInit
       {
          ERROR_LOG ("Failed to set initialisation state to IDLE");
       }
+
+      /* Set back to TRUE the temperature Flag */
+
+      readTempReadyFlag = TRUE ;
    }
    else
    {
@@ -5298,9 +6699,15 @@ uint32 detInit
       }
    }
 
+   /* Set the system state to "RUNNING" even if init fails */
+
+   if (epToVxPipeWrite (NULL, "RUNNING", pStateContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set state to RUNNING");
+   }
+
    return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -5309,7 +6716,8 @@ uint32 detInit
  *   detReset
  *
  *   INVOCATION:
- *   detReset (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detReset (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *             obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
@@ -5367,7 +6775,8 @@ uint32 detReset
                               /* Combined path name and file name.      */
    BOOL         limitAdrsRange;      /* Flag for limiting address range */
 
-   /*uint32       mode;*/
+   uint32       tempCode;           /* Target temperature code                */
+   uint32       tempCoeff;          /* Coefficient for temperature control    */
 
    /*
     * Initialise the error number and obtain the attributes provided with the 
@@ -5411,6 +6820,10 @@ uint32 detReset
       errorNumber = S_detControl_BUSY;
       return (errorNumber);
    }
+
+   /* Set to FLASE the temperature Flag */
+
+   readTempReadyFlag = FALSE ;
 
    /*
     * Reset the SDSU hardware.
@@ -5500,7 +6913,8 @@ uint32 detReset
          sprintf (pFullOmfFileName, "%s/%s", pFilePath, pOmfFileName );
       }
 
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to TIMING DSP...", pFullOmfFileName);
+      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to TIMING DSP...", 
+                    pFullOmfFileName);
 
       if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_TIM, 
                           limitAdrsRange) == ERROR)
@@ -5579,6 +6993,25 @@ uint32 detReset
    }
 
    /*
+    * Set the default temperature to -20
+    */
+
+   tempCode = (uint32)1282 ;
+   tempCoeff = (uint32)128 ;
+
+   MESSAGE_LOG2 (MSG_LOG,
+                 "Defining temperature control parameters: %#lx %#lx",
+                 tempCode, tempCoeff);
+
+   if ( (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
+         == ERROR) ||
+        (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
+         == ERROR) )
+   {
+      ERROR_LOG ("Error setting temperasture control parameters");
+   }
+
+   /*
     * If no errors have occurred during the reset set the controller health to 
     * GOOD.
     * If the reset failed the controller may be in an unusable state, so set the
@@ -5588,6 +7021,10 @@ uint32 detReset
    if ( errorNumber == 0 )
    {
       epToVxSetHealth( pRecordPrefix, "GOOD" );
+
+      /* Set to TRUE the temperature Flag */
+
+      readTempReadyFlag = TRUE ;
    }
    else
    {
@@ -5597,7 +7034,6 @@ uint32 detReset
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -5605,18 +7041,18 @@ uint32 detReset
  *   detTest
  *
  *   INVOCATION:
- *   detTest (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *            obsId, pTestResultsContext)
+ *   detTest (cadCmdContext, commandNumber, sdsuId,
+ *            obsId, pTestResultsContext, pDetTestContext)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
- *   (>) pTestResultsContext (DATREC_CONTECT) Context structure for test 
+ *   (>) pTestResultsContext (DATREC_CONTECT) Context structure for test
  *                                            results record
+ *   (>) pDetTestContext (DATREC_CONTECT) Context structure for test
+ *                                        sir record
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -5643,19 +7079,19 @@ uint32 detReset
 
 uint32 detTest
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
    OBS_ID          obsId,         /* Observation context structure.           */
-   DATREC_CONTEXT  pTestResultsContext /* Test results context structure.     */
+   DATREC_CONTEXT  pTestResultsContext, /* Test results context structure.    */
+   DATREC_CONTEXT  pDetTestContext /* Test sir context structure.             */
    )
 {
    uint32          errorNumber;   /* Error number reported by task.           */
 
    long            testLevel;     /* Test level.                              */
    long            verbose;       /* Flag for verbose mode.                   */
+   long            testState;     /* Testing state                            */
 
    uint32          testMask;      /* Mask for types of tests.                 */
    uint32          dspMask;       /* Mask for DSP to be tested.               */
@@ -5664,34 +7100,33 @@ uint32 detTest
                                  /* String to contain test results.           */
 
    /*
-    * Initialise the error number and obtain the attributes provided with the 
+    * Initialise the error number and obtain the attributes provided with the
     * command.
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
                           (char *) & testLevel);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
                           (char *) & verbose);
 
    /*
     * The controller can only self-test if it has access to the SDSU hardware.
-    * Note having access to the hardware should not be regarded as a test 
-    * failure, since all controllers will be tested routinely on startup, 
-    * and when the hardware is shared there will always be one controller 
+    * Note having access to the hardware should not be regarded as a test
+    * failure, since all controllers will be tested routinely on startup,
+    * and when the hardware is shared there will always be one controller
     * without access. Instead issue a warning.
     */
-
    /*
     * Check there are valid SDSU and observation context structures.
     */
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
-      if (epToVxPipeWrite (NULL, "Bad SDSU context", pTestResultsContext) == 
+      if (epToVxPipeWrite (NULL, "Bad SDSU context", pTestResultsContext) ==
           ERROR)
       {
          ERROR_LOG ("Failed to write test results");
@@ -5701,10 +7136,10 @@ uint32 detTest
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
-      if (epToVxPipeWrite (NULL, "Bad observation context", 
+      if (epToVxPipeWrite (NULL, "Bad observation context",
           pTestResultsContext) == ERROR)
       {
          ERROR_LOG ("Failed to write test results");
@@ -5718,11 +7153,19 @@ uint32 detTest
 
    if ( obsId->observing )
    {
-      ERROR_SET (S_detControl_BUSY, 
+      ERROR_SET (S_detControl_BUSY,
          "Observation in progress - abort observation and try again",
          ERROR_LOG_NOW);
       errorNumber = S_detControl_BUSY;
       return (errorNumber);
+   }
+
+   /* Set the testing state to BUSY. */
+
+   testState = CAR_BUSY;
+   if (epToVxPipeWrite (NULL, (char *) &testState, pDetTestContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set testing state to BUSY");
    }
 
    MESSAGE_LOG1 (MSG_LOG, "Testing SDSU controller: level=%ld", testLevel);
@@ -5771,6 +7214,12 @@ uint32 detTest
       {
          ERROR_LOG ("Failed to write test results");
       }
+
+      testState = CAR_ERROR;
+      if (epToVxPipeWrite (NULL, (char *) &testState, pDetTestContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set testing state to ERROR");
+      }
    }
    else
    {
@@ -5779,6 +7228,12 @@ uint32 detTest
       if (epToVxPipeWrite (NULL, "Tested OK", pTestResultsContext) == ERROR)
       {
          ERROR_LOG ("Failed to write test results");
+      }
+
+      testState = CAR_IDLE;
+      if (epToVxPipeWrite (NULL, (char *) &testState, pDetTestContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set testing state to IDLE");
       }
    }
 
@@ -5792,12 +7247,9 @@ uint32 detTest
  *   detSave
  *
  *   INVOCATION:
- *   detSave (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *            obsId)
+ *   detSave (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -5828,8 +7280,6 @@ uint32 detTest
 
 uint32 detSave
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
@@ -5848,7 +7298,7 @@ uint32 detSave
                               /* Combined path name and file name.            */
 
    /*
-    * Initialise the error number and obtain the attributes provided with the 
+    * Initialise the error number and obtain the attributes provided with the
     * command.
     */
 
@@ -5863,7 +7313,7 @@ uint32 detSave
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -5871,7 +7321,7 @@ uint32 detSave
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -5883,7 +7333,7 @@ uint32 detSave
 
    if ( obsId->observing )
    {
-      ERROR_SET (S_detControl_BUSY, 
+      ERROR_SET (S_detControl_BUSY,
          "Observation in progress - abort observation and try again",
          ERROR_LOG_NOW);
       errorNumber = S_detControl_BUSY;
@@ -5891,14 +7341,14 @@ uint32 detSave
    }
 
    /*
-    * Combine the path and file names together, and append the string ".par" 
-    * to the file name if it is not already present. Ignore the path if not 
+    * Combine the path and file names together, and append the string ".par"
+    * to the file name if it is not already present. Ignore the path if not
     * specified.
     */
 
    if ( strcmp (pFilePath, "") == 0 )
    {
-      strncpy (pFullParamFileName, pParamFileName, 
+      strncpy (pFullParamFileName, pParamFileName,
                EPICS_MAX_BYTES_STRING_ATTRIB);
    }
    else
@@ -5911,11 +7361,11 @@ uint32 detSave
 
    /*
     * Upload SDSU parameters from the specified DSP to the specified file.
-    * (If the DSP is specified as "-1" all the known SDSU parameters will be 
+    * (If the DSP is specified as "-1" all the known SDSU parameters will be
     * uploaded to the file).
     */
 
-   MESSAGE_LOG1 (MSG_LOG, "Uploading SDSU parameters to %s", 
+   MESSAGE_LOG1 (MSG_LOG, "Uploading SDSU parameters to %s",
                  pFullParamFileName);
 
    if ( sdsuParamUpload( sdsuId, pFullParamFileName, (uint32) destId) == ERROR )
@@ -5927,7 +7377,6 @@ uint32 detSave
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -5935,18 +7384,18 @@ uint32 detSave
  *   detGeometry
  *
  *   INVOCATION:
- *   detGeometry (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                sdsuId, obsId, pxPixels, pyYpixels)
+ *   detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
+ *                aoCtrlId, pAoCtrlInitContext, pAoFlatInitContext)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (!) obsId         (OBS_ID)          Observation context structure
- *   (<) pxPixels      (int *)           Pointer to number of X pixels
- *   (<) pyPixels      (int *)           Pointer to number of Y pixels
+ *   (<) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
+ *   (<) aoCtrlId      (AO_CTRL_ID)      AO control context structure
+ *   (!) pAoCtrlInitContext (DATREC_CONTEXT) AoCtrlInit SIR record context
+ *   (!) pAoFlatInitContext (DATREC_CONTEXT) AoFlatInit SIR record context
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -5958,7 +7407,7 @@ uint32 detSave
  *   This function sets up the SDSU detector geometry parameters.
  *
  *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
+ *   None.
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -5967,83 +7416,71 @@ uint32 detSave
  *   detControl.h
  *
  *   DEFICIENCIES:
- *   I have found out that it may not be possible to read parameters from the 
- *   timing board while on observation is taking place. To use this function 
- *   to set parameters on-the-fly during an observation a redesign may be 
- *   necessary where the timing board parameters are
- *   read and saved before the observation starts. SMB - 21 Jan 1999.
  *-
  */
 
 uint32 detGeometry
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
    OBS_ID          obsId,         /* Observation context structure.           */
-   int *           pxPixels,      /* Pointer to current number of X pixels.   */
-   int *           pyPixels       /* Pointer to current number of Y pixels.   */
+   AO_CCD_ID       aoCcdId,       /* AO CCD geometry context structure        */
+   AO_CTRL_ID      aoCtrlId,      /* AO control context structure             */
+   DATREC_CONTEXT  pAoCtrlInitContext,  /* AoCtrlInit SIR record context      */
+   DATREC_CONTEXT  pAoFlatInitContext   /* AoFlatInit SIR record context      */
    )
 {
    uint32          errorNumber;   /* Error number reported by task.           */
 
-   /* 
-    * Variables associated with "Set detector readout geometry and binning 
+   /*
+    * Variables associated with "Set detector readout geometry and binning
     * mode" command.
     */
 
-   long         xPixels;    /* Number of X pixels in digitised image (AC only)*/
-   long         yPixels;    /* Number of Y pixels in digitised image (AC only)*/
-   long         xSubap;     /* Number of subapertures per sector in X         */
+   long         xReqSubap;  /* Number of subapertures per sector in X         */
                             /* direction (WFS only).                          */
-   long         ySubap;     /* Number of subapertures per sector in Y         */
+   long         yReqSubap;  /* Number of subapertures per sector in Y         */
                             /* direction (WFS only).                          */
-   long         xBin;       /* X binning factor (pixels per superpixel)       */
-   long         yBin;       /* Y binning factor (pixels per superpixel)       */
-   long         xRas;       /* Size of each subaperture in X direction in     */
+   long         xReqBin;    /* X binning factor (pixels per superpixel)       */
+   long         yReqBin;    /* Y binning factor (pixels per superpixel)       */
+   long         xReqRas;    /* Size of each subaperture in X direction in     */
                             /* super-pixels (wfs ONLY)                        */
-   long         yRas;       /* Size of each subaperture in Y direction in     */
+   long         yReqRas;    /* Size of each subaperture in Y direction in     */
                             /* super-pixels (WFS only)                        */
-   long         xSpace;     /* Spacing between subapertures in X direction in */
+   long         xReqSpace;  /* Spacing between subapertures in X direction in */
                             /* pixels (WFS only)                              */
-   long         ySpace;     /* Spacing between subapertures in Y direction in */
+   long         yReqSpace;  /* Spacing between subapertures in Y direction in */
                             /* pixels (WFS only)                              */
-   long         xStart;     /* X offset from bottom left corner of array in   */
+   long         xReqStart;  /* X offset from bottom left corner of array in   */
                             /* pixels.                                        */
-   long         yStart;     /* Y offset from bottom left corner of array in   */
+   long         yReqStart;  /* Y offset from bottom left corner of array in   */
                             /* pixels.                                        */
 
-   long         xTail;      /* Number of trailing X pixels to be discarded on */
+   long         xReqPixels; /* Number of X pixels in digitised image (AC only)*/
+   long         yReqPixels; /* Number of Y pixels in digitised image (AC only)*/
+   long         xReqTail;   /* Number of trailing X pixels to be discarded on */
                             /* each row.                                      */
-   long         xSize;      /* X size of each sector in pixels.               */
-   long         ySize;      /* Y size of each sector in pixels.               */
-   long         xTotalSize; /* Total X size in pixels.                        */
-   long         yTotalSize; /* Total Y size in pixels.                        */
-   long         outputs;    /* Number of detector outputs = number of sectors.*/
-   long         uscan;      /* Number of underscan pixels.                    */
-   long         nPixels;    /* Total number of digitised pixels.              */
-   long         packetSize; /* Packet size in pixels.                         */
+   long         reqPixelsNb;/* Total number of digitised pixels.              */
+   long         defPixelsNb;/* Total number of digitised pixels.              */
    int          nPackets;   /* Number of packets expected per frame.          */
-   int          fullFrameFlag;/* Set to 1 when the SDSU controller is reading */
-                              /* out full frames and 0 when it is not.        */ 
+
    /*
-    * Initialise the error number and obtain the attributes provided with the 
+    * Initialise the error number and obtain the attributes provided with the
     * command.
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & xSubap);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *) & ySubap);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *) & xRas);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *) & yRas);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *) & xBin);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *) & yBin);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *) & xStart);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *) & yStart);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *) & xSpace);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *) & ySpace);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) &xReqSubap);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *) &yReqSubap);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *) &xReqRas);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *) &yReqRas);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *) &xReqBin);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *) &yReqBin);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *) &xReqStart);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *) &yReqStart);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *) &xReqSpace);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *) &yReqSpace);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -6051,7 +7488,7 @@ uint32 detGeometry
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -6059,15 +7496,15 @@ uint32 detGeometry
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 
    /*
-    * The command can be used when an observation is in progress, as it only 
-    * redefines "on-the-fly" parameters. However, warn the user this is 
+    * The command can be used when an observation is in progress, as it only
+    * redefines "on-the-fly" parameters. However, warn the user this is
     * happening.
     */
 
@@ -6081,176 +7518,231 @@ uint32 detGeometry
     * The number of subapertures per sector must be positive and non-zero.
     */
 
-   if ( (xSubap < 1) || (ySubap < 1) )
+   if ( (xReqSubap < 1) || (yReqSubap < 1) )
    {
-      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE, 
+      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE,
          "Invalid number of subapertures: %ld x %ld",
-         ERROR_LOG_NOW, xSubap, ySubap);
+         ERROR_LOG_NOW, xReqSubap, yReqSubap);
       errorNumber = S_detControl_BAD_ATTRIBUTE;
       return (errorNumber);
    }
 
    /*
-    * The binning factors must be positive and non zero.
+    * The binning factors must be 1 or 2 
     */
 
-   if ( (xBin < 1) || (yBin < 1) )
+   if ( (xReqBin < 1) || (yReqBin < 1) || (xReqBin > 2) || (yReqBin > 2) )
    {
-      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE, 
+      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE,
          "Invalid binning factors: %ld, %ld",
-         ERROR_LOG_NOW, xBin, yBin);
+         ERROR_LOG_NOW, xReqBin, yReqBin);
       errorNumber = S_detControl_BAD_ATTRIBUTE;
       return (errorNumber);
    }
 
    /*
-    * Read the outputs and uscan parameters from the SDSU controller, unless
-    * the controller is being simulated (in which case default values for the 
-    * particular wavefront sensor are used).
+    * Calculate the number of digitized pixels per frame, and update the
+    * current number of X and Y pixels. Also calculate the number of packets
+    * into which these pixels will fit. (The ceil function is used because the
+    * number of packets is always rounded up to the nearest integer).
+    * xReqRas contains already the xReqBin division
     */
 
-   if ( !sdsuId->simulate )
-   {
-      if ( (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSIZE", 
-            (uint32 *) & xSize) == ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSIZE", 
-            (uint32 *) & ySize) == ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_OUTPUTS", 
-            (uint32 *) & outputs) == ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_USCAN", 
-            (uint32 *) & uscan) == ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_VME, "V_PSIZE", 
-            (uint32 *) & packetSize) == ERROR)
-         )
-      {
-         ERROR_LOG (
-         "Failed to read T_XSIZE, T_YSIZE, T_OUTPUTS, T_USCAN, V_PSIZE from SDSU controller");
-         errorNumber = S_detControl_SDSU_ERROR;
-         return (errorNumber);
-      }
+   xReqPixels = xReqSubap * xReqRas * 2; 
+   yReqPixels = yReqSubap * yReqRas * 2;
 
-      xTotalSize = xSize * 2;
-      yTotalSize = ySize * 2;
-      printf ( "detGeometry: USCAN=%d\n" , uscan ) ;
-   }
-   else
+   reqPixelsNb = xReqPixels * yReqPixels;
+
+   defPixelsNb = (CCD_XSIZE)*(CCD_YSIZE);
+
+   if ( reqPixelsNb > defPixelsNb )
    {
-      xTotalSize = DET_CONTROL_PWFS2_XSIZE;
-      yTotalSize = DET_CONTROL_PWFS2_YSIZE;
-      xSize = xTotalSize / 2;
-      ySize = yTotalSize / 2;
-      outputs = 4;
-      uscan = 4;
+      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE,
+         "Invalid total number of pixels to read : %ld, max: %ld",
+         ERROR_LOG_NOW, reqPixelsNb, defPixelsNb);
+      errorNumber = S_detControl_BAD_ATTRIBUTE;
+      return (errorNumber);
    }
 
    /*
-    * Calculate the number of digitized pixels per frame, and update the 
-    * current number of X and Y pixels. Also calculate the number of packets 
-    * into which these pixels will fit. (The ceil function is used because the 
-    * number of packets is always rounded up to the nearest integer).
+    * Calculate the number of trailing X pixels. This is required by the DSP
+    * code as a check. If the value is negative then the subapertures span the
+    * boundary between outputs (not physically possible), and xTail should
+    * be set zero.
+    *
+    * xTail is the number of pixels that need to be discarded at the end of
+    * each row, and is calculated by starting with the total number of pixels
+    * to read (xSize) and subtracting off the pixels that are read out and/or
+    * discarded during a readout.
     */
 
-   xPixels = xSubap * xRas * 2;
-   yPixels = ySubap * yRas * 2;
-
-   *pxPixels = xPixels;
-   *pyPixels = yPixels;
-   nPixels = xPixels * yPixels;
-
-   if ( (!sdsuId->simulate) && (packetSize > 0) )
+   xReqTail = aoCcdId->xSize - (((xReqRas * xReqBin) + xReqSpace) * xReqSubap)
+              + xReqSpace - xReqStart - aoCcdId->uscanNb;
+   if ( xReqTail < 0 )
    {
-      nPackets = 
-      (int) ceil ( (double) (nPixels) / (double) packetSize );
+      ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
+      "Xtail is %ld. Should not be less than zero", ERROR_LOG_NOW, xReqTail);
+      errorNumber = S_detControl_BAD_ATTRIBUTE;
+      return (errorNumber);
+   }
+
+   if ( (!sdsuId->simulate) && (aoCcdId->packetSize > 0) )
+   {
+      aoCcdId->packetSize =
+      xReqRas * xReqSubap * (aoCcdId->outputsNb/2) * 2;
+
+      nPackets = (int) ceil ( (double) (reqPixelsNb) / 
+                 (double) aoCcdId->packetSize );
    }
    else
    {
       nPackets = 1;
    }
 
+   /* Init the binning flag */
+
+   if ( (xReqBin == 2) || ( yReqBin == 2) )
+   {
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         aoCcdId->binningFlag = TRUE ; /* no change */
+      }
+      else
+      {
+         aoCcdId->binningFlag = TRUE ;
+         aoCtrlId->initFlag = FALSE;
+         if (epToVxPipeWrite (NULL, "Not initialized", pAoCtrlInitContext) 
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         }
+         aoCtrlId->darkInitFlag = FALSE;
+         if (epToVxPipeWrite (NULL, "Not initialized", 
+                              obsId->pAoDarkInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         }
+         aoCtrlId->flatInitFlag = FALSE;
+         if (epToVxPipeWrite (NULL, "Not initialized", pAoFlatInitContext) 
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         }
+      }
+   }
+   else
+   {
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         aoCcdId->binningFlag = FALSE ;
+         aoCtrlId->initFlag = FALSE;
+         if (epToVxPipeWrite (NULL, "Not initialized", pAoCtrlInitContext) 
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         }
+         aoCtrlId->darkInitFlag = FALSE;
+         if (epToVxPipeWrite (NULL, "Not initialized", 
+                              obsId->pAoDarkInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         }
+         aoCtrlId->flatInitFlag = FALSE;
+         if (epToVxPipeWrite (NULL, "Not initialized", pAoFlatInitContext) 
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         }
+      }
+      else
+      {
+         aoCcdId->binningFlag = FALSE ; /* no change */
+      }
+   }
+
    /*
+    * Everything is ok, init aoCcdId.
     * Determine whether the given parameters will put the detector controller
     * into full frame mode. This happens when the there is one subaperture per
     * output and the subapertures fill the detector surface without any gaps.
     */
 
-   if ( (xSubap == 1) && (ySubap == 1) && (xStart == 0) && (yStart == 0) &&
-        (xSpace == 0) && (ySpace == 0) 
-      )
-   {
-      fullFrameFlag = 1;
-   }
-   else
-   {
-      fullFrameFlag = 0;
-   }
+   aoCcdId->xStart = xReqStart;
+   aoCcdId->yStart = yReqStart;
+   aoCcdId->xBin = xReqBin;
+   aoCcdId->yBin = yReqBin;
+   aoCcdId->xRaster = xReqRas;
+   aoCcdId->yRaster = yReqRas;
+   aoCcdId->xSpace = xReqSpace;
+   aoCcdId->ySpace = yReqSpace;
+   aoCcdId->xSubapNb = xReqSubap;
+   aoCcdId->ySubapNb = yReqSubap;
+   aoCcdId->xPixels = xReqPixels;
+   aoCcdId->yPixels = yReqPixels;
+   aoCcdId->pixelsNb = reqPixelsNb;
+   aoCcdId->xTail = xReqTail;
+   aoCcdId->packetNb = nPackets;
 
-
-   /*
-    * Calculate the number of trailing X pixels. This is required by the DSP 
-    * code as a check. If the value is negative then the subapertures span the 
-    * boundary between outputs (not physically possible), and xTail should 
-    * be set zero.
-    *
-    * xTail is the number of pixels that need to be discarded at the end of 
-    * each row, and is calculated by starting with the total number of pixels 
-    * to read (xSize) and subtracting off the pixels that are read out and/or 
-    * discarded during a readout.
-    */
-
-   xTail = 
-   xSize - (((xRas * xBin) + xSpace) * xSubap) - xSpace - xStart - uscan;
-   if ( xTail < 0 )
-   {
-      MESSAGE_LOG1 (MSG_WARNING, 
-      "Xtail is %ld. Should not be less than zero. Reset to zero", xTail);
-      xTail = 0;
-   }
+   aoCcdContextShow (aoCcdId);
 
    MESSAGE_LOG1 (MSG_LOG, "Setting new detector geometry (%s frame mode)",
-      (fullFrameFlag ? "full":"reduced"));
+      (aoCcdId->binningFlag ? "binned":"full"));
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XSIZE=%d, YSIZE=%d, XPIXELS=%d, YPIXELS=%d",
+      aoCcdId->xSize, aoCcdId->ySize, aoCcdId->xPixels, aoCcdId->yPixels);
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XSUBAP=%d, YSUBAP=%d, XBIN=%d, YBIN=%d",
+      aoCcdId->xSubapNb, aoCcdId->ySubapNb, aoCcdId->xBin, aoCcdId->yBin);
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XRAS=%d, YRAS=%d, XSPACE=%d, YSPACE=%d",
+      aoCcdId->xRaster, aoCcdId->yRaster, aoCcdId->xSpace, aoCcdId->ySpace);
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XSTART=%d, YSTART=%d, XTAIL=%d, NPIXELS=%d",
+      aoCcdId->xStart, aoCcdId->yStart, aoCcdId->xTail, aoCcdId->pixelsNb);
 
-   MESSAGE_LOG4 (MSG_MINDEBUG, "XSIZE=%ld, YSIZE=%ld, XPIXELS=%d, YPIXELS=%d",
-      xSize, ySize, *pxPixels, *pyPixels);
-   MESSAGE_LOG4 (MSG_MINDEBUG, "XSUBAP=%ld, YSUBAP=%ld, XBIN=%ld, YBIN=%ld",
-      xSubap, ySubap, xBin, yBin);
-   MESSAGE_LOG4 (MSG_MINDEBUG, "XRAS=%ld, YRAS=%ld, XSPACE=%ld, YSPACE=%ld",
-      xRas, yRas, xSpace, ySpace);
-   MESSAGE_LOG4 (MSG_MINDEBUG, "XSTART=%ld, YSTART=%ld, XTAIL=%ld, NPIXELS=%ld",
-      xStart, yStart, xTail, nPixels);
-
-   MESSAGE_LOG2 (MSG_FULLDEBUG, 
-      "Each frame will consist of %d packets of %ld pixels each",
-      nPackets, packetSize);
+   MESSAGE_LOG2 (MSG_FULLDEBUG,
+      "Each frame will consist of %d packets of %d pixels each",
+      nPackets, aoCcdId->packetSize);
 
    /*
-    * Update the geometry parameters in the SDSU timing DSP. These are all 
-    * "on-the-fly" parameters and need to be downloaded with sdsuParamWRP() 
+    * Update the geometry parameters in the SDSU timing DSP. These are all
+    * "on-the-fly" parameters and need to be downloaded with sdsuParamWRP()
     * and activated by sending a "LDP" command.
     */
 
-   if ( (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XSUBAP", (uint32) xSubap) 
+   if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE",
+                       aoCcdId->packetSize) == ERROR)
+   {
+      ERROR_LOG ("Failed to increase the PWFS packet size");
+      errorNumber = S_detControl_SDSU_ERROR;
+      return (errorNumber);
+   }
+
+   if ( (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XSUBAP", (uint32) xReqSubap)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YSUBAP", (uint32) ySubap) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YSUBAP", (uint32) yReqSubap)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XSTART", (uint32) xStart) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XSTART", (uint32) xReqStart)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YSTART", (uint32) yStart) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YSTART", (uint32) yReqStart)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XRAS",   (uint32) xRas) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XRAS",   (uint32) xReqRas)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YRAS",   (uint32) yRas) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YRAS",   (uint32) yReqRas)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XSPACE", (uint32) xSpace) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XSPACE", (uint32) xReqSpace)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YSPACE", (uint32) ySpace) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YSPACE", (uint32) yReqSpace)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XBIN",   (uint32) xBin) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XBIN",   (uint32) xReqBin)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YBIN",   (uint32) yBin) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YBIN",   (uint32) yReqBin)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XTAIL",  (uint32) xTail) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XTAIL",  (uint32) xReqTail)
         == ERROR) ||
-        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_NPIXEL", (uint32) nPixels) 
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_NPIXEL", (uint32) reqPixelsNb)
         == ERROR)
      )
    {
@@ -6273,329 +7765,81 @@ uint32 detGeometry
    sdsuId->packetsPerFrame = nPackets;
 
    /*
-    * If signal processing is active for this WFS, update the geometry 
-    * parameters supplied to the signal processing software.
+    * Init the SAD records 
     */
 
-   if ( (obsId->ospFGContext != NULL) && (obsId->ospGeometry != NULL) )
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xStart) ,
+                        obsId->pXstartContext ) == ERROR)
    {
-      if ( (xStart == 0) && (yStart == 0) && (xBin == 2) && (yBin == 2) &&
-           (xRas == 20) && (yRas == 20) && (xSpace == 0) && (ySpace == 0) &&
-           (xSubap == 1) && (ySubap == 1) )
-      {
+      ERROR_LOG ("Failed to init xstart sad record");
+      return (ERROR);
+   }
 
-         obsId->ospFGContext->ospxraster = xRas ; 
-         obsId->ospFGContext->ospyraster = yRas ; 
-         obsId->ospFGContext->xframesize = xRas * outputs / 2 ;  
-         obsId->ospFGContext->yframesize = yRas * outputs / 2 ; 
-         obsId->ospFGContext->buffsize = (xRas * outputs / 2) * (yRas * outputs / 2) ;
-         
-         if ( obsId->binningFlag == FALSE )
-         {
-            obsId->ospFGContext->xcenter = (obsId->ospFGContext->xcenter - 0.5)/2 + 0.5 ;
-            obsId->ospFGContext->ycenter = (obsId->ospFGContext->ycenter - 0.5)/2 + 0.5 ;
-         }
-         obsId->binningFlag = TRUE ;
-      }
-      else
-      {
-         obsId->ospGeometry->sectors =     (int) outputs;
-         obsId->ospGeometry->xstart =      (int) xStart;
-         obsId->ospGeometry->ystart =      (int) yStart;
-         obsId->ospGeometry->xbin =        (int) xBin;
-         obsId->ospGeometry->ybin =        (int) yBin;
-         obsId->ospGeometry->xraster =     (int) xRas;
-         obsId->ospGeometry->yraster =     (int) yRas;
-         obsId->ospGeometry->xspace =      (int) xSpace;
-         obsId->ospGeometry->yspace =      (int) ySpace;
-         obsId->ospGeometry->xsubap =      (int) xSubap;
-         obsId->ospGeometry->ysubap =      (int) ySubap;
-         obsId->ospGeometry->xarraysize =  80;
-         obsId->ospGeometry->yarraysize =  80;
-         obsId->ospGeometry->framesizeflag = fullFrameFlag;
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yStart) ,
+                        obsId->pYstartContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ystart sad record");
+      return (ERROR);
+   }
 
-         if ( obsId->binningFlag == TRUE )
-         {
-            obsId->ospFGContext->xcenter = (obsId->ospFGContext->xcenter - 0.5)*2 + 0.5 ;
-            obsId->ospFGContext->ycenter = (obsId->ospFGContext->ycenter - 0.5)*2 + 0.5 ;
-         }
-         obsId->binningFlag = FALSE ;
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSubapNb) ,
+                        obsId->pXsubapContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xsubap sad record");
+      return (ERROR);
+   }
 
-         if ( ospChangeGeometry (obsId->ospGeometry, obsId->ospFGContext) == 
-              ERROR )
-         {
-            ERROR_LOG (
-            "Failed to update signal processing geometry parameters");
-            errorNumber = S_detControl_INTERNAL;
-            return (errorNumber);
-         }
-      }
-         
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySubapNb) ,
+                        obsId->pYsubapContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init Ysubap sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xRaster) ,
+                        obsId->pXrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yRaster) ,
+                        obsId->pYrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSpace) ,
+                        obsId->pXspaceContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xspace sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySpace) ,
+                        obsId->pYspaceContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yspace sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xBin) ,
+                        obsId->pXbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xbin sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yBin) ,
+                        obsId->pYbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ybin sad record");
+      return (ERROR);
    }
 
    return (errorNumber);
 }
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detDownload
- *
- *   INVOCATION:
- *   detDownload (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                sdsuId, obsId)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
- *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
- *   (>) commandNumber (int)             Command number
- *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
- *   (>) obsId         (OBS_ID)          Observation context structure
- *   (>) vmeAddress    (uint32)          VME address of SDSU controller 
- *                                       (0=simulate)
- *
- *   FUNCTION VALUE:
- *   (uint32)   Error number. 0 if command successful.
- *
- *   PURPOSE:
- *   Execute detDownload command
- *
- *   DESCRIPTION:
- *   This function downloads DSP code from OMF files.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-uint32 detDownload
-   (
-   const char *    pWfsName,       /* Name of wavefront sensor.               */
-   const char *    pRecordPrefix,  /* Record name prefix.                     */
-   CAD_CMD_CONTEXT cadCmdContext,  /* CAD command context structure.          */
-   int             commandNumber,  /* Command number.                         */
-   SDSU_ID         sdsuId,         /* SDSU context structure.                 */
-   OBS_ID          obsId           /* Observation context structure.          */
-   )
-{
-   uint32          errorNumber;    /* Error number reported by task.          */
-
-   char            pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                              /* Path name for file.                  */
-   char            pOmfFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                              /* File name.                           */
-   char            pFullOmfFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-                              /* Combined path name and file name.    */
-
-   BOOL            limitAdrsRange;      
-                              /* Flag for limiting address range in DSP memory*/
-
-   /*uint32          mode;*/
-
-   /*
-    * Initialise the error number.
-    */
-
-   errorNumber = 0;
-
-   /*
-    * Check there are valid SDSU and observation context structures.
-    */
-
-   if ( sdsuId == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-
-   if ( obsId == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-
-   /*
-    * The command can only be used when an observation is not in progress.
-    */
-
-   if ( obsId->observing )
-   {
-      ERROR_SET (S_detControl_BUSY, 
-         "Observation in progress - abort observation and try again",
-         ERROR_LOG_NOW);
-      errorNumber = S_detControl_BUSY;
-      return (errorNumber);
-   }
-
-   /* First obtain the path of the directory containing the DSP code. */
-
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pFilePath);
-
-
-   /* Determine whether any code should be downloaded to the VME DSP */
-
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pOmfFileName);
-
-   if ( (strcmp (pOmfFileName, "") != 0) && 
-        (strcmp (pOmfFileName, "NONE") != 0) )
-   {
-
-      /* The ability to limit the address range is ignored. It is rarely needed
-       * and can only be done by executing sdsuFileDnload at the console (since
-       * sdsuFileDnload expects to prompt for the values).
-       */
-
-      limitAdrsRange = 0;
-
-      if ( strcmp (pFilePath, "") == 0 )
-      {
-         strncpy (pFullOmfFileName, pOmfFileName, 
-                  EPICS_MAX_BYTES_STRING_ATTRIB);
-      }
-      else
-      {
-         sprintf (pFullOmfFileName, "%s/%s", pFilePath, pOmfFileName );
-      }
-
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to VME DSP...",
-                    pFullOmfFileName);
-
-      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_VME, 
-                          limitAdrsRange) == ERROR)
-      {
-         ERROR_LOG ("Failed to download OMF file to VME DSP");
-         errorNumber = S_detControl_SDSU_ERROR;
-         epToVxSetHealth( pWfsName, "WARNING" );
-      }
-   }
-
-   /* Determine whether any code should be downloaded to the Timing DSP */
-
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pOmfFileName);
-
-   if ( (strcmp (pOmfFileName, "") != 0) && 
-        (strcmp (pOmfFileName, "NONE") != 0) )
-   {
-
-      /* The ability to limit the address range is ignored. It is rarely needed
-       * and can only be done by executing sdsuFileDnload at the console (since
-       * sdsuFileDnload expects to prompt for the values).
-       */
-
-      limitAdrsRange = 0;
-
-      if ( strcmp (pFilePath, "") == 0 )
-      {
-         strncpy (pFullOmfFileName, pOmfFileName, 
-                  EPICS_MAX_BYTES_STRING_ATTRIB);
-      }
-      else
-      {
-         sprintf (pFullOmfFileName, "%s/%s", pFilePath, pOmfFileName );
-      }
-
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to TIMING DSP...",
-                    pFullOmfFileName);
-
-      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_TIM, 
-                          limitAdrsRange) == ERROR)
-      {
-         ERROR_LOG ("Failed to download OMF file to TIMING DSP");
-         errorNumber = S_detControl_SDSU_ERROR;
-         epToVxSetHealth( pRecordPrefix, "WARNING" );
-      }
-   }
-
-   /* Determine whether any code should be downloaded to the Utility DSP */
-
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pOmfFileName);
-
-   if ( (strcmp (pOmfFileName, "") != 0) && 
-        (strcmp (pOmfFileName, "NONE") != 0) )
-   {
-
-      /* The ability to limit the address range is ignored. It is rarely needed
-       * and can only be done by executing sdsuFileDnload at the console (since
-       * sdsuFileDnload expects to prompt for the values).
-       */
-
-      limitAdrsRange = 0;
-
-      if ( strcmp (pFilePath, "") == 0 )
-      {
-         strncpy (pFullOmfFileName, pOmfFileName, 
-                  EPICS_MAX_BYTES_STRING_ATTRIB);
-      }
-      else
-      {
-         sprintf (pFullOmfFileName, "%s/%s", pFilePath, pOmfFileName );
-      }
-
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to UTILITY DSP...",
-                    pFullOmfFileName);
-
-      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_UTL, 
-                          limitAdrsRange) == ERROR)
-      {
-         ERROR_LOG ("Failed to download OMF file to UTILITY DSP");
-         errorNumber = S_detControl_SDSU_ERROR;
-         epToVxSetHealth( pRecordPrefix, "WARNING" );
-      }
-   }
-
-   if ( errorNumber == 0 )
-   {
-         /* The default PWFS packet size should be larger when used in full 
-          * frame mode. 
-          */
-
-         if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE", 160) == ERROR)
-         {
-            ERROR_LOG ("Failed to increase the PWFS packet size");
-         }
-   }
-
-   /*
-    * After successfully downloading new OMF code, the controller must be 
-    * reinitialised by sending an "INI" command to the utility DSP and a "LDP" 
-    * command to the timing DSP.
-    */
-
-   if ( errorNumber == 0 )
-   {
-      if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
-      {
-         ERROR_LOG ("Failed to initialise UTILITY DSP with INI command");
-         errorNumber = S_detControl_SDSU_ERROR;
-         epToVxSetHealth( pRecordPrefix, "WARNING" );
-      }
-      if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
-      {
-         ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
-         errorNumber = S_detControl_SDSU_ERROR;
-         epToVxSetHealth( pRecordPrefix, "WARNING" );
-      }
-   }
-
-   return (errorNumber);
-}
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -6604,17 +7848,15 @@ uint32 detDownload
  *   detPrimitive
  *
  *   INVOCATION:
- *   detPrimitive (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                 sdsuId, obsId, pDetPrimReplyContext)
+ *   detPrimitive (cadCmdContext, commandNumber, sdsuId, obsId, 
+ *                 pDetPrimReplyContext)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName             (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix        (const char *)    Record name prefix
  *   (>) cadCmdContext        (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber        (int)             Command number
  *   (>) sdsuId               (SDSU_ID)         Current SDSU context structure
  *   (>) obsId                (OBS_ID)          Observation context structure
- *   (>) pDetPrimReplyContext (DATREC_CONTEXT)  Content structure for prim 
+ *   (>) pDetPrimReplyContext (DATREC_CONTEXT)  Content structure for prim
  *                                              reply record
  *
  *   FUNCTION VALUE:
@@ -6642,8 +7884,6 @@ uint32 detDownload
 
 uint32 detPrimitive
    (
-   const char *    pWfsName,       /* Name of wavefront sensor.               */
-   const char *    pRecordPrefix,  /* Record name prefix.                     */
    CAD_CMD_CONTEXT cadCmdContext,  /* CAD command context structure.          */
    int             commandNumber,  /* Command number.                         */
    SDSU_ID         sdsuId,         /* SDSU context structure.                 */
@@ -6679,7 +7919,7 @@ uint32 detPrimitive
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -6687,20 +7927,20 @@ uint32 detPrimitive
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 
    /*
-    * Some primitive commands can be accepted while an observation is in 
+    * Some primitive commands can be accepted while an observation is in
     * progress. However, warn the user if there is an observation in progress.
     */
 
    if ( obsId->observing )
    {
-      MESSAGE_LOG (MSG_WARNING, 
+      MESSAGE_LOG (MSG_WARNING,
       "NOTE: Issuing primitive command while observation in progress.");
    }
 
@@ -6708,17 +7948,16 @@ uint32 detPrimitive
     * Get the command name, destination DSP and up to 6 command arguments
     * from the attributes supplied with the CAD command.
     */
-
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pStringAttrib);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *) & destId);
 
    for (i = 0; i < 6; i++)
    {
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, i + 2, 
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, i + 2,
                              (char *) & pCmdArg [i]);
    }
 
-   MESSAGE_LOG4 (MSG_LOG, 
+   MESSAGE_LOG4 (MSG_LOG,
    "About to execute SDSU primitive command \"%s\" to %ld with %#lx ... %#lx",
    pStringAttrib, destId, pCmdArg[0], pCmdArg[5]);
 
@@ -6726,16 +7965,16 @@ uint32 detPrimitive
     * Issue the primitive command to the SDSU controller.
     */
 
-   if (sdsuPrimitive (sdsuId, pStringAttrib, (uint32) destId, 
+   if (sdsuPrimitive (sdsuId, pStringAttrib, (uint32) destId,
        (uint32 *) pCmdArg, (uint32 *) pRepArg) == ERROR)
    {
       ERROR_LOG ("Failed to execute SDSU primitive command");
       errorNumber = S_detControl_SDSU_ERROR;
    }
 
-   /* Write the reply to the SDSU primitive reply SIR record. */   
+   /* Write the reply to the SDSU primitive reply SIR record. */
 
-   sprintf (pStringAttrib, "0x%08lx 0x%08lx 0x%08lx", pRepArg [0], 
+   sprintf (pStringAttrib, "0x%08lx 0x%08lx 0x%08lx", pRepArg [0],
             pRepArg [1], pRepArg [2]);
    if (epToVxPipeWrite (NULL, pStringAttrib, pDetPrimReplyContext) == ERROR)
    {
@@ -6746,7 +7985,6 @@ uint32 detPrimitive
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -6754,12 +7992,9 @@ uint32 detPrimitive
  *   detMode
  *
  *   INVOCATION:
- *   detMode (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *            obsId)
+ *   detMode (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -6790,8 +8025,6 @@ uint32 detPrimitive
 
 uint32 detMode
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
@@ -6810,7 +8043,7 @@ uint32 detMode
    BOOL        irFailed = FALSE;  /* Set TRUE if CCD parameter setup fails.   */
 
    /*
-    * Initialise the error number and obtain the attributes provided with the 
+    * Initialise the error number and obtain the attributes provided with the
     * command.
     */
 
@@ -6827,7 +8060,7 @@ uint32 detMode
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -6835,18 +8068,17 @@ uint32 detMode
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 
    /*
-    * The command can be used when an observation is in progress, as it only 
-    * redefines "on-the-fly" parameters. However, warn the user this is 
+    * The command can be used when an observation is in progress, as it only
+    * redefines "on-the-fly" parameters. However, warn the user this is
     * happening.
     */
-
    if ( obsId->observing )
    {
       MESSAGE_LOG (MSG_WARNING,
@@ -6857,23 +8089,23 @@ uint32 detMode
       mode, tInt, gainSp, samples);
 
    /*
-    * Set the readout mode by writing the appropriate SDSU parameters. All are 
-    * on-the-fly parameters, except GAIN_SP, and need to be downloaded with 
-    * sdsuParamWRP() and activated by sending a "LDP" command. GAIN_SP cannot 
-    * be changed if an observation is in progress, and must be updated 
+    * Set the readout mode by writing the appropriate SDSU parameters. All are
+    * on-the-fly parameters, except GAIN_SP, and need to be downloaded with
+    * sdsuParamWRP() and activated by sending a "LDP" command. GAIN_SP cannot
+    * be changed if an observation is in progress, and must be updated
     * separately with sdsuParamWrite().
     *
     * If any parameter is defined as -1 it is not changed.
     *
-    * Only the T_MODE parameter is universal. The T_INT_TIM and T_GAIN_SP 
-    * parameters are valid for CCD detectors only, and T_SAMPLES is valid for 
-    * IR detectors only. An error is only reported if an attempt to write both 
+    * Only the T_MODE parameter is universal. The T_INT_TIM and T_GAIN_SP
+    * parameters are valid for CCD detectors only, and T_SAMPLES is valid for
+    * IR detectors only. An error is only reported if an attempt to write both
     * the CCD and IR parameters fails.
     */
 
    if ( mode != -1 )
    {
-      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_MODE", (uint32) mode ) == 
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_MODE", (uint32) mode ) ==
            ERROR )
       {
          ERROR_LOG ("Error setting readout mode parameter");
@@ -6902,7 +8134,7 @@ uint32 detMode
 
    if ( (!obsId->observing) && (gainSp != -1) )
    {
-      if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_GAIN_SP", 
+      if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_GAIN_SP",
                            (uint32) gainSp ) == ERROR )
       {
          ccdFailed = TRUE;
@@ -6910,7 +8142,7 @@ uint32 detMode
    }
    else if ( obsId->observing )
    {
-      MESSAGE_LOG (MSG_WARNING, 
+      MESSAGE_LOG (MSG_WARNING,
       "T_GAIN_SP parameter not changed while observing");
    }
 
@@ -6931,7 +8163,6 @@ uint32 detMode
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -6939,12 +8170,9 @@ uint32 detMode
  *   detOffset
  *
  *   INVOCATION:
- *   detOffset (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *              obsId)
+ *   detOffset (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -6975,8 +8203,6 @@ uint32 detMode
 
 uint32 detOffset
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
@@ -6991,7 +8217,7 @@ uint32 detOffset
    long            offset3;       /* ADC offset for output 3.               */
 
    /*
-    * Initialise the error number and obtain the attributes provided with the 
+    * Initialise the error number and obtain the attributes provided with the
     * command.
     */
 
@@ -7007,7 +8233,7 @@ uint32 detOffset
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7015,15 +8241,15 @@ uint32 detOffset
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 
    /*
-    * The command can be used when an observation is in progress, as it only 
-    * redefines "on-the-fly" parameters. However, warn the user this is 
+    * The command can be used when an observation is in progress, as it only
+    * redefines "on-the-fly" parameters. However, warn the user this is
     * happening.
     */
 
@@ -7095,7 +8321,6 @@ uint32 detOffset
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -7103,12 +8328,9 @@ uint32 detOffset
  *   detTemp
  *
  *   INVOCATION:
- *   detTemp (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *            obsId)
+ *   detTemp (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -7121,7 +8343,7 @@ uint32 detOffset
  *   Execute detTemp command
  *
  *   DESCRIPTION:
- *   This function sets up the SDSU exposure parameters.
+ *   This function sets up the SDSU temperature parameters.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -7139,8 +8361,6 @@ uint32 detOffset
 
 uint32 detTemp
    (
-   const char *    pWfsName,         /* Name of wavefront sensor.             */
-   const char *    pRecordPrefix,    /* Record name prefix.                   */
    CAD_CMD_CONTEXT cadCmdContext,    /* CAD command context structure.        */
    int             commandNumber,    /* Command number.                       */
    SDSU_ID         sdsuId,           /* SDSU context structure.               */
@@ -7149,8 +8369,8 @@ uint32 detTemp
 {
    uint32          errorNumber;      /* Error number reported by task.        */
 
-   /* 
-    * Variables associated with the "set detector temperature parameters" 
+   /*
+    * Variables associated with the "set detector temperature parameters"
     * command.
     */
 
@@ -7164,9 +8384,9 @@ uint32 detTemp
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
                           (char *) & tempTarget);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
                           (char *) & tempCoeff);
 
    /*
@@ -7175,7 +8395,7 @@ uint32 detTemp
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7183,19 +8403,18 @@ uint32 detTemp
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
-
    /*
     * The command can only be used when an observation is not in progress.
     */
 
    if ( obsId->observing )
    {
-      ERROR_SET (S_detControl_BUSY, 
+      ERROR_SET (S_detControl_BUSY,
                  "Observation in progress - abort observation and try again",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_BUSY;
@@ -7220,9 +8439,9 @@ uint32 detTemp
     * Write the temperature control parameters to the SDSU controller.
     */
 
-   if ( (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode ) 
+   if ( (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
         == ERROR) ||
-        (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32) tempCoeff ) 
+        (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32) tempCoeff )
         == ERROR)
       )
    {
@@ -7234,7 +8453,6 @@ uint32 detTemp
    return (errorNumber);
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 /*+
@@ -7242,16 +8460,18 @@ uint32 detTemp
  *   detSigInit
  *
  *   INVOCATION:
- *   detSigInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
- *               obsId)
+ *   detSigInit (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, aoCtrlId,
+ *               pAoCtrlInitContext, pAoFlatInitContext)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
+ *   (>) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
+ *   (!) aoCtrlId      (AO_CTRL_ID)      AO control context structure
+ *   (!) pAoCtrlInitContext (DATREC_CONTEXT) AoCtrlInit SIR record context
+ *   (!) pAoFlatInitContext (DATREC_CONTEXT) AoFlatInit SIR record context
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -7260,7 +8480,7 @@ uint32 detTemp
  *   Execute detSigInit command
  *
  *   DESCRIPTION:
- *   This function initialises the signal processing.
+ *   This function updates the AO control context structure
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -7278,12 +8498,14 @@ uint32 detTemp
 
 uint32 detSigInit
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId          /* Observation context structure.           */
+   OBS_ID          obsId,         /* Observation context structure.           */
+   AO_CCD_ID       aoCcdId,       /* AO CCD geometry context structure.       */
+   AO_CTRL_ID      aoCtrlId,      /* AO control context structure.            */
+   DATREC_CONTEXT  pAoCtrlInitContext,  /* AoCtrlInit SIR record context      */
+   DATREC_CONTEXT  pAoFlatInitContext   /* AoFlatInit SIR record context      */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
@@ -7297,15 +8519,10 @@ uint32 detSigInit
    char         pFullFlatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullRefFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    double       refX, refY;
-   double       threshold;
-   /*double       tipGain;
-   double       tiltGain;
-   double       focusGain;
-   double       focusAverageGain;*/
    double       angle;
 
    /*
-    * Initialise the error number and get the attributes provided with this 
+    * Initialise the error number and get the attributes provided with this
     * command.
     */
 
@@ -7313,24 +8530,18 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pDarkFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFlatFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&threshold);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&angle);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&refX);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&refY);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, pRefFileName);
-
-   /*EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&tipGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&tiltGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&focusGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, (char *)&focusAverageGain);*/
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&angle);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&refX);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&refY);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, pRefFileName);
 
    /*
-    * Check there are valid SDSU and observation context structures.
+    * Check there are valid context structures.
     */
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7338,7 +8549,24 @@ uint32 detSigInit
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( aoCcdId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "AO CCD geometry context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( aoCtrlId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "AO control context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7350,7 +8578,7 @@ uint32 detSigInit
 
    if ( obsId->observing )
    {
-      ERROR_SET (S_detControl_BUSY, 
+      ERROR_SET (S_detControl_BUSY,
          "Observation in progress - abort observation and try again",
          ERROR_LOG_NOW);
       errorNumber = S_detControl_BUSY;
@@ -7378,30 +8606,75 @@ uint32 detSigInit
    MESSAGE_LOG (MSG_LOG, "Initialising signal processing ...");
 
    /*
-    * Update the signal processing context structure.
+    * Update the AO control context structure
     */
 
-   if ( obsId->ospFGContext == NULL )
+   if (aoCtrlContextUpdate ( pFullDarkFileName, pFullFlatFileName,
+                             pFullRefFileName, refX, refY,
+                             angle, aoCcdId, aoCtrlId ) == ERROR )
    {
-      ERROR_SET (S_detControl_INTERNAL, 
-                 "Signal processing context not initialised", 
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   };
-
-   if (ospUpdate ( obsId->ospFGContext ,
-                   pFullDarkFileName , pFullFlatFileName ,
-                   threshold , angle , 
-                   refX, refY, 
-                   pFullRefFileName ,
-                   obsId->binningFlag ) == ERROR )
-   {
-      ERROR_SET (0, "Failed to update OSP context", ERROR_LOG_NOW);
+      ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
-    
+
+   aoCtrlContextShow (aoCcdId, aoCtrlId);
+
+   if ( aoCtrlId->initFlag == TRUE )
+   {
+      if (epToVxPipeWrite (NULL, "Initialized", pAoCtrlInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      }
+   }
+   else
+   {
+      if (epToVxPipeWrite (NULL, "Not Initialized", pAoCtrlInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      }
+   }
+
+   if ( aoCtrlId->darkInitFlag == TRUE )
+   {
+      if (epToVxPipeWrite (NULL, aoCtrlId->darkFileName, 
+                           obsId->pAoDarkInitContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      }
+   }
+   else
+   {
+      if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      }
+   }
+
+   if ( aoCtrlId->flatInitFlag == TRUE )
+   {
+      if (epToVxPipeWrite (NULL, aoCtrlId->flatFileName, pAoFlatInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      }
+   }
+   else
+   {
+      if (epToVxPipeWrite (NULL, "Not initialized", pAoFlatInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      }
+   }
+
    return (errorNumber);
 }
 
@@ -7412,16 +8685,14 @@ uint32 detSigInit
  *   detSigInitGain
  *
  *   INVOCATION:
- *   detSigInitGain (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                   sdsuId, obsId)
+ *   detSigInitGain (cadCmdContext, commandNumber, sdsuId, obsId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
+ *   (!) aoCtrlId      (AO_CTRL_ID)      AO control context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -7448,31 +8719,31 @@ uint32 detSigInit
 
 uint32 detSigInitGain
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId          /* Observation context structure.           */
+   OBS_ID          obsId,         /* Observation context structure.           */
+   AO_CTRL_ID      aoCtrlId       /* AO control context structure.            */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
 
-   double       tipGain;
-   double       tiltGain;
-   double       focusGain;
-   double       focusAverageGain;
+   double       tipScale;
+   double       tiltScale;
+   double       focusScale;
+   double       slidingFocusGain;
 
    /*
-    * Initialise the error number and get the attributes provided with this 
+    * Initialise the error number and get the attributes provided with this
     * command.
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&tipGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&tiltGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&focusGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&focusAverageGain);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&tipScale);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&tiltScale);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&focusScale);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, 
+                          (char *)&slidingFocusGain);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -7481,7 +8752,7 @@ uint32 detSigInitGain
 #ifdef DEBUG
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7489,17 +8760,17 @@ uint32 detSigInitGain
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 #endif
 
-   if ( obsId->ospFGContext == NULL )
+   if ( aoCtrlId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, 
-                 "Signal processing context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL,
+                 "AO control context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7515,12 +8786,12 @@ uint32 detSigInitGain
       printf ( "Init FG Gain when observation in progress\n" ) ;
 #endif
 
-      obsId->tipGain = tipGain ;
-      obsId->tiltGain = tiltGain ;
-      obsId->focusGain = focusGain ;
-      obsId->focusAverageGain = focusAverageGain ;
-      obsId->updateGain = TRUE ;
-      /*printf ( "detSigInitGain : updateGain = %d\n" , obsId->updateGain );*/
+      obsId->tipScale = tipScale ;
+      obsId->tiltScale = tiltScale ;
+      obsId->focusScale = focusScale ;
+      obsId->slidingFocusGain = slidingFocusGain ;
+      obsId->updateScale = TRUE ;
+      /*printf ( "detSigInitGain : updateScale = %d\n" , obsId->updateScale );*/
    }
    else
    {
@@ -7528,30 +8799,27 @@ uint32 detSigInitGain
       printf ( "Init FG Gain when observation is not in progress\n" ) ;
 #endif
 
-      obsId->ospFGContext->tipscale = (float)(tipGain) ;
-      obsId->ospFGContext->tiltscale = (float)(tiltGain) ;
-      obsId->ospFGContext->focusscale = (float)(focusGain) ;
-      obsId->ospFGContext->gainFocus = (float)(focusAverageGain) ;
-      obsId->ospFGContext->one_gainFocus = 1.0 - (float)(focusAverageGain) ;
+      aoCtrlId->scaleFactorVect[0] = tipScale ;
+      aoCtrlId->scaleFactorVect[1] = tiltScale ;
+      aoCtrlId->scaleFactorVect[2] = focusScale ;
+      aoCtrlId->slidingFocusGain = slidingFocusGain;
+      aoCtrlId->one_slidingFocusGain = 1.0 - slidingFocusGain ;
    }
-    
+
    return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detSigMode
+ *   detSigModeNone
  *
  *   INVOCATION:
- *   detSigMode (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId,
- *               obsId)
+ *   detSigModeNone (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
- *   (>) pRecordPrefix (const char *)    Record name prefix
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
@@ -7561,10 +8829,10 @@ uint32 detSigInitGain
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigMode command
+ *   Execute detSigModeNone command
  *
  *   DESCRIPTION:
- *   This function defines the signal processing mode.
+ *   This function defines the AO processing mode to no processing.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -7580,29 +8848,29 @@ uint32 detSigInitGain
  *-
  */
 
-uint32 detSigMode
+uint32 detSigModeNone
    (
-   const char *    pWfsName,      /* Name of wavefront sensor.                */
-   const char *    pRecordPrefix, /* Record name prefix.                      */
-   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
-   int             commandNumber, /* Command number.                          */
-   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId          /* Observation context structure.           */
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
    )
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
-   long         nCoaddFrames;   /* Number of frames to coadd.                 */
+                                /* closed loop sequence                       */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
    /*
-    * Initialise the error number and obtain the attributes provided with the 
+    * Initialise the error number and obtain the attributes provided with the
     * command.
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & sigMode);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
-                          (char *) & nCoaddFrames);
+   sigMode = AO_MODE_NONE;
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -7610,7 +8878,7 @@ uint32 detSigMode
 
    if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
@@ -7618,69 +8886,31 @@ uint32 detSigMode
 
    if ( obsId == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 
    /*
-    * The command can be used when an observation is in progress, as ospLib 
-    * allows the mode to be changed "on-the-fly". However, warn the user this 
-    * is happening.
+    * The command cannot be used when an observation is in progress.
     */
 
    if ( obsId->observing )
    {
-      MESSAGE_LOG (MSG_WARNING,
-      "NOTE: Changing signal processing parameters while observation in progress.");
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
    }
 
-   switch (sigMode)
+   MESSAGE_LOG (MSG_LOG, "Switching signal processing off");
+   if (epToVxPipeWrite (NULL, "No processing", 
+                        obsId->pAoProcessModeContext) == ERROR)
    {
-      case (OSP_MODE_NONE):
-         MESSAGE_LOG (MSG_LOG, "Switching signal processing off");
-         break;
-
-      case (OSP_MODE_DARK):
-         MESSAGE_LOG (MSG_LOG, 
-         "Signal processing switched to \"Subtract Dark\" mode");
-         break;
-
-      case (OSP_MODE_FG):
-         MESSAGE_LOG (MSG_LOG, 
-         "Signal processing switched to \"Fast Guide\" mode");
-         break;
-
-      case (OSP_MODE_FG_COADD):
-         MESSAGE_LOG1 (MSG_LOG,
-         "Signal processing switched to \"FG + Coadd\" mode - nCoaddFrames=%ld",
-         nCoaddFrames);
-         break;
-
-      case (OSP_MODE_COADD):
-         MESSAGE_LOG1 (MSG_LOG,
-         "Signal processing switched to \"Coadd Only\" mode - nCoaddFrames=%ld",
-         nCoaddFrames);
-         break;
-
-      case (OSP_MODE_CALIB_REF):
-         MESSAGE_LOG1 (MSG_LOG,
-            "Signal processing switched to \"Calibrate Reference\" mode - "
-            "nCoaddFrames=%ld ", nCoaddFrames);
-         break;
-
-      case (OSP_MODE_FG_FOCUS):
-         MESSAGE_LOG (MSG_LOG,
-            "Signal processing switched to \"FG and Focus\" mode ");
-         break;
-
-      default:
-         ERROR_SET (S_detControl_BAD_ATTRIBUTE, 
-            "Invalid signal processing mode",
-            ERROR_LOG_SAVE);
-         return (ERROR);
-         break;
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
    }
 
    /*
@@ -7689,13 +8919,33 @@ uint32 detSigMode
     */
 
    obsId->sigMode = sigMode;
-   obsId->nCoaddFrames = nCoaddFrames;
 
-   /* Initialise the coadd counter used to decide when to save coadded data 
-    * to disk. 
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
     */
 
    obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
 
    return (errorNumber);
 }
@@ -7704,251 +8954,26 @@ uint32 detSigMode
 
 /*+
  *   FUNCTION NAME:
- *   detShow
+ *   detSigModeDark
  *
  *   INVOCATION:
- *   detShow (pWfsName, verbose)
+ *   detSigModeDark (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName (const char *) Name of WFS
- *   (>) verbose  (const BOOL)   Enable verbose printout
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
  *
  *   FUNCTION VALUE:
- *   None
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Show status of detector control tasks
+ *   Execute detSigModeDark command
  *
  *   DESCRIPTION:
- *   This is an engineering function which displays the current status of the
- *   detector control task.
- *
- *   NOTE:
- *   This function is designed to be invoked from the VxWorks shell
- *
- *   EXTERNAL VARIABLES:
- *   (>) detSdsuIdP2  (SDSU_ID)  SDSU context structure for PWFS2
- *   (>) detObsIdP2   (OBS_ID)   Observation context structure for PWFS2
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-void detShow
-   (
-   const char *   pWfsName,
-   const BOOL     verbose
-   )
-{
-   /*
-    * Display the contents of the SDSU context structures for the 
-    * wavefront sensor: PWFS2
-    */
-
-   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
-        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
-      )
-   {
-      printf ("detShow:          PWFS2\n");
-      printf ("detShow:          -----\n");
-
-      if ( detSdsuIdP2 != NULL )
-      {
-         if ( sdsuShow (detSdsuIdP2, verbose) != ERROR )
-         {   
-            if (detObsIdP2 != NULL)
-            {
-               detObsShow (detObsIdP2, verbose);
-            }
-         }
-         else
-         {
-            printf ("detShow: SDSU controller context for PWFS2 invalid.\n");
-         }
-      }
-      else
-      {
-         printf ("detShow: SDSU controller for PWFS2 not initialised.\n");
-      }
-   }
-
-   return;
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detStatusShow
- *
- *   INVOCATION:
- *   detStatusShow (pWfsName)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName   (const char *)   Name of WFS
- *
- *   FUNCTION VALUE:
- *   None
- *
- *   PURPOSE:
- *   Show status parameters of detector control task
- *
- *   DESCRIPTION:
- *   This is an engineering function which displays the status parameters of the
- *   detector control task.
- *
- *   NOTE:
- *   This function is designed to be invoked from the VxWorks shell
- *
- *   EXTERNAL VARIABLES:
- *   (>) detSdsuIdP2 (SDSU_ID) SDSU context structure for PWFS2
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-void detStatusShow
-   (
-   const char *   pWfsName
-   )
-{
-   /*
-    * Display the SDSU status parameters for PWFS2
-    */
-
-   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
-        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
-      )
-   {
-      printf ("detStatusShow:          PWFS2\n");
-      printf ("detStatusShow:          -----\n");
-
-      if ( detSdsuIdP2 != NULL )
-      {
-         if ( sdsuStatusShow (detSdsuIdP2) == ERROR )
-         {
-            printf (
-            "detStatusShow: SDSU controller context for PWFS2 invalid.\n");
-         }
-      }
-      else
-      {
-         printf ("detStatusShow: SDSU controller for PWFS2 not initialised.\n");
-      }
-   }
-
-   return;
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detTempShow
- *
- *   INVOCATION:
- *   detTempShow (pWfsName)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName (const char *) Name of WFS
- *
- *   FUNCTION VALUE:
- *   None
- *
- *   PURPOSE:
- *   Show temperature parameters of detector control task
- *
- *   DESCRIPTION:
- *   This is an engineering function which displays the temperature parameters 
- *   of the detector control task.
- *
- *   NOTE:
- *   This function is designed to be invoked from the VxWorks shell
- *
- *   EXTERNAL VARIABLES:
- *   (>) detSdsuIdP2 (SDSU_ID) SDSU context structure for PWFS2
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-void detTempShow
-   (
-   const char *   pWfsName
-   )
-{
-   /*
-    * Display the SDSU status parameters for PWFS2
-    */
-
-   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
-        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
-      )
-   {
-
-      printf ("detTempShow:          PWFS2\n");
-      printf ("detTempShow:          -----\n");
-
-      if ( detSdsuIdP2 != NULL )
-      {
-         if ( sdsuTempShow (detSdsuIdP2) == ERROR )
-         {
-           printf ("detTempShow: SDSU controller context for PWFS2 invalid.\n");
-         }
-      }
-      else
-      {
-         printf ("detTempShow: SDSU controller for PWFS2 not initialised.\n");
-      }
-   }
-
-   return;
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detObsContextCreate
- *
- *   INVOCATION:
- *   detObsContextCreate (void)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   None
- *
- *   FUNCTION VALUE:
- *   (OBS_ID)   Pointer to observation ID, or NULL if unsuccessful.
- *
- *   PURPOSE:
- *   Create an observation ID structure
- *
- *   DESCRIPTION:
- *   This function creates and initialises an observation ID structure.
+ *   This function defines the AO processing mode to dark subtraction
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -7964,187 +8989,133 @@ void detTempShow
  *-
  */
 
-OBS_ID detObsContextCreate (void)
-{
-   OBS_ID   obsId;
-
-   /* Allocate memory for the observation ID structure, initialising its 
-    * contents to zero. 
-    */
-
-#ifdef DEBUG
-  printf (
-  "detObsContextCreate: Allocating %d bytes of memory for OBS_ID structure.\n",
-  sizeof (OBS_ID_STRUCT));
-#endif /* DEBUG */
-
-   if ((obsId = (OBS_ID) calloc ((size_t) 1, sizeof (OBS_ID_STRUCT))) == NULL)
-   {
-      ERROR_SET (0,"Memory allocation for observation context failed", 
-                 ERROR_LOG_SAVE);
-      return (NULL);
-   }
-
-   /* Create a binary semaphore for synchronising observation threads. */
-
-   obsId->syncSem = semBCreate( SEM_Q_FIFO, SEM_EMPTY );
-   if ( obsId->syncSem == NULL )
-   {
-      ERROR_SET (0, "Failed to create observation synchronisation semaphore", 
-                 ERROR_LOG_SAVE);
-      cfree ((char *) obsId);
-      return (NULL);
-   }
-
-   return (obsId);
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detObsShow
- *
- *   INVOCATION:
- *   detObsShow (obsId)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) obsId   (OBS_ID)      Pointer to observation ID
- *   (>) verbose (const BOOL)  Enable verbose mode
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Display the contents of an observation ID structure
- *
- *   DESCRIPTION:
- *   This function creates and initialises an observation ID structure.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-STATUS detObsShow 
+uint32 detSigModeDark
    (
-   OBS_ID      obsId,
-   const BOOL   verbose
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
    )
 {
-   const char *   outOptionStrings[4] =
-      {
-         "NONE", "DHS", "FILE", "BOTH"
-      };
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
-   /* Check the observation context structure is valid. */
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   sigMode = AO_MODE_DARK;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
 
    if ( obsId == NULL )
    {
-      ERROR_SET (0, "Invalid observation context", ERROR_LOG_SAVE);
-      return (ERROR);
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
    }
 
-   /* Display the contents of the observation context structure. */
-
-   printf ("Contents of observation context structure at %p:\n", obsId);
-   printf ("--------------------------------------------------------\n");
-   printf ("Associated SDSU context          : %p\n", obsId->sdsuId);
-   printf ("Observing?                       : %s\n", 
-           (obsId->observing ? "YES" : "NO") );
-   printf ("  Observing status record context: %p\n", 
-           obsId->pDetObservingContext);
-
-   printf ("Total number of frames           : %d\n", obsId->totalFrames);
-
-   printf ("Alarm timer ID                   : %d\n", (int) obsId->timeId);
-
-   printf ("Size of frame in pixels (X x Y)  : %d x %d\n", obsId->xPixels, 
-           obsId->yPixels);
-   printf ("Number of detector outputs       : %ld\n", obsId->outputs);
-
-   printf ("Output options                   : %s\n", 
-           outOptionStrings[obsId->outOptions] );
-
-   if ( (obsId->outOptions == 1) || (obsId->outOptions == 3) )
-   {
-      printf ("  DHS connection ID          : %d\n", 
-              (int) obsId->dhsConnection);
-      printf ("  Data label                 : %s\n", obsId->pDataLabel);
-   }
-   if ( (obsId->outOptions == 2) || (obsId->outOptions == 3) ) 
-   {
-      printf ("  Output data file name      : %s\n", obsId->pOutFileName);
-   }
-   printf ("  Simulated data file name       : %s (simulate=%s)\n", 
-           obsId->pSimFileName,
-           ((obsId->sdsuId == NULL) ? "DON'T KNOW" : (obsId->sdsuId->simulate ? "YES" : "NO")) );
-
-   printf ("Signal processing FG context     : %p\n", obsId->ospFGContext);
-
-   printf ("Time at observation start/end    : %f %f\n", obsId->rawtStart, 
-           obsId->rawtEnd);
-   printf ("Exposure in seconds reqst/actual : %f %f\n", obsId->exposedRQ, 
-           obsId->exposed);
-
-   printf ("Axis 1 world coordinate info.    : %s %f %f\n",
-      obsId->ctype1, obsId->crpix1, obsId->crval1);
-   printf ("Axis 2 world coordinate info.    : %s %f %f\n",
-      obsId->ctype2, obsId->crpix2, obsId->crval2);
-   printf ("Rotation/skew matrix             : %f %f %f %f\n",
-      obsId->cd1_1, obsId->cd1_2, obsId->cd2_1, obsId->cd2_2);
-   printf ("Radecsys, equinox, mjd           : %s %f %f\n",
-      obsId->radecsys, obsId->equinox, obsId->mjdobs);
-   printf ("\n\n");
-
-   printf ("\n");         /* Blank line for spacing */
-
-   /* In verbose mode, also show the contents of the signal processing context 
-    * structure 
+   /*
+    * The command cannot be used when an observation is in progress.
     */
 
-   if (verbose & (obsId->ospFGContext != NULL))
+   if ( obsId->observing )
    {
-      ospShow(obsId->ospFGContext);
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
    }
 
-   return (OK);
-}
+   MESSAGE_LOG (MSG_LOG,
+   "Signal processing switched to \"Subtract Dark\" mode");
+   if (epToVxPipeWrite (NULL, "Subtract dark", 
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
 
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   if (detDhsInitialised)
+      outOption = 1 ;      /* DHS */
+   else
+      outOption = 0 ;      /* NO DHS */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
+}
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detPacketCallback
+ *   detSigModeGg
  *
  *   INVOCATION:
- *   detPacketCallback (sdsuId, obsIdIn, frameId)
+ *   detSigModeGg (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) sdsuId  (SDSU_ID)      SDSU context structure
- *   (>) obsIdIn (void *)       Observation context pointer cast to void *
- *   (>) pFrame  (SDSU_FRAME *) Frame pointer
+ *   (>) pRecordPrefix (const char *) Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
  *
  *   FUNCTION VALUE:
- *   None
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Detector controller packet callback function
+ *   Execute detSigModeGg command
  *
  *   DESCRIPTION:
- *   This function will be called each time a packet is received from a
- *   wavefront sensor.
+ *   This function defines the AO processing mode to global guide.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -8156,47 +9127,134 @@ STATUS detObsShow
  *   detControl.h
  *
  *   DEFICIENCIES:
- *   Doesn't do anything, not used yet either.
+ *   None known
  *-
  */
 
-void detPacketCallback
+uint32 detSigModeGg
    (
-   SDSU_ID        sdsuId,           /* SDSU context structure.                */
-   void *         obsIdIn,          /* Observation context structure.         */
-   SDSU_FRAME *   pFrame            /* Frame pointer.                         */
+   const char *    pRecordPrefix,    /* Record Name Prefix.                   */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
    )
 {
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
-   printf ("Packet callback\n");
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
 
-   return;
+   errorNumber = 0;
+   sigMode = AO_MODE_GG;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   MESSAGE_LOG (MSG_LOG,
+                "Signal processing switched to \"Global Guide\" mode");
+   if (epToVxPipeWrite (NULL, "Global Guide on the whole CCD", 
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detFrameCallback
+ *   detSigModeFgFocus
  *
  *   INVOCATION:
- *   detFrameCallback (sdsuId, obsIdIn, pFrame)
+ *   detSigModeFgFocus (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) sdsuId  (SDSU_ID)      SDSU context structure
- *   (>) obsIdIn (void *)       Observation context pointer cast to void *
- *   (>) pFrame  (SDSU_FRAME *) Frame pointer
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
  *
  *   FUNCTION VALUE:
- *   None
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Detector controller frame callback function
+ *   Execute detSigModeFgFocus command
  *
  *   DESCRIPTION:
- *   This function is called each time a frame readout from a wavefront sensor 
- *   is finished.
+ *   This function defines the AO processing mode to fast guide and focus.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -8208,274 +9266,1105 @@ void detPacketCallback
  *   detControl.h
  *
  *   DEFICIENCIES:
- *   Doesn't do anything, not used yet either.
+ *   None known
  *-
  */
 
-void detFrameCallback
+uint32 detSigModeFgFocus
    (
-   SDSU_ID        sdsuId,            /* SDSU context structure.               */
-   void *         obsIdIn,           /* Observation context structure.        */
-   SDSU_FRAME *   pFrame             /* Frame pointer.                        */
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
    )
 {
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
-   printf ("Frame callback\n");
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
 
-   return;
+   errorNumber = 0;
+   sigMode = AO_MODE_FG_FOCUS;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   MESSAGE_LOG (MSG_LOG,
+           "Signal processing switched to \"FG and Focus\" mode ");
+   if (epToVxPipeWrite (NULL, "Fast guide and focus", 
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detSimulateData
+ *   detSigModeCoadd
  *
  *   INVOCATION:
- *   detSimulateData (xPixels, yPixels, option, pFrame)
+ *   detSigModeCoadd (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                    obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) xPixels (const int)    Number of pixels in X
- *   (>) yPixels (const int)    Number of pixels in Y
- *   (>) option  (const int)    Simulation option
- *   (!) pFrame  (SDSU_FRAME *) Pointer to SDSU frame
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
  *
  *   FUNCTION VALUE:
- *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Fill frame buffer with simulated data (TEMPORARY FUNCTION)
+ *   Execute detSigModeCoadd command
  *
  *   DESCRIPTION:
- *   This function fills a frame buffer with simulated data with the following
- *   options:
- *
- *   Option 1 consists of an incrementing series. The first pixel (output 1) 
- *   contains zero, the second pixel (output 2) is one, and so on. Thus within 
- *   each quadrant the least significant 2 bits should always be the same for a 
- *   4-output device, or the least significant bit the same for 2-output 
- *   devices.
- *
- *   Option 2 consists of...
+ *   This function defines the AO processing mode to COADD mode.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
  *
  *   PRIOR REQUIREMENTS:
- *   It is assumed that pFrame points to an SDSU frame structure (initialised 
- *   with sdsuFrameAlloc, sdsuFrameFind and sdsuFrameReserve) containing 
- *   sufficient storage space for xPixels * yPixels values.
+ *   None
  *
  *   INCLUDE FILES:
  *   detControl.h
  *
  *   DEFICIENCIES:
- *   Option 2 is very wasteful of CPU. It should be used for small images only.
- *
- *   At the moment this function only simulates a 2x2 array of spots for a CCD
- *   with 2x2 sectors. It can be extended if necessary.
+ *   None known
  *-
  */
 
-STATUS detSimulateData
+uint32 detSigModeCoadd
    (
-   const int      xPixels,         /* Number of pixels in X.                  */
-   const int      yPixels,         /* Number of pixels in Y.                  */
-   const int      option,          /* Simulation option.                      */
-   SDSU_FRAME *   pFrame           /* Pointer to frame buffer.                */
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
    )
 {
-   const int      nPixels = xPixels * yPixels;
-                                   /* Total number of pixels.                 */
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nCoaddFrames;   /* Number of frames to coadd.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
 
-   const int      nSectors = 4;    /* Number of sectors/outputs.              */
-   int            sector;          /* Sector counter.                         */
-   int            xPixelsSector;   /* Number of columns per sector.           */
-   int            yPixelsSector;   /* Number of rows per sector.              */
-   int            i, j;            /* Column and row counters.                */
-   int            is, js;          /* Column and row for a particular sector  */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                              /* Path name for files.                         */
+   char         pCoaddFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pFullCoaddFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
 
-   const int      nSpots = 4;      /* Number of simulated spots.              */
-   int            spot;            /* Spot counter.                           */
-   int            spotx[4];        /* X coordinates of simulated spot centres */
-   int            spoty[4];        /* y coordinates of simulated spot centres */
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
 
+   errorNumber = 0;
+   sigMode = AO_MODE_COADD;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                          (char *) & nCoaddFrames);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
 
-   double         dist;            /* Distance between pixel and spot centre. */
-   double         dvalue;          /* Double valueto write into frame buffer. */
-   uint16         value;           /* Integer value to write into frame buffer*/
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
 
-   volatile uint16 *   ptr;        /* Pointer into frame buffer.              */
-
-
-   /* Check the frame buffer pointer and size are valid. */
-
-   if (pFrame == NULL)
+   if ( sdsuId == NULL )
    {
-      ERROR_SET(S_detControl_INTERNAL, "No frame buffer defined", 
-                ERROR_LOG_SAVE);
-      return (ERROR);
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
    }
 
-   if ((xPixels <= 0) || (yPixels <= 0 ))
+   if ( obsId == NULL )
    {
-      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE, 
-                  "Bad number of pixels given, %d x %d", ERROR_LOG_SAVE,
-                  xPixels, yPixels);
-      return (ERROR);
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
    }
 
-#ifdef DEBUG
-   printf (
-   "detSimulateData: Simulating %d x %d pixels of data to buffer at %p - option %d\n",
-   xPixels, yPixels, pFrame, option );
-#endif   /* DEBUG */
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
 
-   /* Switch according to the simulation option chosen. */
-
-   switch (option)
+   if ( obsId->observing )
    {
-      case (1):
-
-         /*
-          * An incrementing series of values is required.
-          * Note that ptr is initialised to the start of the frame pixels.
-          */
-
-         ptr = & pFrame->pixel[0];
-         for ( i=0; i<nPixels; i++)
-         {
-            value = (uint16) i;
-            *(ptr) = value;
-            ptr++;
-         }
-         break;
-
-
-      case (2):
-
-         /*
-          * An array of simulated spots is required.
-          */
-
-         /* First initialise the number of pixels per sector, based on the 
-          * number of sectors. 
-          */
-
-         if ( nSectors == 2 )
-         {
-            /* There are two outputs and therefore 2 sectors in a 2x1 pattern */
-
-            xPixelsSector = xPixels / 2;
-            yPixelsSector = yPixels;
-         }
-         else if ( nSectors == 4 )
-         {
-            /* There are four outputs and therefore 2 sectors in a 2x2 pattern*/
-
-            xPixelsSector = xPixels / 2;
-            yPixelsSector = yPixels / 2;
-         }
-
-         /* Real positions for 2x2 wavefront sensor */
-         spotx[0] = 32;
-         spoty[0] = 27;
-         spotx[1] = 61;            
-         spoty[1] = 25;
-         spotx[2] = 25;
-         spoty[2] = 59;
-         spotx[3] = 61;            
-         spoty[3] = 58;
-
-         /*
-          * Initialise ptr to the start of the frame pixels and then step 
-          * through the rows and columns within each sector.
-          */
-
-         ptr = & pFrame->pixel[0];
-
-         for ( j=0; j < yPixelsSector; j++ )
-         {
-            for ( i=0; i < xPixelsSector; i++ )
-            {
-               for ( sector=1; sector <= nSectors; sector++ )
-               {
-                  /*
-                   * Calculate the row and column coordinates of this particular
-                   * point in this sector.
-                   */
-
-                  if ( sector == 1 )
-                  {
-                     /* Sector 1 */
-                     is = i;
-                     js = j;
-                  }
-                  else if ( sector == 2 )
-                  {
-                     /* Sector 2 */
-                     is = xPixels - i;
-                     js = j;
-                  }
-                  else if ( sector == 3 )
-                  {
-                     /* Sector 3 */
-                     is = xPixels - i;
-                     js = yPixels - j;
-                  }
-                  else
-                  {
-                     /* Sector 4 */
-                     is = i;
-                     js = yPixels - j;
-                  }
-
-                  /*
-                   * Use the row and column coordinates calculated above to 
-                   * determine the the distance of this point from each spot 
-                   * centre, calculate the sum of the light from each spot 
-                   * (assuming a Gaussian distribution), and write
-                   * this sum to the location pointed to by ptr. The value is 
-                   * not allowed to exceed 65535 because it needs to be stored 
-                   * as an unsigned 16 bit integer. Finally, ptr is incremented.
-                   *
-                   * The constant factors used in the following equations are 
-                   * arbitrary.
-                   */
-
-                  dvalue = 
-                  (double) ( 1000 * rand() / RAND_MAX ); /* Random background */
-
-                  for ( spot=0; spot < nSpots; spot++ )
-                  {
-                     dist = 0.25 * (double) ((is-spotx[spot])*(is-spotx[spot]) +
-                                             (js-spoty[spot])*(js-spoty[spot]));
-                     dvalue +=  30000.0 * exp (-dist);
-                  }
-
-                  if ( dvalue <= 65535.0 )
-                     value = (uint16) floor(dvalue);
-                  else
-                     value = 65535;
-
-                  *ptr++ = value;
-               }
-            }
-         }
-         break;
-
-      default:
-
-         ERROR_SET( S_detControl_BAD_ATTRIBUTE, "Unknown simulation option", 
-                    ERROR_LOG_SAVE);
-         return (ERROR);
-         break;
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
    }
 
-   return (OK);
+   MESSAGE_LOG1 (MSG_LOG,
+         "Signal processing switched to \"Coadd Only\" mode - nCoaddFrames=%ld",
+         nCoaddFrames);
+   if (epToVxPipeWrite (NULL, "Coadd only", 
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /* Combine file and path name for coadd file name */
+
+   detCreateFileName ( pFilePath ,
+                       pCoaddFileName ,
+                       pFullCoaddFileName ) ;
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+   obsId->nCoaddFrames = nCoaddFrames;
+   strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
+            (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames ;      /* nCoaddFrames exposures */
+   outOption = 0 ;            /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;        /* 10ms */
+   else
+      expTime = 0.005 ;       /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigModeThresh
+ *
+ *   INVOCATION:
+ *   detSigModeThresh (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                     obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *) Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigModeThresh command
+ *
+ *   DESCRIPTION:
+ *   This function defines the AO processing mode to threshold computation.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigModeThresh
+   (
+   const char *    pRecordPrefix,    /* Record Name Prefix.                   */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
+   )
+{
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         method;         /* Method for threshold computation.          */
+   long         nAverageData;   /* Number of data to average.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       rateBright;     /* Rate of brightest pixels.                  */
+   double       multCoeff;      /* Multiplicative coefficients for rms value  */
+   double       threshold;      /* Threshold value if no computation          */
+   double       expTime;        /* Exposure time                              */
+   
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   sigMode = AO_MODE_THRESH;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) &method);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+                          (char *) &nAverageData);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, 
+                          (char *) & rateBright);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, 
+                          (char *) & multCoeff);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, 
+                          (char *) & threshold);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   rateBright = rateBright/100.0; /* in percent */
+
+   MESSAGE_LOG4 (MSG_LOG,
+            "Signal processing switched to \"Threshold Computation\" mode - "
+            "method=%d, nAverageData=%d, rateBright=%f, multCoeff=%f", 
+            (int)method, (int)nAverageData, rateBright, multCoeff);
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->methodThreshComp = method;
+   obsId->aoCtrlId->thresholdMethod = method;
+   if ( obsId->methodThreshComp == AO_THRESH_VALUE )
+   { 
+      /* no computation requested */
+      obsId->aoCtrlId->threshold = threshold;
+      if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold), 
+                           obsId->pAoThreshContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+      }
+   }
+   else
+   {
+      obsId->nAverageDataThreshComp = nAverageData;
+      obsId->rateBrightPixThreshComp = rateBright;
+      obsId->aoCtrlId->thresholdRate = rateBright;
+      obsId->multCoeffRmsThreshComp = multCoeff;
+      obsId->aoCtrlId->thresholdMultCoeff = multCoeff;
+      obsId->sigMode = sigMode;
+      if (epToVxPipeWrite (NULL, "Compute threshold", 
+                           obsId->pAoProcessModeContext) == ERROR)
+      {
+         ERROR_LOG (
+              "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      }
+      /* Init the fields of the observe CAD record */
+
+      nExp = nAverageData ;     /* nAverageData exposure */
+      outOption = 0 ;           /* NONE */
+      if ( obsId->aoCcdId->binningFlag == FALSE )
+         expTime = 0.01 ;       /* 10ms */
+      else
+         expTime = 0.005 ;      /* 5ms */
+
+      if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+           ERROR )
+      {
+         ERROR_LOG ( "Failed to initialise fields of observe record");
+      }
+   }
+
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigModeGgCoadd
+ *
+ *   INVOCATION:
+ *   detSigModeGgCoadd (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigModeGgCoadd command
+ *
+ *   DESCRIPTION:
+ *   This function defines the AO processing mode to global guide and coadd.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigModeGgCoadd
+   (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
+   )
+{
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nCoaddFrames;   /* Number of frames to coadd.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                              /* Path name for files.                         */
+   char         pCoaddFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pFullCoaddFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   sigMode = AO_MODE_GG_COADD;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                          (char *) & nCoaddFrames);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   MESSAGE_LOG1 (MSG_LOG,
+         "Signal processing switched to \"GG + Coadd\" mode - nCoaddFrames=%ld",
+         nCoaddFrames);
+   if (epToVxPipeWrite (NULL, "Global Guide and Coadd", 
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+        "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /* Combine file and path name for coadd file name */
+
+   detCreateFileName ( pFilePath ,
+                       pCoaddFileName ,
+                       pFullCoaddFileName ) ;
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+   obsId->nCoaddFrames = nCoaddFrames;
+   strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
+            (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames ;     /* nCoaddFrames exposures */
+   outOption = 0 ;           /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;       /* 10ms */
+   else
+      expTime = 0.005 ;      /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigModeSeq
+ *
+ *   INVOCATION:
+ *   detSigModeSeq (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigModeSeq command
+ *
+ *   DESCRIPTION:
+ *   This function defines the AO processing mode to sequence closed loop.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigModeSeq
+   (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
+   )
+{
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         saveCbCtrlClosedLoopFlag; 
+                                /* Save control circular buffer during closed */
+                                /* loop flag.                                 */
+   long         fluxFlag;       /* Average flux after GG Flag                 */
+   long         nFramesFlux;    /* Number of frames to average for computing  */
+                                /* the average flux                           */
+   long         threshFlag;     /* Threshold after GG Flag                 */
+   long         nFramesThresh;  /* Number of frames to compute the threshold  */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+   double       fgTime;         /* Time when fg over the whole CCD in the     */
+                                /* closed loop sequence                       */
+   double       saveCbCtrlEveryTime;
+                                /* Time when to save the control circular     */
+                                /* buffer in the closed loop sequence         */
+   double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
+   double       rateBright;     /* Rate of brightest pixels.                  */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                                /* Path name for circular buffer.             */
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   sigMode = AO_MODE_CLOSED_LOOP;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
+                          (char *) & fgTime);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+                          (char *) & threshFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, 
+                          (char *) & nFramesThresh);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, 
+                          (char *) & rateBright);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, 
+                          (char *) & fluxFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, 
+                          (char *) & nFramesFlux);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, 
+                          (char *) & multCoeffFlux);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, 
+                          (char *) & saveCbCtrlClosedLoopFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, 
+                          (char *) & saveCbCtrlEveryTime);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, pFilePath); 
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   rateBright = rateBright / 100.0 ; /* in percent */
+   multCoeffFlux = multCoeffFlux / 100.0 ; /* in percent */
+
+   MESSAGE_LOG3 (MSG_LOG,
+            "Signal processing switched to \"Sequence closed loop\" mode - "
+            "fgTime=%f, saveCbCtrlClosedLoopFlag=%d, saveCbCtrlEveryTime=%f",
+            fgTime, (int)saveCbCtrlClosedLoopFlag, saveCbCtrlEveryTime);
+   MESSAGE_LOG3 (MSG_LOG, "threshFlag=%d, nFramesThresh=%d, rateBright=%f",
+                 (int)threshFlag, (int)nFramesThresh, rateBright);
+   MESSAGE_LOG3 (MSG_LOG, "fluxFlag=%d, nFramesFlux=%d, multCoeffFlux=%f",
+                 (int)fluxFlag, (int)nFramesFlux, multCoeffFlux);
+   if (epToVxPipeWrite (NULL, "Sequence closed loop", 
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+
+   obsId->fgTime = fgTime;
+   obsId->saveCbCtrlClosedLoop = saveCbCtrlClosedLoopFlag;
+   obsId->saveCbCtrlClosedLoopTime = saveCbCtrlEveryTime;
+
+   obsId->averageFluxFlag = fluxFlag;
+   obsId->nFramesAverageFlux = nFramesFlux;
+   obsId->multCoeffAverageFlux = multCoeffFlux;
+
+   obsId->threshFlag = threshFlag;
+   obsId->methodThreshComp = AO_THRESH_SPOTS;
+   obsId->aoCtrlId->thresholdMethod = AO_THRESH_SPOTS;
+   obsId->nAverageDataThreshComp = nFramesThresh;
+   obsId->rateBrightPixThreshComp = rateBright;
+   obsId->aoCtrlId->thresholdRate = rateBright;
+
+   if ( fluxFlag == TRUE )
+      obsId->aoCtrlId->multCoeffTotal= multCoeffFlux;
+
+   strcpy ( obsId->pCbPathSeq, pFilePath );
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigModeTotal
+ *
+ *   INVOCATION:
+ *   detSigModeTotal (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                    obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigModeTotal command
+ *
+ *   DESCRIPTION:
+ *   This function defines the AO processing mode to average flux computation.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigModeTotal
+   (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
+   )
+{
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         method;         /* Method for average flux computation        */
+   long         nFramesFlux;    /* Number of frames to average for computing  */
+                                /* the average flux                           */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
+   double       thresholdFlux;  /* threshold for flux value                   */
+   double       expTime;        /* Exposure time                              */
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   sigMode = AO_MODE_TOTAL;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
+                          (char *) & method);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+                          (char *) & thresholdFlux);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, 
+                          (char *) & nFramesFlux);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, 
+                          (char *) & multCoeffFlux);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   multCoeffFlux = multCoeffFlux / 100.0 ; /* in percent */
+
+   MESSAGE_LOG4 (MSG_LOG,
+            "Signal processing switched to \"Average Flux computation\" mode - "
+            "method=%d, thresholdFlux=%f, nFramesFlux=%d, multCoeffFlux=%f",
+             (int)method, thresholdFlux, (int)nFramesFlux, multCoeffFlux);
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->methodFluxComp = method;
+   obsId->aoCtrlId->totalMethod = method;
+   if ( obsId->methodFluxComp == AO_TOTAL_VALUE )
+   { 
+      /* no computation requested */
+      obsId->aoCtrlId->totalThreshold = thresholdFlux;
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
+                           obsId->pAoTotalContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+      }
+   }
+   else
+   {
+      obsId->nFramesAverageFlux = nFramesFlux;
+      obsId->multCoeffAverageFlux = multCoeffFlux;
+      obsId->aoCtrlId->multCoeffTotal= multCoeffFlux;
+      obsId->sigMode = sigMode;
+      if (epToVxPipeWrite (NULL, "Average flux computation", 
+                           obsId->pAoProcessModeContext) == ERROR)
+      {
+         ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      }
+      /* Init the fields of the observe CAD record */
+
+      nExp = nFramesFlux ;     /* nFramesFlux exposures */
+      outOption = 0 ;          /* NONE */
+      if ( obsId->aoCcdId->binningFlag == FALSE )
+         expTime = 0.01 ;      /* 10ms */
+      else
+         expTime = 0.005 ;     /* 5ms */
+
+      if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+           ERROR )
+      {
+         ERROR_LOG ( "Failed to initialise fields of observe record");
+      }
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitCb
+ *
+ *   INVOCATION:
+ *   detSigInitCb (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitCb command
+ *
+ *   DESCRIPTION:
+ *   This function sets the parameters to save the circular buffers.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitCB
+   (
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
+   )
+{
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         saveCbImFlag;   /* Save image circular buffer flag.           */
+   long         saveCbCtrlFlag; /* Save control circular buffer flag.         */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                                /* Path name for circular buffer.             */
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
+                          (char *) & saveCbImFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+                          (char *) & saveCbCtrlFlag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFilePath); 
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command can be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      MESSAGE_LOG (MSG_WARNING,
+      "NOTE: Changing AO processing parameters while observation in progress");
+   }
+
+   if ( saveCbImFlag == TRUE )
+   {
+      MESSAGE_LOG (MSG_LOG, "Save image circular buffer set to TRUE");
+   }
+   else
+   {
+      MESSAGE_LOG (MSG_LOG, "Save image circular buffer set to FALSE");
+   }
+
+   if ( saveCbCtrlFlag == TRUE )
+   {
+      MESSAGE_LOG (MSG_LOG, "Save control circular buffer set to TRUE");
+   }
+   else
+   {
+      MESSAGE_LOG (MSG_LOG, "Save control circular buffer set to FALSE");
+   }
+
+   /*
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->saveCbIm = saveCbImFlag;
+   obsId->saveCbCtrl = saveCbCtrlFlag;
+   strcpy ( obsId->pCbPath , pFilePath );
+
+   return (errorNumber);
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -8547,13 +10436,13 @@ STATUS detFrameUnscramble
    volatile uint16 *  inDataPtr;   /* Pointer to start of input data.         */
    float *            outDataPtr;  /* Pointer to start of output data.        */
 
-   float *         ps1;            /* Pointer to beginning of sector 1.       */
-   float *         ps2;            /* Pointer to beginning of sector 2.       */
-   float *         ps3;            /* Pointer to beginning of sector 3.       */
-   float *         ps4;            /* Pointer to beginning of sector 4.       */
+   float *        ps1;             /* Pointer to beginning of sector 1.       */
+   float *        ps2;             /* Pointer to beginning of sector 2.       */
+   float *        ps3;             /* Pointer to beginning of sector 3.       */
+   float *        ps4;             /* Pointer to beginning of sector 4.       */
 
 #ifdef DEBUG
-   float         min, max;         /* Minimum and maximum.                    */
+   float          min, max;         /* Minimum and maximum.                    */
 #endif /* DEBUG */
 
 
@@ -8665,7 +10554,7 @@ STATUS detFrameUnscramble
  *   (>) xPixels   (const int)  Number of columns
  *   (>) yPixels   (const int)  Number of rows
  *   (>) outputs   (const int)  Number of detector outputs (2 or 4)
- *   (>) inFrame   (float *)    Pointer to input frame buffer
+ *   (>) inFrame   (float *)   Pointer to input frame buffer
  *   (<) outBuffer (uint16 *)   Pointer to output frame buffer
  *
  *   FUNCTION VALUE:
@@ -8848,6 +10737,3640 @@ STATUS detFrameScramble
    return (OK);
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detObserveEnd
+ *
+ *   INVOCATION:
+ *   detObserveEnd (sdsuId, obsIdIn, pRawFrame)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) sdsuId    (SDSU_ID)      Controller ID
+ *   (>) obsIdIn   (void *)       Pointer to observation definition, cast to 
+ *                                void *
+ *   (>) pRawFrame (SDSU_FRAME *) Pointer to image frame
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Complete observation
+ *
+ *   DESCRIPTION:
+ *   This function ends an observation.
+ *
+ *   EXTERNAL VARIABLES:
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *
+ *-
+ */
+
+void detObserveEnd
+   (
+   SDSU_ID        sdsuId,         /* SDSU ID                                  */
+   void *         obsIdIn,        /* Pointer to observation ID cast to void * */
+   SDSU_FRAME *   pRawFrame       /* Incoming Image frame                     */
+   )
+{
+   /* Variables describing the observation. */
+
+   OBS_ID         obsId;          /* Pointer to observation ID structure.     */
+
+   /* DHS variables */
+
+   DHS_STATUS     dhsErrno;       /* DHS error number.                        */
+   DHS_STATUS     dummyDhsErrno;  /* DHS error number used for freeing        */
+                                  /* resources.                               */
+   DHS_TAG        putTag;         /* DHS data transfer tag.                   */
+
+   /* Circular buffer variable. */
+   
+   int            indexIm;
+   int            indexCtrl;
+   int            imageSize;
+   float *        pImage;
+   float *        pi;
+   float *        pc;
+   float *        pMax;
+   double *       pTotal;
+   double *       pFlux;
+   double *       pCentroids;
+   double *       pErrorCentroids;
+   double *       pZernikes;
+   double *       pErrors;
+   double         elapsed;
+
+   /* File names. */
+
+   char         pFileNameString[ (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 + 4];
+                                   /* String containing file name.            */
+
+   /* SDSU parameters. */
+
+   uint32       frameCount;        /* SDSU frame counter.                     */
+   BOOL         bufferReserved;    /* TRUE if the SDSU frame buffer been      */
+                                   /* reserved.                               */
+   BOOL         obsAlreadyAborted; /* TRUE if observation already  aborted.   */
+
+   double       readoutTimeout;    /* Readout timeout in seconds.             */
+   double       waitTimeSecs;      /* Wait time in seconds.                   */
+
+   /*
+    * Signal processing parameters.
+    */
+
+   int           nCoadds;          /* Number of frames per coadd.             */
+ 
+   double        rms;
+   /* 
+    * Variables associated with "observe" command.
+    * (Label, datapath and filename use general filename parameters)
+    */
+
+   long         observingState;    /* Observation status (busy or idle).      */
+   long         measuringState;    /* Measuring status (0 or 1).              */
+
+#ifdef DEBUG
+   printf ("detObserveEnd: %p %p %p\n", sdsuId, obsIdIn, pRawFrame);
+#endif
+
+   bufferReserved = FALSE;
+   obsAlreadyAborted = FALSE;
+
+#ifdef DEBUG
+   /* Check the pointers provided as arguments. */
+
+   if ( obsIdIn == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "NULL observation ID", ERROR_LOG_NOW);
+      return;
+   }
+
+   if ( pRawFrame == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "NULL raw frame pointer", 
+                 ERROR_LOG_NOW);
+      return;
+   }
+#endif
+
+   /* Convert the observation ID pointer provided as an argument. */
+
+   obsId = (OBS_ID) obsIdIn;
+
+   /*
+    * Initialise the DHS error number.
+    */
+
+   dhsErrno = DHS_S_SUCCESS;         /* <---- DHS error number is reset here. */
+
+#ifdef DEBUG
+   /* This function should only be called when an observation is in progress */
+
+   if ( !obsId->observing )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation not in progress", 
+                 ERROR_LOG_NOW);
+      return;
+   }
+#endif
+
+   /*
+    * Cancel any observation timer. Failing to cancel this is not a serious 
+    * error. THIS IS NOW ONLY DONE IN SIMULATION MODE.
+    */
+
+   if ( sdsuId->simulate )
+   {
+      if ( obsId->timeId != NULL )
+      {
+         if ( timeoutAlarmCancel( obsId->timeId ) == ERROR )
+         {
+            ERROR_SET (0, "Failed to cancel observation timer", ERROR_LOG_NOW);
+         }
+      }
+   }
+
+   /*
+    * Get a timestamp to record the time at which the observation finished.
+    * Failing to cancel this is not a serious error.
+    */
+
+   if ( timeNow (&(obsId->rawtEnd)) != OK )
+   {
+      ERROR_SET (0, "Failed to get time stamp at observation end", 
+                 ERROR_LOG_NOW);
+   }
+
+#ifdef DEBUG
+   printf ("detObserveEnd: Time at observation end: %f seconds.\n", 
+           obsId->rawtEnd);
+#endif
+
+   /*
+    * Get the frame countdown counter attached to the data and increment 
+    * the frame counter.
+    */
+
+   frameCount = pRawFrame->header.frameCount;
+   obsId->nframes++;
+
+   /* BUG WORK AROUND: THE SDSU CONTROLLER REPORTS FRAME COUNT=1 WHEN AN 
+    * INFINITE NUMBER OF FRAMES ARE BEING RETURNED. IF THE CONTROLLER IS 
+    * RUNNING IN CONTINUOUS MODE, POKE THE FRAME COUNT WITH ZERO. 
+    * (REMOVE WHEN SDSU DSP CODE IS FIXED).
+    */
+
+   if ( obsId->continuous ) frameCount = 0;
+   if ( obsId->totalFrames > 1 ) frameCount = 0;  /* MODIF 01 nov 99 */
+
+   /*
+    * Report the frame counter and the number of frames remaining.
+    */
+
+   if ( obsId->stopped )
+   {
+      if ( frameCount > 1 )
+      {
+         MESSAGE_LOG1 (MSG_MINDEBUG,
+            "... exp. complete and obs. stopped. Frame count=%d",
+            obsId->nframes);
+         MESSAGE_LOG1 (MSG_WARNING,
+            "WARNING: Remaining %ld frames will be aborted", (frameCount-1));
+      }
+      else if ( frameCount == 1 )
+      {
+         MESSAGE_LOG1 (MSG_MINDEBUG,
+         "... exp. complete and obs. stopped. Frame count=%d (last frame)",
+         obsId->nframes);
+      }
+      else
+      {
+         MESSAGE_LOG1 (MSG_MINDEBUG,
+         "... exp. complete and continuous obs. stopped. Frame count=%d",
+         obsId->nframes);
+      }
+   }
+   else
+   {
+      if ( frameCount > 1 )
+      {
+         MESSAGE_LOG2 (MSG_MINDEBUG, 
+         "... exposure complete. Frame count=%d (%ld remaining)",
+         obsId->nframes, (frameCount-1));
+      }
+      else if ( frameCount == 1 )
+      {
+         MESSAGE_LOG1 (MSG_MINDEBUG, 
+            "... exposure complete. Frame count=%d (last frame)",
+            obsId->nframes);
+      }
+      else
+      {
+         MESSAGE_LOG1 (MSG_MINDEBUG, 
+            "... exposure complete. Frame count=%d (continuous)",
+            obsId->nframes);
+      }
+   }
+
+   /*
+    * If this is the first frame, wait for the binary semaphore indicating 
+    * that the code executed at the start of the the observation has 
+    * completed. (This will only matter for very short observations).
+    *
+    * If an error occurs jump to the ERROR_EXIT at the end of this function.
+    * I do not like "goto" statements but they seem to be necessary in this case
+    * where the function is void and I cannot use "return (ERROR)" and have 
+    * the caller set the "observing" flag. The alternative to the "goto" would 
+    * be to fill the rest of the function with "if (!error)" tests, which 
+    * would be even more incomprehensible.
+    * SMB - 11 December 1998.
+    */
+
+   if ( obsId->nframes <= 1 )
+   {
+#ifdef DEBUG
+      printf ("detObserveEnd: Waiting for observation sync semaphore...");
+#endif
+      if ( semTake ( obsId->syncSem, OBS_WAIT_TIMEOUT ) == ERROR )
+      {
+         ERROR_SET (0, 
+         "Failed to take observation synchronisation semaphore", ERROR_LOG_NOW);
+         goto ERROR_EXIT;
+      }
+#ifdef DEBUG
+      printf (" ... got observation sync semaphore...\n");
+#endif
+   }
+
+   /*
+    * Check the status of the frame just received and only process the data 
+    * if the frame has been received successfully.
+    */
+
+ 
+   if ( sdsuId->fatal )
+   {
+      ERROR_SET1 (0, "Fatal error at frame %lu - observation abandoned",
+         ERROR_LOG_NOW, frameCount);
+      goto ERROR_EXIT;
+   }
+   else if ( pRawFrame->header.status != 0 )
+   {
+      if ((pRawFrame->header.status & SDSU_FSTAT_TIMEOUT) != 0)
+      {
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Timeout in frame %lu - frame ignored", frameCount);
+      }
+      else if ((pRawFrame->header.status & SDSU_FSTAT_OVERRUN) != 0)
+      {
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Data overrun in frame %lu - frame ignored", frameCount);
+      }
+      else if ((pRawFrame->header.status & SDSU_FSTAT_FRAMESYNC) != 0)
+      {
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Sync error in frame %lu - ignored", frameCount);
+      }
+      else if ((pRawFrame->header.status & SDSU_FSTAT_CHECKSUM) != 0)
+      {
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Checksum error in frame %lu - ignored", frameCount);
+      }
+      else if ((pRawFrame->header.status & SDSU_FSTAT_NOK) != 0)
+      {
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Overwritten error in frame %lu - ignored", frameCount);
+      }
+   }
+   else
+   {
+      /* Update the dhs counter */
+
+      obsId->dhsCounter ++ ;
+
+      /* Init the circular buffer */
+ 
+      indexIm = obsId->aoCbImId->position;
+      pImage = obsId->aoCbImId->cbImRecord[indexIm].imageVect;
+      indexCtrl = obsId->aoCbCtrlId->position;
+      pTotal = obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].totalCountsVect;
+      pFlux = pTotal + obsId->aoCcdId->subapUsedNb;
+      pCentroids = obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].centroidsVect;
+      pErrorCentroids = 
+      obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].errorCentroidsVect;
+      pZernikes = obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].zernikesVect;
+      pErrors = obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].errorsVect;
+
+      obsId->aoCbImId->cbImRecord[indexIm].imageStatus = 
+      (int)(pRawFrame->header.status) ;
+
+      /*printf ( "index image CB =%d\n", indexIm) ;
+      printf ( "index control CB =%d\n", indexCtrl) ;*/
+
+      /*
+       * Unscramble the data. The algorithm used depends on the number of 
+       * detector outputs, obtained earlier.
+       */
+
+      /*if ( swapFlag == 0 )
+      {
+         xycom_ptr->port7 = 0x0 ;
+         swapFlag = 1;
+      }
+      else
+      {
+         xycom_ptr->port7 = 0x1;
+         swapFlag = 0;
+      }*/
+
+      if ( detFrameUnscramble( obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels,
+                               (int) obsId->aoCcdId->outputsNb,
+                               pRawFrame,  pImage)
+           == ERROR )
+      {
+         ERROR_LOG ("Failed to unscramble data");
+         if ( obsId->outOptions == 1 )
+         {
+            dummyDhsErrno = DHS_S_SUCCESS;         
+            dhsBdDsFree ( obsId->dhsDataset, &dummyDhsErrno );
+         }
+         else
+         {
+         }
+         goto ERROR_EXIT;
+      }
+
+      obsId->outNFrames ++ ;
+
+#ifdef DEBUG
+      printf ( "outNFrames = %d\n" , obsId->outNFrames ) ;
+#endif
+
+      /*
+       * If a signal processing context has been initialised, process the data.
+       */
+
+      if ( (obsId->aoCtrlId == NULL) || 
+           (obsId->aoCtrlId->initFlag == FALSE) )
+      {
+         MESSAGE_LOG (MSG_MINDEBUG,
+         "PWFS2: Cannot process data - no AO control structure defined");
+      }   
+      else
+      {
+         /*
+          * Switch according to the signal processing mode, as defined with 
+          * the detSigMode command, or as defaulted in the detSigInit 
+          * command.
+          */
+
+         switch (obsId->sigMode)
+         {
+            case (AO_MODE_DARK):
+
+               /*
+               * Subtract Dark mode.
+               */
+#ifdef DEBUG
+               printf ("aoDarkSubtract: %p %p %d %d\n", 
+                       pImage, obsId->aoCtrlId->darkVect, 
+                       obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels);
+#endif
+               if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                    obsId->aoCcdId->xPixels, 
+                                    obsId->aoCcdId->yPixels) == ERROR )
+               {
+                  ERROR_LOG ("Failed to subtract DARK from current frame");
+               }
+
+               break;
+
+            case (AO_MODE_GG):
+
+               /*
+                * Global Guide mode.
+                */
+#ifdef DEBUG
+               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
+                       pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+                       pCentroids, pZernikes, pErrors, 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time), 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus));
+#endif
+               if ( obsId->updateScale == TRUE )
+               {
+                  obsId->aoCtrlId->scaleFactorVect[0] = obsId->tipScale ;
+                  obsId->aoCtrlId->scaleFactorVect[1] = obsId->tiltScale ;
+                  obsId->aoCtrlId->scaleFactorVect[2] = obsId->focusScale ; 
+                  obsId->aoCtrlId->slidingFocusGain = 
+                  obsId->slidingFocusGain; 
+                  obsId->aoCtrlId->one_slidingFocusGain = 
+                  1.0 - obsId->slidingFocusGain ;
+
+                  obsId->updateScale = FALSE ;
+               };
+
+               if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId, 
+                      pTotal, pCentroids, pZernikes, pErrors, 
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                    == ERROR )
+               {
+                  ERROR_LOG ("Failed to run fast guide correction");
+               };
+
+               break;
+
+            case (AO_MODE_GG_COADD):
+
+               /*
+                * Global Guide and Coadd mode.
+                */
+
+               nCoadds = (int) obsId->nCoaddFrames;
+#ifdef DEBUG
+               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
+                       pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+                       pCentroids, pZernikes, pErrors, 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time), 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus));
+#endif
+               if ( obsId->updateScale == TRUE )
+               {
+                  obsId->aoCtrlId->scaleFactorVect[0] = obsId->tipScale;
+                  obsId->aoCtrlId->scaleFactorVect[1] = obsId->tiltScale;
+                  obsId->aoCtrlId->scaleFactorVect[2] = obsId->focusScale;
+                  obsId->aoCtrlId->slidingFocusGain = obsId->slidingFocusGain;
+                  obsId->aoCtrlId->one_slidingFocusGain = 
+                  1.0 - obsId->slidingFocusGain;
+
+                  obsId->updateScale = FALSE ;
+               };
+
+               if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
+                      pTotal, pCentroids, pZernikes, pErrors,
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                    == ERROR )
+               {
+                  ERROR_LOG ("Failed to run fast guide correction");
+               }
+#ifdef DEBUG
+               printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
+                       obsId->aoCcdId, obsId->aoCtrlId, nCoadds);
+#endif
+               if ( aoImageFloatAverage (pImage, obsId->aoCcdId, 
+                                         obsId->aoCtrlId, nCoadds) == ERROR )
+               {
+                  ERROR_LOG ("Failed to average images");
+               }
+
+               /*
+                * Increment the coadd counter and when it reaches nCoadds 
+                * save the coadded data to disk. Coadded data are only 
+                * saved once per observation.
+                */
+
+               obsId->coaddCounter++;
+               if ( obsId->coaddCounter == nCoadds )
+               {
+                  /*
+                   * Make up a file name by adding the string ".coadd.fits"
+                   * to the given file name. Use a default file name if one 
+                   * has not been given.
+                   */
+
+                  if ( strcmp(obsId->pCoaddFileName, "") == 0 )
+                  {
+                     strcpy ( pFileNameString, "coadd.fits" );
+                  }
+                  else
+                  {
+                     sprintf( pFileNameString, "%s.fits", 
+                              obsId->pCoaddFileName );
+                  }
+
+                  MESSAGE_LOG1 (MSG_MINDEBUG, 
+                  "Saving coadded data to %s", pFileNameString);
+
+                  if ( detWriteFits (pFileNameString, obsId, 
+                                     obsId->aoCcdId->xPixels, 
+                                     obsId->aoCcdId->yPixels,
+                                     obsId->aoCtrlId->sumVect) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to save coadded data to disk");
+                   }
+               }
+            break;
+
+            case (AO_MODE_COADD):
+
+               /*
+                * Coadd only mode.
+                */
+
+               nCoadds = (int) obsId->nCoaddFrames;
+#ifdef DEBUG
+               printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
+                       obsId->aoCcdId, obsId->aoCtrlId, nCoadds);
+#endif
+               if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                    obsId->aoCcdId->xPixels, 
+                                    obsId->aoCcdId->yPixels) == ERROR )
+               {
+                  ERROR_LOG ("Failed to subtract DARK from current frame");
+               }
+
+               if ( aoImageFloatAverage (pImage, obsId->aoCcdId, 
+                                         obsId->aoCtrlId, nCoadds) == ERROR )
+               {
+                  ERROR_LOG ("Failed to average images");
+               }
+
+               
+               /*
+                * Increment the coadd counter and when it reaches nCoadds 
+                * save the coadded data to disk. Coadded data are only 
+                * saved once per observation.
+                */
+
+               obsId->coaddCounter++;
+#ifdef DEBUG
+               printf ( "obsId->coaddCounter=%d\n" , obsId->coaddCounter);
+#endif
+               if ( obsId->coaddCounter == nCoadds )
+               {
+                  /*
+                   * Make up a file name by adding the string ".coadd.fits" to 
+                   * the given file name. Use a default file name if one 
+                   * has not been given.
+                   */
+
+
+                  if ( strcmp(obsId->pCoaddFileName, "") == 0 )
+                  {
+                     strcpy ( pFileNameString, "coadd.fits" );
+                  }
+                  else
+                  {
+                     sprintf( pFileNameString, "%s.fits", 
+                              obsId->pCoaddFileName );
+                  }
+
+                  MESSAGE_LOG1 (MSG_MINDEBUG, 
+                  "Saving coadded data to %s", pFileNameString);
+
+                  if ( detWriteFits (pFileNameString, obsId, 
+                                     obsId->aoCcdId->xPixels, 
+                                     obsId->aoCcdId->yPixels,
+                                     obsId->aoCtrlId->sumVect) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to save coadded data to disk");
+                  }
+               }
+            break;
+
+            case (AO_MODE_THRESH):
+
+               /*
+                * Threshold computation mode.
+                */
+
+               if ( obsId->methodThreshComp == AO_THRESH_SPOTS ) 
+               {
+                  /* 
+                   * With spots method -> average images and look for the 
+                   * brightest pixels 
+                   */
+
+                  nCoadds = (int) obsId->nAverageDataThreshComp;
+#ifdef DEBUG
+                  printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
+                          obsId->aoCcdId, obsId->aoCtrlId, nCoadds);
+#endif
+                  if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                       obsId->aoCcdId->xPixels, 
+                                       obsId->aoCcdId->yPixels) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to subtract DARK from current frame");
+                  }
+
+                  if ( aoImageFloatAverage (pImage, obsId->aoCcdId, 
+                                            obsId->aoCtrlId, nCoadds) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to average images");
+                  }
+
+                  /*
+                   * Increment the coadd counter and when it reaches nCoadds 
+                   * save the coadded data to disk. Coadded data are only 
+                   * saved once per observation.
+                   */
+
+                  obsId->coaddCounter++;
+#ifdef DEBUG
+                  printf ( "obsId->coaddCounter=%d\n" , obsId->coaddCounter);
+#endif
+                  if ( obsId->coaddCounter == nCoadds )
+                  {
+                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
+                                              obsId->aoCcdId, 
+                                              obsId->rateBrightPixThreshComp,
+                                              &obsId->aoCtrlId->threshold) 
+                                              == ERROR )
+                     {
+                        ERROR_LOG ("Failed to subtract DARK from current frame");
+                     }
+                     /*printf ( "Threshold = %f\n", obsId->aoCtrlId->threshold);*/
+                     if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (obsId->aoCtrlId->threshold), 
+                           obsId->pAoThreshContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+                     }
+                  }
+               }
+               else if ( obsId->methodThreshComp == AO_THRESH_NOSPOTS )
+               {
+                  /*
+                   * Without spots -> rms of a frame * multCoeff 
+                   */
+
+                  nCoadds = (int) obsId->nAverageDataThreshComp;
+
+                  if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                       obsId->aoCcdId->xPixels, 
+                                       obsId->aoCcdId->yPixels) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to subtract DARK from current frame");
+                  }
+
+                  if ( aoRmsNoiseDarkCompute (pImage,
+                                              obsId->aoCcdId, &rms) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to compute rms of current frame");
+                  }
+
+                  /*printf ( "image %d, rms = %f\n", obsId->coaddCounter, rms);*/
+
+                  obsId->averageRms += rms;
+                  obsId->coaddCounter ++;
+                  
+                  if ( obsId->coaddCounter == nCoadds )
+                  {
+                     obsId->averageRms /= nCoadds;
+
+                     obsId->aoCtrlId->threshold = 
+                     obsId->multCoeffRmsThreshComp * obsId->averageRms ;
+                     obsId->aoCtrlId->thresholdDark =
+                     obsId->aoCtrlId->threshold ;
+                     /*printf ( "Threshold = %f\n", obsId->aoCtrlId->threshold);*/
+                     if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (obsId->aoCtrlId->threshold), 
+                           obsId->pAoThreshContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+                     }
+                  }
+               }
+               else
+               {
+                  /*
+                   * A value has been selected - nothing to do
+                   */
+                  if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                       obsId->aoCcdId->xPixels, 
+                                       obsId->aoCcdId->yPixels) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to subtract DARK from current frame");
+                  }
+               }    
+            break;
+
+            case (AO_MODE_FG_FOCUS):
+
+               /*
+                * Fast guide and focus correction mode.
+                */
+
+               nCoadds = (int) obsId->nCoaddFrames;
+#ifdef DEBUG
+               printf ("aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
+                       pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+                       pCentroids, pErrorCentroids, pZernikes, pErrors, 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time), 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus));
+#endif
+               if ( obsId->updateScale == TRUE )
+               {
+                  obsId->aoCtrlId->scaleFactorVect[0] = obsId->tipScale;
+                  obsId->aoCtrlId->scaleFactorVect[1] = obsId->tiltScale;
+                  obsId->aoCtrlId->scaleFactorVect[2] = obsId->focusScale;
+                  obsId->aoCtrlId->slidingFocusGain = obsId->slidingFocusGain;
+                  obsId->aoCtrlId->one_slidingFocusGain = 
+                  1.0 - obsId->slidingFocusGain;
+
+                  obsId->updateScale = FALSE ;
+               } ;
+
+               if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
+                      pTotal, pCentroids, pErrorCentroids, pZernikes, pErrors,
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                    == ERROR )
+               {
+                  ERROR_LOG ("Failed to run fast guide and focus correction");
+               }
+            break;
+
+            case (AO_MODE_TOTAL):
+
+               if ( obsId->methodFluxComp == AO_TOTAL_SPOTS ) 
+               {
+                  if ( obsId->coaddCounter < obsId->nFramesAverageFlux)
+                  {
+                     if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
+                         obsId->aoCtrlId,
+                         pTotal, pCentroids, pErrorCentroids, pZernikes, 
+                         pErrors,
+                         &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                         &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                         == ERROR )
+                     {
+                        ERROR_LOG ("Failed to run FG and focus correction");
+                     }
+                     obsId->averageFlux += *pFlux ;
+                     obsId->coaddCounter ++;
+
+                     if ( obsId->coaddCounter == obsId->nFramesAverageFlux)
+                     {
+                        obsId->averageFlux /= 
+                        (double)obsId->nFramesAverageFlux;
+                        obsId->aoCtrlId->averageTotal = obsId->averageFlux;
+                        obsId->aoCtrlId->totalThreshold = 
+                        obsId->averageFlux * obsId->multCoeffAverageFlux;
+                        if (epToVxPipeWrite (NULL, 
+                              (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
+                              obsId->pAoTotalContext) == ERROR)
+                        {
+                          ERROR_LOG (
+                          "Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+                        }
+                     }
+                  }
+               }
+
+            break;
+
+            case (AO_MODE_FG_FOCUS_COADD):
+
+               /*
+                * Fast Guide Focus and Coadd mode.
+                */
+
+               nCoadds = (int) obsId->nCoaddFrames;
+#ifdef DEBUG
+               printf ("aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
+                       pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+                       pCentroids, pErrorCentroids, pZernikes, pErrors, 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time), 
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus));
+#endif
+               if ( obsId->updateScale == TRUE )
+               {
+                  obsId->aoCtrlId->scaleFactorVect[0] = obsId->tipScale;
+                  obsId->aoCtrlId->scaleFactorVect[1] = obsId->tiltScale;
+                  obsId->aoCtrlId->scaleFactorVect[2] = obsId->focusScale;
+                  obsId->aoCtrlId->slidingFocusGain = obsId->slidingFocusGain;
+                  obsId->aoCtrlId->one_slidingFocusGain = 
+                  1.0 - obsId->slidingFocusGain;
+
+                  obsId->updateScale = FALSE ;
+               } ;
+
+               if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
+                      pTotal, pCentroids, pErrorCentroids, pZernikes, pErrors,
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                      &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                    == ERROR )
+               {
+                  ERROR_LOG ("Failed to run fast guide and focus correction");
+               }
+#ifdef DEBUG
+               printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
+                       obsId->aoCcdId, obsId->aoCtrlId, nCoadds);
+#endif
+               if ( aoImageFloatAverage (pImage, obsId->aoCcdId, 
+                                         obsId->aoCtrlId, nCoadds) == ERROR )
+               {
+                  ERROR_LOG ("Failed to average images");
+               }
+
+               /*
+                * Increment the coadd counter and when it reaches nCoadds 
+                * save the coadded data to disk. Coadded data are only 
+                * saved once per observation.
+                */
+
+               obsId->coaddCounter++;
+               if ( obsId->coaddCounter == nCoadds )
+               {
+                  /*
+                   * Make up a file name by adding the string ".coadd.fits"
+                   * to the given file name. Use a default file name if one 
+                   * has not been given.
+                   */
+
+                  if ( strcmp(obsId->pCoaddFileName, "") == 0 )
+                  {
+                     strcpy ( pFileNameString, "coadd.fits" );
+                  }
+                  else
+                  {
+                     sprintf( pFileNameString, "%s.fits", 
+                              obsId->pCoaddFileName );
+                  }
+
+                  MESSAGE_LOG1 (MSG_MINDEBUG, 
+                  "Saving coadded data to %s", pFileNameString);
+
+                  if ( detWriteFits (pFileNameString, obsId, 
+                                     obsId->aoCcdId->xPixels, 
+                                     obsId->aoCcdId->yPixels,
+                                     obsId->aoCtrlId->sumVect) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to save coadded data to disk");
+                   }
+               }
+            break;
+
+            case (AO_MODE_SEQ_DARK):
+
+               /*
+                * Sequence dark mode.
+                */
+
+               nCoadds = (int) obsId->nCoaddFrames;
+
+               if ( obsId->coaddCounter < nCoadds )
+               {
+#ifdef DEBUG
+                  printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
+                          obsId->aoCcdId, obsId->aoCtrlId, nCoadds);
+#endif
+                  if ( aoImageFloatAverage (pImage, obsId->aoCcdId,
+                                            obsId->aoCtrlId, nCoadds) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to average images");
+                  }
+
+                  /*
+                   * Increment the coadd counter and when it reaches nCoadds
+                   * save the coadded data to disk. Coadded data are only
+                   * saved once per observation.
+                   */
+
+                  obsId->coaddCounter++;
+#ifdef DEBUG
+                  printf ( "obsId->coaddCounter=%d\n" , obsId->coaddCounter);
+#endif
+                  if ( obsId->coaddCounter == nCoadds )
+                  {
+                     /*
+                      * Make up a file name by adding the string ".fits" to
+                      * the given file name. Use a default file name if one
+                      * has not been given.
+                      */
+
+                      if ( strcmp(obsId->pCoaddFileName, "") == 0 )
+                      {
+                         strcpy ( pFileNameString, "dark.fits" );
+                      }
+                      else
+                      {
+                         sprintf( pFileNameString, "%s.fits",
+                                  obsId->pCoaddFileName );
+                      }
+
+                      MESSAGE_LOG1 (MSG_MINDEBUG,
+                      "Saving dark data to %s", pFileNameString);
+
+                      if ( detWriteFits (pFileNameString, obsId,
+                           obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels,
+                           obsId->aoCtrlId->sumVect) == ERROR )
+                      {
+                         ERROR_LOG ("Failed to save coadded data to disk");
+                      }
+
+                      if ( aoDarkUpdate ( pFileNameString, obsId->aoCcdId,
+                                          obsId->aoCtrlId ) == ERROR )
+                      {
+                         ERROR_LOG ("Failed to load new dark" );
+                      }
+
+                      if (epToVxPipeWrite (NULL, pFileNameString,
+                                           obsId->pAoDarkInitContext) == ERROR)
+                      {
+                         ERROR_LOG (
+                         "Failed to init DET_CONTROL_AODARKINIT_SIR_NAME rec");
+                      }
+                   }
+               }
+
+               if ( obsId->coaddCounter >= nCoadds )
+               {
+                  if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
+                                       obsId->aoCcdId->xPixels,
+                                       obsId->aoCcdId->yPixels) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to subtract DARK from current frame");
+                  }
+
+                  if ( aoRmsNoiseDarkCompute (pImage,
+                                              obsId->aoCcdId, &rms) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to compute rms of current frame");
+                  }
+
+                  /*printf ( "image %d, rms = %f\n", obsId->coaddCounter,
+                           rms);*/
+
+                  obsId->averageRms += rms;
+                  obsId->coaddCounter ++;
+
+                  if ( obsId->coaddCounter ==
+                       nCoadds + obsId->nAverageDataThreshComp)
+                  {
+                     obsId->averageRms /= obsId->nAverageDataThreshComp;
+
+                     obsId->aoCtrlId->threshold =
+                     obsId->multCoeffRmsThreshComp * obsId->averageRms ;
+                     obsId->aoCtrlId->thresholdDark =
+                     obsId->aoCtrlId->threshold ;
+                     /*printf ( "Threshold = %f\n",
+                                obsId->aoCtrlId->threshold); */
+                     if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->aoCtrlId->threshold),
+                           obsId->pAoThreshContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+                     }
+                  }
+               }
+
+            break;
+
+            case (AO_MODE_CLOSED_LOOP):
+                
+               if ( obsId->updateScale == TRUE )
+               {
+                  obsId->aoCtrlId->scaleFactorVect[0] = obsId->tipScale;
+                  obsId->aoCtrlId->scaleFactorVect[1] = obsId->tiltScale;
+                  obsId->aoCtrlId->scaleFactorVect[2] = obsId->focusScale;
+                  obsId->aoCtrlId->slidingFocusGain = 
+                  obsId->slidingFocusGain;
+                  obsId->aoCtrlId->one_slidingFocusGain = 
+                  1.0 - obsId->slidingFocusGain;
+
+                  obsId->updateScale = FALSE ;
+               };
+
+               if ( (obsId->fgFrame != 0) && 
+                    (obsId->coaddCounter < obsId->fgFrame) )
+               {
+                  /*printf ( "coaddCounter =%d fast guide only\n", 
+                           obsId->coaddCounter );*/
+    
+                  if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
+                       pTotal, pCentroids, pZernikes, pErrors,
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                       == ERROR )
+                  {
+                     ERROR_LOG ("Failed to run fast guide correction");
+                  }
+                  obsId->coaddCounter ++;
+               }
+               else if ( (obsId->threshFlag == TRUE) && 
+                         (obsId->coaddCounter < obsId->nAverageDataThreshComp +
+                                                obsId->fgFrame) )
+               {
+                  /*printf ( "coaddCounter =%d compute thresh \n",
+                           obsId->coaddCounter );*/
+                  if ( aoGuideAndFocus (pImage, obsId->aoCcdId,
+                        obsId->aoCtrlId,
+                        pTotal, pCentroids, pErrorCentroids, pZernikes, 
+                        pErrors,
+                        &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                        &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                       == ERROR )
+                  {
+                      ERROR_LOG ("Failed to run FG and focus correction");
+                  }
+
+                  if ( aoImageFloatAverage (pImage, obsId->aoCcdId,
+                                            obsId->aoCtrlId, 
+                                            obsId->nAverageDataThreshComp) 
+                       == ERROR )
+                  {
+                     ERROR_LOG ("Failed to average images");
+                  }
+                  obsId->coaddCounter ++;
+
+                  if ( obsId->coaddCounter == 
+                       (obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                  {
+                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
+                                              obsId->aoCcdId,
+                                              obsId->rateBrightPixThreshComp,
+                                              &obsId->aoCtrlId->threshold)
+                          == ERROR )
+                     {
+                        ERROR_LOG ("Failed to compute threshold") ;
+                     }
+                     /*printf ( "Threshold = %f\n", 
+                                obsId->aoCtrlId->threshold); */
+                     if (epToVxPipeWrite (NULL,
+                                  (char *)(int)& (obsId->aoCtrlId->threshold),
+                                  obsId->pAoThreshContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                               "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME");
+                     }
+                  }
+               }
+               else if ( (obsId->averageFluxFlag == TRUE) &&
+                         (obsId->coaddCounter < obsId->nFramesAverageFlux +
+                          obsId->nAverageDataThreshComp + obsId->fgFrame) )
+               {
+                  /*printf ( "coaddCounter =%d compute total \n", 
+                           obsId->coaddCounter );*/
+                  if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
+                       obsId->aoCtrlId,
+                       pTotal, pCentroids, pErrorCentroids, pZernikes, pErrors,
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                       == ERROR )
+                  {
+                     ERROR_LOG ("Failed to run FG and focus correction");
+                  }
+                  obsId->averageFlux += *pFlux ;
+                  obsId->coaddCounter ++;
+
+                  if ( obsId->coaddCounter == (obsId->nFramesAverageFlux+
+                       obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                  {
+                     obsId->averageFlux /= 
+                     (double)obsId->nFramesAverageFlux;
+                     obsId->aoCtrlId->averageTotal = obsId->averageFlux;
+                     obsId->aoCtrlId->totalThreshold = 
+                     obsId->averageFlux * obsId->multCoeffAverageFlux;
+                     if (epToVxPipeWrite (NULL, 
+                         (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
+                         obsId->pAoTotalContext) == ERROR)
+                     {
+                        ERROR_LOG ( "Failed to init AOTOTAL_SIR_NAME record");
+                     }
+                     /*printf ( "coaddCounter =%d total =%f \n", 
+                           obsId->coaddCounter,obsId->averageFlux );*/
+                  }
+               }
+               else 
+               {
+                  /*printf ( "coaddCounter =%d ao guide \n", 
+                           obsId->coaddCounter );*/
+
+                  if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
+                       obsId->aoCtrlId,
+                       pTotal, pCentroids, pErrorCentroids, pZernikes, pErrors,
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].time),
+                       &(obsId->aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus))
+                       == ERROR )
+                  {
+                     ERROR_LOG ("Failed to run FG and focus correction");
+                  }
+               }
+
+               if ( obsId->saveCbCtrlClosedLoop == TRUE )
+               {
+                  obsId->saveCbCounter ++;
+                  if (obsId->saveCbCounter == obsId->saveCbCtrlClosedLoopFrame)
+                  {
+                     if ( aoCbCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
+                                        obsId->aoCtrlId, obsId->aoCbCtrlId) 
+                          == ERROR )
+                     {
+                        ERROR_LOG ("Failed to save control circular buffer\n" );
+                     }
+                     obsId->saveCbCounter = 0;
+                  }
+               }
+               
+            break;
+
+            default:
+#ifdef DEBUG
+               printf ("Signal processing switched off\n");
+#endif
+            break;
+         }
+      }
+
+      /*
+       * Send the data to the DHS, store it to disk or do nothing, 
+       * as appropriate
+       */
+
+      if ( (obsId->outOptions == 1) && 
+           ((obsId->dhsCounter % obsId->dhsQlRate) == 0) )
+      {
+         /*printf ( "display frame, obsId->dhsCounter=%d\n", obsId->dhsCounter);*/
+         /*
+          * Convert the time stamps from Gemini raw time into Universal Time
+          * and construct these into character strings.
+          */
+
+         if (timeThenC( obsId->rawtEnd, UT1, 2, obsId->timeArrayEnd ) != OK)
+         {
+            ERROR_SET (0,
+            "Failed to convert time stamp at observation end to date/time",
+            ERROR_LOG_NOW);
+         }
+
+         sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
+                  obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], 
+                  obsId->timeArrayEnd[2], obsId->timeArrayEnd[3], 
+                  obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
+
+         /*
+          * Compute the elapsed time
+          */
+
+         elapsed = obsId->rawtEnd - obsId->rawtStart ;
+         if (epToVxPipeWrite( NULL, (char *)obsId->utEndString, 
+                              obsId->pUTendContext) == ERROR)
+         {
+            ERROR_LOG ("Failed to set UT at end of observation SIR record");
+         }
+
+         if (epToVxPipeWrite( NULL, (char *)(int)&elapsed, 
+                              obsId->pElapsedContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set elapsed time SIR record");
+         }
+
+         /*if ( obsId->stopped != TRUE )
+            semGive ( detDhsStartSem);*/
+
+         MESSAGE_LOG (MSG_MINDEBUG, "Sending data to DHS...");
+
+         /* Copy the image into pCurFrame */
+
+         imageSize = obsId->aoCcdId->pixelsNb;
+         pMax = (float *)((int)pImage + imageSize*sizeof(float));
+         pc = obsId->pCurFrame ;
+
+         for ( pi = pImage ; pi < pMax ; pi ++ )
+             *(pc ++) = *pi;
+
+         if ( obsId->totalFrames == 1 )
+         {
+            dhsBdAttribAdd (obsId->dhsDataFrame, "utend", DHS_DT_STRING,
+                            0, NULL, obsId->utEndString, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+         }
+
+#ifdef DEBUG
+         dhsBdDsPrint (obsId->dhsDataset, &dhsErrno);
+         CHECK_DHS (dhsErrno);
+#endif
+
+         /* Send the data to the dhs */
+#ifdef DEBUG
+         printf (
+       "detObserveEnd: dhsBdPut, dhsConnection=%d, pDataLabel=%s, dataset=%d\n",
+         detDhsConnection, obsId->pDataLabel, (int) obsId->dhsDataset);
+#endif 
+
+         if ( obsId->dhsOutOptions == 2 ) /* QL only */
+         {
+            if ( obsId->totalFrames == 1 )
+               putTag = dhsBdPut (detDhsConnection, obsId->pDataLabel,
+                                  DHS_BD_PT_DS_QL, DHS_TRUE,
+                                  obsId->dhsDataset, NULL, &dhsErrno);
+            else
+               putTag = dhsBdPut (detDhsConnection, obsId->pDataLabel,
+                                  DHS_BD_PT_DS_QL, DHS_FALSE,
+                                  obsId->dhsDataset, NULL, &dhsErrno);
+         }
+         else
+         {
+            if ( obsId->totalFrames == 1 )
+            {
+               putTag =
+               dhsBdPut (detDhsConnection, obsId->pDataLabel,
+               DHS_BD_PT_DS, DHS_TRUE, obsId->dhsDataset, NULL, &dhsErrno);
+            }
+            else
+            {
+               putTag =
+               dhsBdPut (detDhsConnection, obsId->pDataLabel,
+                         DHS_BD_PT_DS, DHS_FALSE, obsId->dhsDataset, NULL,
+                         &dhsErrno);
+            }
+         }
+
+         CHECK_DHS (dhsErrno);
+
+         if (dhsErrno != DHS_S_SUCCESS)
+         {
+            ERROR_SET1 (S_detControl_DHS_ERROR,
+                        "Failed to initiate data transfer (dhsErrno=%d)",
+                        ERROR_LOG_NOW, dhsErrno);
+            dummyDhsErrno = DHS_S_SUCCESS;
+            dhsTagFree (putTag, &dummyDhsErrno);
+            CHECK_DHS (dummyDhsErrno);
+            dummyDhsErrno = DHS_S_SUCCESS;
+            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
+            CHECK_DHS (dummyDhsErrno);
+            goto ERROR_EXIT;
+         }
+
+         /* Wait for completion */
+
+#ifdef DEBUG
+         printf ("detObserveEnd: dhsWait putTag=%d ...\n", (int) putTag);
+#endif 
+
+         dhsWait (1, &putTag, &dhsErrno);
+         CHECK_DHS (dhsErrno);
+
+         if (dhsErrno != DHS_S_SUCCESS)
+         {
+            ERROR_SET1 (S_detControl_DHS_ERROR,
+                        "Error during wait for data transfer (dhsErrno=%d)",
+                        ERROR_LOG_NOW, dhsErrno);
+
+            dummyDhsErrno = DHS_S_SUCCESS;
+            dhsTagFree (putTag, &dummyDhsErrno);
+            CHECK_DHS (dummyDhsErrno);
+            dummyDhsErrno = DHS_S_SUCCESS;
+            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
+            CHECK_DHS (dummyDhsErrno);
+            goto ERROR_EXIT;
+         }
+
+#ifdef DEBUG
+         printf ("detObserveEnd: detDhsCheckCmdStatus putTag=%d ...\n",
+                 (int) putTag);
+#endif 
+
+         if ( detDhsCheckCmdStatus (putTag) == ERROR )
+         {
+            ERROR_SET (S_detControl_DHS_ERROR, "Data transfer failed",
+                       ERROR_LOG_NOW);
+
+            dummyDhsErrno = DHS_S_SUCCESS;
+            dhsTagFree (putTag, &dummyDhsErrno);
+            CHECK_DHS (dummyDhsErrno);
+            dummyDhsErrno = DHS_S_SUCCESS;
+            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
+            CHECK_DHS (dummyDhsErrno);
+            goto ERROR_EXIT;
+         }
+
+         /*
+          * If the last frame has been received free the DHS dataset.
+          */
+
+#ifdef DEBUG
+         printf ("detObserveEnd: dhsTagFree putTag=%d ...\n", (int) putTag);
+#endif 
+
+         dhsErrno = DHS_S_SUCCESS;
+         dhsTagFree (putTag, &dhsErrno);
+
+         if ( (frameCount == 1) || (obsId->stopped) )
+         {
+            dhsBdDsFree (obsId->dhsDataset, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+         }
+      }
+      else if ( obsId->outOptions == 2 )
+      {
+         /*
+          * Convert the time stamps from Gemini raw time into Universal Time
+          * and construct these into character strings.
+          */
+
+         if (timeThenC( obsId->rawtEnd, UT1, 2, obsId->timeArrayEnd ) != OK)
+         {
+            ERROR_SET (0,
+            "Failed to convert time stamp at observation end to date/time",
+            ERROR_LOG_NOW);
+         }
+
+         sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
+                  obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], 
+                  obsId->timeArrayEnd[2], obsId->timeArrayEnd[3], 
+                  obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
+
+         elapsed = obsId->rawtEnd - obsId->rawtStart ;
+         if (epToVxPipeWrite( NULL, (char *)obsId->utEndString, 
+                              obsId->pUTendContext) == ERROR)
+         {
+            ERROR_LOG ("Failed to set UT at end of observation SIR record");
+         }
+
+         if (epToVxPipeWrite( NULL, (char *)(int)&elapsed, 
+                              obsId->pElapsedContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set elapsed time SIR record");
+         }
+
+         /*
+          * The DHS is not being used and the data will be saved to FITS files.
+          * If this is the first frame of the observation the standard names 
+          * will be used.
+          * Frames 2 onwards have .2, .3, etc... appended to the names.
+          */
+
+         if ( obsId->totalFrames != 1 )
+         {
+            sprintf( pFileNameString, "%s.%d.fits", obsId->pOutFileName,
+                     obsId->outNFrames );
+         }
+         else
+         {
+            sprintf( pFileNameString, "%s.fits", obsId->pOutFileName ); 
+         }
+
+         MESSAGE_LOG2 (MSG_MINDEBUG, 
+         "Saving unscrambled data from %p to directly to file \"%s\"...",
+         pImage, pFileNameString);
+
+         if (detWriteFits (pFileNameString, obsId, obsId->aoCcdId->xPixels, 
+                           obsId->aoCcdId->yPixels, pImage) == ERROR)
+         {
+            ERROR_LOG ("Failed to write FITS file");
+            goto ERROR_EXIT;
+         }
+
+         MESSAGE_LOG (MSG_MINDEBUG, "... file saved ok");
+      }
+
+      /* If obsId->totalFrames > 1 and obsId->outNFrames = obsId->totalFrames */
+      /* stop the observation */
+
+#ifdef DEBUG
+      printf ( "detObserveEnd : ouNFrames = %d, totalFrames = %d\n" ,
+               obsId->outNFrames , obsId->totalFrames ) ;
+#endif
+
+      if ( (obsId->totalFrames > 1) && 
+           (obsId->outNFrames == obsId->totalFrames) )
+         obsId->stopped = TRUE ;
+
+      /* Update the cicular buffers */
+ 
+      if ( ++ obsId->aoCbImId->position == CB_IM_RECORD_NB )
+      {
+         obsId->aoCbImId->position = 0 ;
+         obsId->aoCbImId->counter ++ ;
+      }
+
+      if ( ++ obsId->aoCbCtrlId->position == CB_CTRL_RECORD_NB )
+      {
+         obsId->aoCbCtrlId->position = 0 ;
+         obsId->aoCbCtrlId->counter ++ ;
+      }
+   }
+
+   /*
+    * Abort any further readouts if the observation was stopped prematurely.
+    */
+
+   if ( obsId->stopped )
+   {
+      /* add 27 sept 99 for slow stop pb */
+      printf ( "detObserveEnd() -> sdsuReadoutAbort()\n" ) ;
+      obsAlreadyAborted = TRUE;
+      if (sdsuReadoutAbort (sdsuId) == ERROR)
+      {
+         ERROR_LOG ("Failed to abort readouts on receipt of STOP instruction");
+         goto ERROR_EXIT;
+      }
+      /* add 27 sept 99 for slow stop pb */
+      printf ( "detObserveEnd() -> sdsuReadoutAbort() done \n" ) ;
+   }
+
+   /*
+    * If the last frame has been received, set the observing flag FALSE
+    * and set the observeC CAR record to IDLE via the "observing" record.
+    * Otherwise set a timeout on the receipt of the next frame.
+    */
+
+   if ( (frameCount == 1) || (obsId->stopped) )
+   {
+      if ( sdsuId->frameErrors <= 0 )
+      {
+         MESSAGE_LOG1 (MSG_LOG, 
+                       "Observation completed successfully, frames lost: %d", 
+                       sdsuFrameLost);
+      }
+      else if ( sdsuId->frameErrors < obsId->nframes )
+      {
+         MESSAGE_LOG2 (MSG_WARNING, 
+         "Observation completed with %d frames lost and %d frames with error",
+         sdsuFrameLost , sdsuId->frameErrors);
+      }
+      else
+      {
+         ERROR_LOG ("Observation failed - all frames lost");
+         goto ERROR_EXIT;
+      }
+
+      /* Finally, save the circular buffers */
+
+      if ( obsId->saveCbIm == TRUE )
+      {
+         if ( aoCbImSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+                          obsId->aoCbImId) == ERROR )
+         {
+            ERROR_LOG ("Failed to save image circular buffer\n" ) ;
+         }
+      }
+
+      if ( obsId->saveCbCtrl == TRUE )
+      {
+         if ( aoCbCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+                            obsId->aoCbCtrlId) == ERROR )
+         {
+            ERROR_LOG ("Failed to save control circular buffer\n" ) ;
+         }
+      }
+
+      /* Reset the observing flag */
+
+      obsId->observing = FALSE;
+      observingState = CAR_IDLE;
+      if (epToVxPipeWrite (NULL, (char *) &observingState, 
+                           obsId->pDetObservingContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set observing flag to IDLE");
+      }
+      measuringState = 0;
+      if (epToVxPipeWrite (NULL, (char *) &measuringState, 
+                           obsId->pDetMeasuringContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set measuring flag to 0");
+      }
+   }
+   else
+   {
+#ifdef DEBUG
+      printf (
+      "detObserveEnd: Further frames are anticipated - obs. not finished.\n");
+#endif
+
+      /*
+       * Start an alarm timer which will trigger if the frame sync callback 
+       * never runs.
+       * Set the delay time to the readout timeout plus the largest frame 
+       * exposure time obtained earlier.
+       *
+       * THE TIMEOUT IS NOW ONLY USED IN SIMULATION MODE - SMB 21 JAN 99
+       */
+
+
+      if ( sdsuId->simulate )
+      {
+         readoutTimeout = 5.0;
+         if ( obsId->exposed >= obsId->exposedRQ )
+         {
+            if ( obsId->totalFrames > 0 )
+            {
+               waitTimeSecs = 
+               readoutTimeout + (obsId->exposed / (double) obsId->totalFrames);
+            }
+            else
+            {
+               waitTimeSecs = readoutTimeout + obsId->exposed;
+            }
+         }
+         else
+         {
+            if ( obsId->totalFrames > 0 )
+            {
+               waitTimeSecs = 
+               readoutTimeout + (obsId->exposedRQ/(double) obsId->totalFrames);
+            }
+            else
+            {
+               waitTimeSecs = readoutTimeout + obsId->exposedRQ;
+            }
+         }
+
+         if ( timeoutAlarmSet (obsId->timeId, waitTimeSecs, 
+                               detObserveTimeout, (int) obsId) == ERROR )
+         {
+            ERROR_LOG ("Failed to set alarm timer");
+         }
+      }
+   }
+
+   return;
+
+
+ERROR_EXIT:
+
+   /*
+    * If an error occurred, abort the observation, release the SDSU frame 
+    * buffer (if necessary)
+    * set the observing flag FALSE and set the observeC CAR record to ERROR,
+    * via the "observing" record.
+    */
+
+   if ( !obsAlreadyAborted )
+   {
+      if (sdsuReadoutAbort (sdsuId) == ERROR)
+      {
+         ERROR_LOG ("Failed to abort readouts after error");
+      }
+      obsAlreadyAborted = TRUE;
+   }
+
+   obsId->observing = FALSE;
+   observingState = CAR_ERROR;
+   if (epToVxPipeWrite (NULL, (char *) &observingState, 
+                        obsId->pDetObservingContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set observing flag to ERROR");
+   }
+   measuringState = 0;
+   if (epToVxPipeWrite (NULL, (char *) &measuringState, 
+                        obsId->pDetMeasuringContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to set measuring flag to 0");
+   }
+
+   return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detObserveTimeout
+ *
+ *   INVOCATION:
+ *   detObserveTimeout (timeId, obsIdInt)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) timeId   (timer_t) Timer ID
+ *   (>) obsIdInt (int)     Pointer to observation definition, cast to integer
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Handle an observation timeout.
+ *
+ *   DESCRIPTION:
+ *   Handle the situation when a readout does not complete within the time
+ *   when its exposure and readout should have finished.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   UNFINISHED
+ *-
+ */
+
+void detObserveTimeout
+   (
+   timer_t     timeId,             /* Timer ID.                               */
+   int         obsIdInt            /* Pointer to observation ID cast to int.  */
+   )
+{
+   OBS_ID      obsId = (OBS_ID) obsIdInt;
+   SDSU_ID     sdsuId = (SDSU_ID) obsId->sdsuId;
+
+   char *      mainKeywords[] = {"NAXIS1", "NAXIS2", "SECTORS", "OSP_FSZ"};
+                              /* Main FITS keywords to read from header.      */
+   int         mainValues[4]; /* Values corresponding to main FITS keywords.  */
+
+   /*
+    * The following variables will be used to test additional header items in
+    * a file of simulated data, but the check has not been implemented yet.
+    */
+
+   long        observingState; /* Observation status (busy or idle).          */
+   long        measuringState; /* Measuring status (0 or 1).                  */
+   int         simOption;      /* Simulation option.                          */
+
+#ifdef DEBUG
+   printf ("detObserveTimeout: Observation timed out.\n");
+#endif
+
+   /*
+    * When sdsuLib is simulating this routine makes the frame look like it has
+    * been read out properly by the controller, and calls the frame ISR.
+    * Simulating the packet ISRs would be a bit tricky...
+    */
+
+   if (sdsuId->simulate)
+   {
+      SDSU_FRAME *pFrame = sdsuId->readFrame;
+
+      pFrame->header.packetCount   = 0;
+      pFrame->header.status        = 0;   /* No errors during readout */
+      pFrame->header.parameterId   = 0;   /* Simulated parameter ID   */
+      pFrame->header.frameCount    = 1;   /* Simulate just one frame  */
+
+      if ( strcmp(obsId->pSimFileName, "NONE") == 0 )
+      {
+
+         /*
+          * Simulate the data internally, writing the result to the current
+          * SDSU frame. Use option 1 (a simple ramp) for large data frames and
+          * option 2 (simulated Shack-Hartmann spots) for small data frames.
+          */
+
+         MESSAGE_LOG (MSG_LOG, "Simulating data internally");
+
+         if ( (obsId->aoCcdId->xPixels > 256) || 
+              (obsId->aoCcdId->yPixels > 256) )
+         {
+            simOption = 1;
+         }
+         else
+         {
+            simOption = 2;
+         }
+
+         if ( detSimulateData (obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels, 
+                               simOption, pFrame) == ERROR )
+         {
+            ERROR_LOG ("Failed to simulate data");
+         }
+      }
+      else
+      {
+
+         /*
+          * Read simulated data from the specified file.
+          * First check the contents of the file correspond to the actual SDSU
+          * setup.
+          */
+
+         MESSAGE_LOG1 (MSG_LOG,
+           "Reading simulated data from %s\n", obsId->pSimFileName);
+         if (detReadFitsHeaderInt ( obsId->pSimFileName, 3, mainKeywords, 
+                                    mainValues) == ERROR )
+         {
+            ERROR_SET (0, "Failed to read simulated data header",
+                       ERROR_LOG_NOW);
+         }
+
+         if ( (mainValues[0] == obsId->aoCcdId->xPixels) &&
+              (mainValues[1] == obsId->aoCcdId->yPixels) &&
+              (mainValues[2] == obsId->aoCcdId->outputsNb)
+            )
+         {
+
+            /*
+             * The file is acceptable. Now read its contents.
+             */
+
+            MESSAGE_LOG (MSG_MINDEBUG, "Simulated data header looks OK");
+            if (detReadFitsImageUint16 ((uint16 *)& (pFrame->pixel[0]),
+                obsId->pSimFileName,
+                (obsId->aoCcdId->xPixels)*(obsId->aoCcdId->yPixels)) == ERROR )
+            {
+               ERROR_SET (0, "Failed to read simulated data", ERROR_LOG_NOW);
+            }
+         }
+         else
+         {
+            /*
+             * The simulated data contained in the file does not match the
+             * simulated data required.
+             */
+
+            ERROR_SET4 (S_detControl_BAD_FILE,
+               "Required size is %d x %d, simulated data file contains %d x %d",
+               ERROR_LOG_SAVE, obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels,
+               mainValues[0], mainValues[1]);
+            ERROR_SET2 (0,
+            "%ld detector outputs are required, simulated data file assumes %d",
+               ERROR_LOG_SAVE, obsId->aoCcdId->outputsNb, mainValues[2]);
+            ERROR_LOG ("Mismatch between simulated data file and requirements");
+         }
+      }
+
+      /* Simulate the packet count reaching the desired value. */
+
+      pFrame->header.packetCount   = sdsuId->packetsPerFrame;
+
+      /*
+       * Simulate an SDSU frame sync interrupt. This should cause the
+       * detObserveEnd callback to be executed.
+       */
+
+/* COMMENTED OUT - ONLY ANY USE WHEN USING INTERRUPTS.
+      if ( sdsuSimulateSimpleSync(sdsuId) == ERROR)
+      {
+         ERROR_LOG ("Failed to simulate frame sync interrupt");
+      }
+*/
+   }
+   else if ( sdsuId->frameIntNum == 0 )
+   {
+      /*
+       * The observation timed out with SDSU frame interrupts disabled.
+       * Assume the data are available in the buffer and simulate an SDSU
+       * frame sync interrupt.
+       * This should cause the detObserveEnd callback to be executed.
+       */
+
+      MESSAGE_LOG (MSG_MINDEBUG,
+                   "Observation time completed with interrupts disabled");
+
+      if ( sdsuSimulateSimpleSync(sdsuId) == ERROR)
+      {
+         ERROR_LOG ("Failed to simulate frame sync interrupt");
+      }
+   }
+   else
+   {
+      /* sysIntDisable(6); */                     /* DEBUG TEST */
+
+      /*
+       * The observation completion was supposed to have been signalled by an
+       * interrupt and timed out.
+       * Set the observing flag FALSE and set the observeC CAR record to ERROR,
+       * via the "observing" record.
+       */
+
+      MESSAGE_LOG (MSG_WARNING,
+      "Observation timed out - trying to read data anyway...");
+
+      obsId->observing = FALSE;
+      observingState = CAR_ERROR;
+      if (epToVxPipeWrite (NULL, (char *) &observingState,
+          obsId->pDetObservingContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set observing flag to ERROR");
+      }
+
+      measuringState = 0;
+      if (epToVxPipeWrite (NULL, (char *) &measuringState,
+          obsId->pDetMeasuringContext) == ERROR)
+      {
+         ERROR_LOG ("Failed to set measuring flag to ERROR");
+      }
+
+      /* Try and simulate a frame sync interrupt to force a data readout.
+       * This may or may not work.
+       */
+
+      if ( sdsuSimulateSimpleSync (sdsuId) == ERROR)
+      {
+         ERROR_LOG ("Failed to simulate frame sync interrupt");
+      }
+   }
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSimulateData
+ *
+ *   INVOCATION:
+ *   detSimulateData (xPixels, yPixels, option, pFrame)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) xPixels (const int)    Number of pixels in X
+ *   (>) yPixels (const int)    Number of pixels in Y
+ *   (>) option  (const int)    Simulation option
+ *   (!) pFrame  (SDSU_FRAME *) Pointer to SDSU frame
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Fill frame buffer with simulated data (TEMPORARY FUNCTION)
+ *
+ *   DESCRIPTION:
+ *   This function fills a frame buffer with simulated data with the following
+ *   options:
+ *
+ *   Option 1 consists of an incrementing series. The first pixel (output 1)
+ *   contains zero, the second pixel (output 2) is one, and so on. Thus within
+ *   each quadrant the least significant 2 bits should always be the same for a
+ *   4-output device, or the least significant bit the same for 2-output
+ *   devices.
+ *
+ *   Option 2 consists of...
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   It is assumed that pFrame points to an SDSU frame structure (initialised
+ *   with sdsuFrameAlloc, sdsuFrameFind and sdsuFrameReserve) containing
+ *   sufficient storage space for xPixels * yPixels values.
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   Option 2 is very wasteful of CPU. It should be used for small images only.
+ *
+ *   At the moment this function only simulates a 2x2 array of spots for a CCD
+ *   with 2x2 sectors. It can be extended if necessary.
+ *-
+ */
+
+STATUS detSimulateData
+   (
+   const int      xPixels,         /* Number of pixels in X.                  */
+   const int      yPixels,         /* Number of pixels in Y.                  */
+   const int      option,          /* Simulation option.                      */
+   SDSU_FRAME *   pFrame           /* Pointer to frame buffer.                */
+   )
+{
+   const int      nPixels = xPixels * yPixels;
+                                   /* Total number of pixels.                 */
+
+   const int      nSectors = 4;    /* Number of sectors/outputs.              */
+   int            sector;          /* Sector counter.                         */
+   int            xPixelsSector;   /* Number of columns per sector.           */
+   int            yPixelsSector;   /* Number of rows per sector.              */
+   int            i, j;            /* Column and row counters.                */
+   int            is, js;          /* Column and row for a particular sector  */
+
+   const int      nSpots = 4;      /* Number of simulated spots.              */
+   int            spot;            /* Spot counter.                           */
+   int            spotx[4];        /* X coordinates of simulated spot centres */
+   int            spoty[4];        /* y coordinates of simulated spot centres */
+
+
+   double         dist;            /* Distance between pixel and spot centre. */
+   double         dvalue;          /* Double valueto write into frame buffer. */
+   uint16         value;           /* Integer value to write into frame buffer*/
+
+   volatile uint16 *   ptr;        /* Pointer into frame buffer.              */
+
+
+   /* Check the frame buffer pointer and size are valid. */
+
+   if (pFrame == NULL)
+   {
+      ERROR_SET(S_detControl_INTERNAL, "No frame buffer defined",
+                ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   if ((xPixels <= 0) || (yPixels <= 0 ))
+   {
+      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE,
+                  "Bad number of pixels given, %d x %d", ERROR_LOG_SAVE,
+                  xPixels, yPixels);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf (
+   "detSimulateData: Simulating %d x %d pixels of data to buffer at %p - option %d\n",
+   xPixels, yPixels, pFrame, option );
+#endif   /* DEBUG */
+
+   /* Switch according to the simulation option chosen. */
+
+   switch (option)
+   {
+      case (1):
+
+         /*
+          * An incrementing series of values is required.
+          * Note that ptr is initialised to the start of the frame pixels.
+          */
+
+         ptr = & pFrame->pixel[0];
+         for ( i=0; i<nPixels; i++)
+         {
+            value = (uint16) i;
+            *(ptr) = value;
+            ptr++;
+         }
+         break;
+
+
+      case (2):
+
+         /*
+          * An array of simulated spots is required.
+          */
+
+         /* First initialise the number of pixels per sector, based on the
+          * number of sectors.
+          */
+
+         if ( nSectors == 2 )
+         {
+            /* There are two outputs and therefore 2 sectors in a 2x1 pattern */
+
+            xPixelsSector = xPixels / 2;
+            yPixelsSector = yPixels;
+         }
+         else if ( nSectors == 4 )
+         {
+            /* There are four outputs and therefore 2 sectors in a 2x2 pattern*/
+
+            xPixelsSector = xPixels / 2;
+            yPixelsSector = yPixels / 2;
+         }
+
+         /* Real positions for 2x2 wavefront sensor */
+         spotx[0] = 32;
+         spoty[0] = 27;
+         spotx[1] = 61;
+         spoty[1] = 25;
+         spotx[2] = 25;
+         spoty[2] = 59;
+         spotx[3] = 61;
+         spoty[3] = 58;
+
+         /*
+          * Initialise ptr to the start of the frame pixels and then step
+          * through the rows and columns within each sector.
+          */
+
+         ptr = & pFrame->pixel[0];
+
+         for ( j=0; j < yPixelsSector; j++ )
+         {
+            for ( i=0; i < xPixelsSector; i++ )
+            {
+               for ( sector=1; sector <= nSectors; sector++ )
+               {
+                  /*
+                   * Calculate the row and column coordinates of this particular
+                   * point in this sector.
+                   */
+
+                  if ( sector == 1 )
+                  {
+                     /* Sector 1 */
+                     is = i;
+                     js = j;
+                  }
+                  else if ( sector == 2 )
+                  {
+                     /* Sector 2 */
+                     is = xPixels - i;
+                     js = j;
+                  }
+                  else if ( sector == 3 )
+                  {
+                     /* Sector 3 */
+                     is = xPixels - i;
+                     js = yPixels - j;
+                  }
+                  else
+                  {
+                     /* Sector 4 */
+                     is = i;
+                     js = yPixels - j;
+                  }
+
+                  /*
+                   * Use the row and column coordinates calculated above to
+                   * determine the the distance of this point from each spot
+                   * centre, calculate the sum of the light from each spot
+                   * (assuming a Gaussian distribution), and write
+                   * this sum to the location pointed to by ptr. The value is
+                   * not allowed to exceed 65535 because it needs to be stored
+                   * as an unsigned 16 bit integer. Finally, ptr is incremented.
+                   *
+                   * The constant factors used in the following equations are
+                   * arbitrary.
+                   */
+
+                  dvalue =
+                  (double) ( 1000 * rand() / RAND_MAX ); /* Random background */
+
+                  for ( spot=0; spot < nSpots; spot++ )
+                  {
+                     dist = 0.25 * (double) ((is-spotx[spot])*(is-spotx[spot]) +
+                                             (js-spoty[spot])*(js-spoty[spot]));
+                     dvalue +=  30000.0 * exp (-dist);
+                  }
+
+                  if ( dvalue <= 65535.0 )
+                     value = (uint16) floor(dvalue);
+                  else
+                     value = 65535;
+
+                  *ptr++ = value;
+               }
+            }
+         }
+         break;
+
+      default:
+
+         ERROR_SET( S_detControl_BAD_ATTRIBUTE, "Unknown simulation option",
+                    ERROR_LOG_SAVE);
+         return (ERROR);
+         break;
+   }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detReadFitsHeaderInt
+ *
+ *   INVOCATION:
+ *   detReadFitsHeaderInt (fileName, nKey, keyName, keyVal)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) fileName     (char *)    Name of FITS file whose header is being read
+ *   (>) nKey         (int)       Maximum number of keywords to be read
+ *   (>) keyName      (char **)   Name of array of keywords
+ *   (<) keyVal       (int *)     Array of integer values of keywords
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the integer values of an array of keywords from a FITS header
+ *
+ *   DESCRIPTION:
+ *   Uses functions from the cfitsio library to open a FITS file for reading,
+ *   and read the values of specified keywords with integer values. The keywords
+ *   elements of an array, and their values are read into the corresponding
+ *   elements of an array of integers. The number of elements of the keyword
+ *   array may exceed the number of keywords actually present, but obviously not
+ *   the number of array elements allocated. The keywords should be consecutive
+ *   elements of their array, as reading of keywords will end when a NULL value
+ *   is encountered as a keyword. The file is closed when reading is finished.
+ *
+ *   ACKNOWLEDGEMENTS:
+ *   This function is based on a private function provided by Steven Heddle,
+ *   UKATC, Edinburgh 18/1/1999
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   Restricted to keywords with integer values.
+ *-
+ */
+
+STATUS detReadFitsHeaderInt
+   (
+   char *         fileName,          /* Name of file to be read.              */
+   int            nKey,              /* Maximum number of keywords to be read */
+   char **        keyName,           /* Name of array of keywords             */
+   int *          keyVal             /* Array of integer values of keywords   */
+   )
+{
+   fitsfile *     fp;                /* FITS File descriptor.                 */
+   int            fitsStatus;        /* FITS status used by the fits function */
+   int            i;                 /* Counter.                              */
+   char           comment [80] ;     /* Comment buffer read from FITS file    */
+
+   /*
+    * Set to zero the FITS status
+    */
+
+   fitsStatus = 0 ;
+
+   /*
+    * Open the FITS file
+    */
+
+   if ( fits_open_file ( &fp, fileName, FITSIO_READONLY, &fitsStatus) )
+   {
+      ERROR_SET2(0, "Can't open FITS file %s: %d", ERROR_LOG_SAVE, fileName,
+                 fitsStatus);
+      return (ERROR);
+   }
+
+   /*
+    * Read the keywords array and write their values into the corresponding
+    * int array
+    */
+
+   i = 0 ;
+
+
+   while ( (keyName[i] != NULL) && (i < nKey) )
+   {
+      if ( fits_read_key(fp, TINT, keyName[i], keyVal+i, comment, &fitsStatus) )
+      {
+         ERROR_SET2(0, "Failed on reading %s keyword: %d", ERROR_LOG_SAVE,
+                    keyName[i], fitsStatus);
+      }
+      i++;
+   }
+
+   /*
+    * Close the FITS file
+    */
+
+   if (fits_close_file (fp, &fitsStatus))
+   {
+      ERROR_SET1(0, "Problem closing FITS file : %d", 
+                 ERROR_LOG_SAVE, fitsStatus);
+      return (ERROR);
+   }
+
+   return (OK);
+}
+
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detReadFitsImageUint16
+ *
+ *   INVOCATION:
+ *   detReadFitsImageUint16 (pImageBuffer, fileName, buffSize)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) pImageBuffer (uint16 *) Pointer to buffer for image read in
+ *   (>) fileName     (char *)   Name of FITS file whose image is being read
+ *   (>) buffSize     (int)      Size of the image buffer
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the unsigned short int image into a buffer from a FITS file
+ *
+ *   DESCRIPTION:
+ *   The FITS file is opened and the NAXIS keywords read to get the image
+ *   size. If the size is greater than buffsize, only enough of the image to
+ *   fill the buffer is read in. If the image is smaller than or equal to the
+ *   size of the buffer, the whole image is read in. No padding to fill any
+ *   unassigned elements of the buffer takes place, as the image dimensions for
+ *   any subsequent processing should be strictly controlled to match the
+ *   xframesize and yframesize dimensions specified in the context structure.
+ *   The FITS file is then closed.
+ *
+ *   ACKNOWLEDGEMENTS:
+ *   This function is based on a private function provided by Steven Heddle,
+ *   UKATC, Edinburgh 18/1/1999
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The buffer pointed to by pImageBuffer has been allocated large enough to
+ *   accomodate buffSize unsigned short ints
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detReadFitsImageUint16
+   (
+   uint16 *       pImageBuffer, /* Pointer to buffer for image read in     */
+   char *         fileName,     /* Name of file to be read.                */
+   int            buffSize      /* Size of the image buffer                */
+   )
+{
+   fitsfile *     fp;           /* FITS File descriptor.                   */
+   int            fitsStatus;   /* FITS status used by the fits function   */
+   int            nFound;       /* Number of keywords founds               */
+   long           nAxes[2];     /* Array of keyword NAXIS values           */
+   long           nPixels;      /* Number of pixels of the image           */
+   long           nElemRead;    /* Number of pixels read                   */
+   long           firstPixel;    /* Number of pixels read                   */
+   uint16         nullval;      /* Value for undefined pixels when reading */
+   int            anynull;      /* Set to 1 if any values are null; else 0 */
+
+   /*
+    * Set to zero the FITS status
+    */
+
+   fitsStatus = 0 ;
+
+   /*
+    * Open the FITS file
+    */
+
+   if ( fits_open_file ( &fp, fileName, FITSIO_READONLY, &fitsStatus) )
+   {
+      ERROR_SET2(0, "Can't open FITS file %s: %d", ERROR_LOG_SAVE, fileName,
+                 fitsStatus);
+      return (ERROR);
+   }
+
+   /*
+    * Read the keywords NAXIS1 and NAXIS2 to get image size
+    */
+
+   if ( fits_read_keys_lng(fp, "NAXIS", 1, 2, nAxes, &nFound, &fitsStatus) )
+   {
+      ERROR_SET1(0, "Failed to read keywords NAXIS: %d", ERROR_LOG_SAVE,
+                 fitsStatus);
+
+      if (fits_close_file (fp, &fitsStatus))
+      {
+         ERROR_SET1(0, "Problem closing FITS file: %d", 
+                    ERROR_LOG_SAVE, fitsStatus);
+      }
+
+      return (ERROR) ;
+   }
+
+   nPixels = nAxes[0] * nAxes[1];
+
+   /*
+    * Check the image size in comparison to the buffer size
+    */
+
+   if ( buffSize < nPixels )
+      nElemRead = buffSize ;
+   else
+      nElemRead = nPixels ;
+
+   /*
+    * Read the image
+    */
+
+   firstPixel = 1;
+   nullval = 0;           /* don't check for null values in the image */
+
+   /* Note that even though the FITS images contains unsigned integer */
+   /* pixel values (or more accurately, signed integer pixels with    */
+   /* a bias of 32768),  this routine is reading the values into a    */
+   /* float array.Cfitsio automatically performs the datatype         */
+   /* conversion in cases like this.                                  */
+
+   if ( fits_read_img (fp, TUSHORT, firstPixel, nElemRead, &nullval,
+                       pImageBuffer, &anynull, &fitsStatus) )
+   {
+      ERROR_SET1(0, "Failed to read image: %d", ERROR_LOG_SAVE,
+                 fitsStatus);
+
+      if (fits_close_file (fp, &fitsStatus))
+      {
+         ERROR_SET1(0, "Problem closing FITS file: %d", 
+                    ERROR_LOG_SAVE, fitsStatus);
+      }
+
+      return (ERROR) ;
+   }
+
+   /*
+    * Close the FITS file
+    */
+
+   if (fits_close_file (fp, &fitsStatus))
+   {
+      ERROR_SET1(0, "Problem closing FITS file: %d", ERROR_LOG_SAVE, 
+                 fitsStatus) ;
+      return (ERROR);
+   }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detFrameSize
+ *
+ *   INVOCATION:
+ *   detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
+ *                 aoCtrlId, pAoCtrlInitContext, pAoFlatInitContext)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (!) obsId         (OBS_ID)          Observation context structure
+ *   (<) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
+ *   (<) aoCtrlId      (AO_CTRL_ID)      AO control context structure
+ *   (!) pAoCtrlInitContext (DATREC_CONTEXT) AoCtrlInit SIR record context
+ *   (!) pAoFlatInitContext (DATREC_CONTEXT) AoFlatInit SIR record context
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detFrameSize command
+ *
+ *   DESCRIPTION:
+ *   This function sets up the SDSU detector geometry parameters.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *-
+ */
+
+uint32 detFrameSize
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId,         /* Observation context structure.           */
+   AO_CCD_ID       aoCcdId,       /* AO CCD geometry context structure        */
+   AO_CTRL_ID      aoCtrlId,      /* AO control context structure             */
+   DATREC_CONTEXT  pAoCtrlInitContext,  /* AoCtrlInit SIR record context      */
+   DATREC_CONTEXT  pAoFlatInitContext   /* AoFlatInit SIR record context      */
+   )
+{
+   uint32          errorNumber;   /* Error number reported by task.           */
+
+   /*
+    * Variables associated with "Set Frame size"
+    */
+
+   long         binFlag;
+
+   long         xReqPixels; /* Number of X pixels in digitised image (AC only)*/
+   long         yReqPixels; /* Number of Y pixels in digitised image (AC only)*/
+   long         xReqBin;    /* X binning factor (pixels per superpixel)       */
+   long         yReqBin;    /* Y binning factor (pixels per superpixel)       */
+   long         xReqRas;    /* Size of each subaperture in X direction in     */
+                            /* super-pixels (wfs ONLY)                        */
+   long         yReqRas;    /* Size of each subaperture in Y direction in     */
+                            /* super-pixels (WFS only)                        */
+   long         xReqTail;   /* Number of trailing X pixels to be discarded on */
+   long         reqPixelsNb;/* Total number of digitised pixels.              */
+   int          nPackets;   /* Number of packets expected per frame.          */
+
+   /*
+    * Parameters to update the aoCtrlId structure 
+    */
+
+   int          updateAoCtrlFlag = FALSE;
+   char         path[STRING_SIZE];        
+   char         darkFileName[STRING_SIZE];
+   char         fullDarkFileName[STRING_SIZE];
+   char         flatFileName[STRING_SIZE];
+   char         fullFlatFileName[STRING_SIZE];
+   char         refFileName[STRING_SIZE];
+   char         fullRefFileName[STRING_SIZE];
+   char         aoInitFileName[STRING_SIZE];
+   double       angle;
+   double       refX;
+   double       refY;
+   double       thresh;
+   double       totalThresh;
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) &binFlag);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command can be used when an observation is not in progress
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   /*
+    * Init xBin and yBin
+    */
+
+   if ( binFlag == TRUE )
+   {
+      xReqBin = 2;
+      yReqBin = 2;
+   }
+   else
+   {
+      xReqBin = 1;
+      yReqBin = 1;
+   }
+
+   /* Init the others parameters */
+
+   if ( (binFlag == TRUE) && (aoCcdId->binningFlag == FALSE) ) 
+   {
+      /* First time binning */
+    
+      xReqRas = aoCcdId->xRaster / xReqBin ;
+      yReqRas = aoCcdId->yRaster / yReqBin ;
+      xReqPixels = 2 * xReqRas * aoCcdId->xSubapNb ;
+      yReqPixels = 2 * yReqRas * aoCcdId->ySubapNb ;
+      reqPixelsNb = xReqPixels * yReqPixels ;
+      xReqTail = aoCcdId->xSize - 
+                 (((xReqRas * xReqBin) + aoCcdId->xSpace) * aoCcdId->xSubapNb) + 
+                 aoCcdId->xSpace - aoCcdId->xStart - aoCcdId->uscanNb;
+
+      if ( xReqTail < 0 )
+      {
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
+                     "Xtail is %ld. Should not be less than zero", 
+                     ERROR_LOG_NOW, xReqTail);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+      
+      aoCtrlId->initFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized", pAoCtrlInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      }
+      aoCtrlId->darkInitFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      }
+      aoCtrlId->flatInitFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized", pAoFlatInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      }
+
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS2_AO_BIN_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               &angle, &refX, &refY, refFileName, &thresh,
+                               &totalThresh ) == ERROR )
+         {
+            ERROR_LOG ("Failed to read ao control file parameters");
+         }
+
+         sprintf ( fullDarkFileName, "%s/%s", path, darkFileName );
+         sprintf ( fullFlatFileName, "%s/%s", path, flatFileName );
+         sprintf ( fullRefFileName, "%s/%s", path, refFileName );
+         updateAoCtrlFlag = TRUE;
+      }
+   }
+   else if ( (binFlag == TRUE) && (aoCcdId->binningFlag == TRUE) )
+   {
+      /* Already binning mode - do not change anything */
+
+      xReqRas = aoCcdId->xRaster ;
+      yReqRas = aoCcdId->yRaster ;
+      xReqPixels = aoCcdId->xPixels;
+      yReqPixels = aoCcdId->yPixels;
+      reqPixelsNb = aoCcdId->pixelsNb;
+      xReqTail = aoCcdId->xTail;
+   }
+   else if ( (binFlag == FALSE) && (aoCcdId->binningFlag == FALSE) )
+   {
+      /* Already not binning mode - do not change anything */
+
+      xReqRas = aoCcdId->xRaster ;
+      yReqRas = aoCcdId->yRaster ;
+      xReqPixels = aoCcdId->xPixels;
+      yReqPixels = aoCcdId->yPixels;
+      reqPixelsNb = aoCcdId->pixelsNb;
+      xReqTail = aoCcdId->xTail;
+   }
+   else if ( (binFlag == FALSE) && (aoCcdId->binningFlag == TRUE) )
+   {
+      /* cancel binning mode */
+
+      xReqRas = aoCcdId->xRaster * aoCcdId->xBin;
+      yReqRas = aoCcdId->yRaster * aoCcdId->yBin;
+      xReqPixels = 2 * xReqRas * aoCcdId->xSubapNb;
+      yReqPixels = 2 * yReqRas * aoCcdId->ySubapNb;
+      reqPixelsNb = xReqPixels * yReqPixels;
+      xReqTail = aoCcdId->xSize - 
+                 (((xReqRas * xReqBin) + aoCcdId->xSpace) * aoCcdId->xSubapNb) +
+                 aoCcdId->xSpace - aoCcdId->xStart - aoCcdId->uscanNb;
+
+      if ( xReqTail < 0 )
+      {
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
+                     "Xtail is %ld. Should not be less than zero", 
+                     ERROR_LOG_NOW, xReqTail);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+      
+      aoCtrlId->initFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized", pAoCtrlInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      }
+      aoCtrlId->darkInitFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      }
+      aoCtrlId->flatInitFlag = FALSE;
+      if (epToVxPipeWrite (NULL, "Not initialized", pAoFlatInitContext) 
+          == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      }
+
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               &angle, &refX, &refY, refFileName, &thresh,
+                               &totalThresh ) == ERROR )
+         {
+            ERROR_LOG ("Failed to read ao control file parameters");
+         }
+
+         sprintf ( fullDarkFileName, "%s/%s", path, darkFileName );
+         sprintf ( fullFlatFileName, "%s/%s", path, flatFileName );
+         sprintf ( fullRefFileName, "%s/%s", path, refFileName );
+
+         updateAoCtrlFlag = TRUE;
+      }
+   }
+   else 
+   {
+      /* do not change anything */
+
+      xReqRas = aoCcdId->xRaster ;
+      yReqRas = aoCcdId->yRaster ;
+      xReqPixels = aoCcdId->xPixels;
+      yReqPixels = aoCcdId->yPixels;
+      reqPixelsNb = aoCcdId->pixelsNb;
+      xReqTail = aoCcdId->xTail;
+   }
+
+   if ( (!sdsuId->simulate) && (aoCcdId->packetSize > 0) )
+   {
+      nPackets = (int) ceil ( (double) (reqPixelsNb) / 
+                 (double) aoCcdId->packetSize );
+   }
+   else
+   {
+      nPackets = 1;
+   }
+
+   /* Init aoCcdId now */
+
+   aoCcdId->xBin = xReqBin;
+   aoCcdId->yBin = yReqBin;
+   aoCcdId->xRaster = xReqRas;
+   aoCcdId->yRaster = yReqRas;
+   aoCcdId->xPixels = xReqPixels;
+   aoCcdId->yPixels = yReqPixels;
+   aoCcdId->pixelsNb = reqPixelsNb;
+   aoCcdId->xTail = xReqTail;
+   aoCcdId->packetNb = nPackets;
+
+   if ( binFlag == TRUE )
+      aoCcdId->binningFlag = TRUE ;
+   else
+      aoCcdId->binningFlag = FALSE ;
+
+   aoCcdContextShow (aoCcdId);
+
+   MESSAGE_LOG1 (MSG_LOG, "Setting new detector geometry (%s frame mode)",
+      (aoCcdId->binningFlag ? "binned":"full"));
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XSIZE=%d, YSIZE=%d, XPIXELS=%d, YPIXELS=%d",
+      aoCcdId->xSize, aoCcdId->ySize, aoCcdId->xPixels, aoCcdId->yPixels);
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XSUBAP=%d, YSUBAP=%d, XBIN=%d, YBIN=%d",
+      aoCcdId->xSubapNb, aoCcdId->ySubapNb, aoCcdId->xBin, aoCcdId->yBin);
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XRAS=%d, YRAS=%d, XSPACE=%d, YSPACE=%d",
+      aoCcdId->xRaster, aoCcdId->yRaster, aoCcdId->xSpace, aoCcdId->ySpace);
+   MESSAGE_LOG4 (MSG_MINDEBUG, "XSTART=%d, YSTART=%d, XTAIL=%d, NPIXELS=%d",
+      aoCcdId->xStart, aoCcdId->yStart, aoCcdId->xTail, aoCcdId->pixelsNb);
+
+   MESSAGE_LOG2 (MSG_FULLDEBUG,
+      "Each frame will consist of %d packets of %d pixels each",
+      nPackets, aoCcdId->packetSize);
+
+   /*
+    * Update the geometry parameters in the SDSU timing DSP. These are all
+    * "on-the-fly" parameters and need to be downloaded with sdsuParamWRP()
+    * and activated by sending a "LDP" command.
+    */
+
+   if ( (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XRAS",   (uint32) xReqRas)
+        == ERROR) ||
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YRAS",   (uint32) yReqRas)
+        == ERROR) ||
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XBIN",   (uint32) xReqBin)
+        == ERROR) ||
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YBIN",   (uint32) yReqBin)
+        == ERROR) ||
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XTAIL",  (uint32) xReqTail)
+        == ERROR) ||
+        (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_NPIXEL", (uint32) reqPixelsNb)
+        == ERROR)
+     )
+   {
+      ERROR_LOG ("Failed to download geometry parameters to TIMING DSP");
+      errorNumber = S_detControl_SDSU_ERROR;
+      return (errorNumber);
+   }
+
+   if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to activate TIMING DSP parameters with LDP command");
+      errorNumber = S_detControl_SDSU_ERROR;
+      return (errorNumber);
+   }
+
+   /*
+    * Update the number of packets per frame in the SDSU context structure.
+    */
+
+   sdsuId->packetsPerFrame = nPackets;
+
+   /*
+    * Now init the SAD geometry records
+    */
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xRaster) ,
+                        obsId->pXrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yRaster) ,
+                        obsId->pYrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xBin) ,
+                        obsId->pXbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xbin sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yBin) ,
+                        obsId->pYbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ybin sad record");
+      return (ERROR);
+   }
+   
+   if ( updateAoCtrlFlag == TRUE )
+   {
+      if (aoCtrlContextUpdate ( fullDarkFileName, fullFlatFileName,
+                                fullRefFileName, refX, refY,
+                                angle, aoCcdId, aoCtrlId ) == ERROR )
+      {
+         ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
+      }
+
+      obsId->aoCtrlId->threshold = thresh;
+      obsId->aoCtrlId->totalThreshold = totalThresh;
+
+      aoCtrlContextShow (aoCcdId, aoCtrlId);
+
+      if ( aoCtrlId->initFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, "Initialized", pAoCtrlInitContext) 
+             == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->darkInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->darkFileName, 
+                              obsId->pAoDarkInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         }
+      }
+
+      if ( aoCtrlId->flatInitFlag == TRUE )
+      {
+         if (epToVxPipeWrite (NULL, aoCtrlId->flatFileName, 
+                              pAoFlatInitContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         }
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold), 
+                           obsId->pAoThreshContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
+                           obsId->pAoTotalContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+      }
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsReconnect
+ *
+ *   INVOCATION:
+ *   detDhsReconnect (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (!) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detDhsReconnect command
+ *
+ *   DESCRIPTION:
+ *   This function disconnects or reconnects to the dhs .
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *-
+ */
+
+uint32 detDhsReconnect
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32          errorNumber;   /* Error number reported by task.           */
+   
+   DHS_STATUS      dhsErrno;      /* DHS error number.                        */
+
+   long            connect;
+
+   /*int             tid;*/
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) &connect);
+   
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command can be used when an observation is not in progress
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   /*
+    * Check wether it is connect or disconnect command 
+    */
+    
+   if ( connect == 0 ) /* disconnect requested */
+   {
+      semTake (detDhsSem, WAIT_FOREVER);
+
+      dhsErrno = 0;
+      dhsDisconnect (detDhsConnection, &dhsErrno);
+      CHECK_DHS (dhsErrno);
+      /*dhsEventLoopEnd(&dhsErrno);
+      CHECK_DHS (dhsErrno);
+      dhsExit ( &dhsErrno );
+      CHECK_DHS (dhsErrno);
+
+      printf ("Disconnect dhs\n");
+
+      if ( (tid = taskNameToId ("ImpMaster")) != ERROR )
+      {
+         if ( taskDelete ( tid) == ERROR )
+         {
+            ERROR_SET (0, "Failed to delete ImpMaster task", ERROR_LOG_NOW);
+            return (ERROR);
+         }
+         printf ("task ImpMaster deleted\n" ) ;
+      }
+
+      if ( (tid = taskNameToId ("ImpTransmitter")) != ERROR )
+      {
+         if ( taskDelete ( tid) == ERROR )
+         {
+            ERROR_SET (0, "Failed to delete ImpTransmitter task", ERROR_LOG_NOW);
+            return (ERROR);
+         }
+         printf ("task ImpTransmitter deleted\n" ) ;
+      }
+
+      if ( (tid = taskNameToId ("ImpReceiver")) != ERROR )
+      {
+         if ( taskDelete ( tid) == ERROR )
+         {
+            ERROR_SET (0, "Failed to delete ImpReceiver task", ERROR_LOG_NOW);
+            return (ERROR);
+         }
+         printf ("task ImpReceiver deleted\n" ) ;
+      }
+
+      detDhsInitialised = FALSE;
+      if (semDelete (detDhsSem) == ERROR )
+      {      
+         ERROR_SET (0, "Failed to delete DHS semaphore", ERROR_LOG_NOW);
+         return (ERROR);
+      }
+      if (semDelete (detDhsStartSem) == ERROR )
+      {      
+         ERROR_SET (0, "Failed to delete DHS start semaphore", ERROR_LOG_NOW);
+         return (ERROR);
+      } 
+      printf ("sem deleted\n" );*/
+   }
+   else                /* connect requested */
+   {
+      /*tid = taskSpawn ("ImpMaster", 100, VX_FP_TASK, 20000, (FUNCPTR) ImpMaster, 
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      if ( tid == ERROR )
+      {
+         ERROR_SET (0, "Can't spawn the ImpMaster", ERROR_LOG_NOW);
+         return (ERROR);
+      }
+      printf ( "sp ImpMaster ok\n" ) ;
+
+      taskDelay ( (int) (sysClkRateGet () * 10) );
+
+      if ( detDhsInit ("pwfs2", 16, "10.2.4.56", "dataServerNS") == ERROR)
+      {
+         ERROR_SET (0, "Can't reinit the dhs", ERROR_LOG_NOW);
+         return (ERROR);
+      }*/
+      if ( detDhsConnect () == ERROR )
+      {
+         ERROR_SET (0, "Can't recoonect to the dhs", ERROR_LOG_NOW);
+         return (ERROR);
+      }
+   }
+
+   return (OK); 
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsDisplay
+ *
+ *   INVOCATION:
+ *   detDhsDisplay (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (!) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detDhsDisplay command
+ *
+ *   DESCRIPTION:
+ *   This function sets the parameters to send the data to the QL of the DHS.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *-
+ */
+
+uint32 detDhsDisplay
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32          errorNumber;   /* Error number reported by task.           */
+   
+   long            rate;
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) &rate);
+   
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command can be used when an observation is in progress.
+    * Set the obsId parameters.
+    */
+
+   obsId->dhsQlRate = rate;
+
+   return (OK); 
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detHeadTempGet
+ *
+ *   INVOCATION:
+ *   detHeadTempGet (struct sirRecord *psir)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) psir (struct sirRecord *) Pointer to headTemp sir record
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Write the temperature of the CCD into the SIR record
+ *
+ *   DESCRIPTION:
+ *   For this sir record, I have decided to use Epics facilities and not 
+ *   epToVxLib. Faster and simpler. CB - 03 Apr 2000
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   external variables :detSdsuIdP2, detObsIdP2
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detHeadTempGet
+   (
+   struct sirRecord *       psir /* Pointer to "headTemp" sir record       */
+   )
+{
+   uint32   value ;
+
+   int      sample ;
+
+   double   meanValue6, meanValue7;
+   double   sdsuTemp6, sdsuTemp7, sdsuTemp;
+
+   if ( detObsIdP2 == NULL )
+   {
+      return (ERROR);
+   }
+
+   if ( detSdsuIdP2 == NULL )
+   {
+      return (ERROR);
+   }
+
+   if ( ( detObsIdP2->observing != TRUE ) && ( readTempReadyFlag != FALSE ) )
+   {
+
+      meanValue6 = meanValue7 = 0.0;
+      for ( sample=0; sample<20; sample++)
+      {
+         if (sdsuParamRead (detSdsuIdP2, SDSU_IDENT_UTL, "U_ADC6", &value) == 
+             ERROR)
+         {
+            ERROR_LOG ("Failed to read thermistor 1 temperature parameter");
+            return (ERROR);
+         }
+         else
+         {
+            meanValue6 += (double) value;
+         }
+
+         if (sdsuParamRead (detSdsuIdP2, SDSU_IDENT_UTL, "U_ADC7", &value) 
+             == ERROR)
+         {
+            ERROR_LOG ("Failed to read thermistor 2 temperature parameter");
+            return (ERROR);
+         }
+         else
+         {
+            meanValue7 += (double) value;
+         }
+      }
+
+      meanValue6 /= 20.0;
+      meanValue7 /= 20.0;
+
+      sdsuTemp6 = meanValue6 * (-0.01545); 
+                                      /* 0.01545 is not quite SDSU_TEMP_UNIT*/
+      sdsuTemp7 = meanValue7 * (-0.01545); 
+                                      /* 0.01545 is not quite SDSU_TEMP_UNIT*/
+
+      sdsuTemp = (sdsuTemp6 + sdsuTemp7) / 2.0 ;
+
+#ifdef DEBUG
+      printf ( "detHeadTempGet() : not observing -> val = %f\n" , sdsuTemp ) ;
+#endif
+      *(double *)psir->val = sdsuTemp ;
+   }
+#ifdef DEBUG
+   else
+   {
+      printf ( "detHeadTempGet() observing then wait...\n" ) ;
+   }
+#endif
+
+   return (OK) ;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detShow
+ *
+ *   INVOCATION:
+ *   detShow (pWfsName,verbose)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pWfsName (const char *) Name of WFS
+ *   (>) verbose  (const BOOL)   Enable verbose printout
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Show status of detector control tasks
+ *
+ *   DESCRIPTION:
+ *   This is an engineering function which displays the current status of the
+ *   detector control task.
+ *
+ *   NOTE:
+ *   This function is designed to be invoked from the VxWorks shell
+ *
+ *   EXTERNAL VARIABLES:
+ *   (>) detSdsuIdP2  (SDSU_ID)  SDSU context structure for PWFS2
+ *   (>) detObsIdP2   (OBS_ID)   Observation context structure for PWFS2
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void detShow
+   (
+   const char *   pWfsName,
+   const BOOL     verbose
+   )
+{
+   /*
+    * Display the contents of the SDSU context structures for the
+    * wavefront sensor: PWFS2
+    */
+
+   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
+        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
+      )
+   {
+      printf ("detShow:          PWFS2\n");
+      printf ("detShow:          -----\n");
+
+      if ( detSdsuIdP2 != NULL )
+      {
+         if ( sdsuShow (detSdsuIdP2, verbose) != ERROR )
+         {
+            if (detObsIdP2 != NULL)
+            {
+               detObsShow (detObsIdP2, verbose);
+            }
+         }
+         else
+         {
+            printf ("detShow: SDSU controller context for PWFS2 invalid.\n");
+         }
+      }
+      else
+      {
+         printf ("detShow: SDSU controller for PWFS2 not initialised.\n");
+      }
+   }
+
+   return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detStatusShow
+ *
+ *   INVOCATION:
+ *   detStatusShow (pWfsName)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pWfsName   (const char *)   Name of WFS
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Show status parameters of detector control task
+ *
+ *   DESCRIPTION:
+ *   This is an engineering function which displays the status parameters of the
+ *   detector control task.
+ *
+ *   NOTE:
+ *   This function is designed to be invoked from the VxWorks shell
+ *
+ *   EXTERNAL VARIABLES:
+ *   (>) detSdsuIdP2 (SDSU_ID) SDSU context structure for PWFS2
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void detStatusShow
+   (
+   const char *   pWfsName
+   )
+{
+   /*
+    * Display the SDSU status parameters for PWFS2
+    */
+
+   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
+        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
+      )
+   {
+      printf ("detStatusShow:          PWFS2\n");
+      printf ("detStatusShow:          -----\n");
+
+      if ( detSdsuIdP2 != NULL )
+      {
+         if ( sdsuStatusShow (detSdsuIdP2) == ERROR )
+         {
+            printf (
+            "detStatusShow: SDSU controller context for PWFS2 invalid.\n");
+         }
+      }
+      else
+      {
+         printf ("detStatusShow: SDSU controller for PWFS2 not initialised.\n");
+      }
+   }
+
+   return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detTempShow
+ *
+ *   INVOCATION:
+ *   detTempShow (pWfsName)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pWfsName (const char *) Name of WFS
+ *
+ *   FUNCTION VALUE:
+ *   None
+ *
+ *   PURPOSE:
+ *   Show temperature parameters of detector control task
+ *
+ *   DESCRIPTION:
+ *   This is an engineering function which displays the temperature parameters
+ *   of the detector control task.
+ *
+ *   NOTE:
+ *   This function is designed to be invoked from the VxWorks shell
+ *
+ *   EXTERNAL VARIABLES:
+ *   (>) detSdsuIdP2 (SDSU_ID) SDSU context structure for PWFS2
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void detTempShow
+   (
+   const char *   pWfsName
+   )
+{
+   /*
+    * Display the SDSU status parameters for PWFS2
+    */
+
+   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
+        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
+      )
+   {
+
+      printf ("detTempShow:          PWFS2\n");
+      printf ("detTempShow:          -----\n");
+
+      if ( detSdsuIdP2 != NULL )
+      {
+         if ( sdsuTempShow (detSdsuIdP2) == ERROR )
+         {
+           printf ("detTempShow: SDSU controller context for PWFS2 invalid.\n");
+         }
+      }
+      else
+      {
+         printf ("detTempShow: SDSU controller for PWFS2 not initialised.\n");
+      }
+   }
+
+   return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detObsShow
+ *
+ *   INVOCATION:
+ *   detObsShow (obsId, verbose)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) obsId   (OBS_ID)      Pointer to observation ID
+ *   (>) verbose (const BOOL)  Enable verbose mode
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Display the contents of an observation ID structure
+ *
+ *   DESCRIPTION:
+ *   This function creates and initialises an observation ID structure.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detObsShow
+   (
+   OBS_ID      obsId,
+   const BOOL   verbose
+   )
+{
+   const char *   outOptionStrings[3] =
+      {
+         "NONE", "DHS", "FILE"
+      };
+
+   const char *   dhsOutOptionStrings[3] =
+      {
+         "PERM", "TEMP", "QL"
+      };
+
+   /* Check the observation context structure is valid. */
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (0, "Invalid observation context", ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   /* Display the contents of the observation context structure. */
+
+   printf ("Contents of observation context structure at %p:\n", obsId);
+   printf ("--------------------------------------------------------\n");
+   printf ("Associated SDSU context          : %p\n", obsId->sdsuId);
+   printf ("Observing?                       : %s\n",
+           (obsId->observing ? "YES" : "NO") );
+   printf ("stopped                          : %s\n",
+           (obsId->stopped ? "TRUE" : "FALSE") );
+   printf ("continuous                       : %s\n",
+           (obsId->continuous ? "TRUE" : "FALSE") );
+   printf ("Total number of frames           : %d\n", obsId->totalFrames);
+   printf ("Out number of frames             : %d\n", obsId->outNFrames);
+   printf ("Frame counter                    : %d\n", obsId->nframes);
+
+   printf ("Alarm timer ID                   : %d\n", (int) obsId->timeId);
+
+   printf ("Name of wfs                      : %s\n", obsId->pWfsName );
+   printf ("Observation type                 : %s\n", obsId->pObsType );
+
+   printf ("Output options                   : %s\n",
+           outOptionStrings[obsId->outOptions] );
+   printf ("DHS output options               : %s\n",
+           dhsOutOptionStrings[obsId->dhsOutOptions] );
+   printf ("pCurFrame                        : %p\n",
+            obsId->pCurFrame );
+   printf ("Size of frame in pixels for DHS (X x Y)  : %d x %d\n", 
+           obsId->xPixelsDhs, obsId->yPixelsDhs);
+   printf ("dhsQlRate                        : %d\n",
+           obsId->dhsQlRate );
+   printf ("dhsCounter                       : %d\n",
+           obsId->dhsCounter );
+   printf ("Number of detector outputs       : %ld\n", obsId->outputs);
+   printf ("Data label                       : %s\n", obsId->pDataLabel);
+   printf ("Output data file name            : %s\n", obsId->pOutFileName);
+   printf ("Simulated data file name         : %s (simulate=%s)\n",
+   obsId->pSimFileName,
+   ((obsId->sdsuId == NULL) ? "DON'T KNOW" : (obsId->sdsuId->simulate ? " YES" : "NO")) );
+
+   printf ("AO CCD geometry context          : %p\n", obsId->aoCcdId);
+   printf ("AO control context               : %p\n", obsId->aoCtrlId);
+   printf ("AO control CB context            : %p\n", obsId->aoCbCtrlId);
+   printf ("AO image CB context              : %p\n", obsId->aoCbImId);
+   printf ("save image CB                    : %s\n",
+           (obsId->saveCbIm ? "TRUE" : "FALSE") );
+   printf ("save control CB                  : %s\n",
+           (obsId->saveCbCtrl ? "TRUE" : "FALSE") );
+   printf ("Signal processing mode           : %d\n", (int)obsId->sigMode);
+   printf ("Number of frames to coadd        : %d\n", (int)obsId->nCoaddFrames);
+   printf ("Coadd counter                    : %d\n", (int)obsId->coaddCounter);
+   printf ("saveCbCounter                    : %d\n", 
+           (int)(obsId->saveCbCounter) );
+   printf ("UpdateScale                      : %s\n",
+           (obsId->updateScale ? "TRUE" : "FALSE") );
+   printf ("methodThreshComp                 : %d\n", 
+           (int)obsId->methodThreshComp);
+   printf ("nAverageDataThreshComp           : %d\n",
+           (int)obsId->nAverageDataThreshComp);
+   printf ("saveCbCtrlClosedLoop             : %s\n",
+           (obsId->saveCbCtrlClosedLoop ? "TRUE" : "FALSE") );
+   printf ("saveCbCtrlClosedLoopFrame        : %d\n",
+           (int)obsId->saveCbCtrlClosedLoopFrame);
+   printf ("Number of frames with FG only    : %d\n", 
+           (int)(obsId->fgFrame) );
+   printf ("methodFluxComp                   : %d\n", 
+           (int)obsId->methodFluxComp);
+   printf ("Average flux flag                : %s\n", 
+           (obsId->averageFluxFlag ? "TRUE" : "FALSE") );
+   printf ("Threshold flag                   : %s\n", 
+           (obsId->threshFlag ? "TRUE" : "FALSE") );
+   printf ("nFramesAverageFlux               : %d\n", 
+           (int)(obsId->nFramesAverageFlux) );
+   printf ("Time with FG only                : %f sec\n", (obsId->fgTime) );
+   printf ("saveCbCtrlClosedLoopTime         : %f sec\n",
+           obsId->saveCbCtrlClosedLoopTime);
+   printf ("rateBrightPixThreshComp          : %f\n",
+           obsId->rateBrightPixThreshComp);
+   printf ("multCoeffRmsThreshComp           : %f\n",
+           obsId->multCoeffRmsThreshComp);
+   printf ("averageRms                       : %f\n", obsId->averageRms);
+   printf ("multCoeffAverageFlux             : %f\n",
+           obsId->multCoeffAverageFlux);
+   printf ("averageFlux                      : %f\n", obsId->averageFlux);
+   printf ("Tip scale                        : %f\n", obsId->tipScale);
+   printf ("Tilt scale                       : %f\n", obsId->tiltScale);
+   printf ("Focus scale                      : %f\n", obsId->focusScale);
+   printf ("Sliding focus gain               : %f\n", obsId->slidingFocusGain);
+   printf ("Coadd file name                  : %s\n", obsId->pCoaddFileName);
+   printf ("Save circular buffer directory   : %s\n", obsId->pCbPath);
+   printf ("Save control CB directory (seq)  : %s\n", obsId->pCbPathSeq);
+
+   printf ("dataSec                          : %s\n", obsId->dataSec);
+   printf ("ccdSec                           : %s\n", obsId->ccdSec);
+   printf ("origSec                          : %s\n", obsId->origSec);
+   printf ("utStartString                    : %s\n", obsId->utStartString);
+   printf ("utEndString                      : %s\n", obsId->utEndString);
+   printf ("detType                          : %s\n", obsId->detType);
+   printf ("detId                            : %s\n", obsId->detId);
+
+   printf ("Time at observation start/end    : %f %f\n", obsId->rawtStart,
+           obsId->rawtEnd);
+   printf ("Exposure in seconds reqst/actual : %f %f\n", obsId->exposedRQ,
+           obsId->exposed);
+
+   printf ("wcsStatus                        : %d\n", obsId->wcsStatus);
+   printf ("nWcsPoints                       : %d\n", obsId->nWcsPoints);
+   printf ("Axis 1 world coordinate info.    : %s %f %f\n",
+      obsId->ctype1, obsId->crpix1, obsId->crval1);
+   printf ("Axis 2 world coordinate info.    : %s %f %f\n",
+      obsId->ctype2, obsId->crpix2, obsId->crval2);
+   printf ("Rotation/skew matrix             : %f %f %f %f\n",
+      obsId->cd1_1, obsId->cd1_2, obsId->cd2_1, obsId->cd2_2);
+   printf ("RA, Dec, epoch                   : %f %f %f\n",
+      obsId->RA, obsId->Dec, obsId->epoch);
+   printf ("Radecsys, equinox, mjd           : %s %f %f\n",
+      obsId->radecsys, obsId->equinox, obsId->mjdobs);
+
+   printf ("\n");         /* Blank line for spacing */
+
+   if ( obsId->aoCcdId != NULL )
+      aoCcdContextShow (obsId->aoCcdId);
+   printf ("\n");         /* Blank line for spacing */
+
+   if ( obsId->aoCtrlId != NULL )
+      aoCtrlContextShow (obsId->aoCcdId, obsId->aoCtrlId);
+   printf ("\n\n");         /* Blank line for spacing */
+
+   return (OK);
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -8856,7 +14379,7 @@ STATUS detFrameScramble
  *   detWriteFits
  *
  *   INVOCATION:
- *   detWriteFits (filename. obsId, xPixels, yPixels, pImageBuffer)
+ *   detWriteFits (filename, obsId, xPixels, yPixels, pImageBuffer)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) filename     (char *)   Name of file to contain data.
@@ -8869,27 +14392,21 @@ STATUS detFrameScramble
  *   (STATUS)   OK if command successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Write floating point data to FITS file (TEMPORARY FUNCTION)
+ *   Write floating point data to FITS file
  *
  *   DESCRIPTION:
  *   This function writes the contents of the frame buffer to a FITS file.
  *
- *   ACKNOWLEDGEMENTS:
- *   This function is based on a private function provided by Andrew Johnson.
- *
  *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
+ *   None.
  *
  *   PRIOR REQUIREMENTS:
  *   It is assumed that pImageBuffer points to a buffer of memory containing
- *   xPixels*yPixels unsigned short integer pixel values.
+ *   xPixels*yPixels float pixel values.
  *
  *   INCLUDE FILES:
  *   detControl.h
  *
- *   DEFICIENCIES:
- *   This function does not write very good FITS files. It needs to be rewritten
- *   to use the cFitsio library.
  *-
  */
 
@@ -8902,28 +14419,26 @@ STATUS detWriteFits
    float *        pImageBuffer     /* Pointer to image data.                  */
    )
 {
-
-   int            nPixels;          /* Number of pixels.                      */
-   int            i;                /* Counter.                               */
-   FILE *         fp;               /* File descriptor.                       */
-
-   int            headerCount;      /* Count of header items written.         */
-
-   float          fileBuffer[720];  /* 2880 byte buffer for FITS file.        */
-                                    /* [assumes sizeof(float)=4].             */
-   float*         pFileData;
-   int            nBlocks;
-   int            block;
-   int            extra;
    char           telName[40];
+   char           bunit[40];
 
-   /*
+   int            i;
+   int            extra;
+   int            counter;
+   int            bufferSize;
+
+   float          extraBuffer[2880];
+   double         elapsedTime;
+
+   FILE           *pFile; 
+
+   /* 
     * Check the parameters provided.
     */
 
    if (pImageBuffer == NULL)
    {
-      ERROR_SET(S_detControl_INTERNAL, "No image buffer defined", 
+      ERROR_SET(S_detControl_INTERNAL, "No image buffer defined",
                 ERROR_LOG_SAVE);
       return (ERROR);
    }
@@ -8936,784 +14451,411 @@ STATUS detWriteFits
       return (ERROR);
    }
 
-
    /*
     * Convert the time stamps from Gemini raw time into Universal Time
     * and construct these into character strings.
     */
-
-   /*if (timeThenC( obsId->rawtStart, UT1, 2, timeArrayStart ) != OK)
-   {
-      ERROR_SET (0, 
-         "Failed to convert time stamp at observation start to date/time",
-         ERROR_LOG_NOW);
-   }*/
 
    if (timeThenC( obsId->rawtEnd, UT1, 2, obsId->timeArrayEnd ) != OK)
    {
-      ERROR_SET (0, 
-         "Failed to convert time stamp at observation end to date/time",
-         ERROR_LOG_NOW);
-   }
-
-   sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
-            obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], obsId->timeArrayEnd[2],
-            obsId->timeArrayEnd[3], obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
-
-   wfsGetTelName ( telName ) ;
-
-   fp = fopen (filename, "w");
-
-   if (fp == NULL)
-   {
-      ERROR_SET(0, "Can't create/open FITS file", ERROR_LOG_SAVE);
-      return (ERROR);
-   }
-
-   headerCount = 0;
-
-   fprintf (fp, "SIMPLE  =                    T /                                                ");
-   headerCount++;
-   fprintf (fp, "BITPIX  =                  -32 /                                                ");
-   headerCount++;
-   fprintf (fp, "NAXIS   =                    2 /                                                ");
-   headerCount++;
-   fprintf (fp, "NAXIS1  =                %5d /                                                ", xPixels);
-   headerCount++;
-   fprintf (fp, "NAXIS2  =                %5d /                                                ", yPixels);
-   headerCount++;
-   fprintf (fp, "BZERO   =                    0 /                                                ");
-   headerCount++;
-   fprintf (fp, "EXTEND  =                    T /                                                ");
-   headerCount++;
-   fprintf (fp, "UTSTART ='%20s'/                                                ", obsId->utStartString);
-   headerCount++;
-   fprintf (fp, "UTEND   ='%20s'/                                                ", obsId->utEndString);
-   headerCount++;
-   fprintf (fp, "EXPTIME =      %15f /                                                ", obsId->exposed);
-   headerCount++;
-   fprintf (fp, "DARKTIME=      %15f /                                                ", obsId->exposed);
-   headerCount++;
-   fprintf (fp, "ELAPSED =      %15f /                                                ", (obsId->rawtEnd - obsId->rawtStart));
-   headerCount++;
-   fprintf (fp, "TELESCOP='%20s'/                                                ", telName);
-   headerCount++;
-   fprintf (fp, "INSTRUME='%20s'/                                                ", obsId->pWfsName);
-   headerCount++;
-   fprintf (fp, "OBSERVAT='%20s'/                                                ", telName);
-   headerCount++;
-   fprintf (fp, "BUNIT   ='%20s'/                                                ", "SDSU ADC units");
-   headerCount++;
-   fprintf (fp, "UNITS   ='%20s'/                                                ", "SDSU ADC units");
-   headerCount++;
-   fprintf (fp, "OBSTYPE ='%20s'/                                                ", obsId->pObsType);
-   headerCount++;
-
-   if ( obsId->wcsStatus == 0 )
-   {
-      fprintf (fp, "CTYPE1  ='%20s'/                                                ", obsId->ctype1);
-      headerCount++;
-      fprintf (fp, "CRPIX1  =      %15f /                                                ", obsId->crpix1);
-      headerCount++;
-      fprintf (fp, "CRVAL1  =      %15f /                                                ", obsId->crval1);
-      headerCount++;
-      fprintf (fp, "CTYPE2  ='%20s'/                                                ", obsId->ctype2);
-      headerCount++;
-      fprintf (fp, "CRPIX2  =      %15f /                                                ", obsId->crpix2);
-      headerCount++;
-      fprintf (fp, "CRVAL2  =      %15f /                                                ", obsId->crval2);
-      headerCount++;
-      fprintf (fp, "CD1_1   =      %15f /                                                ", obsId->cd1_1);
-      headerCount++;
-      fprintf (fp, "CD1_2   =      %15f /                                                ", obsId->cd1_2);
-      headerCount++;
-      fprintf (fp, "CD2_1   =      %15f /                                                ", obsId->cd2_1);
-      headerCount++;
-      fprintf (fp, "CD2_2   =      %15f /                                                ", obsId->cd2_2);
-      headerCount++;
-      fprintf (fp, "RADECSYS='%20s'/                                                ", obsId->radecsys);
-      headerCount++;
-   }
-
-   fprintf (fp, "RA      =      %15f /                                                ", obsId->RA);
-   headerCount++;
-   fprintf (fp, "DEC     =      %15f /                                                ", obsId->Dec);
-   headerCount++;
-   fprintf (fp, "EQUINOX =      %15f /                                                ", obsId->equinox);
-   headerCount++;
-   fprintf (fp, "MJDOBS  =      %15f /                                                ", obsId->mjdobs);
-   headerCount++;
-   fprintf (fp, "XBIN    =                %5d /                                                ", obsId->ospGeometry->xbin);
-   headerCount++;
-   fprintf (fp, "YBIN    =                %5d /                                                ", obsId->ospGeometry->ybin);
-   headerCount++;
-   fprintf (fp, "DATASEC ='%20s'/                                                ", obsId->dataSec);
-   headerCount++;
-   fprintf (fp, "CCDSEC  ='%20s'/                                                ", obsId->ccdSec);
-   headerCount++;
-   fprintf (fp, "ORIGSEC ='%20s'/                                                ", obsId->origSec);
-   headerCount++;
-   fprintf (fp, "DETTYPE ='%20s'/                                                ", obsId->detType);
-   headerCount++;
-   fprintf (fp, "DETID   ='%20s'/                                                ", obsId->detId);
-   headerCount++;
-   fprintf (fp, "END                                                                             ");
-   headerCount++;
-
-   /*
-    * Fill up the remaining header records (which must be a whole number of
-    * 2880-byte or 36-line blocks) with blanks.
-    */
-
-   headerCount = headerCount % 36;
-
-   for ( i=headerCount; i<36; i++)
-   {
-      fprintf (fp, "                                                                                ");
-   }
-
-
-   /* write image data in 2880-byte blocks */
-
-   nPixels = xPixels * yPixels;
-
-   nBlocks = nPixels / 720;
-   extra   = nPixels % 720;
-
-   pFileData = pImageBuffer;
-   for (block=0; block<nBlocks; block++)
-   {
-      if ( fwrite (pFileData, sizeof (float), 720, fp) != 720 )
-      {
-         ERROR_SET(0, "Problem writing FITS output file", ERROR_LOG_SAVE);
-         fclose (fp);
-         return (ERROR);
-      }
-      pFileData += 720;
-   }
-
-   if ( extra > 0 )
-   {
-      for (i=0; i<extra; i++)
-         fileBuffer[i] = *pFileData++;
-      for (; i<720; i++)                  /* Pad remainder of block */
-         fileBuffer[i] = 0.0;
-
-      if ( fwrite (fileBuffer, sizeof (float), 720, fp) != 720 )
-      {
-         ERROR_SET(0, "Problem writing FITS output file", ERROR_LOG_SAVE);
-         fclose (fp);
-         return (ERROR);
-      }
-   }
-   
-   /* tidy up */
-
-   if (fclose (fp))
-   {
-      ERROR_SET(0, "Problem closing FITS output file", ERROR_LOG_SAVE);
-      return (ERROR);
-   }
-
-   return (OK);
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detWriteFitsUint16
- *
- *   INVOCATION:
- *   detWriteFitsUint16 (filename. obsId, xPixels, yPixels, pImageBuffer)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) filename     (char *)    Name of file to contain data.
- *   (>) obsId        (OBS_ID)    Current observation context structure
- *   (>) xPixels      (int)       Number of pixels along X axis
- *   (>) yPixels      (int)       Number of pixels along Y axis
- *   (!) pImageBuffer (uint16 *)  Pointer to image buffer
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Write unsigned short integer data to FITS file (TEMPORARY FUNCTION)
- *
- *   DESCRIPTION:
- *   This function writes the contents of the frame buffer to a FITS file.
- *
- *   ACKNOWLEDGEMENTS:
- *   This function is based on a private function provided by Andrew Johnson.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   It is assumed that pImageBuffer points to a buffer of memory containing
- *   xPixels*yPixels unsigned short integer pixel values.
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   This function does not write very good FITS files. It needs to be rewritten
- *   to use the cFitsio library.
- *-
- */
-
-STATUS detWriteFitsUint16
-   (
-   char *         filename,        /* Name of file to be written.             */
-   OBS_ID         obsId,           /* Current observation context structure.  */
-   int            xPixels,         /* Number of pixels along X axis.          */
-   int            yPixels,         /* Number of pixels along Y axis.          */
-   uint16 *       pImageBuffer     /* Pointer to image data.                  */
-   )
-{
-
-   int            nPixels;           /* Number of pixels.                     */
-   int            i;                 /* Counter.                              */
-   uint16 *       ptr;               /* Pointer into image buffer.            */
-   uint16         value;             /* Value to write into image buffer.     */
-   FILE *         fp;                /* File descriptor.                      */
-   int            timeArrayStart[7]; /* Array of year/month/day/hour/min/sec  */
-   int            timeArrayEnd[7];   /* Array of year/month/day/hour/min/sec  */
-
-   int            headerCount;       /* Count of header items written.        */
-
-   uint16         fileBuffer[1440];  /* 2880 byte buffer for FITS file.       */
-                                     /* [assumes sizeof(uint16)=2].           */
-   uint16*        pFileData;
-   int            nBlocks;
-   int            block;
-   int            extra;
-
-
-   /*
-    * Check the parameters provided.
-    */
-
-   if (pImageBuffer == NULL)
-   {
-      ERROR_SET (S_detControl_INTERNAL, "No image buffer defined", 
-                 ERROR_LOG_SAVE);
-      return (ERROR);
-   }
-
-   if ( (xPixels <= 0) || (yPixels <= 0) )
-   {
-      ERROR_SET2 (S_detControl_BAD_ATTRIBUTE,
-         "Bad number of pixels given, %d X %d", ERROR_LOG_SAVE,
-         xPixels, yPixels);
-      return (ERROR);
-   }
-
-   /*
-    * Convert the time stamps from Gemini raw time into Universal Time
-    * and construct these into character strings.
-    */
-
-   if (timeThenC ( obsId->rawtStart, UT1, 2, timeArrayStart ) != OK)
-   {
-      ERROR_SET (0, 
-      "Failed to convert time stamp at observation start to date/time",
-      ERROR_LOG_NOW);
-   }
-
-   if (timeThenC ( obsId->rawtEnd, UT1, 2, timeArrayEnd ) != OK)
-   {
-      ERROR_SET (0, 
+      ERROR_SET (0,
       "Failed to convert time stamp at observation end to date/time",
       ERROR_LOG_NOW);
    }
 
-   fp = fopen (filename, "w");
+   sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
+            obsId->timeArrayEnd[0], obsId->timeArrayEnd[1],
+            obsId->timeArrayEnd[2], obsId->timeArrayEnd[3],
+            obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
 
-   if (fp == NULL)
+   elapsedTime =  (obsId->rawtEnd - obsId->rawtStart);
+
+   wfsGetTelName ( telName ) ;
+
+   strcpy ( bunit, DET_BUNIT ) ;
+
+   /* Create the FITS file */
+
+   pFile = fopen ( filename , "w" );
+
+   if ( pFile == (FILE *)NULL )
    {
-      ERROR_SET(0, "Can't create/open FITS file", ERROR_LOG_SAVE);
+      ERROR_SET1 ( 0, "Can't create FITS file %s", ERROR_LOG_SAVE,
+                   filename );
       return (ERROR);
    }
 
-   headerCount = 0;
+   /* Write a complete header */
 
-   fprintf (fp, "SIMPLE  =                    T /                                                ");
-   headerCount++;
-   fprintf (fp, "BITPIX  =                  -32 /                                                ");
-   headerCount++;
-   fprintf (fp, "NAXIS   =                    2 /                                                ");
-   headerCount++;
-   fprintf (fp, "NAXIS1  =                %5d /                                                ", xPixels);
-   headerCount++;
-   fprintf (fp, "NAXIS2  =                %5d /                                                ", yPixels);
-   headerCount++;
-   fprintf (fp, "BZERO   =                    0 /                                                ");
-   headerCount++;
-   fprintf (fp, "EXTEND  =                    T /                                                ");
-   headerCount++;
-   fprintf (fp, "UTSTART ='%04d-%02d-%02d:%02d:%02d:%02d' /                                                ",
-            timeArrayStart[0], timeArrayStart[1], timeArrayStart[2], 
-            timeArrayStart[3], timeArrayStart[4], timeArrayStart[5]);
-   headerCount++;
-   fprintf (fp, "UTEND   ='%04d-%02d-%02d:%02d:%02d:%02d' /                                                ",
-            timeArrayEnd[0], timeArrayEnd[1], timeArrayEnd[2], 
-            timeArrayEnd[3], timeArrayEnd[4], timeArrayEnd[5]);
-   headerCount++;
+   counter = 0;
 
-   fprintf (fp, "EXPTIME =      %15f /                                                ", obsId->exposed);
-   headerCount++;
-   fprintf (fp, "ELAPSED =      %15f /                                                ", (obsId->rawtEnd - obsId->rawtStart));
-   headerCount++;
-   fprintf (fp, "INSTRUME='%20s'/                                                ", obsId->pWfsName);
-   headerCount++;
-   fprintf (fp, "OBSTYPE ='%20s'/                                                ", obsId->pObsType);
-   headerCount++;
+   fprintf ( pFile, "SIMPLE  =                    T /                                                " );
+   counter ++;
+   fprintf ( pFile, "BITPIX  =                  -32 /                                                " );
+   counter ++;
+   fprintf ( pFile, "NAXIS   =                    2 /                                                " );
+   counter ++;
+   fprintf ( pFile, "NAXIS1  =                %5d /                                                ", xPixels );
+   counter ++;
+   fprintf ( pFile, "NAXIS2  =                %5d /                                                ", yPixels );
+   counter ++;
+   fprintf ( pFile, "BZERO   =                    0 /                                                " );
+   counter ++;
+   fprintf ( pFile, "EXTEND  =                    T /                                                " );
+   counter ++;
+   fprintf ( pFile, "UTEND   ='%20s'/                                                ", obsId->utEndString );
+   counter ++;
+   fprintf ( pFile, "UTSTART ='%20s'/                                                ", obsId->utStartString );
+   counter ++;
+   fprintf ( pFile, "EXPTIME =      %15f /                                                ", obsId->exposureTime);
+   counter ++;
+   fprintf ( pFile, "DARKTIME=      %15f /                                                ", obsId->exposureTime);
+   counter ++;
+   fprintf ( pFile, "ELAPSED =      %15f /                                                ", elapsedTime);
+   counter ++;
+   fprintf ( pFile, "TELESCOP='%20s'/                                                ", telName);
+   counter ++;
+   fprintf ( pFile, "INSTRUME='%20s'/                                                ", obsId->pWfsName);
+   counter ++;
+   fprintf ( pFile, "OBSERVAT='%20s'/                                                ", telName);
+   counter ++;
+   fprintf ( pFile, "BUNIT   ='%20s'/                                                ", bunit);
+   counter ++;
+   fprintf ( pFile, "UNITS   ='%20s'/                                                ", bunit);
+   counter ++;
+   fprintf ( pFile, "OBSTYPE ='%20s'/                                                ", obsId->pObsType);
+   counter ++;
 
    if ( obsId->wcsStatus == 0 )
    {
-      fprintf (fp, "CTYPE1  ='%20s'/                                                ", obsId->ctype1);
-      headerCount++;
-      fprintf (fp, "CRPIX1  =      %15f /                                                ", obsId->crpix1);
-      headerCount++;
-      fprintf (fp, "CRVAL1  =      %15f /                                                ", obsId->crval1);
-      headerCount++;
-      fprintf (fp, "CTYPE2  ='%20s'/                                                ", obsId->ctype2);
-      headerCount++;
-      fprintf (fp, "CRPIX2  =      %15f /                                                ", obsId->crpix2);
-      headerCount++;
-      fprintf (fp, "CRVAL2  =      %15f /                                                ", obsId->crval2);
-      headerCount++;
-      fprintf (fp, "CD1_1   =      %15f /                                                ", obsId->cd1_1);
-      headerCount++;
-      fprintf (fp, "CD1_2   =      %15f /                                                ", obsId->cd1_2);
-      headerCount++;
-      fprintf (fp, "CD2_1   =      %15f /                                                ", obsId->cd2_1);
-      headerCount++;
-      fprintf (fp, "CD2_2   =      %15f /                                                ", obsId->cd2_2);
-      headerCount++;
-      fprintf (fp, "EQUINOX =      %15f /                                                ", obsId->equinox);
-      headerCount++;
-      fprintf (fp, "RADECSYS='%20s'/                                                ", obsId->radecsys);
-      headerCount++;
-   }
-   fprintf (fp, "MJDOBS  =      %15f /                                                ", obsId->mjdobs);
-   headerCount++;
-   fprintf (fp, "END                                                                             ");
-   headerCount++;
-
-   /*
-    * Fill up the remaining header records (which must be a whole number of
-    * 2880-byte or 36-line blocks) with blanks.
-    */
-
-   headerCount = headerCount % 36;
-
-   for ( i=headerCount; i<36; i++)
-   {
-      fprintf (fp, "                                                                                ");
+      fprintf ( pFile, "CTYPE1  ='%20s'/                                                ", obsId->ctype1);
+      counter ++;
+      fprintf ( pFile, "CRPIX1  =      %15f /                                                ", obsId->crpix1);
+      counter ++;
+      fprintf ( pFile, "CRVAL1  =      %15f /                                                ", obsId->crval1);
+      counter ++;
+      fprintf ( pFile, "CTYPE2  ='%20s'/                                                ", obsId->ctype2);
+      counter ++;
+      fprintf ( pFile, "CRPIX2  =      %15f /                                                ", obsId->crpix2);
+      counter ++;
+      fprintf ( pFile, "CRVAL2  =      %15f /                                                ", obsId->crval2);
+      counter ++;
+      fprintf ( pFile, "CD1_1   =      %15f /                                                ", obsId->cd1_1);
+      counter ++;
+      fprintf ( pFile, "CD1_2   =      %15f /                                                ", obsId->cd1_2);
+      counter ++;
+      fprintf ( pFile, "CD2_1   =      %15f /                                                ", obsId->cd2_1);
+      counter ++;
+      fprintf ( pFile, "CD2_2   =      %15f /                                                ", obsId->cd2_2);
+      counter ++;
+      fprintf ( pFile, "RADECSYS='%20s'/                                                ", obsId->radecsys);
+      counter ++;
    }
 
-   /*
-    * Subtract 32768 from the image data to counteract the BZERO=32768 in the 
-    * FITS header.
-    * (This is necessary because FITS readers will assume the data are signed).
-    */
+   fprintf ( pFile, "RA      =      %15f /                                                ", obsId->RA);
+   counter ++;
+   fprintf ( pFile, "DEC     =      %15f /                                                ", obsId->Dec);
+   counter ++;
+   fprintf ( pFile, "EQUINOX =      %15f /                                                ", obsId->equinox);
+   counter ++;
+   fprintf ( pFile, "MJDOBS  =      %15f /                                                ", obsId->mjdobs);
+   counter ++;
+   fprintf ( pFile, "XBIN    =                %5d /                                                ", obsId->aoCcdId->xBin);
+   counter ++;
+   fprintf ( pFile, "YBIN    =                %5d /                                                ", obsId->aoCcdId->yBin);
+   counter ++;
+   fprintf ( pFile, "DATASEC ='%20s'/                                                ", obsId->dataSec);
+   counter ++;
+   fprintf ( pFile, "CCDSEC  ='%20s'/                                                ", obsId->ccdSec);
+   counter ++;
+   fprintf ( pFile, "ORIGSEC ='%20s'/                                                ", obsId->origSec);
+   counter ++;
+   fprintf ( pFile, "DETTYPE ='%20s'/                                                ", obsId->detType);
+   counter ++;
+   fprintf ( pFile, "DETID   ='%20s'/                                                ", obsId->detId);
+   counter ++;
+   fprintf ( pFile, "END                                                                             ");
+   counter ++;
 
-   nPixels = xPixels * yPixels;
+   /* Fill the rest of the header with blanks: header 36 * 80 char */
 
-   ptr = pImageBuffer;
-   for ( i=0; i<nPixels; i++)
+   /*printf ( "counter = %d\n" , counter );*/
+   counter = counter % 36 ;
+   /*printf ( "counter = %d\n" , counter );*/
+   if ( counter != 0 )
    {
-      value = (int) *(ptr);
-      value -= 32768;
-      *(ptr) = (uint16) value;
-      ptr++;
+      for ( i = counter ; i < 36 ; i ++ )
+          fprintf ( pFile, "                                                                                " );
    }
 
-   /* write image data in 2880-byte blocks */
+   /* Write the image in 2880 byte blocks to the Fits file */
 
-   nPixels = xPixels * yPixels;
+   bufferSize = xPixels * yPixels;
 
-   nBlocks = nPixels / 1440;
-   extra   = nPixels % 1440;
+   extra = (bufferSize*4) % 2880;
 
-   pFileData = pImageBuffer;
-   for (block=0; block<nBlocks; block++)
+   /*printf ( "extra=%d\n", extra );*/
+
+   if ( fwrite ( pImageBuffer, sizeof (float), bufferSize, pFile ) != 
+        bufferSize )
    {
-      if ( fwrite (pFileData, sizeof (uint16), 1440, fp) != 1440 )
-      {
-         ERROR_SET(0, "Problem writing FITS output file", ERROR_LOG_SAVE);
-         fclose (fp);
-         return (ERROR);
-      }
-      pFileData += 1440;
-   }
+      ERROR_SET1 ( 0, "Failed to write image into %s",
+                   ERROR_LOG_SAVE, filename );
 
-   if ( extra > 0 )
-   {
-      for (i=0; i<extra; i++)
-         fileBuffer[i] = *pFileData++;
-      for (; i<1440; i++)                  /* Pad remainder of block */
-         fileBuffer[i] = 0;
-
-      if ( fwrite (fileBuffer, sizeof (uint16), 1440, fp) != 1440 )
-      {
-         ERROR_SET(0, "Problem writing FITS output file", ERROR_LOG_SAVE);
-         fclose (fp);
-         return (ERROR);
-      }
-   }
-
-   /* tidy up */
-
-   if (fclose (fp))
-   {
-      ERROR_SET(0, "Problem closing FITS output file", ERROR_LOG_SAVE);
+      fclose ( pFile );
       return (ERROR);
    }
 
-   return (OK);
+   if ( extra != 0 )
+   {
+      extra = (2880 - extra)/4;
+      /*printf ( "extra=%d\n", extra );*/
+      for ( i = 0 ; i < extra ; i ++ )
+          extraBuffer[i]=0;
+
+      if ( fwrite ( extraBuffer, sizeof (float), extra, pFile ) != 
+           extra )
+      {
+         ERROR_SET1 ( 0, "Failed to fill with zero image into %s",
+                      ERROR_LOG_SAVE, filename );
+
+         fclose ( pFile );
+         return (ERROR);
+      }
+   }
+
+   /* Close the fits file */
+
+   fclose ( pFile ) ;
+
+   return ( OK ) ;
 }
-
-/* -------------------------------------------------------------------------- */
-
-void detDhsErrorCallback         /* DHS error callback function.              */
-   (
-   DHS_CONNECT     connect,      /* DHS connection ID for connection causing  */
-                                 /* error.                                    */
-   DHS_STATUS      errorNum,     /* DHS error number.                         */
-   DHS_ERR_LEVEL   errorLev,     /* DHS error level.                          */
-   char *          msg,          /* DHS error message string.                 */
-   DHS_TAG         tag,          /* DHS command tag of the error.             */
-   void *          userData      /* Pointer to user data (if any).            */
-   )
-{
-   printErr ("DHS error callback: connection=%d errNum=%d level=%d \"%s\"\n",
-             (int) connect, (int) errorNum, (int) errorLev, msg);
-}
-
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detDhsInit
+ *   detSigModeSeqDark
  *
  *   INVOCATION:
- *   detDhsInit (pClientName, numConnect, pHostName, pSeverName)
+ *   detSigModeSeqDark (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pClientName  (const char *)  Unique name for DHS client.
- *   (>) numConnect   (const int)     Maximum number of DHS connections.
- *   (>) pHostName    (const char *)  Name of DHS data server host.
- *   (>) pServerName  (const char *)  Name of DHS data server.
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
  *
  *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Initialise the DHS library and define DHS server information
+ *   Execute detSigModeSeqDark command
  *
  *   DESCRIPTION:
- *   This function initialises the DHS library and sets up the DHS server 
- *   information used by the detector controller.
+ *   This function defines the AO processing mode to sequence dark.
  *
  *   EXTERNAL VARIABLES:
- *   (<) detDhsInitialised (BOOL)   DHS initialised flag.
- *   (<) detDhsSem         (SEM_ID) DHS semaphore
- *   (<) pDetDhsClientName (char *) Current name of DHS client= Instrument name.
- *   (<) pDetDhsHostName   (char *) Current name of DHS server host.
- *   (<) pDetDhsServerName (char *) Current name of DHS server.
+ *   None. (The function needs to be reentrant)
+ *
  *
  *   PRIOR REQUIREMENTS:
  *   None
  *
  *   INCLUDE FILES:
  *   detControl.h
- *   dhs.h
  *
  *   DEFICIENCIES:
  *   None known
- *
- *   BUGS:
- *   There is a bug in the DHS event loop which causes it to hang up the 
- *   VxWorks crate when an attempt is made to start it. This call is commented 
- *   out, which means that a DHS event loop will not be running. Without an 
- *   event loop the software must call dhsWait() explicitly to wait for the 
- *   completion of each asynchronous command.
- *   SMB - 14 Sep 1998.
- *
- *   It is rumoured that the above bug has been fixed. Event loop call 
- *   tentatively restored. SMB - 16 Nov 1998.
  *-
  */
-
-STATUS detDhsInit
+uint32 detSigModeSeqDark
    (
-   const char *   pClientName,      /* Unique name of DHS client.             */
-   const int      numConnect,       /* Maximum number of DHS connections.     */
-   const char *   pHostName,        /* Name of data server host.              */
-   const char *   pServerName       /* Name of server.                        */
+   const char *    pRecordPrefix,       /* Record Name Prefix.                */
+   CAD_CMD_CONTEXT cadCmdContext,       /* CAD command context structure.     */
+   int             commandNumber,       /* Command number.                    */
+   SDSU_ID         sdsuId,              /* SDSU context structure.            */
+   OBS_ID          obsId                /* Observation context structure.     */
    )
 {
-   DHS_STATUS     dhsErrno;         /* DHS error number.                      */
-   DHS_THREAD     dhsThreadId;      /* DHS thread ID.                         */
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nCoaddFrames;   /* Image number to average                    */
+   long         nAverageData;   /* Number of data to average.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+   double       multCoeff;      /* Multiplicative coefficients for rms value  */
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                              /* Path name for files.                         */
+   char         pCoaddFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pFullCoaddFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
 
-   /* Initialise the DHS error number. */
-
-   dhsErrno = DHS_S_SUCCESS;        /* <--- DHS error number initialised here.*/
+   char         pDarkFileName [STRING_SIZE];
 
    /*
-    * Check the DHS library has not already been initialised.
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
     */
 
-   if (detDhsInitialised)
+   errorNumber = 0;
+   sigMode = AO_MODE_SEQ_DARK;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                          (char *) & nCoaddFrames);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3,
+                          (char *) & nAverageData);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&multCoeff);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
    {
-      ERROR_SET (S_detControl_DHS_ERROR, "DHS already initialised", 
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
                  ERROR_LOG_NOW);
-      return (ERROR);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
    }
 
-   /* Create the DHS semaphore and take it, ensuring that only one task 
-    * attempts to initialise the DHS and update the DHS global variables.
-    */
-
-   detDhsSem = semMCreate( SEM_Q_FIFO | SEM_DELETE_SAFE );
-   if ( (detDhsSem == NULL) || (semTake (detDhsSem, NO_WAIT) == ERROR) )
+   if ( obsId == NULL )
    {
-      ERROR_SET (0, "Failed to create and take DHS semaphore", ERROR_LOG_NOW);
-      semGive (detDhsSem);
-      return (ERROR);
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
    }
 
    /*
-    * Initialise the DHS, specifying a unique name and maximum number of 
-    * connections.
+    * The command cannot be used when an observation is in progress.
     */
 
-#ifdef DEBUG
-   printf ("detDhsInit: dhsInit pClientName=%s numConnect=%d\n", 
-           pClientName, numConnect);
-#endif /* DEBUG */
-
-   dhsInit (pClientName, numConnect, &dhsErrno);
-   CHECK_DHS (dhsErrno);
-
-   if (dhsErrno != DHS_S_SUCCESS)
+   if ( obsId->observing )
    {
-      ERROR_SET1 (S_detControl_DHS_ERROR, 
-                  "Failed to initialise DHS (dhsErrno=%d)",
-                  ERROR_LOG_SAVE, dhsErrno);
-      semGive (detDhsSem);
-      return (ERROR);
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
    }
 
-   /* Set up callbacks. */
+   MESSAGE_LOG3 (MSG_LOG,
+      "Signal processing switched to \"Sequence dark\" mode - "
+      "nCoaddFrames=%d, nAverageData=%d, multCoeff=%f",
+      (int)nCoaddFrames, (int)nAverageData, (float)multCoeff);
 
-#ifdef DEBUG
-   printf (
-   "detDhsInit: dhsCallbackSet DHS_CBT_ERROR=%d detDhsErrorCallback=%p\n",
-   DHS_CBT_ERROR, detDhsErrorCallback);
-#endif /* DEBUG */
-
-   dhsCallbackSet (DHS_CBT_ERROR, detDhsErrorCallback, &dhsErrno);
-   CHECK_DHS (dhsErrno);
-
-   if (dhsErrno != DHS_S_SUCCESS)
+   if (epToVxPipeWrite (NULL, "Sequence Dark",
+                        obsId->pAoProcessModeContext) == ERROR)
    {
-      ERROR_SET1 (S_detControl_DHS_ERROR, 
-         "Failed to set up DHS error callback (dhsErrno=%d)",
-         ERROR_LOG_SAVE, dhsErrno);
-      semGive (detDhsSem);
-      return (ERROR);
+      ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
    }
+
+   /* First set the dark to null values */
+
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+   {
+      strcpy ( pDarkFileName, "./data/defFullP2Dark.fits" );
+   }
+   else
+   {
+      strcpy ( pDarkFileName, "./data/defBinP2Dark.fits" );
+   }
+
+   if ( aoDarkUpdate ( pDarkFileName, obsId->aoCcdId, obsId->aoCtrlId)
+        == ERROR )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Can't set the dark to null",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if (epToVxPipeWrite (NULL, pDarkFileName, obsId->pAoDarkInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+   }
+
+   /* Combine file and path name for coadd file name */
+
+   detCreateFileName ( pFilePath ,
+                       pCoaddFileName ,
+                       pFullCoaddFileName ) ;
+
+   obsId->nCoaddFrames = nCoaddFrames;
+   strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
+            (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
 
    /*
-    * Start the DHS event loop.
-    *
-    * BUG WORK AROUND - THIS CODE COMMENTED OUT - SEE "BUGS" SECTION IN HEADER.
-    * REINSTATED - SMB 16 NOV 98
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
     */
 
-#ifdef DEBUG
-   printf ("detDhsInit: dhsEventLoop DHS_ELT_THREADED=%d ... ", 
-           DHS_ELT_THREADED);
-#endif /* DEBUG */
+   obsId->sigMode = sigMode;
+   obsId->nAverageDataThreshComp = nAverageData;
+   obsId->multCoeffRmsThreshComp = multCoeff;
+   obsId->aoCtrlId->thresholdMultCoeff = multCoeff;
 
-   dhsEventLoop (DHS_ELT_THREADED, &dhsThreadId, &dhsErrno);
-   CHECK_DHS (dhsErrno);
 
-#ifdef DEBUG
-   printf ("dhsThreadId=%d dhsErrno=%d\n", dhsThreadId, dhsErrno);
-#endif /* DEBUG */
+   /* Init the fields of the observe CAD record */
 
-   if (dhsErrno != DHS_S_SUCCESS)
+   nExp = nCoaddFrames + nAverageData;
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
    {
-      ERROR_SET1 (S_detControl_DHS_ERROR, 
-         "Failed to start DHS event loop (dhsErrno=%d)",
-         ERROR_LOG_SAVE, dhsErrno);
-      semGive (detDhsSem);
-      return (ERROR);
+      ERROR_LOG ( "Failed to initialise fields of observe record");
    }
 
-   /* Store the given client name, host name and server name in global 
-    * variables.
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
     */
 
-   strncpy (pDetDhsClientName, pClientName, EPICS_MAX_BYTES_STRING_ATTRIB);
-   strncpy (pDetDhsHostName, pHostName, EPICS_MAX_BYTES_STRING_ATTRIB);
-   strncpy (pDetDhsServerName, pServerName, EPICS_MAX_BYTES_STRING_ATTRIB);
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
 
-   /* Finally, set the detDhsInitialised flag and return the semaphore. */
-
-   detDhsInitialised = TRUE;
-   semGive (detDhsSem);
-
-   return (OK);
+   return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detDhsConnect
+ *   detSigModeFgCoadd
  *
  *   INVOCATION:
- *   detDhsConnect (pWfsName, pDhsConnection)
+ *   detSigModeFgCoadd (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName       (const char *)  Name of wavefront sensor p2
- *   (<) pDhsConnection (DHS_CONNECT *) Pointer to DHS connection ID
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
  *
  *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Initialise connection to DHS for a particular WFS
+ *   Execute detSigModeFgCoadd command
  *
  *   DESCRIPTION:
- *   This function initialises the connection to the DHS.
- *
- *   EXTERNAL VARIABLES:
- *   (>)   detDhsInitialised   (BOOL)        DHS initialised flag
- *   (>)   pDetDhsHostName     (char *)      DHS server host name
- *   (>)   pDetDhsServerName   (char *)      DHS server name
- *
- *   PRIOR REQUIREMENTS:
- *   The DHS library should already have been initialised by calling detDhsInit.
- *
- *   INCLUDE FILES:
- *   detControl.h
- *   dhs.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-STATUS detDhsConnect
-   (
-   const char *   pWfsName,           /* Name of wavefront sensor.            */
-   DHS_CONNECT *  pDhsConnection      /* Pointer to DHS connection.           */
-   )
-{
-   DHS_STATUS     dhsErrno;           /* DHS error number.                    */
-
-
-   /* Initialise the DHS error number. */
-
-   dhsErrno = DHS_S_SUCCESS;
-
-   /*
-    * Check the DHS library has been initialised.
-    */
-
-   if (!detDhsInitialised)
-   {
-      ERROR_SET (S_detControl_DHS_ERROR, "DHS not initialised", ERROR_LOG_NOW);
-      return (ERROR);
-   }
-
-   /*
-    * Take the DHS semaphore, so that only one WFS attempts to connect to the 
-    * DHS and access the pDetDhsHostName and pDetDhsServerName global variables 
-    * at any one time.
-    */
-
-#ifdef DEBUG
-   printf ("detDhsConnect: Taking DHS semaphore for WFS %s...\n", pWfsName);
-#endif /* DEBUG */
-
-   if ( semTake (detDhsSem, DHS_WAIT_TIMEOUT) == ERROR )
-   {
-      ERROR_SET (0, "Failed to take DHS semaphore", ERROR_LOG_NOW);
-      semGive (detDhsSem);
-      return (ERROR);
-   }
-
-   /*
-    * Connect to the DHS server. There is no user data to be supplied 
-    * (hence NULL).
-    */
-
-   MESSAGE_LOG2 (MSG_LOG, "Connecting to DHS server %s on host %s",
-      pDetDhsServerName, pDetDhsHostName);
-
-   *pDhsConnection = dhsConnect (pDetDhsHostName, pDetDhsServerName, NULL, 
-                                 &dhsErrno);
-   CHECK_DHS (dhsErrno);
-
-#ifdef DEBUG
-   printf ("dhsConnect: dhsConnection=%ld dhsErrno=%d\n", *pDhsConnection, 
-           dhsErrno);
-#endif /* DEBUG */
-
-   if (dhsErrno != DHS_S_SUCCESS)
-   {
-      ERROR_SET3 (S_detControl_DHS_ERROR, 
-         "Failed to connect to DHS server %s on %s (dhsErrno=%d)",
-         ERROR_LOG_SAVE, pDetDhsServerName, pDetDhsHostName, dhsErrno);
-      semGive (detDhsSem);
-      return (ERROR);
-   }
-
-   /* Finally, return the semaphore. */
-
-   semGive (detDhsSem);
-
-   return (OK);
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detDhsCheckErrno
- *
- *   INVOCATION:
- *   detDhsCheckErrno (dhsErrno, line, filename)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) dhsErrno   (const DHS_STATUS)  DHS error number (unchanged)
- *   (>) line       (const int)         Line number to report
- *   (>) filename   (const char *)      File name to report
- *
- *   FUNCTION VALUE:
- *   None
- *
- *   PURPOSE:
- *   Check DHS error number and report any error messages
- *
- *   DESCRIPTION:
- *   This function checks the DHS error number provided. If the status suggests 
- *   an error has occurred, the dhsMessage() functions are used to extract 
- *   information from the DHS message stack.
- *   This function should be called after every DHS function to ensure all the 
- *   relevant DHS errors are reported.
+ *   This function defines the AO processing mode to fast guide and focus and
+ *   coadd.
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -9723,207 +14865,157 @@ STATUS detDhsConnect
  *
  *   INCLUDE FILES:
  *   detControl.h
- *   dhs.h
  *
  *   DEFICIENCIES:
  *   None known
- *
- *   BUGS:
- *   This function appears to cause problems with the DHS. 
- *   For the time being its contents are commented out and replaced by a 
- *   trivial report. SMB - 17 Jan 1999. 
  *-
  */
 
-void detDhsCheckErrno
+uint32 detSigModeFgCoadd
    (
-   const DHS_STATUS  dhsErrno,        /* DHS error number.                    */
-   const int         line,            /* Line number.                         */
-   const char *      filename         /* File name.                           */
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
    )
 {
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nCoaddFrames;   /* Number of frames to coadd.                 */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+
+   char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                              /* Path name for files.                         */
+   char         pCoaddFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pFullCoaddFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
 
    /*
-    * If the DHS error number is ok, this function will return without doing 
-    * anything.
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
     */
 
-   if ( dhsErrno != DHS_S_SUCCESS )
+   errorNumber = 0;
+   sigMode = AO_MODE_FG_FOCUS_COADD;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                          (char *) & nCoaddFrames);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
    {
-      errorSet ( line, filename, 0, "DHS error detected", ERROR_LOG_NOW );
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
    }
 
-   return;
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   MESSAGE_LOG1 (MSG_LOG,
+   "Signal processing switched to \"FG Focus + Coadd\" mode - nCoaddFrames=%ld",
+   nCoaddFrames);
+   if (epToVxPipeWrite (NULL, "Fast Guide, Focus and Coadd",
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+        "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /* Combine file and path name for coadd file name */
+
+   detCreateFileName ( pFilePath ,
+                       pCoaddFileName ,
+                       pFullCoaddFileName ) ;
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   obsId->sigMode = sigMode;
+   obsId->nCoaddFrames = nCoaddFrames;
+   strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
+            (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = nCoaddFrames; /* nCoaddFrames exposures */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
 }
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detDhsCheckCmdStatus
+ *   detInitObserbeRecord
  *
  *   INVOCATION:
- *   detDhsCheckCmdStatus (dhsTag)
+ *   detInitObserbeRecord (pRecordPrefix, nExp, expTime, outOption)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>)   dhsTag   (const DHS_TAG)      DHS command tag (unchanged)
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Check and reports DHS command status 
- *
- *   DESCRIPTION:
- *   This function checks the DHS command status and reports a message if the 
- *   status is not DHS_CS_DONE.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *   dhs.h
- *
- *   DEFICIENCIES:
- *   The DHS allocates a buffer to store the command status message. It would
- *   be more sensible if the buffer was allocated here and provided to the DHS,
- *   as there would then be more control over the buffer. At the moment the
- *   buffer has to be explicitly freed because the DHS does not do this.
- *   SMB - 17 Jan 1998.
- *-
- */
-
-STATUS detDhsCheckCmdStatus
-   (
-   const DHS_TAG   dhsTag            /* DHS command tag.                      */
-   )
-{
-   DHS_CMD_STATUS  sendStatus;       /* DHS command status.                   */
-   DHS_STATUS      dhsErrno;         /* DHS error number.                     */
-   char            *msg = NULL;      /* Command status message.               */
-
-
-   /* Initialise the DHS error number */
-
-   dhsErrno = DHS_S_SUCCESS;
-
-   /*
-    * Query the command status associated with the tag.
-    * Note that the DHS allocates a buffer to hold the command status message
-    * and returns a pointer to this buffer in "msg".
-    */
-
-#ifdef DEBUG
-   printf ("detDhsCheckCmdStatus: dhsStatus\n");
-#endif /* DEBUG */
-
-   /*sendStatus = dhsStatus (dhsTag, &msg, &dhsErrno);
-   CHECK_DHS (dhsErrno);*/
-
-   sendStatus = DHS_CS_DONE ;
-
-   /*
-    * Check that the query worked and report an error if it didn't.
-    * If the query returned DHS_CS_DONE nothing more needs to be done.
-    * Any other command status is reported as an error.
-    */
-
-   if ( dhsErrno != DHS_S_SUCCESS )
-   {
-
-      ERROR_SET2 (0, 
-         "Failed to query DHS command status for tag %ld, (dhsErrno=%d)",
-         ERROR_LOG_SAVE, dhsTag, dhsErrno);
-
-      /* Free the message buffer if allocated. */
-      if ( msg != NULL ) free (msg);
-      return (ERROR);
-   }
-   else if ( sendStatus != DHS_CS_DONE )
-   {
-      switch (sendStatus)
-      {
-         case (DHS_CS_IDLE):
-
-            ERROR_SET1 (0, 
-               "Command still waiting to execute, %s", ERROR_LOG_SAVE, msg);
-            break;
-
-         case (DHS_CS_BUSY):
-
-            ERROR_SET1 (0, 
-               "Command is still executing, %s", ERROR_LOG_SAVE, msg);
-            break;
-   
-         case (DHS_CS_ERROR):
-
-            ERROR_SET1 (0, "Command completed with error, %s",
-                       ERROR_LOG_SAVE, msg);
-            break;
-
-         case (DHS_CS_ABORTED):
-
-            ERROR_SET1 (0, "Command was aborted, %s.", ERROR_LOG_SAVE, msg);
-            break;
-
-         case (DHS_CS_PENDING):
-
-            ERROR_SET1 (0, "Command is still pending, %s", ERROR_LOG_SAVE, msg);
-            break;
-
-         case (DHS_CS_LOST):
-
-            ERROR_SET1 (0, "Connection was lost before command completed, %s",
-                       ERROR_LOG_SAVE, msg);
-            break;
-
-         default:
-            ERROR_SET2 (0, 
-               "Unknown command status, %d, %s", ERROR_LOG_SAVE, sendStatus, 
-               msg);
-            break;
-      }
-
-      /* Free the message buffer if allocated. */
-      if ( msg != NULL ) free (msg);
-
-      return (ERROR);
-   }
-
-   return (OK);
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detDownloadDefault
- *
- *   INVOCATION:
- *   detDownloadDefault (pWfsName, pRecordPrefix, sdsuId)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName      (const char *) Name of wavefront sensor p2
  *   (>) pRecordPrefix (const char *) Record Name prefix
- *   (>) sdsuId        (SDSU_ID)      Current SDSU context structure
+ *   (>) pNExp         (long *)       Number of exposures
+ *   (>) pExpTime      (double *)     Exposure time
+ *   (>) pOutOption    (long *)       Output option (NONE, DHS, FILE)
  *
  *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Download default OMF files
+ *   Initialize the fields of the observe CAD record
  *
  *   DESCRIPTION:
- *   This function downloads DSP code from the default OMF files. Executed on 
- *   startup.
+ *   Initialize the fields of the observe CAD record according to the signal 
+ *   processing
  *
  *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
+ *   None. 
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -9936,669 +15028,154 @@ STATUS detDhsCheckCmdStatus
  *-
  */
 
-STATUS detDownloadDefault
+uint32 detInitObserveRecord
    (
-   const char *   pWfsName,         /* Name of wavefront sensor.              */
-   const char *   pRecordPrefix,    /* Record Name prefix                     */
-   SDSU_ID        sdsuId            /* SDSU context structure.                */
+   const char *    pRecordPrefix,   /* Record Name Prefix  */
+   long *          pNExp,           /* Number of exposures */
+   double *        pExpTime,        /* Exposure time       */
+   long *          pOutOption       /* Output option       */
    )
 {
-   char         pFullOmfFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-                             /* Combined path name and file name.             */
-   /* 
-    * Variables associated with "Download OMF file" command.
-    * (omfPath, vmeFile, timFile and utlFile use general filename parameters)
-    */
+   uint32       errorNumber=0;  /* Error number reported by task.             */
+   long         value;
+   char         message [EPICS_MAX_BYTES_STRING_ATTRIB * 2];
+   char         pRecordName [EPICS_MAX_BYTES_RECORD_NAME + 1];
+                                /* String to store record fields.         */
+   char         label [EPICS_MAX_BYTES_RECORD_NAME + 1];
+   char         path [EPICS_MAX_BYTES_RECORD_NAME + 1];
+   char         file [EPICS_MAX_BYTES_RECORD_NAME + 1];
+   char         sim [EPICS_MAX_BYTES_RECORD_NAME + 1];
 
-   BOOL         limitAdrsRange;      
-                             /* Flag for limiting address range in DSP memory */
+#ifdef DEBUG
+   printf ( "detInitObserverecord(%s,%d,%f,%d)\n", pRecordPrefix, *pNExp, 
+            *pExpTime, *pOutOption);
+#endif
 
-   /*uint32       mode;*/
+   /* Init the field A of the observe CAD record */
 
-   /*
-    * Check there is a valid SDSU context structure.
-    */
-
-   if ( sdsuId == NULL )
+   sprintf ( pRecordName, "%s%s:%s.A", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   if ( cicsDbPut (pRecordName, message, DBF_LONG, pNExp) == ERROR )
    {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
-                 ERROR_LOG_NOW);
-      return (ERROR);
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
    }
 
-   /*
-    * Download default OMF code to the VME DSP, unless the default file name is
-    * "NONE" or blank. If the code could not be downloaded, the controller 
-    * health is set "BAD", since it cannot do anything until this code is 
-    * downloaded.
-    */
+   /* Init the field B of the observe CAD record */
 
-   if ( (strcmp (DET_CONTROL_OMF_VME_FILE, "") != 0) &&
-       (strcmp (DET_CONTROL_OMF_VME_FILE, "NONE") != 0)
-      )
+   sprintf ( pRecordName, "%s%s:%s.B", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   /*if ( cicsDbPut (pRecordName, message, DBF_DOUBLE, pExpTime) == ERROR )*/
+   if ( cicsDbPut (pRecordName, message, 8, pExpTime) == ERROR )
    {
-
-      /* The ability to limit the address range is ignored. It is rarely needed
-       * and can only be done by executing sdsuFileDnload at the console (since
-       * sdsuFileDnload expects to prompt for the values).
-       */
-
-      limitAdrsRange = 0;
-
-      sprintf (pFullOmfFileName, "%s/%s", 
-               DET_CONTROL_OMF_FILE_PATH, DET_CONTROL_OMF_VME_FILE);
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to VME DSP...", 
-                    pFullOmfFileName);
-
-      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_VME, 
-                          limitAdrsRange) == ERROR)
-      {
-         ERROR_LOG ("Failed to download default OMF file to VME DSP");
-         epToVxSetHealth( pRecordPrefix, "BAD" );
-         return (ERROR);
-      }
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
    }
 
-   /*
-    * Download default OMF code to the TIMING DSP, unless the default file 
-    * name is "NONE" or blank. If the code could not be downloaded, the 
-    * controller health is set "BAD", since it cannot do anything until this 
-    * code is downloaded. 
-    */
+   /* Init the field C of the observe CAD record */
 
-
-   if ( (strcmp (DET_CONTROL_GBD_OMF_TIM_FILE, "") != 0) &&
-        (strcmp (DET_CONTROL_GBD_OMF_TIM_FILE, "NONE") != 0)
-      )
+   sprintf ( pRecordName, "%s%s:%s.C", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   if ( cicsDbPut (pRecordName, message, DBF_LONG, pOutOption) == ERROR )
    {
-
-      /* The ability to limit the address range is ignored. It is rarely needed
-       * and can only be done by executing sdsuFileDnload at the console (since
-       * sdsuFileDnload expects to prompt for the values).
-       */
-
-      limitAdrsRange = 0;
-
-      sprintf (pFullOmfFileName, "%s/%s", DET_CONTROL_OMF_FILE_PATH,
-               DET_CONTROL_GBD_OMF_TIM_FILE);
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to TIMING DSP...", 
-                    pFullOmfFileName);
-
-      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_TIM, 
-                          limitAdrsRange) == ERROR)
-      {
-         ERROR_LOG ("Failed to download default OMF file to TIMING DSP");
-         epToVxSetHealth( pRecordPrefix, "BAD" );
-         return (ERROR);
-      }
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
    }
 
-   /*
-    * Download default OMF code to the UTILITY DSP, unless the default file 
-    * name is "NONE" or blank. If the code could not be downloaded, the 
-    * controller health is set "BAD", since it cannot do anything until this 
-    * code is downloaded.
-    */
+   /* Init the field D of the observe CAD record */
 
-   if ( (strcmp (DET_CONTROL_OMF_UTL_FILE, "") != 0) &&
-       (strcmp (DET_CONTROL_OMF_UTL_FILE, "NONE") != 0)
-      )
+   sprintf ( pRecordName, "%s%s:%s.D", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy ( label, "NONE" );
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, label) == ERROR )
    {
-
-      /* The ability to limit the address range is ignored. It is rarely needed
-       * and can only be done by executing sdsuFileDnload at the console (since
-       * sdsuFileDnload expects to prompt for the values).
-       */
-
-      limitAdrsRange = 0;
-
-      sprintf (pFullOmfFileName, "%s/%s", DET_CONTROL_OMF_FILE_PATH, 
-               DET_CONTROL_OMF_UTL_FILE);
-      MESSAGE_LOG1 (MSG_LOG, "Downloading OMF file %s to UTILITY DSP...", 
-               pFullOmfFileName);
-
-      if (sdsuFileDnload (sdsuId, pFullOmfFileName, SDSU_IDENT_UTL, 
-               limitAdrsRange) == ERROR)
-      {
-         ERROR_LOG ("Failed to download default OMF file to UTILITY DSP");
-         epToVxSetHealth( pRecordPrefix, "BAD" );
-         return (ERROR);
-      }
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
    }
 
-   if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE", 160) == ERROR)
+   /* Init the field E of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.E", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   value = 2;
+   if ( cicsDbPut (pRecordName, message, DBF_LONG, &value) == ERROR )
    {
-      ERROR_LOG ("Failed to increase the PWFS packet size");
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
    }
 
-   /*
-    * After successfully downloading new OMF code, the controller must be 
-    * reinitialised by sending an "INI" command to the utility DSP and a 
-    * "LDP" command to the timing DSP.
-    */
+   /* Init the field F of the observe CAD record */
 
-   if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
+   sprintf ( pRecordName, "%s%s:%s.F", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy (path, "." );
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, path) == ERROR )
    {
-      ERROR_LOG ("Failed to initialise UTILITY DSP with INI command");
-      epToVxSetHealth( pRecordPrefix, "BAD" );
-      return (ERROR);
-   }
-   if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
-   {
-      ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
-      epToVxSetHealth( pRecordPrefix, "BAD" );
-      return (ERROR);
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
    }
 
-   return (OK);
+   /* Init the field G of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.G", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy (file, "pwfs2.fits");
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, file) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   /* Init the field H of the observe CAD record */
+
+   sprintf ( pRecordName, "%s%s:%s.H", TOP, pRecordPrefix, 
+             DET_CONTROL_OBSERVE_CAD_NAME);
+   /*printf ( "record name: %s\n" , pRecordName);*/
+   strcpy (sim, "NONE");
+   if ( cicsDbPut (pRecordName, message, DBF_STRING, sim) == ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise %s field");
+      errorNumber = S_detControl_INTERNAL;
+   }
+
+   return (errorNumber);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
- *   detCheckGeometry
+ *   detInitSigInit
  *
  *   INVOCATION:
- *   detCheckGeometry (pWfsName, sdsuId, pxMax, pyMax, pxPixels, pyPixels)
+ *   detInitSigInit (struct genSubRecord *pgsub)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName (const char *) Name of wavefront sensor p2
- *   (>) sdsuId   (SDSU_ID)      Current SDSU context structure
- *   (!) pxMax    (int *)        Maximum number of X pixels expected
- *   (!) pyMax    (int *)        Maximum number of Y pixels expected
- *   (!) pxPixels (int *)        Current number of X pixels expected
- *   (!) pyPixels (int *)        Current number of Y pixels expected
+ *   (<) pgsub (struct genSubRecord *) Pointer to initSigInit gsub record
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK if command successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Check and update default detector geometry
+ *   Init the detSigInit input fields according to the binning status
  *
  *   DESCRIPTION:
- *   This function compares the default detector geometry contained in xPixels, 
- *   yPixels with the default parameters defined by the SDSU DSP code and 
- *   ensures that on exit xPixels, yPixels contain the maximum expected detector
- *   geometry. Executed on startup.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-STATUS detCheckGeometry
-   (
-   const char *  pWfsName,        /* Name of wavefront sensor.                */
-   SDSU_ID       sdsuId,          /* SDSU context structure.                  */
-   int *         pxMax,           /* Maximum number of X pixels on detector.  */
-   int *         pyMax,           /* Maximum number of X pixels on detector.  */
-   int *         pxPixels,        /* Current number of X pixels on detector.  */
-   int *         pyPixels         /* Current number of X pixels on detector.  */
-   )
-{
-   uint32        xRas;            /* SDSU "number of X super pixels per       */
-                                  /* subaperture" parameter (T_XRAS).         */
-   uint32        yRas;            /* SDSU "number of Y super pixels per       */
-                                  /* subaperture" parameter (T_YRAS).         */
-   uint32        xSubap;          /* SDSU number of X subapertures per output */
-                                  /* parameter (T_XSUBAP).                    */
-   uint32        ySubap;          /* SDSU number of Y subapertures per output */
-                                  /* parameter (T_YSUBAP).                    */
-   uint32        outputs;         /* SDSU "number of outputs " parameter      */
-                                  /* (T_OUTPUTS).                             */
-   uint32        xChip;           /* Maximum X pixels per output (T_XSIZE).   */
-   uint32        yChip;           /* Maximum Y pixels per output (T_YSIZE).   */
-   uint32        packetSize;      /* Packet size in pixels.                   */
-   int           nPackets;        /* Number of packets expected per frame.    */
-
-   int           xSize;           /* Number of X super pixels per output.     */
-   int           ySize;           /* Number of Y super pixels per output.     */
-   int           dspxPixels;      /* Number of X pixels expected by DSP code. */
-   int           dspyPixels;      /* Number of Y pixels expected by DSP code. */
-   int           dspxMax;         /* Maximum X pixels expected by DSP code.   */
-   int           dspyMax;         /* Maximum Y pixels expected by DSP code.   */
-
-   /*
-    * Check there is a valid SDSU context structure.
-    */
-
-   if ( sdsuId == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
-                 ERROR_LOG_NOW);
-      return (ERROR);
-   }
-
-   /*
-    * In simulation mode no DSP code will have been downloaded, and nothing 
-    * needs to be checked.
-    */
-
-   if ( !sdsuId->simulate )
-   {
-
-      /*
-       * Obtain the xChip, yChip, xRas, yRas, xSubap, ySubap and number of 
-       * outputs parameters from the SDSU controller and use these to calculate 
-       * the default size expected by the DSP code.
-       */
-
-      if ( (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSIZE", &xChip) == 
-            ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSIZE", &yChip) == 
-            ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XRAS", &xRas) == ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YRAS", &yRas) == ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSUBAP", &xSubap) == 
-            ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSUBAP", &ySubap) == 
-            ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_OUTPUTS", &outputs) == 
-            ERROR) ||
-           (sdsuParamRead (sdsuId, SDSU_IDENT_VME, "V_PSIZE", &packetSize) == 
-            ERROR)
-         )
-      {
-         ERROR_SET (0,
-"Failed to read T_XSIZE, T_YSIZE, T_XRAS, T_YRAS, T_XSUBAP, T_YSUBAP, T_OUTPUTS, V_PSIZE parameters",
-            ERROR_LOG_SAVE);
-         return (ERROR);
-      }
-
-      printf ( "detCheckGeometry: XSIZE=%d, YSIZE=%d, XRAS=%d, YRAS=%d\n" ,
-               xChip, yChip, xRas, yRas ) ;
-      printf ( "detCheckGeometry: XSUBAP=%d, YSUBAP=%d, T_OUTPUTS=%d, PSIZE=%d\n" ,
-               xSubap, ySubap, outputs, packetSize ) ;
-
-      /*
-       * xSize=(xRas*xSubap) and ySize=(yRas*ySubap) represent the number of 
-       * pixels per output. The arrangement depends on the number of outputs. 
-       * If there are two outputs the sectors generated from each output are 
-       * arranged like this
-       *
-       *   +------------+------------+
-       *   |  sector 1  |  sector 2  |
-       *   0----->------+-----<------0
-       *
-       * and if there are four outputs the sectors are arranged like this
-       *
-       *   0----->------+-----<------0
-       *   |  sector 4  |  sector 3  |
-       *   +------------+------------+
-       *   |  sector 1  |  sector 2  |
-       *   0----->------+-----<------0
-       *
-       * "0" shows the origin of each sector and ">" the direction of readout.
-       */
-
-      xSize = (int) (xRas * xSubap);
-      ySize = (int) (yRas * ySubap);
-
-      switch (outputs)
-      {
-         case (2):
-            dspxPixels = xSize * 2;
-            dspyPixels = ySize;
-            dspxMax    = (int) xChip * 2;
-            dspyMax    = (int) yChip;
-            break;
-
-         case (4):
-            dspxPixels = xSize * 2;
-            dspyPixels = ySize * 2;
-            dspxMax    = (int) xChip * 2;
-            dspyMax    = (int) yChip * 2;
-            break;
-
-         default:
-            ERROR_SET1 (S_detControl_INTERNAL, 
-                "Invalid number of SDSU outputs, %d",
-                ERROR_LOG_SAVE, (int) outputs);
-            return (ERROR);
-            break;
-      }
-
-      /*
-       * Compare the default detector size downloaded in the DSP code with 
-       * xMax and yMax and increase if necessary. Replace the current xPixels 
-       * and yPixels with that found in the DSP code.
-       */
-
-      MESSAGE_LOG4 (MSG_FULLDEBUG,
-         "detControl assumed detector size (%d,%d); DSP code assumed (%d,%d)",
-         *pxMax, *pyMax, dspxMax, dspyMax);
-
-      MESSAGE_LOG4 (MSG_FULLDEBUG,
-         "detControl assumed readout size (%d,%d); DSP code assumed (%d,%d)",
-         *pxPixels, *pyPixels, dspxPixels, dspyPixels);
-
-      if ( dspxMax > *pxMax )
-      {
-         MESSAGE_LOG2 (MSG_LOG, 
-            "Maximum number of X pixels increased from %d to %d\n",
-            *pxMax, dspxMax);
-         *pxMax = dspxMax;
-      }
-
-      if ( dspyMax > *pyMax )
-      {
-         MESSAGE_LOG2 (MSG_LOG, 
-            "Maximum number of Y pixels increased from %d to %d\n",
-            *pyMax, dspyMax);
-         *pyMax = dspyMax;
-      }
-
-      if ( dspxPixels != *pxPixels )
-      {
-         MESSAGE_LOG2 (MSG_LOG, 
-            "Default number of X pixels changed from %d to %d\n",
-            *pxPixels, dspxPixels);
-         *pxPixels = dspxPixels;
-      }
-
-      if ( dspyPixels != *pyPixels )
-      {
-         MESSAGE_LOG2 (MSG_LOG, 
-            "Default number of Y pixels changed from %d to %d\n",
-            *pyPixels, dspyPixels);
-         *pyPixels = dspyPixels;
-      }
-
-      /*
-       * Update the expected number of packets per frame using the number of 
-       * pixels read from the controller.
-       */
-
-      if ( packetSize > 0 )
-      {
-         nPackets = 
-         (int)ceil ( (double) (outputs * xSize * ySize) / (double) packetSize );
-      }
-      else
-      {
-         nPackets = 1;
-      }
-
-      sdsuId->packetsPerFrame = nPackets;
-   }
-   else
-   {
-      /* In simu. mode the number of packets/frame needs to be init. to 1. */
-
-      sdsuId->packetsPerFrame = 1;
-   }
-
-   MESSAGE_LOG2 (MSG_FULLDEBUG, 
-      "Each frame will consist of %d packets of %lu pixels each",
-      nPackets, packetSize);
-
-   return (OK);
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detCopyGeometry
- *
- *   INVOCATION:
- *   detCopyGeometry (pWfsName, sdsuId, ospGeometry)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pWfsName    (const char *)          Name of wavefront sensor p2
- *   (>) sdsuId      (SDSU_ID)               Current SDSU context structure
- *   (<) ospGeometry (struct OSP_GEOMETRY *) Pointer to OSP geometry structure
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Copy detector geometry to OSP geometry structure
- *
- *   DESCRIPTION:
- *   This function copies the current detector geometry to the OSP geometry 
- *   structure.
- *
- *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-STATUS detCopyGeometry
-   (
-   const char *         pWfsName,         /* Name of wavefront sensor.        */
-   SDSU_ID              sdsuId,           /* SDSU context structure.          */
-   struct OSP_GEOMETRY *   ospGeometry    /* Pointer to OSP geometry structure*/
-   )
-{
-   uint32         xStart;     /* SDSU parameter (T_XSTART).                   */
-   uint32         yStart;     /* SDSU parameter (T_YSTART).                   */
-   uint32         xBin;
-   uint32         yBin;
-   uint32         xRas;       /* SDSU "number of X super pixels per           */
-                              /* subaperture" parameter (T_XRAS).             */
-   uint32         yRas;       /* SDSU "number of Y super pixels per           */
-                              /* subaperture" parameter (T_YRAS).             */
-   uint32         xSpace;
-   uint32         ySpace;
-   uint32         xSubap;     /* SDSU "number of X subapertures per output"   */
-                              /* parameter (T_XSUBAP).                        */
-   uint32         ySubap;     /* SDSU "number of Y subapertures per output"   */
-                              /* parameter (T_YSUBAP).                        */
-   uint32         outputs;    /* SDSU "number of outputs " parameter          */
-                              /* (T_OUTPUTS).                                 */
-   int            xOutputSize;/* X size of output in pixels.                  */
-   int            yOutputSize;/* Y size of output in pixels.                  */
-   int            xArraySize; /* Total number of X pixels.                    */
-   int            yArraySize; /* Total number of Y pixels.                    */
-   int            fullFrameFlag;  /* Full frame flag.                         */
-
-   /*
-    * Check there is a valid SDSU context structure.
-    */
-
-   if ( sdsuId == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
-                 ERROR_LOG_NOW);
-      return (ERROR);
-   }
-
-   /*
-    * In simulation mode the SDSU parameters will not have sensible values 
-    * when read back.
-    */
-
-   if ( sdsuId->simulate )
-   {
-      ERROR_SET (S_detControl_INTERNAL,
-      "Geometry parameters cannot be read from SDSU controller in simulation mode",
-      ERROR_LOG_NOW);
-      return (ERROR);   
-   }
-
-   /*
-    * Read all the geometry parameters from the SDSU controller.
-    */
-
-   if ( (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSTART", &xStart) == 
-         ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSTART", &yStart) == 
-         ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XBIN", &xBin) == ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YBIN", &yBin) == ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XRAS", &xRas) == ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YRAS", &yRas) == ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSPACE", &xSpace) == 
-         ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSPACE", &ySpace) == 
-         ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_XSUBAP", &xSubap) == 
-         ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_YSUBAP", &ySubap) == 
-         ERROR) ||
-        (sdsuParamRead (sdsuId, SDSU_IDENT_TIM, "T_OUTPUTS", &outputs) == 
-         ERROR)
-      )
-   {
-      ERROR_SET (0, "Failed to read SDSU geometry parameters", ERROR_LOG_SAVE);
-      return (ERROR);
-   }
-
-   printf ( "detCopyGeometry: XSTART=%d, YSTART=%d, XBIN=%d, YBIN=%d\n" ,
-            xStart, yStart, xBin, yBin ) ;
-   printf ( "detCopyGeometry: XSPACE=%d, YSPACE=%d\n" , xSpace, ySpace) ;
-   /*
-    * xOutputSize and yOutputSize represent the size of each output in pixels,
-    * which can be used to calculate ther full array size).
-    * The arrangement depends on the number of outputs. If there are two outputs
-    * the sectors generated from each output are arranged like this
-    *
-    *   +------------+------------+
-    *   |  sector 1  |  sector 2  |
-    *   0----->------+-----<------0
-    *
-    * and if there are four outputs the sectors are arranged like this
-    *
-    *   0----->------+-----<------0
-    *   |  sector 4  |  sector 3  |
-    *   +------------+------------+
-    *   |  sector 1  |  sector 2  |
-    *   0----->------+-----<------0
-    *
-    * "0" shows the origin of each sector and ">" the direction of readout.
-    */
-
-   xOutputSize = (int) (xStart + (xRas * ((xSubap * xBin) + xSpace)));
-   yOutputSize = (int) (yStart + (yRas * ((ySubap * yBin) + ySpace)));
-
-   switch (outputs)
-   {
-      case (2):
-         xArraySize = xOutputSize * 2;
-         yArraySize = yOutputSize;
-         break;
-
-      case (4):
-         xArraySize = xOutputSize * 2;
-         yArraySize = yOutputSize * 2;
-         break;
-
-      default:
-         ERROR_SET1 (S_detControl_INTERNAL, 
-             "Invalid number of SDSU outputs, %d",
-             ERROR_LOG_SAVE, (int) outputs);
-         return (ERROR);
-         break;
-   }
-
-   /*
-    * Determine whether the given parameters will put the detector controller
-    * into full frame mode. This happens when the there is one subaperture per
-    * output and the subapertures fill the detector surface without any gaps.
-    */
-
-   if ( (xSubap == 1) && (ySubap == 1) && (xStart == 0) && (yStart == 0) &&
-     (xSpace == 0) && (ySpace == 0)
-      )
-   {
-      fullFrameFlag = 1;
-   }
-   else
-   {
-      fullFrameFlag = 0;
-   }
-
-   /*
-    * Update the geometry parameters supplied to the signal processing software.
-    */
-
-   ospGeometry->sectors =        (int) outputs;
-   ospGeometry->xstart =         (int) xStart;
-   ospGeometry->ystart =         (int) yStart;
-   ospGeometry->xbin =           (int) xBin;
-   ospGeometry->ybin =           (int) yBin;
-   ospGeometry->xraster =        (int) xRas;
-   ospGeometry->yraster =        (int) yRas;
-   ospGeometry->xspace =         (int) xSpace;
-   ospGeometry->yspace =         (int) ySpace;
-   ospGeometry->xsubap =         (int) xSubap;
-   ospGeometry->ysubap =         (int) ySubap;
-   ospGeometry->xarraysize =     (int) xArraySize;
-   ospGeometry->yarraysize =     (int) yArraySize;
-   ospGeometry->framesizeflag =  fullFrameFlag;
-
-   return (OK);
-}
-
-/* -------------------------------------------------------------------------- */
-
-/* This function is purely an engineering fudge to reset the "observing" flag 
- * if it screws up. 
- */
-
-void detPokeObserving
-   (
-   OBS_ID    obsId,
-   BOOL      newValue
-   )
-{
-
-   obsId->observing = newValue;
-
-   return;
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detCreateFileName
- *
- *   INVOCATION:
- *   detCreateFileName (pFilePath, pOutFileName, pFullOutFileName)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pFilePath        (char *)  Pointer to the file path name         
- *   (>) pOutFileName     (char *)  Pointer to the output file name       
- *   (<) pFullOutFileName (char *)  Pointer to the combined path and file name 
- *
- *   FUNCTION VALUE:
- *   (uint32)	always OK
- *
- *   PURPOSE:
- *   Combine path and file name 
- *
- *   DESCRIPTION:
- *   Combine path and file name and cancel the .fits at the end if this 
- *   one exists
+ *   For this record, I have decided to use Epics facilities and not 
+ *   epToVxLib. Faster and simpler. CB - 05 July 2000
  *
  *   EXTERNAL VARIABLES:
  *   None.
  *
  *   PRIOR REQUIREMENTS:
- *   None
- * 
+ *   external variables: detObsIdP2
+ *
  *   INCLUDE FILES:
  *   detControl.h
  *
@@ -10607,89 +15184,185 @@ void detPokeObserving
  *-
  */
 
-STATUS detCreateFileName 
-   ( 
-   char *   pFilePath,         /* Pointer to the file path name               */
-   char *   pOutFileName,      /* Pointer to the output file name             */
-   char *   pFullOutFileName   /* Pointer to the combined path and file name  */
-                               /* Size of path and file name is               */
-                               /* EPICS_MAX_BYTES_STRING_ATTRIB + 1           */
-                               /* Size of full file name is                   */
-                               /* 2*(EPICS_MAX_BYTES_STRING_ATTRIB + 1)       */
+STATUS detInitSigInit
+   (
+   struct genSubRecord * pgsub      /* Pointer to "initSigInit" gensub record */
    )
 {
-   char     firstPartOutFileName [ EPICS_MAX_BYTES_STRING_ATTRIB + 1 ] ;
-   char     lastCharOutFileName [ EPICS_MAX_BYTES_STRING_ATTRIB + 1 ] ;
-   int      sizeOutFileName ;
-   int      sizeFits ;
-   int      i, j ;
+   long xbin;
+   long ybin;
+   char path[STRING_SIZE];
+   char darkFileName[STRING_SIZE];
+   char flatFileName[STRING_SIZE];
+   char refFileName[STRING_SIZE];
+   char aoInitFileName[STRING_SIZE];
+   double angle;
+   double refX;
+   double refY;
+   double thresh;
+   double totalThresh;
 
-   sizeFits = strlen ( ".fits" ) ;
-
-   /* Check if pOutFileName contains a string */
-
-   if ( strcmp ( pOutFileName, "" ) == 0 )
+   if ( detObsIdP2 == NULL )
    {
-      /* Default file name hrwfs.fits */
-
-      if ( strcmp ( pFilePath, "" ) == 0 )
-         strcpy ( pFullOutFileName, "pwfs1" ) ;
-      else
-         sprintf ( pFullOutFileName, "%s/pwfs1" , pFilePath ) ;
-      
-      return ( OK ) ;
+      return (ERROR);
    }
 
-   /* Check if pOutFileName contains the string .fits */
+   xbin = *(long *)pgsub->a;
 
-   if ( strstr ( pOutFileName, ".fits" ) != NULL )
+   ybin = *(long *)pgsub->b;
+
+   if ( (xbin == 1) && (ybin == 1) )
    {
-      sizeOutFileName = strlen ( pOutFileName ) ;
+      /* Read default parameters from par file */
 
-      if ( sizeOutFileName < sizeFits )
-         strncpy ( firstPartOutFileName , pOutFileName , 
-                   EPICS_MAX_BYTES_STRING_ATTRIB ) ;
-      else
+      if ( strcmp (DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
       {
-         /* Check if the last 5 char are .fits */
-         i = 0 ;
-	 for ( j = sizeOutFileName - sizeFits ; j < sizeOutFileName ; j ++ )
-	 {
-	     lastCharOutFileName[i] = pOutFileName[j];
-	     i ++ ;
-	 }
-	 lastCharOutFileName [i] = '\0' ;
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE ) ;
 
-	 if ( strcmp ( lastCharOutFileName , ".fits" ) == 0 )
-	 {
-            /* Read the first part of pOutFileName witout .fits */
-	    for ( j = 0 ; j < sizeOutFileName - sizeFits ; j ++ )
-	    {
-                firstPartOutFileName[j] = pOutFileName[j];
-	    }
-	    firstPartOutFileName [j] = '\0' ;
-	 }
-	 else
-	 {
-            strncpy ( firstPartOutFileName , pOutFileName , 
-                      EPICS_MAX_BYTES_STRING_ATTRIB ) ;
-	 }
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               &angle, &refX, &refY, refFileName, &thresh,
+                               &totalThresh ) == ERROR )
+         {
+            printf ("Failed to read ao control file parameters\n");
+            return (ERROR);
+         }
 
+         strcpy ( (char *)pgsub->vala, path );
+         strcpy ( (char *)pgsub->valb, darkFileName );
+         strcpy ( (char *)pgsub->valc, flatFileName );
+         *(double *)pgsub->vald = angle;
+         *(double *)pgsub->vale = refX;
+         *(double *)pgsub->valf = refY;
+         strcpy ( (char *)pgsub->valg, refFileName );
+
+         /*strcpy ( (char *)pgsub->vala, "." );
+         strcpy ( (char *)pgsub->valb, "data/defFullP2Dark.fits" );
+         strcpy ( (char *)pgsub->valc, "data/defFullP2Flat.fits" );
+         *(double *)pgsub->vald = 3.14159;
+         *(double *)pgsub->vale = 40.5;
+         *(double *)pgsub->valf = 40.5;
+         strcpy ( (char *)pgsub->valg, "data/defFullRefP2.dat" );*/
+      }
+   }
+   else if ( (xbin == 2) && (ybin == 2) )
+   {
+      /* Read default parameters from par file */
+
+      if ( strcmp (DET_CONTROL_PWFS2_AO_BIN_CTRL_INIT_FILE, "NONE") != 0 )
+      {
+         strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+         strcat ( aoInitFileName , "/" ) ;
+         strcat ( aoInitFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_INIT_FILE ) ;
+
+         if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
+                               &angle, &refX, &refY, refFileName, &thresh,
+                               &totalThresh ) == ERROR )
+         {
+            ERROR_LOG ("Failed to read ao control file parameters");
+            return (ERROR);
+         }
+
+         strcpy ( (char *)pgsub->vala, path );
+         strcpy ( (char *)pgsub->valb, darkFileName );
+         strcpy ( (char *)pgsub->valc, flatFileName );
+         *(double *)pgsub->vald = angle;
+         *(double *)pgsub->vale = refX;
+         *(double *)pgsub->valf = refY;
+         strcpy ( (char *)pgsub->valg, refFileName );
+
+         /*strcpy ( (char *)pgsub->vala, "." );
+         strcpy ( (char *)pgsub->valb, "data/defBinP2Dark.fits" );
+         strcpy ( (char *)pgsub->valc, "data/defBinP2Flat.fits" );
+         *(double *)pgsub->vald = 3.14159;
+         *(double *)pgsub->vale = 20.5;
+         *(double *)pgsub->valf = 20.5;
+         strcpy ( (char *)pgsub->valg, "data/defBinRefP2.dat" );*/
       }
    }
    else
    {
-      strncpy ( firstPartOutFileName , pOutFileName , 
-                EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+#ifdef DEBUG
+      ERROR_LOG ( "xbin and ybin sir records should contain 1 or 2" );
+#endif
    }
 
-   /* Now combine firstPartOutFileName and pFilePath */
+   return (OK) ;
+}
 
-   if ( strcmp ( pFilePath , "" ) == 0 )
-      strncpy ( pFullOutFileName, firstPartOutFileName, 
-                EPICS_MAX_BYTES_STRING_ATTRIB ) ;
-   else
-      sprintf ( pFullOutFileName, "%s/%s" , pFilePath , firstPartOutFileName ) ;
+/* -------------------------------------------------------------------------- */
 
-   return ( OK ) ;
+/*+
+ *   FUNCTION NAME:
+ *   detSimulateImage
+ *
+ *   INVOCATION:
+ *   detSimulateImage (xPixels, yPixels, pImage)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) xPixels (int)     x pixels
+ *   (>) xPixels (int)     y pixels
+ *   (>) pImage  (float *) image
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSimulateImage command
+ *
+ *   DESCRIPTION:
+ *   This function simulate an image
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSimulateImage
+   (
+   int     xPixels,
+   int     yPixels,
+   float * pImage
+   )
+{
+   FILE *pFile;
+   int itemNb;
+
+
+   pFile = fopen ( "./spotP2.dat" , "r") ;
+
+   if ( pFile == (FILE *)NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Failed to open spotP2.dat",
+                 ERROR_LOG_NOW);
+
+      return ( ERROR );
+   }
+
+   itemNb = fread ( (float *)pImage,
+                    sizeof (float),
+                    xPixels * yPixels,
+                    pFile);
+
+   if ( itemNb == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Failed to read spot_image.dat",
+                 ERROR_LOG_NOW);
+
+      return ( ERROR );
+   }
+
+   (void)fclose (pFile);
+
+   return ( OK );
 }

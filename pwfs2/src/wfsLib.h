@@ -1,15 +1,18 @@
 /*+
- *	MODULE NAME:
- *	wfsLib
+ * MODULE NAME:
+ * wfsLib
  *
- *	FILENAME:
- *	wfsLib.h
+ * FILENAME:
+ * wfsLib.h
  *
- *	PURPOSE:
- *	Include file for wfsLib
+ * PURPOSE:
+ * Include file for wfsLib
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2000/02/03 01:56:35  cboyer
+ * V0-5: small modif in coord system in writeZernikes.c
+ *
  * Revision 1.2  1999/07/17 02:14:25  cboyer
  * Minor modifications
  *
@@ -56,77 +59,64 @@
  *-
  */
 
-#ifndef	__INCwfsLibh
-#define	__INCwfsLibh
+#ifndef   __INCwfsLibh
+#define   __INCwfsLibh
 
 
 /* includes */
 
 #ifdef vxWorks
 #include <vxWorks.h>
-#endif	/* vxWorks */
+#endif   /* vxWorks */
 
 #include "gemTypes.h"
 #include "gemModNum.h"
 
-#ifndef NO_SYSEXTLIB							/* Define this macro to remove sysextLib	*/
-#include "sysextLib.h"
-#endif	/* NO_SYSEXTLIB */
-
-
 /* defines */
 
 
-#define	PIPE_DRV_TIMEOUT_PROC_0		120.0			/* Pipe driver timeout (in seconds) for	*/
-													/* processor 0.							*/
-#define	PIPE_DRV_TIMEOUT_PROC_N		-1.0			/* Pipe driver timeout for other		*/
-													/* processors. (A negative value means	*/
-											 		/* means infinite timeout).				*/
-	/*
-	 * Error number codes used by wfsLib.
-	 * These are designed to be processed using the vxWorks "makeStatTbl" utility.
-	 */
+#define PIPE_DRV_TIMEOUT_PROC_0 120.0  /* Pipe driver timeout (in seconds)    */
+                                       /* for processor 0.                    */
+#define PIPE_DRV_TIMEOUT_PROC_N -1.0   /* Pipe driver timeout for other       */
+                                       /* processors. (A negative value means */
+                                       /* means infinite timeout).            */
+   /*
+    * Error number codes used by wfsLib.
+    * These are designed to be processed using the vxWorks "makeStatTbl" 
+    * utility.
+    */
 
-#define	S_wfsLib_ERRLOG_PIPE_FAIL	(M_wfsLib | 1)	/* Pipe create or open failed.			*/
-#define	S_wfsLib_INVALID_DATA		(M_wfsLib | 2)	/* Invalid data structure defined.		*/
-#define	S_wfsLib_BAD_ARGUMENT		(M_wfsLib | 3)	/* Bad argument supplied.				*/
-#define	S_wfsLib_NOT_CONNECTED		(M_wfsLib | 4)	/* Database not connected.				*/
+#define S_wfsLib_ERRLOG_PIPE_FAIL (M_wfsLib | 1) /* Pipe create or open failed*/
+#define S_wfsLib_INVALID_DATA     (M_wfsLib | 2) /* Invalid data structure    */
+                                                 /* defined.                  */
+#define S_wfsLib_BAD_ARGUMENT     (M_wfsLib | 3) /* Bad argument supplied.    */
+#define S_wfsLib_NOT_CONNECTED    (M_wfsLib | 4) /* Database not connected.   */
 
-	/*
-	 * The following defines a data structure to contain information about
-	 * the processor used by each wavefront sensor control task.
-	 */
+   /*
+    * The following defines a data structure to contain information about
+    * the processor used by each wavefront sensor control task.
+    */
 
 typedef struct
-	{
-	char 		pProcName [80];						/* Processor name.						*/
-	uint32		targetType;							/* Processor type (e.g.					*/
-													/* TARGET_TYPE_MV167, as defined in		*/
-													/* gemTypes.h).							*/
-	uint32		procIpAddrs;						/* Processor IP address.				*/
-	float		procClockRate;						/* Processor clock rate in Hz.			*/
-	uint32		procRamSize;						/* Processor RAM size in bytes.			*/
-#ifndef NO_SYSEXTLIB
-	VME_MODE	vmeMode;							/* VME mode (as defined in sysextLib.h)	*/
-													/* which includes:						*/
-													/* - Bus request level,					*/
-													/* - Release when done flag,			*/
-													/* - Fair requester flag,				*/
-													/* - Round robin arbiter flag,			*/
-													/* - Request level DMA, and				*/
-													/* - Fair requester DMA					*/
-#endif	/* NO_SYSEXTLIB */
-	} WFS_ARCH_PROCESSOR;
+   {
+   char       pProcName [80];     /* Processor name.                          */
+   uint32     targetType;         /* Processor type (e.g.                     */
+                                  /* TARGET_TYPE_MV167, as defined in         */
+                                  /* gemTypes.h).                             */
+   uint32     procIpAddrs;        /* Processor IP address.                    */
+   float      procClockRate;      /* Processor clock rate in Hz.              */
+   uint32     procRamSize;        /* Processor RAM size in bytes.             */
+   } WFS_ARCH_PROCESSOR;
 
 
 /* function declarations */
 
-IMPORT STATUS	wfsLibInit (void);
-IMPORT STATUS	wfsTargetTypeGet (const int processorNumber);
-IMPORT int		wfsNumProcsGet (void);
-IMPORT STATUS	wfsSysInit (const int processorNumber, const BOOL redirectErrorLog);
-IMPORT STATUS	wfsWriteVersion (void);
-IMPORT STATUS	wfsShow (void);
+IMPORT STATUS   wfsLibInit (void);
+IMPORT STATUS   wfsTargetTypeGet (const int processorNumber);
+IMPORT int      wfsNumProcsGet (void);
+IMPORT STATUS   wfsSysInit (const int processorNumber, 
+                            const BOOL redirectErrorLog);
+IMPORT STATUS   wfsShow (void);
 IMPORT void     wfsGetTelName (char *pTelName);
 
 #endif /* __INCwfsLibh */

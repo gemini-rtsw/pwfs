@@ -6,11 +6,11 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="12"
-	nstr="101"
-	ndynamic="7"
+	npc="7"
+	nstr="106"
+	ndynamic="3"
 	nplot="0"
-	nrd="5"
+	nrd="7"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -18,28 +18,28 @@ display {
 	object {
 		x="328"
 		y="298"
-		width="706"
-		height="370"
+		width="677"
+		height="277"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2990"
-	nwords_sta="128"
+	nwords_dspy="3116"
+	nwords_sta="92"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1716"
-	osta="1588"
-	odynamic="1716"
-	oplot="2178"
-	ord="2178"
-	oes="2978"
-	okd="2978"
-	opd="2990"
-	opo="2990"
+	odyng="1786"
+	osta="1694"
+	odynamic="1786"
+	oplot="1984"
+	ord="1984"
+	oes="3104"
+	okd="3104"
+	opd="3116"
+	opo="3116"
 	opc="68"
-	ostr="206"
-	ocmap="1588"
-	ocrules="1588"
+	ostr="158"
+	ocmap="1694"
+	ocrules="1694"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -65,8 +65,8 @@ display {
 "rectangle" {
 	object {
 		x="10"
-		y="226"
-		width="681"
+		y="139"
+		width="652"
 		height="130"
 		groupid="0"
 	}
@@ -97,31 +97,20 @@ display {
 	object {
 		x="10"
 		y="45"
-		width="680"
-		height="175"
+		width="652"
+		height="88"
 		groupid="0"
 	}
 }
 "text" {
 	object {
-		x="410"
-		y="105"
+		x="409"
+		y="77"
 		width="110"
 		height="20"
 		groupid="0"
 	}
 	textix="HEALTH:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="18"
-		y="163"
-		width="135"
-		height="20"
-		groupid="0"
-	}
-	textix="SDSU STATUS:"
 	align="horiz. left"
 }
 "text" {
@@ -149,7 +138,7 @@ display {
 "text" {
 	object {
 		x="18"
-		y="229"
+		y="142"
 		width="302"
 		height="21"
 		groupid="0"
@@ -157,45 +146,23 @@ display {
 	textix="COMMANDS BY CATEGORY:"
 	align="horiz. left"
 }
-"text" {
-	object {
-		x="410"
-		y="134"
-		width="110"
-		height="20"
-		groupid="0"
-	}
-	textix="HEARTBEAT:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="19"
-		y="134"
-		width="210"
-		height="20"
-		groupid="0"
-	}
-	textix="INIT STATE:"
-	align="horiz. left"
-}
 "text update" {
 	object {
-		x="522"
-		y="105"
+		x="492"
+		y="76"
 		width="160"
 		height="21"
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)health"
+		chan="$(top)$(wfs)health"
 		clr="0"
 		bclr="7"
 		label="none"
 		clrmod="rule"
-		rulechan[0] = "$(top)health.VAL"
-		rulechan[1] = "$(top)health.VAL"
-		rulechan[2] = "$(top)health.VAL"
+		rulechan[0] = "$(top)$(wfs)health.VAL"
+		rulechan[1] = "$(top)$(wfs)health.VAL"
+		rulechan[2] = "$(top)$(wfs)health.VAL"
 		rulechan[3] = ""
 		rulechan[4] = ""
 		rulechan[5] = ""
@@ -210,53 +177,7 @@ display {
 		rulechan[14] = ""
 		rulechan[15] = ""
 		clrrule="health"
-		clrargs="C=$(top)health"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="154"
-		y="163"
-		width="529"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)detInitStatus"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="alarm"
-		clrargs=""
+		clrargs="C=$(top)$(wfs)health"
 		rulecolorbg="1"
 		rulecolorfg="1"
 		hdl="0"
@@ -280,16 +201,16 @@ display {
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)detC"
+		chan="$(top)$(wfs)detC"
 		clr="0"
 		bclr="7"
 		label="none"
 		clrmod="rule"
-		rulechan[0] = "$(top)detC.VAL"
-		rulechan[1] = "$(top)detC.VAL"
-		rulechan[2] = "$(top)detC.VAL"
-		rulechan[3] = "$(top)detC.VAL"
-		rulechan[4] = "$(top)detC.VAL"
+		rulechan[0] = "$(top)$(wfs)detC.VAL"
+		rulechan[1] = "$(top)$(wfs)detC.VAL"
+		rulechan[2] = "$(top)$(wfs)detC.VAL"
+		rulechan[3] = "$(top)$(wfs)detC.VAL"
+		rulechan[4] = "$(top)$(wfs)detC.VAL"
 		rulechan[5] = ""
 		rulechan[6] = ""
 		rulechan[7] = ""
@@ -302,7 +223,7 @@ display {
 		rulechan[14] = ""
 		rulechan[15] = ""
 		clrrule="flashifbusy"
-		clrargs="C=$(top)detC"
+		clrargs="C=$(top)$(wfs)detC"
 		rulecolorbg="1"
 		rulecolorfg="1"
 		hdl="0"
@@ -326,16 +247,16 @@ display {
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)observeC"
+		chan="$(top)$(wfs)observeC"
 		clr="0"
 		bclr="7"
 		label="none"
 		clrmod="rule"
-		rulechan[0] = "$(top)observeC.VAL"
-		rulechan[1] = "$(top)observeC.VAL"
-		rulechan[2] = "$(top)observeC.VAL"
-		rulechan[3] = "$(top)observeC.VAL"
-		rulechan[4] = "$(top)observeC.VAL"
+		rulechan[0] = "$(top)$(wfs)observeC.VAL"
+		rulechan[1] = "$(top)$(wfs)observeC.VAL"
+		rulechan[2] = "$(top)$(wfs)observeC.VAL"
+		rulechan[3] = "$(top)$(wfs)observeC.VAL"
+		rulechan[4] = "$(top)$(wfs)observeC.VAL"
 		rulechan[5] = ""
 		rulechan[6] = ""
 		rulechan[7] = ""
@@ -348,145 +269,7 @@ display {
 		rulechan[14] = ""
 		rulechan[15] = ""
 		clrrule="flashifbusy"
-		clrargs="C=$(top)observeC"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="523"
-		y="134"
-		width="160"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)heartBeat"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="alarm"
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="236"
-		y="134"
-		width="160"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)detInitC"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detInitC.VAL"
-		rulechan[1] = "$(top)detInitC.VAL"
-		rulechan[2] = "$(top)detInitC.VAL"
-		rulechan[3] = "$(top)detInitC.VAL"
-		rulechan[4] = "$(top)detInitC.VAL"
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="flashifbusy"
-		clrargs="C=$(top)detInitC"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="154"
-		y="190"
-		width="529"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)testResults"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="alarm"
-		clrargs=""
+		clrargs="C=$(top)$(wfs)observeC"
 		rulecolorbg="1"
 		rulecolorfg="1"
 		hdl="0"
@@ -504,26 +287,26 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="257"
+		y="171"
 		width="300"
 		height="22"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="SET CHOP MASK"
-		name="det_chop.dl"
-		args="top=$(top),sensor=$(sensor),cad=detChop,car=det"
+		label="SET FRAME SIZE"
+		name="det_frameSize.dl"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detFrameSize,car=det"
 	}
 	display[1] {
 		label="SET OBSERVATION TYPE"
 		name="det_obstype.dl"
-		args="top=$(top),sensor=$(sensor),cad=detObstype,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detObstype,car=det"
 	}
 	display[2] {
 		label="SET WCS CALIBRATION"
 		name="det_setwcs.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSetWcs,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detSetWcs,car=det"
 	}
 	display[3] {
 		label=""
@@ -637,8 +420,8 @@ display {
 }
 "related display" {
 	object {
-		x="16"
-		y="290"
+		x="17"
+		y="204"
 		width="300"
 		height="22"
 		groupid="0"
@@ -647,27 +430,27 @@ display {
 	display[0] {
 		label="START OBSERVATION"
 		name="det_observe.dl"
-		args="top=$(top),sensor=$(sensor),cad=observe,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=observe,car=det"
 	}
 	display[1] {
 		label="PAUSE OBSERVATION"
 		name="cad0.dl"
-		args="top=$(top),label=$(sensor),cad=pause,car=observe"
+		args="top=$(top)$(wfs),label=$(sensor),cad=pause,car=observe"
 	}
 	display[2] {
 		label="CONTINUE OBSERVATION"
 		name="cad0.dl"
-		args="top=$(top),label=$(sensor),cad=continue,car=observe"
+		args="top=$(top)$(wfs),label=$(sensor),cad=continue,car=observe"
 	}
 	display[3] {
 		label="STOP OBSERVATION"
 		name="cad0.dl"
-		args="top=$(top),label=$(sensor),cad=stop,car=observe"
+		args="top=$(top)$(wfs),label=$(sensor),cad=stop,car=observe"
 	}
 	display[4] {
 		label="ABORT OBSERVATION"
 		name="cad0.dl"
-		args="top=$(top),label=$(sensor),cad=abort,car=observe"
+		args="top=$(top)$(wfs),label=$(sensor),cad=abort,car=observe"
 	}
 	display[5] {
 		label=""
@@ -771,8 +554,8 @@ display {
 }
 "related display" {
 	object {
-		x="18"
-		y="322"
+		x="17"
+		y="236"
 		width="300"
 		height="22"
 		groupid="0"
@@ -781,27 +564,27 @@ display {
 	display[0] {
 		label="READOUT GEOMETRY"
 		name="det_setGeom.dl"
-		args="top=$(top),sensor=$(sensor),cad=detGeometry,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detGeometry,car=det"
 	}
 	display[1] {
 		label="READOUT MODE"
 		name="det_setMode.dl"
-		args="top=$(top),sensor=$(sensor),cad=detMode,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detMode,car=det"
 	}
 	display[2] {
 		label="ADC OFFSETS"
 		name="det_setOffsets.dl"
-		args="top=$(top),sensor=$(sensor),cad=detOffset,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detOffset,car=det"
 	}
 	display[3] {
-		label="LOAD PARAMETERS"
-		name="det_setup.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSetup,car=det"
+		label="PRIMITIVE COMMAND"
+		name="det_primitive.dl"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detPrim,car=det"
 	}
 	display[4] {
 		label="SAVE PARAMETERS"
 		name="det_save.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSave,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detSave,car=det"
 	}
 	display[5] {
 		label=""
@@ -905,37 +688,37 @@ display {
 }
 "related display" {
 	object {
-		x="347"
-		y="257"
+		x="351"
+		y="171"
 		width="300"
 		height="22"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="INITIALIZE"
+		label="INIT"
 		name="det_init.dl"
-		args="top=$(top),sensor=$(sensor),cad=detInit,car=det"
+		args="top=$(top),wfs=$(wfs),sensor=$(sensor),cad=init,car=init"
 	}
 	display[1] {
 		label="RESET"
 		name="det_reset.dl"
-		args="top=$(top),sensor=$(sensor),cad=detReset,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detReset,car=det"
 	}
 	display[2] {
-		label="PRIMITIVE COMMAND"
-		name="det_primitive.dl"
-		args="top=$(top),sensor=$(sensor),cad=detPrim,car=det"
-	}
-	display[3] {
 		label="TEST"
 		name="det_test.dl"
-		args="top=$(top),sensor=$(sensor),cad=detTest,car=det"
+		args="top=$(top),wfs=$(wfs),sensor=$(sensor),cad=test,car=test"
+	}
+	display[3] {
+		label="REBOOT"
+		name="cad0.dl"
+		args="top=$(top),label=$(sensor),cad=reboot,car=reboot"
 	}
 	display[4] {
-		label=""
-		name=""
-		args=""
+		label="PARK"
+		name="cad0.dl"
+		args="top=$(top),label=$(sensor),cad=park,car=park"
 	}
 	display[5] {
 		label=""
@@ -1039,17 +822,17 @@ display {
 }
 "related display" {
 	object {
-		x="349"
-		y="290"
+		x="351"
+		y="202"
 		width="300"
-		height="22"
+		height="24"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
 		label="SET TEMPERATURE"
 		name="det_setTemp.dl"
-		args="top=$(top),sensor=$(sensor),cad=detTemp,car=det"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detTemp,car=det"
 	}
 	display[1] {
 		label=""
@@ -1171,10 +954,278 @@ display {
 	menu_title="TEMPERATURE CONTROL"
 	decorate="none"
 }
+"related display" {
+	object {
+		x="351"
+		y="236"
+		width="300"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="CONNECT DHS"
+		name="det_DhsReconnect.dl"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detDhsReconnect,car=det"
+	}
+	display[1] {
+		label="DISPLAY DHS"
+		name="det_DhsDisplay.dl"
+		args="top=$(top)$(wfs),sensor=$(sensor),cad=detDhsDisplay,car=det"
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="DHS CONTROL"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="409"
+		y="105"
+		width="242"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SAD"
+		name="det_sad.dl"
+		args="top=$(top)$(wfs),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="SAD"
+	decorate="none"
+}
 "kill display" {
 	object {
-		x="622"
-		y="13"
+		x="592"
+		y="12"
 		width="70"
 		height="23"
 		groupid="0"

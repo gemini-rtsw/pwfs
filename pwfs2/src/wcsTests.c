@@ -39,7 +39,7 @@ double   fpxy[NPOINTS][2];      /* Array of defined focal plane XY        */
 double   pixij[NPOINTS][2];     /* Array of measured pixel IJ             */
                                 /* coordinates (unbinned and unwindowed). */
 double   detij[NPOINTS][2];     /* Array of binned and windowed pixel IJ  */
-								/* coordinates corresponding to the same  */
+                                /* coordinates corresponding to the same  */
                                 /* points on the detector.                */
 double   cij[MATRIXSIZE];       /* XY to IJ transformation matrix.        */
 
@@ -111,7 +111,7 @@ STATUS wcsCalibrate (void)
      * Step 1.
      *
      * Define an example of a set of calibration measurements, for
-	 * demonstration purposes
+     * demonstration purposes
      */
 
     pixij[0][0] = 51.3;
@@ -154,7 +154,7 @@ STATUS wcsCalibrate (void)
         scanf ("%lf %lf", &(fpxy[p][0]), &(fpxy[p][1]));
     }
     printf ("Finished.\n");
- */
+*/
 
 
     /*
@@ -292,16 +292,16 @@ STATUS wcsTest (void)
 
     /*
      * Convert the start time into International Atomic Time (TAI).
-	 * This time will be used to generate the MJD-OBS field in the FITS header.
-	 *
-	 * There is currently no internationally agreed standard defining the 
-	 * timescale for MJD-OBS. TAI is used here because it is a sensible choice
-	 * and, in fact, was once specified in a draft standard in July 1996 that
-	 * was subsequently withdrawn.
-	 * Whatever timescale is specified here, it is important that it be
-	 * continuous across a leap second. Suitable alternatives are
-	 * Terrestrial Time (TT) and Universal Time 1 (UT1). UTC is NOT suitable.
-	 *
+    * This time will be used to generate the MJD-OBS field in the FITS header.
+    *
+    * There is currently no internationally agreed standard defining the 
+    * timescale for MJD-OBS. TAI is used here because it is a sensible choice
+    * and, in fact, was once specified in a draft standard in July 1996 that
+    * was subsequently withdrawn.
+    * Whatever timescale is specified here, it is important that it be
+    * continuous across a leap second. Suitable alternatives are
+    * Terrestrial Time (TT) and Universal Time 1 (UT1). UTC is NOT suitable.
+    *
      * NOTE: Pat Wallace is checking this with the FITS committee.
      */
 
@@ -339,7 +339,7 @@ STATUS wcsTest (void)
      */
 
     trackFrame        = FK5;
-    trackEquinox.type = 'J';	/* NOTE: The data type is 'char'. */
+    trackEquinox.type = 'J';   /* NOTE: The data type is 'char'. */
     trackEquinox.year = 2000.0;
     trackWavelength   = 0.5;
 

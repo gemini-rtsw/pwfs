@@ -1,10 +1,17 @@
 [schematic2]
-uniq 97
+uniq 99
 [tools]
 [detail]
 s -160 2208 500 0 PWFS2 - System Status Records
 s 2512 -704 500 512 systemSad.sch
 [cell use]
+use esirs 1856 1767 100 0 testResults
+xform 0 2064 1920
+p 1920 1728 100 0 1 DESC:Test results
+p 1792 1504 100 0 0 FDSC:System version number
+p 1920 1696 100 0 1 FTVL:STRING
+p 1920 1632 100 0 1 PV:$(sadtop)
+p 1920 1664 100 0 1 SNAM:
 use esirs -672 1767 100 0 name
 xform 0 -464 1920
 p -608 1728 100 0 1 DESC:System name
@@ -74,6 +81,17 @@ p 2080 992 100 0 1 HIHI:10.0
 p 1920 992 100 0 1 LOLO:0.0
 p 1920 1024 100 0 1 LOW:0.0
 p 1920 960 100 0 1 PV:$(sadtop)
+use esirs 1248 1767 100 0 inPosition
+xform 0 1456 1920
+p 1312 1728 100 0 1 DESC:In position SIR record
+p 1312 1664 100 0 1 EGU:0/1
+p 1392 1840 100 0 0 FDSC:In position SIR record
+p 1312 1696 100 0 1 FTVL:LONG
+p 1472 1632 100 0 1 HIGH:100000000
+p 1472 1600 100 0 1 HIHI:100000000
+p 1312 1600 100 0 1 LOLO:0
+p 1312 1632 100 0 1 LOW:0
+p 1312 1568 100 0 1 PV:$(sadtop)
 use errorLogSad 1920 -377 100 0 errorLogSad#79
 xform 0 2016 -256
 use resourceSad 1600 -377 100 0 resourceSad#78
@@ -95,10 +113,10 @@ xform 0 1616 800
 p 2608 -672 200 0 1 author:S.M.Beard
 p 3120 -704 100 0 0 border:D
 p 2608 -752 200 0 0 checked:B.Goodrich
-p 3184 -688 200 0 -1 date:$Date: 1999-07-17 02:13:31 $
+p 3184 -688 200 0 -1 date:$Date: 2000-07-10 21:47:05 $
 p 2592 2336 200 0 -1 id:
 p 2704 -752 100 0 1 modified:C. Boyer
 p 3120 -416 200 0 -1 project:Gemini PWFS2
-p 2592 -480 200 0 -1 revision:$Revision: 1.2 $
+p 2592 -480 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -544 200 0 -1 title:System Status Records
 [comments]

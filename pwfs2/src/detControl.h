@@ -6,20 +6,30 @@
  *   detControl.h
  *
  *   PURPOSE:
- *   Include file for detControl
+ *   Include file for detControl for PWFS2
  *
  *   IMPORTANT:
  *   *** THIS FILE MUST BE MODIFIED TO REFLECT THE ACTUAL VME ADDRESSES OF
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
- *   2 nov 99 - cb add new parameter binningFlag
- *   1 nov 99 - cb add new parameters dhsOutOptions, outNFrames + fits keywords 
- *              and WCS in the structure
+ *   13 apr 2000 - cb add parameters to measure the average flux during the 
+ *                 sequence closed loop
+ *   12 apr 2000 - cb add detType, detId, dataLabel, intTime nexpRQ,
+ *                 nexp, nframes, bunit, exposedRQ, exposed, utstart, 
+ *                 utend, elapsed sir records
+ *   11 apr 2000 - cb replace detSigMode by several detSigModexxx cad
+ *   04 apr 2000 - cb include coadd file + save cb
+ *   03 apr 2000 - cb add all the geometry sir records
+ *   28 mar 2000 - cb add 3 SIR records for stae of signal processing
+ *   23 mar 2000 - cb add a dhs task
+ *   17 mar 2000 - cb replace ospLib with aoPwfs2Lib
+ *   02 nov 1999 - cb add new parameter binningFlag
+ *   01 nov 1999 - cb add new parameters dhsOutOptions, outNFrames + fits 
+ *                    keywords and WCS in the structure
  *INDENT-ON*
  *-
  */
-
 
 /* includes */
 
@@ -33,14 +43,9 @@
 #include "gemModNum.h"
 #include "epToVxLib.h"
 #include "sdsuLib.h"
-#include "osp.h"
+#include "aoP2Lib.h"
 
-#ifndef NO_DHS
 #include "dhs.h"   
-#else
-typedef   unsigned long   DHS_CONNECT;
-#endif   /* NO_DHS */
-
 
 /* defines */
 
@@ -59,6 +64,10 @@ typedef   unsigned long   DHS_CONNECT;
                                     /* Name of SIR record containing          */
                                     /* SDSU test results.                     */
 
+#define   DET_CONTROL_TEST_SIR_NAME          "testing"
+                                    /* Name of SIR record containing          */
+                                    /* test state.                            */
+
 #define   DET_CONTROL_PRIM_REPLY_SIR_NAME     "detPrimReply"
                                     /* Name of SIR record containing          */
                                     /* reply from SDSU primitive cmd.         */
@@ -67,94 +76,218 @@ typedef   unsigned long   DHS_CONNECT;
                                     /* Name of SIR record containing          */
                                     /* observing state.                       */
 
-   /*
-    * Define the VME addresses of the SDSU controllers installed on the bus.
-    * If a particular controller is not installed its address should be set
-    * to 0x0, and the controller will then be simulated.
-    * NOTE: IT IS VERY IMPORTANT THAT THESE ADDRESSES ARE CORRECT.
-    */
+#define   DET_CONTROL_MEAS_SIR_NAME           "measuring"     
+                                    /* Name of SIR record containing          */
+                                    /* measuring state                        */
 
-   /* 
-    * MVME167 0xc0000020 
-    * POWERPC 0x08000000
-    */
-#define   DET_CONTROL_PWFS2_SDSU_ADRS_VME      0x08000000   
-                                    /* VME address of SDSU controller         */
-                                    /* for PWFS2.                             */
+#define   DET_CONTROL_AOCTRLINIT_SIR_NAME     "aoCtrlInit"
+                                    /* Name of SIR record containing the init */
+                                    /* state of the AO control context        */
+                                    /* structure                              */
 
-   /*
-    * Define the bit masks used to stop detector control process
-    */
+#define   DET_CONTROL_AODARKINIT_SIR_NAME     "aoDarkInit"
+                                    /* Name of SIR record containing the init */
+                                    /* state of the dark buffer               */
 
-#define   DET_CONTROL_PWFS2_MASK            0x2      /* Bit 1 set */
+#define   DET_CONTROL_AOFLATINIT_SIR_NAME     "aoFlatInit"
+                                    /* Name of SIR record containing the init */
+                                    /* state of the flat buffer               */
 
-   /*
-    * Define the maximum data frame sizes for each of the wavefront sensors.
-    */
+#define   DET_CONTROL_AOTHRESH_SIR_NAME       "aoThresh"
+                                    /* Name of SIR record containing the      */
+                                    /* threshold for centroids computation    */
 
-#define DET_CONTROL_PWFS2_XSIZE            80
-#define DET_CONTROL_PWFS2_YSIZE            80
+#define   DET_CONTROL_AOTOTAL_SIR_NAME        "aoTotal"
+                                    /* Name of SIR record containing the      */
+                                    /* flux threshold for centroids comp.     */
 
-   /*
-    * Define the default number of SDSU data buffers allocated for PWFS2
-    * sdsuLib expects there to be at least 2 buffers.
-    */
+#define   DET_CONTROL_AOPROCESSMODE_SIR_NAME  "aoProcessMode"
+                                    /* Name of SIR record containing the      */
+                                    /* processing mode                        */
 
-#define DET_CONTROL_PWFS2_MAX_FRAMES      1   
-                                     /* Was 5 - only 2 needed for simple task */
+#define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
+                                    /* Name of SIR record containing    */
+                                    /* the number of ouputs             */
 
-   /*
-    * Define World Coordinate System constants.
-    */
+#define   DET_CONTROL_DETXSIZE_SIR_NAME       "detXsize"
+                                    /* Name of SIR record containing    */
+                                    /* the X detector size              */
 
-#define DET_CONTROL_MAX_WCSPOINTS 40 /* Max number of WCS calibration points. */
+#define   DET_CONTROL_DETYSIZE_SIR_NAME       "detYsize"
+                                    /* Name of SIR record containing    */
+                                    /* the Y detector size              */
 
-   /*
-    * Define the default signal processing initialisation files for PWFS2
-    * Set to "NONE" if no default signal processing initialisation is required.
-    */
+#define   DET_CONTROL_XSUBAP_SIR_NAME         "xsubap"
+                                    /* Name of SIR record containing    */
+                                    /* the X detector size              */
 
-#define DET_CONTROL_PWFS2_OSPFGINI_FILE   "pwfs2fg.ini"   /* Will be "pwfs2fg.ini"   */
+#define   DET_CONTROL_YSUBAP_SIR_NAME         "ysubap"
+                                    /* Name of SIR record containing    */
+                                    /* the Y detector size              */
 
-   /*
-    * Define the names of the OMF files containing the DSP code. These files are
-    * downloaded automatically on startup. 
-    */
+#define   DET_CONTROL_XSTART_SIR_NAME         "xstart"
+                                    /* Name of SIR record containing    */
+                                    /* the X left offset                */
 
-#define   DET_CONTROL_OMF_FILE_PATH        "./bin/asm56000"
-                                    /* Directory containing OMF files.        */
+#define   DET_CONTROL_YSTART_SIR_NAME         "ystart"
+                                    /* Name of SIR record containing    */
+                                    /* the Y bottom offset              */
 
-#define   DET_CONTROL_OMF_VME_FILE         "vme-39.lod"
+#define   DET_CONTROL_XRASTER_SIR_NAME        "xras"
+                                    /* Name of SIR record containing    */
+                                    /* the X subaperture size           */
+
+#define   DET_CONTROL_YRASTER_SIR_NAME        "yras"
+                                    /* Name of SIR record containing    */
+                                    /* the Y subaperture size           */
+
+#define   DET_CONTROL_XSPACE_SIR_NAME         "xspace"
+                                    /* Name of SIR record containing    */
+                                    /* the X space between subapertures */
+
+#define   DET_CONTROL_YSPACE_SIR_NAME         "yspace"
+                                    /* Name of SIR record containing    */
+                                    /* the Y space between subapertures */
+
+#define   DET_CONTROL_XBIN_SIR_NAME           "xbin"
+                                    /* Name of SIR record containing    */
+                                    /* the X binning factor             */
+
+#define   DET_CONTROL_YBIN_SIR_NAME           "ybin"
+                                    /* Name of SIR record containing    */
+                                    /* the Y binning factor             */
+
+#define   DET_CONTROL_DETTYPE_SIR_NAME        "detType"
+                                    /* Name of SIR record containing    */
+                                    /* the type of detector controller  */
+
+#define   DET_CONTROL_DETID_SIR_NAME          "detID"
+                                    /* Name of SIR record containing    */
+                                    /* the SN of the CCD                */
+
+#define   DET_CONTROL_DATALABEL_SIR_NAME      "dataLabel"
+                                    /* Name of SIR record containing    */
+                                    /* the most recent DHS data label   */
+
+#define   DET_CONTROL_INTTIME_SIR_NAME        "intTime"
+                                    /* Name of SIR record containing    */
+                                    /* the integration time             */
+
+#define   DET_CONTROL_NEXPRQ_SIR_NAME         "nexpRQ"
+                                    /* Name of SIR record containing    */
+                                    /* requested nb of exp/dataset      */
+
+#define   DET_CONTROL_NEXP_SIR_NAME           "nexp"
+                                    /* Name of SIR record containing    */
+                                    /* current nb of exp/dataset        */
+
+#define   DET_CONTROL_NFRAMES_SIR_NAME        "nframes"
+                                    /* Name of SIR record containing    */
+                                    /* nb of frames/dataset             */
+
+#define   DET_CONTROL_BUNIT_SIR_NAME          "bunit"
+                                    /* Name of SIR record containing    */
+                                    /* the data unit                    */
+
+#define   DET_CONTROL_UTSTART_SIR_NAME        "utstart"
+                                    /* Name of SIR record containing    */
+                                    /* the ut at start of observation   */
+
+#define   DET_CONTROL_UTEND_SIR_NAME          "utend"
+                                    /* Name of SIR record containing    */
+                                    /* the ut at end of observation     */
+
+#define   DET_CONTROL_EXPOSED_SIR_NAME        "exposed"
+                                    /* Name of SIR record containing    */
+                                    /* the total integration time       */
+
+#define   DET_CONTROL_EXPOSEDRQ_SIR_NAME      "exposedRQ"
+                                    /* Name of SIR record containing    */
+                                    /* the requested total integration  */
+
+#define   DET_CONTROL_ELAPSED_SIR_NAME        "elapsed"
+                                    /* Name of SIR record containing    */
+                                    /* the elapsed time                 */
+
+#define   DET_CONTROL_OBSERVE_CAD_NAME        "observe"
+                                    /* Name of observe CAD record       */
+
+#define   DET_DHS_TASK_PRIORITY               210
+                                    /* Priority of the dhs task               */
+
+#define   DET_DHS_TASK_STACK_SIZE             0x100000
+                                    /* Stack size needed by the dhs task      */
+
+
+#define   DET_CONTROL_PWFS2_SDSU_ADRS_VME     0x08000000   
+                                    /* VME address of PWFS2 SDSU controller   */
+                                    /* If the controller is not installed its */
+                                    /* address should be set to 0x0, and the  */
+                                    /* controller will then be simulated      */
+                                    /* MVME167 0xc0000020, POWERPC 0x08000000 */
+
+#define   DET_CONTROL_PWFS2_MASK              0x2               
+                                    /* Define the bit masks used to stop      */
+                                    /* the detector control process, Bit 1 set*/
+
+
+#define DET_CONTROL_PWFS2_MAX_FRAMES          1   
+                                    /* Define the default number of SDSU data */
+                                    /* buffers allocated for PWFS2            */
+
+#define DET_CONTROL_MAX_WCSPOINTS             40 
+                                    /* Max number of WCS calibration points.  */
+
+#define DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE   "defFullCtrlP2.dat"
+                                    /* Define the default ao control init file*/
+                                    /* for PWFS2 when no binning. Set to      */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS2_AO_BIN_CTRL_INIT_FILE    "defBinCtrlP2.dat"
+                                    /* Define the default ao control init file*/
+                                    /* for PWFS2 when binnig. Set to "NONE" if*/
+                                    /* no default ao control initialisation is*/
+                                    /* required.                              */
+
+#define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
+                                    /* Directory containing OMF files for the */
+                                    /* DSP code                               */
+
+#define   DET_CONTROL_OMF_VME_FILE            "vme-39.lod"
                                     /* OMF file to download to VME DSP.       */
 
-#define   DET_CONTROL_GBD_OMF_TIM_FILE     "tim-39.lod"
+#define   DET_CONTROL_GBD_OMF_TIM_FILE        "tim-39.lod"
                                     /* OMF file to download to TIMING DSP     */
-                                    /* for PWFS and OIWFS.                    */
 
-
-#define   DET_CONTROL_OMF_UTL_FILE         "util.lod"
+#define   DET_CONTROL_OMF_UTL_FILE            "util.lod"
                                     /* OMF file to download to UTILITY DSP.   */
 
-   /* Define the name of the directory containing parameter files. */
-
-#define   DET_CONTROL_PAR_FILE_PATH        "./data"
-
-   /* Define the default directory to contain engineering data files. */
+#define   DET_CONTROL_PAR_FILE_PATH           "./data"
+                                    /* Name of the directory containing par   */
+                                    /* files.                                 */
 
 #define   DET_CONTROL_DATA_FILE_PATH       "."
+                                    /* Define the default directory to contain*/
+                                    /* engineering data files.                */
 
+#define   DET_TYPE "CCD39+SDSUII"
+
+#define   DET_CCD_SN "a5207-2-13"
+
+#define   DET_BUNIT "SDSU ADC units"
+
+/* typedef */
 
 typedef   struct      /* Context structure used to describe an observation.   */
 {
-                           /* AGWPS context information.                      */
+                           /* Main context information.                       */
                            /* --------------------------                      */
    SDSU_ID      sdsuId;    /* SDSU context.                                   */
    BOOL         observing; /* Flag set TRUE when observing.                   */
    BOOL         stopped;   /* Flag set TRUE when observation stopped.         */
    BOOL         continuous;/* BUG WORK AROUND: Set TRUE whenever the SDSU     */
                            /* controller is in continuous mode.               */
-   DATREC_CONTEXT   pDetObservingContext;
-                           /* Observing record context.                       */
    int          totalFrames;/* Total frames for observation.                  */
    int          outNFrames;/* Frame counter for output display.               */
    int          nframes;   /* Frame counter for this observation.             */
@@ -175,12 +308,13 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* --------------------------                      */
    int          outOptions;/* Output options (0=none, 1=DHS, 2=file).         */
    int          dhsOutOptions;/* DHS Output options (0=PERM, 1=TEMP, 2=QL).   */
-   DHS_CONNECT  dhsConnection;/* DHS connection ID.                           */
+   int          xPixelsDhs;/* Number of columns in frame, in pixels for dhs   */
+   int          yPixelsDhs;/* Number of rows in frame, in pixels for dhs      */
+   int          dhsCounter;/* Counter for frames to be sent to the QL         */
+   int          dhsQlRate; /* Number of frames send to the DHS QL             */
    DHS_BD_DATASET dhsDataset; /* DHS dataset ID.                              */
    DHS_BD_FRAME dhsDataFrame; /* DHS data frame ID.                           */
    float *      pCurFrame; /* Pointer to current unscrambled data frame.      */
-   int          xPixels;   /* Number of columns in frame, in pixels.          */
-   int          yPixels;   /* Number of rows in frame, in pixels.             */
    uint32       outputs;   /* Number of detector outputs.                     */
 
    char         pDataLabel [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
@@ -193,46 +327,97 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* data.   */
                            /* (This file is used for engineering only).       */
 
+                           /* AO parameters                                   */
+                           /* -------------                                   */
+   AO_CCD_ID    aoCcdId;   /* AO CCD geometry context structure               */
+   AO_CTRL_ID   aoCtrlId;  /* AO control context structure                    */
+   AO_CB_IM_ID  aoCbImId;  /* AO image circular buffer context structure      */
+   AO_CB_CTRL_ID aoCbCtrlId;  
+                           /* AO control circular buffer context structure    */
+   int          coaddCounter; 
+                           /* Counter of coadding images                      */
+   int          saveCbCounter; 
+                           /* Counter of used in closed loop sequence to save */
+                           /* the control circular buffer                     */
+   int          updateScale; 
+                           /* Flag to indicate if the scale factors have been */
+                           /* updated                                         */
+   long         saveCbIm;  /* Save the image circular buffer flag TRUE/FALSE. */
+   long         saveCbCtrl;/* Save the control circular buffer flag TRUE/FALSE*/
+   long         sigMode;   /* Signal processing mode.                         */
+   long         nCoaddFrames;
+                           /* Number of frames to coadd.                      */
+   long         methodThreshComp;    
+                           /* Method for threshold computation                */
+   long         nAverageDataThreshComp;    
+                           /* Number of data to average for threshold         */
+                           /* computation                                     */
+   long         saveCbCtrlClosedLoop;
+                           /* Save control circular  buffer during closed loop*/
+                           /* sequence                                        */
+   long         saveCbCtrlClosedLoopFrame;
+                           /* Save control circular  buffer during closed loop*/
+                           /* sequence every this number of frames            */
+   long         fgFrame;   /* Number of frames with FG only over the whole CCD*/
+                           /* in the closed loop sequence                     */
+   long         methodFluxComp;
+                           /* Method for average flux computation             */
+   long         averageFluxFlag;
+                           /* Average flux after FG Flag                      */
+   long         threshFlag;
+                           /* Threshold after FG Flag                         */
+   long         nFramesAverageFlux;
+                           /* Number of frames to average for computing the   */
+                           /* average flux                                    */
+   double       fgTime;    /* Time with FG only over the whole CCD in the     */
+                           /* closed loop sequence                            */
+   double       saveCbCtrlClosedLoopTime;
+                           /* Save control circular  buffer during closed loop*/
+                           /* sequence every this time                        */
+   double       rateBrightPixThreshComp;  
+                           /* Rate for brightest pixels for threshold         */
+                           /* computation                                     */
+   double       multCoeffRmsThreshComp;  
+                           /* Multiplicative coeff for threshold computation  */
+   double       averageRms;  
+                           /* Average rms for threshold computation           */
+   double       multCoeffAverageFlux;  
+                           /* Multiplicative coefficient for average flux     */
+   double       averageFlux;/* Average flux                                   */
+   double       tipScale;  /* Scale factor of the tip mode                    */
+   double       tiltScale; /* Scale factor of the tilt mode                   */
+   double       focusScale;/* Scale factor of the focus mode                  */
+   double       slidingFocusGain; 
+                           /* Gain for the sliding average for the focus mode */
+   char         pCoaddFileName[(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+                           /* Combined path name and file name for coadd data */
+   char         pCbPath[EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                           /* Directory where to save the Circular Buffers    */
+   char         pCbPathSeq[EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+                           /* Directory where to save the control circular    */
+                           /* buffer during closed loop                       */
+                             
                            /* Fits keywords                                   */
                            /* -------------                                   */
 
-   char          dataSec[22];
-   char          ccdSec[22];
-   char          origSec[22];
-   int           timeArrayStart[7];/* Array of year/month/day/hour/min/sec    */
-   char          utStartString[20];/* String which contains UTSTART data      */
-   int           timeArrayEnd[7];  /* Array of year/month/day/hour/min/sec    */
-   char          utEndString[20];  /* String to contain UTEND data            */
-   char          detType[16];
-   char          detId[16];
-
-                           /* Signal processing information.                  */
-                           /* ------------------------------                  */
-    struct OSP_CONTEXT *
-             ospFGContext; /* Pointer to FG signal processing context struct. */
-   struct OSP_GEOMETRY *
-             ospGeometry;  /* Pointer to signal processing geometry struct.   */
-   long         sigMode;   /* Signal processing mode.                         */
-   int          binningFlag; 
-                           /* TRUE or FALSE if binning or not                 */
-   long         nCoaddFrames;   
-                           /* Number of frames to coadd.                      */
-   int          coaddCounter;   
-                           /* Counter used to decide when to save coadded data*/
-   BOOL         updateGain;/* Flag to indicate if gain have been updated when */
-                           /* closed loop                                     */   
-   double       tipGain;   /* New closed loop gains                           */
-   double       tiltGain;
-   double       focusGain;
-   double       focusAverageGain;
+   char         dataSec[22];
+   char         ccdSec[22];
+   char         origSec[22];
+   char         utStartString[20]; /* String which contains UTSTART data      */
+   char         utEndString[20];   /* String to contain UTEND data            */
+   char         detType[16];
+   char         detId[16];
+   int          timeArrayEnd[7];   /* Array of year/month/day/hour/min/sec    */
+   int          timeArrayStart[7]; /* Array of year/month/day/hour/min/sec    */
 
                            /* Time stamps.                                    */
                            /* ------------                                    */
    double       rawtStart; /* Raw Gemini time at start of observation.        */
    double       rawtEnd;   /* Raw Gemini time at end of observation.          */
+   double       exposureTime;
+                           /* Current exposure time                           */
    double       exposedRQ; /* Requested total exposure time.                  */
    double       exposed;   /* Actual total exposure time.                     */
-   double       frameTime; /* Frame time.                                     */
 
                            /* World Coordinate System (WCS) information.      */
                            /* ------------------------------------------      */
@@ -246,10 +431,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Array of pixel IJ coordinates applying to data  */
                            /* read from the detector.                         */
    double       cij[6];    /* XY to IJ transformation matrix.                 */
-   char         ctype1[9]; /* WCS projection type for axis 1.                 */
    double       crpix1;    /* Pixel coordinate reference for axis 1.          */
    double       crval1;    /* World coordinate reference for axis 1.          */
-   char         ctype2[9]; /* WCS projection type for axis 2.                 */
    double       crpix2;    /* Pixel coordinate reference for axis 2.          */
    double       crval2;    /* World coordinate reference for axis 2.          */
    double       cd1_1;     /* xi rotation/skew matrix element.                */
@@ -258,12 +441,75 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       cd2_2;     /* yj rotation/skew matrix element.                */
    double       RA;        /* Right Ascension in hours.                       */
    double       Dec;       /* Declination in degrees.                         */
-
-   char         radecsys[9];/* Type of RA/Dec (for celestial coordinate).     */
    double       equinox;   /* Epoch of mean equator & equinox (celestial      */
                            /* coords).                                        */
    double       epoch;     /* Epoch of observation as a year.                 */
    double       mjdobs;    /* Epoch of observation as a modified Julian date. */
+   char         ctype1[9]; /* WCS projection type for axis 1.                 */
+   char         ctype2[9]; /* WCS projection type for axis 2.                 */
+   char         radecsys[9];/* Type of RA/Dec (for celestial coordinate).     */
+
+                           /* SAD information                                 */
+                           /* ---------------                                 */
+   DATREC_CONTEXT pDetObservingContext;
+                                      /* Observing record context.            */
+   DATREC_CONTEXT pDetMeasuringContext;
+                                      /* Measuring record context.            */
+   DATREC_CONTEXT pOutputsContext ;   /* Number of outputs SIR record         */
+                                      /* context structure                    */
+   DATREC_CONTEXT pDetXsizeContext ;  /* X detector size SIR record context   */
+                                      /* structure                            */
+   DATREC_CONTEXT pDetYsizeContext ;  /* Y detector size SIR record context   */
+                                      /* structure                            */
+   DATREC_CONTEXT pXsubapContext ;    /* X subaperture size SIR record        */
+                                      /* context structure                    */
+   DATREC_CONTEXT pYsubapContext ;    /* Y subaperture size SIR record        */
+                                      /* context structure                    */
+   DATREC_CONTEXT pXstartContext ;    /* X left offset SIR record context     */
+                                      /* structure                            */
+   DATREC_CONTEXT pYstartContext ;    /* Y bottom offset SIR record context   */
+                                      /* structure                            */
+   DATREC_CONTEXT pXrasterContext ;   /* X subaperture size SIR record        */
+                                      /* context structure                    */
+   DATREC_CONTEXT pYrasterContext ;   /* Y subaperture size SIR record        */
+                                      /* context structure                    */
+   DATREC_CONTEXT pXspaceContext ;    /* X space between subapertures SIR     */
+                                      /* record context structure             */
+   DATREC_CONTEXT pYspaceContext ;    /* Y space between subapertures SIR     */
+                                      /* record context structure             */
+   DATREC_CONTEXT pXbinContext ;      /* X binning factor SIR record context  */
+                                      /* structure                            */
+   DATREC_CONTEXT pYbinContext ;      /* Y binning factor SIR  record context */
+                                      /* structure                            */
+   DATREC_CONTEXT pAoDarkInitContext; /* Context structure for aoDarkInit     */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pAoThreshContext;   /* Context structure for aoThresh SIR   */
+                                      /* record.                              */
+   DATREC_CONTEXT pAoProcessModeContext;
+                                      /* Context structure for aoProcessMode  */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pAoTotalContext;    /* Context structure for aoTotal SIR    */
+                                      /* record.                              */
+   DATREC_CONTEXT pDataLabelContext ; /* Data Label SIR record context        */
+                                      /* structure                            */
+   DATREC_CONTEXT pIntTimeContext ;   /* Integration time SIR record context  */
+                                      /* structure                            */
+   DATREC_CONTEXT pNExpRQContext ;    /* Requested number of exp/data set SIR */
+                                      /* record context structure             */
+   DATREC_CONTEXT pNExpContext ;      /* Actual number of exp/data set SIR    */
+                                      /* record context structure             */
+   DATREC_CONTEXT pNFramesContext ;   /* Number of frames/data set SIR        */
+                                      /* record context structure             */
+   DATREC_CONTEXT pUTstartContext ;   /* UT at start of observation SIR record*/
+                                      /* context structure                    */
+   DATREC_CONTEXT pUTendContext ;     /* UT at end of observation SIR record  */
+                                      /* context structure                    */
+   DATREC_CONTEXT pExposedRQContext ; /* Requested total integration time SIR */
+                                      /* record context structure             */
+   DATREC_CONTEXT pExposedContext ;   /* Actual total integration time SIR    */
+                                      /* record context structure             */
+   DATREC_CONTEXT pElapsedContext ;   /* Actual elapsed time SIR record       */
+
 } OBS_ID_STRUCT, * OBS_ID;
 
    /*
@@ -294,8 +540,10 @@ enum
 
    /* GBDS commands. */
 
-   DET_CONTROL_CMD_SETUP = 0,  /* Set up SDSU controller parameters.          */
-   DET_CONTROL_CMD_CHOP,       /* Specify chop states mask.                   */
+   DET_CONTROL_CMD_CHOP = 0,   /* Specify chop states mask.                   */
+   DET_CONTROL_CMD_FRAME_SIZE, /* Specify frame size (binning or not)         */
+   DET_CONTROL_CMD_DHS_RECONNECT,/* Set connection with DHS                   */
+   DET_CONTROL_CMD_DHS_DISPLAY,/* Set display parameters for DHS QL           */
    DET_CONTROL_CMD_EXPOSURE,   /* Specify exposure time.                      */
    DET_CONTROL_CMD_OBSTYPE,    /* Specify observation type.                   */
    DET_CONTROL_CMD_SETDHS,     /* Set Data Handling System parameters.        */
@@ -307,7 +555,23 @@ enum
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
    DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
    DET_CONTROL_CMD_SIGINITGAIN,/* Init FG gains.                              */
-   DET_CONTROL_CMD_SIGMODE,    /* Configure signal processing.                */
+   DET_CONTROL_CMD_SIGMODE_NONE, /* Configure to no signal processing.        */
+   DET_CONTROL_CMD_SIGMODE_DARK, /* Configure to dark subtraction only.       */
+   DET_CONTROL_CMD_SIGMODE_GG, /* Configure to global guide only.             */
+   DET_CONTROL_CMD_SIGMODE_FG_FOCUS, 
+                               /* Configure to fast guide and focus.          */
+   DET_CONTROL_CMD_SIGMODE_COADD, /* Configure to coadd only.                 */
+   DET_CONTROL_CMD_SIGMODE_THRESH,/* Configure to compute threshold.          */
+   DET_CONTROL_CMD_SIGMODE_GG_COADD, 
+                               /* Configure to global guide and coadd mode.   */
+   DET_CONTROL_CMD_SIGMODE_SEQ,/* Configure sequence closed loop mode.        */
+   DET_CONTROL_CMD_SIGINIT_CB, /* Save circular buffers.                      */
+   DET_CONTROL_CMD_SIGMODE_TOTAL, 
+                               /* Configure to average flux computation mode. */
+   DET_CONTROL_CMD_SIGMODE_SEQ_DARK,/* Configure sequence dark mode.          */
+   DET_CONTROL_CMD_SIGMODE_FG_FOCUS_COADD,
+                               /* Configure to fast guide and focus and coadd */
+                               /* mode.                                       */
 
    /* genSub commands. */
 
@@ -320,11 +584,9 @@ enum
    DET_CONTROL_CMD_INITIALISE, /* Initialise SDSU controller.                 */
    DET_CONTROL_CMD_RESET,      /* Reset SDSU controller.                      */
    DET_CONTROL_CMD_TEST,       /* Test SDSU controller.                       */
-   DET_CONTROL_CMD_GIVEUP,     /* Give up control of hardware (HRWFS/OIWFS).  */
    DET_CONTROL_CMD_SAVE,       /* Save SDSU controller parameters.            */
    DET_CONTROL_CMD_GEOMETRY,   /* Set detector readout geometry.              */
    DET_CONTROL_CMD_PRIMITIVE,  /* Execute SDSU primitive command.             */
-   DET_CONTROL_CMD_DOWNLOAD,   /* Download DSP code.                          */
    DET_CONTROL_CMD_MODE,       /* Set detector readout mode.                  */
    DET_CONTROL_CMD_OFFSET,     /* Set detector ADC offsets.                   */
    DET_CONTROL_CMD_TEMP        /* Define temperature control params.          */
@@ -337,14 +599,14 @@ IMPORT SEM_ID      detDhsSem;
 
    /* Public functions */
 
-IMPORT void         detShow (const char * pWfsName, const BOOL verbose);
-IMPORT void         detStatusShow (const char * pWfsName);
-IMPORT void         detTempShow (const char * pWfsName);
-IMPORT STATUS       detObsShow (OBS_ID obsId, const BOOL verbose);
-IMPORT void         detDhsErrorCallback (DHS_CONNECT connect, 
-                                         DHS_STATUS errorNum,
-                                         DHS_ERR_LEVEL errorLev, char * msg, 
-                                         DHS_TAG tag, void * userData);
+IMPORT void        detShow (const char * pWfsName, const BOOL verbose);
+IMPORT void        detStatusShow (const char * pWfsName);
+IMPORT void        detTempShow (const char * pWfsName);
+IMPORT STATUS      detObsShow (OBS_ID obsId, const BOOL verbose);
+IMPORT void        detDhsErrorCallback (DHS_CONNECT connect, 
+                                        DHS_STATUS errorNum,
+                                        DHS_ERR_LEVEL errorLev, char * msg, 
+                                        DHS_TAG tag, void * userData);
 IMPORT STATUS      detDhsInit (const char * pClientName, const int numConnect,
                                const char * pHostName, 
                                const char * pServerName);

@@ -10,6 +10,11 @@
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1999/11/10 23:59:45  cboyer
+ * WCS + Ra and Dec implemented, Fits header improved, new observe command,
+ * remove init gain from signal processing init and now init gain works in
+ * open and closed loop with the same command + binning at 200Hz
+ *
  * Revision 1.2  1999/07/17 02:14:30  cboyer
  * Minor modifications
  *
@@ -42,8 +47,10 @@
 
 /* function declarations */
 
-IMPORT void wfsSetTrackFrame (FRAMETYPE frame, char type, double year, double wavelength,
-                              double RA, double Dec, char epochType, double epochYear);
-IMPORT void wfsGetTrackFrame (FRAMETYPE * pFrame, char * pType, double * pYear, double * pWavelength,
-                              double * pRA, double * pDec, char * pEpochType, double * pEpochYear);
+IMPORT void wfsSetTrackFrame (FRAMETYPE frame, char type, double year, 
+                              double wavelength, double RA, double Dec, 
+                              char epochType, double epochYear);
+IMPORT void wfsGetTrackFrame (FRAMETYPE * pFrame, char * pType, double * pYear, 
+                              double * pWavelength, double * pRA, double * pDec,
+                              char * pEpochType, double * pEpochYear);
 #endif /* __INCwfsWcsh */
