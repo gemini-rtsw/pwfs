@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsLib.c,v 1.1.1.1 1999-05-19 00:04:54 cboyer Exp $"};
+   "$Id: wfsLib.c,v 1.2 1999-07-17 02:14:25 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -634,7 +634,7 @@ STATUS   wfsWriteVersion (void)
 #ifdef NO_RCS
    if (epToVxPipeWrite ("version", COMPILE_DATE_AND_TIME, 0) == ERROR)
 #else
-    if (epToVxPipeWrite ("version", "$Revision: 1.1.1.1 $", 0) == ERROR)
+    if (epToVxPipeWrite ("version", "$Revision: 1.2 $", 0) == ERROR)
 #endif
    {
       ERROR_LOG ("Failed to write version number");

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: sdsuLib.c,v 1.1.1.1 1999-05-19 00:04:49 cboyer Exp $"};
+   "$Id: sdsuLib.c,v 1.2 1999-07-17 02:14:13 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -1101,7 +1101,7 @@ uint32 sdsuVersionGet ( SDSU_ID         context,
     */
 
    if (destId == SDSU_IDENT_HST)
-      return (sdsu_getVersion ("$Revision: 1.1.1.1 $"));
+      return (sdsu_getVersion ("$Revision: 1.2 $"));
    
    /*
     * The SDSU context must be valid if the code gets this far, as the version 

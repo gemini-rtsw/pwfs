@@ -17,7 +17,7 @@
 **  overflows, and division by zero, and disables exceptions for underflows and
 **  inexact conditions.
 */
-#define	FP_ENABLE_INVALID_OPERATION_EXCEPTIONS
+#define	FP_DISABLE_INVALID_OPERATION_EXCEPTIONS
 #define	FP_ENABLE_OVERFLOW_EXCEPTIONS
 #define	FP_DISABLE_UNDERFLOW_EXCEPTIONS
 #define	FP_ENABLE_ZERO_DIVIDE_EXCEPTIONS

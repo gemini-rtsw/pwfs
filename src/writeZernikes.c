@@ -60,6 +60,7 @@
  * 24-Jan-1999: ttfZero and aoZero - read ports B and C for fudge factors in polarity and rotation
  * 10-Feb-1999: cb - add check max/min TT and focus to writeWfsToSynchro()
  * 17-Feb-1999: cb - ttfZero change computation of theta for TCS and SCS
+ * 29-Jun-1999: cb - ttfZero change computation of theta for TCS and SCS
  *
  */
 /* INDENT ON */
@@ -994,6 +995,8 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
  * 24-Jan-1999: read ports B and C for fudge factors - port B selects add or subtract
  *		of the Zeiss angle, port C provides an additional rotation angle
  *		rotationAngle = tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
+ * 29-Jun-1999: Now the computation of the composite angle is
+ *              tcsAngle + tableAngle - armAngle
  *
  */
 
@@ -1067,11 +1070,18 @@ long    ttfZero (struct genSubRecord * pgsub)
 		    f->null[index] = *(ptr++);
 		}
 
+		if(f->null[3] < -45.0 || f->null[3] > 215.0)
+		{
+			/*logMsg("ttfZero > %s tcs angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);*/
+			f->null[3] = 0.0;
+		}
 		/* calculate composite correction angle */
 
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
 		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS); *//* for TCS */
-		compositeAngle = (tableAngle - armAngle)*DEGS2RADS;   /* for SCS */
+
+                /*printf ( "tcsAngle=%f, tableAngle=%f, armAngle=%f\n" , f->null[3] , tableAngle  , armAngle) ;*/
+		compositeAngle = (f->null[3] + tableAngle - armAngle)*DEGS2RADS;   /* for SCS, null[3] corresponds to the cass rotator angle */
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);
