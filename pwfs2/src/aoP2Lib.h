@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 29 Mar 2004: CB - Add aoMaxThreshold to aoCtrlId
  * 04 Feb 2003: CB - Add aoThreshold to aoCtrlId
  * 24 Sep 2002: CB - Implement seeing computation according FR's method
  * 18 Jun 2002: CB - Implement seeing computation according BE's method
@@ -508,6 +509,8 @@ typedef struct
 
    double       aoThreshold;           /* aO threshold above which the aO     */
                                        /* gains are increased                 */
+   double       aoMaxThreshold;        /* aO threshold above which the aO     */
+                                       /* values are clamped                  */
 
 } AO_CTRL_ID_STRUCT, * AO_CTRL_ID;
 
@@ -918,7 +921,7 @@ STATUS aoCtrlContextUpdate (char * pDarkFileName, char * pFlatFileName,
                             char * pSeeingCoeffVectFileName, 
                             double xCenter, double yCenter, 
                             double angleWithM2, double angleWithM1, 
-                            double seeingScaleFactor, double aoThreshold,
+                            double seeingScaleFactor, 
                             AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
 STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels,
@@ -979,7 +982,7 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        char * pSeeingCmFileName, char * pSeeingCvFileName,
                        double * pRms, double * pThresh, double * pTotalThresh,
                        double * pAngleM2, double * pAngleM1, 
-                       double * pSeeingGain, double * pAoThreshold,
+                       double * pSeeingGain, 
                        double *pFgGain, double * pSlidingFocusGain);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,

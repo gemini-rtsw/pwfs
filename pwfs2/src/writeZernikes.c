@@ -854,6 +854,24 @@ long gensubToTcsAo
 
       /* write whole array to valj for the TCS to pick up */
 
+      /* but make sure there are nothing else than astigmatism sent to TCS */
+
+      aoData[2]=0.0;
+      aoData[3]=0.0;
+      aoData[4]=0.0;
+      aoData[9]=0.0;
+      aoData[10]=0.0;
+      aoData[11]=0.0;
+      aoData[12]=0.0;
+      aoData[13]=0.0;
+      aoData[14]=0.0;
+      aoData[15]=0.0;
+      aoData[16]=0.0;
+      aoData[17]=0.0;
+      aoData[18]=0.0;
+      aoData[19]=0.0;
+      aoData[20]=0.0;
+
       memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
 
       /* write Zernike values to vala for display */
@@ -956,6 +974,9 @@ STATUS writeWfsToTcs
    double    posThresh = (aoCtrlId->aoThreshold);
    double    negThresh = (aoCtrlId->aoThreshold) * -1.0;
 
+   double    posMaxThresh = (aoCtrlId->aoMaxThreshold);
+   double    negMaxThresh = (aoCtrlId->aoMaxThreshold) * -1.0;
+
    double    astig0=0.0;
    double    astig45=0.0;
 
@@ -1033,6 +1054,16 @@ STATUS writeWfsToTcs
          else
             result.z3 = z3AfterRot*aoCtrlId->aoScaleFactorVect[1];
 
+         if (result.z2 >= posMaxThresh)
+            result.z2 = posMaxThresh;
+         else if (result.z2 <= negMaxThresh)
+            result.z2 = negMaxThresh;
+
+         if (result.z3 >= posMaxThresh)
+            result.z3 = posMaxThresh;
+         else if (result.z3 <= negMaxThresh)
+            result.z3 = negMaxThresh;
+
 /*
          result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
                      * aoCtrlId->aoScaleFactorVect[0];
@@ -1080,6 +1111,15 @@ STATUS writeWfsToTcs
          else
             result.z6 = z6AfterRot*aoCtrlId->aoScaleFactorVect[4];
 
+         if (result.z5 >= posMaxThresh)
+            result.z5 = posMaxThresh;
+         else if (result.z5 <= negMaxThresh)
+            result.z5 = negMaxThresh;
+
+         if (result.z6 >= posMaxThresh)
+            result.z6 = posMaxThresh;
+         else if (result.z6 <= negMaxThresh)
+            result.z6 = negMaxThresh;
 
 /*
          result.z5 = ( (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
@@ -1121,6 +1161,16 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[6];
          else
             result.z8 = z8AfterRot*aoCtrlId->aoScaleFactorVect[6];
+
+         if (result.z7 >= posMaxThresh)
+            result.z7 = posMaxThresh;
+         else if (result.z7 <= negMaxThresh)
+            result.z7 = negMaxThresh;
+
+         if (result.z8 >= posMaxThresh)
+            result.z8 = posMaxThresh;
+         else if (result.z8 <= negMaxThresh)
+            result.z8 = negMaxThresh;
 
 /*
          result.z7 = ( (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
@@ -1164,6 +1214,16 @@ STATUS writeWfsToTcs
          else
             result.z11 = z11AfterRot*aoCtrlId->aoScaleFactorVect[9];
 
+         if (result.z10 >= posMaxThresh)
+            result.z10 = posMaxThresh;
+         else if (result.z10 <= negMaxThresh)
+            result.z10 = negMaxThresh;
+
+         if (result.z11 >= posMaxThresh)
+            result.z11 = posMaxThresh;
+         else if (result.z11 <= negMaxThresh)
+            result.z11 = negMaxThresh;
+
 /*
          result.z10 = ( (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
                       - (trefoilModel.costref) ) * 
@@ -1201,6 +1261,16 @@ STATUS writeWfsToTcs
          else
             result.z13 = z13AfterRot*aoCtrlId->aoScaleFactorVect[11];
 
+         if (result.z12 >= posMaxThresh)
+            result.z12 = posMaxThresh;
+         else if (result.z12 <= negMaxThresh)
+            result.z12 = negMaxThresh;
+
+         if (result.z13 >= posMaxThresh)
+            result.z13 = posMaxThresh;
+         else if (result.z13 <= negMaxThresh)
+            result.z13 = negMaxThresh;
+
 /*
          result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11))) 
                       * (aoCtrlId->aoScaleFactorVect[10]);
@@ -1235,6 +1305,16 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[13];
          else
             result.z15 = z15AfterRot*aoCtrlId->aoScaleFactorVect[13];
+
+         if (result.z14 >= posMaxThresh)
+            result.z14 = posMaxThresh;
+         else if (result.z14 <= negMaxThresh)
+            result.z14 = negMaxThresh;
+
+         if (result.z15 >= posMaxThresh)
+            result.z15 = posMaxThresh;
+         else if (result.z15 <= negMaxThresh)
+            result.z15 = negMaxThresh;
 
 /*
          result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)))
@@ -1274,6 +1354,16 @@ STATUS writeWfsToTcs
          else
             result.z18 = z18AfterRot*aoCtrlId->aoScaleFactorVect[16];
 
+         if (result.z17 >= posMaxThresh)
+            result.z17 = posMaxThresh;
+         else if (result.z17 <= negMaxThresh)
+            result.z17 = negMaxThresh;
+
+         if (result.z18 >= posMaxThresh)
+            result.z18 = posMaxThresh;
+         else if (result.z18 <= negMaxThresh)
+            result.z18 = negMaxThresh;
+
 /*
          result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)))
                       * (aoCtrlId->aoScaleFactorVect[15]);
@@ -1308,6 +1398,16 @@ STATUS writeWfsToTcs
          else
             result.z20 = z20AfterRot*aoCtrlId->aoScaleFactorVect[18];
 
+
+         if (result.z19 >= posMaxThresh)
+            result.z19 = posMaxThresh;
+         else if (result.z19 <= negMaxThresh)
+            result.z19 = negMaxThresh;
+
+         if (result.z20 >= posMaxThresh)
+            result.z20 = posMaxThresh;
+         else if (result.z20 <= negMaxThresh)
+            result.z20 = negMaxThresh;
 /*
          result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)))
                       * (aoCtrlId->aoScaleFactorVect[17]);

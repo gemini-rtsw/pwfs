@@ -286,3 +286,6 @@ dev 9 January 2004 CB:
 ----------------------
   - aoTotalThresholdCompute(): new fit given by FR
   - implement pause time between 2 aO commands
+  - add coma rows in the Control Matrix for MK
+  - Monitor coma
+  - Clamp aO commands above a max threshold

@@ -80,6 +80,7 @@
  *   aoNewSeeingCompute () - Compute the seeing according to FR's method
  * 
  *INDENT-OFF*
+ *   29 Mar 2004: CB - remove aoThreshold from par file and add aoMaxThreshold
  *   09 Jan 2004: CB - Update aoTotalThresholdCompute routine with new FR's fit
  *                     add pauseNb parameter into aoModeCompute
  *   07 Jan 2004: CB - Read default TTF gains from file
@@ -2877,41 +2878,6 @@ STATUS aoCtrlContextInit (
             aoCtrlId->seeingScaleFactor );
 #endif
 
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the AO init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      aoCtrlId->initFlag = FALSE;
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   printf ( "aoCtrlContextInit(): %s\n", comment );
-#endif
-
-   /* Read aO threshold above which the aO gain is increased */
-
-   if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
-   {
-      ERROR_SET1 ( 0,
-            "Failed to read aO threshold from the AO init file %s",
-            ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      aoCtrlId->initFlag = FALSE;
-      return (ERROR);
-   }
-
-   aoCtrlId->aoThreshold = value;
-
-#ifdef DEBUG
-   printf ( "aoCtrlContextInit(): aoThreshold = %f\n",
-            aoCtrlId->aoThreshold );
-#endif
-
    /* End - close and return */
 
    aoCtrlId->initFlag = TRUE;
@@ -2950,7 +2916,7 @@ STATUS aoCtrlContextInit (
  *                        pFgContMatFileName, pSeeingCoeffMatFileName,
  *                        pSeeingCoeffVectFileName, xCenter, yCenter, 
  *                        angleWithM2, angleWithM1, 
- *                        seeingScaleFactor, aoThreshold, aoCcdId, aoCtrlId)
+ *                        seeingScaleFactor, aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pDarkFileName            (char *)     Pointer to the dark file name 
@@ -2972,7 +2938,6 @@ STATUS aoCtrlContextInit (
  *   (>) angleWithM2              (double)     New angle between M2 and P2 
  *   (>) angleWithM1              (double)     New angle between M1 and P2 
  *   (>) seeingScaleFactor        (double)     Seeing Scale factor
- *   (>) aoThreshold              (double)     aO threshold
  *   (>) aoCcdId                  (AO_CCD_ID)  Pointer to the AO CCD geometry 
  *                                             context structure 
  *   (<) aoCtrlId                 (AO_CTRL_ID) Pointer to the AO control context
@@ -3024,7 +2989,6 @@ STATUS aoCtrlContextUpdate (
    double     angleWithM2,
    double     angleWithM1,
    double     seeingScaleFactor,
-   double     aoThreshold,
    AO_CCD_ID  aoCcdId,
    AO_CTRL_ID aoCtrlId
    )
@@ -3296,15 +3260,6 @@ STATUS aoCtrlContextUpdate (
             aoCtrlId->seeingScaleFactor );
 #endif
 
-   /* Init the aO threshold */
-
-   aoCtrlId->aoThreshold = aoThreshold;
-
-#ifdef DEBUG
-   printf ( "aoCtrlContextUpdate(): aoThreshold = %f\n",
-            aoCtrlId->aoThreshold );
-#endif
-
    /* End */
 
    aoCtrlId->initFlag = TRUE;
@@ -3544,6 +3499,7 @@ STATUS aoCtrlContextShow (
    printf ( "jitter: %f\n" , aoCtrlId->jitter );
    printf ( "seeingScaleFactor: %f\n" , aoCtrlId->seeingScaleFactor );
    printf ( "aoThreshold: %f\n" , aoCtrlId->aoThreshold );
+   printf ( "aoMaxThreshold: %f\n" , aoCtrlId->aoMaxThreshold );
 
    return (OK);
 }
@@ -6832,7 +6788,7 @@ STATUS aoDarkUpdate (
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName,
  *                   pFgCmFileName, pSeeingCmFileName, pSeeingCvFileName,
  *                   pRms, pThresh, pTotalThresh, pAngleM2, pAngleM1, 
- *                   pSeeingGain, pAoThreshold, pFgGain, pSlidingFocusGain)
+ *                   pSeeingGain, pFgGain, pSlidingFocusGain)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName     (char *)   Pointer to the AO init file name 
@@ -6855,7 +6811,6 @@ STATUS aoDarkUpdate (
  *   (<) pAngleM2          (double *) Pointer to the angle with M2
  *   (<) pAngleM1          (double *) Pointer to the angle with M1
  *   (<) pSeeingGain       (double *) Pointer to the seeing scale factor
- *   (<) pAoThreshold      (double *) Pointer to the aO threshold
  *   (<) pFgGain           (double *) Pointer to array of gain (TTF)
  *   (<) pSlidingFocusGain (double *) Pointer to the focus sliding gain
  *
@@ -6901,7 +6856,6 @@ STATUS aoCtrlFileRead (
    double * pAngleM2,
    double * pAngleM1,
    double * pSeeingGain,
-   double * pAoThreshold,
    double * pFgGain,
    double * pSlidingFocusGain
    )
@@ -7582,20 +7536,6 @@ STATUS aoCtrlFileRead (
 
 #ifdef DEBUG
    printf ( "aoCtrlFileRead(): %s\n", comment );
-#endif
-
-   /* Read aO threshold */
-
-   if ( (fscanf (pFile, "%lf\n", pAoThreshold)) == EOF )
-   {
-      printf ( "Failed to read aO threshold from the AO init file %s\n",
-               pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   printf ( "aoCtrlFileRead(): aoThreshold = %f\n", *pAoThreshold );
 #endif
 
    /* End - close and return */
@@ -9173,10 +9113,10 @@ STATUS aoThresholdPerSubapCompute (
 
 /*+
  *   FUNCTION NAME:
- *   aoTotalThresholdCompute
+ *   aoTotalThresholdCompute_old
  *
  *   INVOCATION:
- *   aoTotalThresholdCompute (aoCcdId, aoCtrlId)
+ *   aoTotalThresholdCompute_old (aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
@@ -9211,7 +9151,7 @@ STATUS aoThresholdPerSubapCompute (
  *-
  */
 
-double aoTotalThresholdCompute (
+double aoTotalThresholdCompute_old (
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId
    )
@@ -10136,10 +10076,10 @@ STATUS aoNewSeeingCompute (
 
 /*+
  *   FUNCTION NAME:
- *   aoTotalThresholdCompute_new
+ *   aoTotalThresholdCompute
  *
  *   INVOCATION:
- *   aoTotalThresholdCompute_new (aoCcdId, aoCtrlId)
+ *   aoTotalThresholdCompute (aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
@@ -10172,7 +10112,7 @@ STATUS aoNewSeeingCompute (
  *-
  */
 
-double aoTotalThresholdCompute_new (
+double aoTotalThresholdCompute (
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId
    )
