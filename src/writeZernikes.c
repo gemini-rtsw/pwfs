@@ -878,7 +878,7 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 
 	if(ptr[pWfs->wfsSource] != NULL)
 	{
-          if ( (result.z2 > (double)(MIN_TT_M2)) && (result.z2 < (double)(MAX_TT_M2)) )
+          /*if ( (result.z2 > (double)(MIN_TT_M2)) && (result.z2 < (double)(MAX_TT_M2)) )
 	     ptr[pWfs->wfsSource]->z1 = (float)(result.z2);
           else if ( result.z2 <= (double)(MIN_TT_M2) )
              ptr[pWfs->wfsSource]->z1 = (float)(MIN_TT_M2) ;
@@ -897,7 +897,11 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
           else if ( result.z4 <= (double)(MIN_FOCUS_M2) )
              ptr[pWfs->wfsSource]->z3 = (float)(MIN_FOCUS_M2);
           else
-             ptr[pWfs->wfsSource]->z3 = (float)(MAX_FOCUS_M2) ;
+             ptr[pWfs->wfsSource]->z3 = (float)(MAX_FOCUS_M2) ;*/
+
+	  ptr[pWfs->wfsSource]->z1 = (float)(result.z2);
+	  ptr[pWfs->wfsSource]->z2 = (float)(result.z3);
+	  ptr[pWfs->wfsSource]->z3 = (float)(result.z4);
 
 	  ptr[pWfs->wfsSource]->err1	= (float)(pWfs->err[1]);
 	  ptr[pWfs->wfsSource]->err2	= (float)(pWfs->err[2]);

@@ -26,4 +26,7 @@ Modification toward V0-4
   - ospLib.c include last cfitsio version V0-3: FITSIO_READONLY
   - defaults parameters for detSigInit and gains
 
-dev
+V0-6 27 June 2000 CB:
+---------------------
+  - default temperature -20
+  - writeWfsToSynchro remove TTF limits checks
