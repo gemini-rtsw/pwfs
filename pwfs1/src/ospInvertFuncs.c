@@ -214,28 +214,28 @@ int /*STATUS*/ ospReadMatrixFromFile(char * infile, float ** matr)
 	fprintf(stderr,"Error reading first line of %s ",infile);
 	fprintf(stderr,"during function readMatrixFromFile\n");
 	fprintf(stderr,"...should be text comment\n");
-	ospstatus=ERROR;
+	return(ERROR);
     }
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
 	fprintf(stderr,"Error reading second line of %s ",infile);
 	fprintf(stderr,"during function readMatrixFromFile\n");
 	fprintf(stderr,"...should be text comment\n");
-	ospstatus=ERROR;
+	return(ERROR);
     }
     if((fscanf(fp,"%d %d ",&m,&n))==EOF)
     {
 	fprintf(stderr,"Error reading third line of %s ",infile);
 	fprintf(stderr,"during function readMatrixFromFile\n");
 	fprintf(stderr,"...should be (space separated) matrix dimensions\n");
-	ospstatus=ERROR;
+	return(ERROR);
     }
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
 	fprintf(stderr,"Error reading fourth line of %s ",infile);
 	fprintf(stderr,"during function readMatrixFromFile\n");
 	fprintf(stderr,"...should be text comment\n");
-	ospstatus=ERROR;
+	return(ERROR);
     }
     for (k=1;k<=m;k++)
 	for (l=1;l<=n;l++) 
@@ -244,7 +244,7 @@ int /*STATUS*/ ospReadMatrixFromFile(char * infile, float ** matr)
 	    {
 		fprintf(stderr,"Error reading element [%d][%d] of matrix stored in %s ", k,l,infile);
 		fprintf(stderr,"during function readMatrixFromFile\n");
-		ospstatus=ERROR;
+	        return(ERROR);
 	    }
 	}
     fclose(fp);

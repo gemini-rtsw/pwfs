@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsLib.c,v 1.4 1999-11-10 22:59:06 cboyer Exp $"};
+   "$Id: wfsLib.c,v 1.5 2000-01-05 20:57:00 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -50,6 +50,11 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  1999/11/10 22:59:06  cboyer
+ * PPC version + WCS + RA and Dec implemented + Fits header improved +
+ * new observe command + init gains apart from signal processor init +
+ * telescope name from TCS record
+ *
  * Revision 1.3  1999/06/10 03:56:50  cboyer
  * Simplified version for PWFS1 only
  *
@@ -768,7 +773,7 @@ STATUS   wfsWriteVersion (void)
 #ifdef NO_RCS
    if (epToVxPipeWrite ("version", COMPILE_DATE_AND_TIME, 0) == ERROR)
 #else
-    if (epToVxPipeWrite ("version", "$Revision: 1.4 $", 0) == ERROR)
+    if (epToVxPipeWrite ("version", "$Revision: 1.5 $", 0) == ERROR)
 #endif
    {
       ERROR_LOG ("Failed to write version number");
@@ -1164,7 +1169,7 @@ STATUS   wfsInitTelName (struct genSubRecord *pgensub)
 {
 
     strcpy ( tcsTelName , (char *)pgensub->a ) ; 
-    if ( (strcmp ( tcsTelName , "Gemini North" ) == 0) || ( strcmp ( tcsTelName , "Gemini South" ) == 0) )
+    if ( (strcmp ( tcsTelName , "Gemini North" ) != 0) && ( strcmp ( tcsTelName , "Gemini South" ) != 0) )
        strcpy ( tcsTelName , "Gemini North" ) ;
     return (OK) ;
 }

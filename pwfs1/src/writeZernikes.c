@@ -63,6 +63,7 @@
  * 26-Apr-1999: cb - replace in writeWfsToSynchro z[] by FGZernikes[]
  * 26-Apr-1999: cb - simplified version for split backplane PWFS1
  * 18-Nov-1999: cb - add in aoZero, contribution from the cass rotator angle
+ * 26-Nov-1999: cb - modify writeWfsToSynchro to update interval as for P2
  *
  */
 /* INDENT ON */
@@ -165,6 +166,7 @@ SDSU_ID sdsuId;
 
 /* add by cb to display 6x6 centroids data */
 double  localDiag[DIAG_ARRAY_SIZE];
+double  globalAngleAO ;
 
 /* declare externals */
 
@@ -305,6 +307,7 @@ double	dfilter(double newSample, int Id)
  *		than creating as necessary during operation
  * 22-Jan-1999: Initialise time values on synchro bus to 0.0
  * 26-Apr-1999: Simplified version for split backplane PWFS1 (cb)
+ * 26-Nov-1999: Update interval as for PWFS2 (cb)
  *-
  */
 
@@ -398,6 +401,7 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
 	   ptr = (wfs*)&basePtr->pwfs1;
 	   strncpy(ptr->name, "pwfs1", 15);
 	   ptr->time = 0.0;
+	   ptr->interval = 0.0;
 	}
 
 	return (OK);
@@ -665,7 +669,7 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 	{
 		/* first rotate the tip and tilt values to the tcs frame of reference */
 
-		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM - f->null[5];
+		/*result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM - f->null[5];
 		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2])*MICRON2MM - f->null[6];
 		result.z4 = (pWfs->z[3])*MICRON2MM - f->null[7];
 		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5])*MICRON2MM - f->null[8];
@@ -683,27 +687,27 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17])*MICRON2MM - f->null[20];
 		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17])*MICRON2MM - f->null[21];
 		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19])*MICRON2MM - f->null[22];
-		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM - f->null[23];
+		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM - f->null[23];*/
 
-		/*result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM ;
-		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2])*MICRON2MM ;
-		result.z4 = (pWfs->z[3])*MICRON2MM;
-		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5])*MICRON2MM ;
-		result.z6 = (f->sinTheta*pWfs->z[4] + f->cosTheta*pWfs->z[5])*MICRON2MM ;
-		result.z7 = (f->cosTheta*pWfs->z[6] - f->sinTheta*pWfs->z[7])*MICRON2MM ;
-		result.z8 = (f->sinTheta*pWfs->z[6] + f->cosTheta*pWfs->z[7])*MICRON2MM ;
-		result.z9 = (pWfs->z[8])*MICRON2MM ;
-		result.z10 = (f->cosTheta*pWfs->z[9] - f->sinTheta*pWfs->z[10])*MICRON2MM ;
-		result.z11 = (f->sinTheta*pWfs->z[9] + f->cosTheta*pWfs->z[10])*MICRON2MM ;
-		result.z12 = (f->cosTheta*pWfs->z[11] - f->sinTheta*pWfs->z[12])*MICRON2MM ;
-		result.z13 = (f->sinTheta*pWfs->z[11] + f->cosTheta*pWfs->z[12])*MICRON2MM ;
-		result.z14 = (f->cosTheta*pWfs->z[13] - f->sinTheta*pWfs->z[14])*MICRON2MM ;
-		result.z15 = (f->sinTheta*pWfs->z[13] + f->cosTheta*pWfs->z[14])*MICRON2MM ;
-		result.z16 = (pWfs->z[15])*MICRON2MM;
-		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17])*MICRON2MM ;
-		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17])*MICRON2MM ;
-		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19])*MICRON2MM ;
-		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM ;*/
+		result.z2 = pWfs->z[1] ;
+		result.z3 = pWfs->z[2] ;
+		result.z4 = pWfs->z[3] ;
+		result.z5 = pWfs->z[4] ;
+		result.z6 = pWfs->z[5] ;
+		result.z7 = pWfs->z[6] ;
+		result.z8 = pWfs->z[7] ;
+		result.z9 = pWfs->z[8] ;
+		result.z10 = pWfs->z[9] ;
+		result.z11 = pWfs->z[10] ;
+		result.z12 = pWfs->z[11] ;
+		result.z13 = pWfs->z[12] ;
+		result.z14 = pWfs->z[13] ;
+		result.z15 = pWfs->z[14] ;
+		result.z16 = pWfs->z[15] ;
+		result.z17 = pWfs->z[16] ;
+		result.z18 = pWfs->z[17] ;
+		result.z19 = pWfs->z[18] ;
+		result.z20 = pWfs->z[19] ;
 
 		semGive(f->access);
 	}
@@ -811,6 +815,7 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
  * 09-Nov-1998	Write fast tip/tilt to synchro bus			(srp)
  * 05-Jan-1999	Add null zernike calculation
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
+ * 26-Nov-1999  Update interval as for P2
  *-
  */
 
@@ -875,7 +880,7 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 	  ptr->err1	= (float)(pWfs->FGZernikesError[0]);
 	  ptr->err2	= (float)(pWfs->FGZernikesError[1]);
 	  ptr->err3	= (float)(pWfs->FGZernikesError[2]);
-	  ptr->interval  = (float)(0.0);
+	  ptr->interval  += (float)(0.0001);
 
 	  /* temporarily just increment the time parameter until bancomm access sorted */
 
@@ -974,7 +979,10 @@ long    ttfZero (struct genSubRecord * pgsub)
 	int	wfsSource = 0;
 	frame	*f;
 	double	*ptr;
-	double	probeAngle = 0.0, polarityFudge = 1.0, rotationFudge = 0.0, compositeAngle = 0.0;
+	double	tableAngle = 0.0;
+        double  fudgeAngle = 0.0; 
+        double  armAngle = 0.0; 
+        double  compositeAngle = 0.0;
 
 	ptr = (double *) pgsub->j;
 
@@ -994,27 +1002,27 @@ long    ttfZero (struct genSubRecord * pgsub)
 	{
 		/* read conversion factors from input ports */
 
-		if(sscanf(pgsub->a, "%lf", &probeAngle) != 1)
+		if(sscanf(pgsub->a, "%lf", &tableAngle) != 1)
 		{
-			probeAngle = 0.0;
+			tableAngle = 0.0;
 		}
 
-		if(sscanf(pgsub->b, "%lf", &polarityFudge) != 1)
+		if(sscanf(pgsub->b, "%lf", &fudgeAngle) != 1)
 		{
-			polarityFudge = 1.0;
+			fudgeAngle = 1.0;
 		}
 
-		if(sscanf(pgsub->c, "%lf", &rotationFudge) != 1)
+		if(sscanf(pgsub->c, "%lf", &armAngle) != 1)
 		{
-			rotationFudge = 0.0;
+			armAngle = 0.0;
 		}
 
 		/* sanity check conversion factors */
 
-		if(probeAngle < LOW_PROBE_ANGLE || probeAngle > HIGH_PROBE_ANGLE)
+		if(tableAngle < LOW_PROBE_ANGLE || tableAngle > HIGH_PROBE_ANGLE)
 		{
 			logMsg("ttfZero > %s probe angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);
-			probeAngle = 0.0;
+			tableAngle = 0.0;
 		}
 	}
 
@@ -1035,7 +1043,9 @@ long    ttfZero (struct genSubRecord * pgsub)
 
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
 		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS); for TCS */
-		compositeAngle = (probeAngle)*DEGS2RADS;   /* for SCS */
+
+		compositeAngle = (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;   /* for SCS, null[3] corresponds to the cass rotator angle */
+
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);
@@ -1054,7 +1064,7 @@ long    ttfZero (struct genSubRecord * pgsub)
 	*(double *) pgsub->valb = f->null[1];			/* tAppl */
 	*(double *) pgsub->valc = f->null[2];			/* trackId */
 	*(double *) pgsub->vald = f->null[3];			/* tcsAngle (degrees) */
-	*(double *) pgsub->vale = probeAngle;			/* probeAngle (degrees) */
+	*(double *) pgsub->vale = tableAngle;			/* tableAngle (degrees) */
 	*(double *) pgsub->valf = compositeAngle/DEGS2RADS;	/* composite angle (degrees) */
 	*(double *) pgsub->valg = f->null[5];			/* z2 */
 	*(double *) pgsub->valh = f->null[6];			/* z3 */
@@ -1107,6 +1117,9 @@ long    ttfZero (struct genSubRecord * pgsub)
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  * 21-June-1999 Modified to read tableAngle and the armAngle from a&g (cb)
  * 18-Nov-1999  Modified to add also cass rotator angle (cb)
+ * 24-Nov-1999  Modified to add a fudge angle to the table angle (cb)
+ * 26-Nov-1999  Change sign in the magic formula for the composite angle(cb)
+ * 13-Dec-1999  Remove limit checks for the cass rotator angle (cb)
  *
  */
 
@@ -1121,7 +1134,7 @@ long    aoZero (struct genSubRecord * pgsub)
 	frame	*f;
 	double	*ptr;
 	double	tableAngle = 0.0; 
-        double  polarityFudge = 1.0;
+        double  fudgeAngle = 0.0;
         double  armAngle = 0.0;
         double  compositeAngle = 0.0;
 
@@ -1148,9 +1161,9 @@ long    aoZero (struct genSubRecord * pgsub)
 			tableAngle = 0.0;
 		}
 
-		if(sscanf(pgsub->b, "%lf", &polarityFudge) != 1)
+		if(sscanf(pgsub->b, "%lf", &fudgeAngle) != 1)
 		{
-			polarityFudge = 1.0;
+			fudgeAngle = 0.0;
 		}
 
 		if(sscanf(pgsub->c, "%lf", &armAngle) != 1)
@@ -1180,23 +1193,21 @@ long    aoZero (struct genSubRecord * pgsub)
 		    f->null[index] = *(ptr++);
 		}
 
-                if(f->null[3] < -45.0 || f->null[3] > 215.0)
-                {
-                        /*logMsg("ttfZero > %s tcs angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);*/
-                        f->null[3] = 0.0;
-                }
-
 		/* calculate composite correction angle */
 
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
 		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS);*/
-		compositeAngle = (f->null[3] + tableAngle - armAngle)*DEGS2RADS;
+
+		compositeAngle = (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;
+
                 /*printf ( "compositeAngle = %lf, null[3]= %lf, tableAngle =%lf, armAngle=%lf\n" ,
                          compositeAngle , f->null[3], tableAngle, armAngle ) ;*/
               
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);
+
+                globalAngleAO = f->theta ; /* used by ospRotateCentroids */
 
 		semGive(f->access);
 	}

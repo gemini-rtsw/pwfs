@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.8 1999-11-19 03:20:28 cboyer Exp $"};
+   "$Id: detControl.c,v 1.9 2000-01-05 20:56:50 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -35,6 +35,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   16 Dec 1999: CB - add another angle to detSigInit (angleFG, angleAO)
+ *   26 Nov 1999: CB - Use interval instead of time for synchro bus.
  *   15 Nov 1999: CB - Add a parameter to detSigInit()
  *                     then modify ospUpdate, capfast and wfsDb.c
  *   09 Nov 1999: CB - TELESCOP and OBSERVAT are now updated from the TCS
@@ -88,6 +90,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "errorLib.h"
 #include "sdsuLib.h"
 #include "osp.h"
+#include "synchroMap.h"
 /*#include "xycom.h"*/
 
 #include "detControl.h"
@@ -152,6 +155,8 @@ uint32  detControlStop = 0x0; /* This bit mask provides a way of aborting     */
 extern struct OSP_CONTEXT *wfsAddr;
 
 extern int sdsuFrameLost ;
+
+extern wfs *ptr;
 
 /*************************** Definition of variables for xycom benchmarking ***/
 
@@ -2227,6 +2232,8 @@ uint32 detObserveStart
        * observation. 
        */
 
+      printf ( "ptr->interval=%f\n" , ptr->interval ) ;
+
       errorNumber = 
       detStop (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
                obsId);
@@ -2245,6 +2252,12 @@ uint32 detObserveStart
          errorNumber = S_detControl_BUSY;
          return (errorNumber);
       }
+
+      /* Reset to zero interval */
+
+      ptr->interval = 0.0 ;
+      printf ( "ptr->interval=%f\n" , ptr->interval ) ;
+
 
       /* Obtain the attributes */
 
@@ -3052,6 +3065,7 @@ uint32 detObserveStart
          qlStreams[0] = "pwfs1Science";
 
          wfsGetTelName ( telName ) ;
+         printf ( "telName=%s\n" , telName ) ;
 
          /* NOTE: Lifetime should be definable
           * PERMANENT for permanent data (e.g. calibrations)
@@ -3848,36 +3862,43 @@ void detObserveEnd
                    * saved once per observation.
                    */
 
-                     obsId->coaddCounter++;
-                     if ( obsId->coaddCounter == nCoadds )
-                     {
+                  obsId->coaddCounter++;
+                  if ( obsId->coaddCounter == nCoadds )
+                  {
                      /*
                       * Make up a file name by adding the string ".coadd.fits" to 
                       * the given file name. Use a default file name if one 
                       * has not been given.
                       */
 
-                        if ( strcmp(obsId->pOutFileName, "") == 0 )
-                        {
-                           strcpy ( pFileNameString, "coadd.fits" );
-                        }
-                        else
-                        {
-                           sprintf( pFileNameString, "%s.coadd.fits", 
-                                    obsId->pOutFileName );
-                        }
-
-                        MESSAGE_LOG1 (MSG_MINDEBUG, "Saving coadded data to %s",
-                                      pFileNameString);
-
-                        if ( detWriteFits (pFileNameString, obsId, 
-                                           obsId->xPixels, obsId->yPixels,
-                                           obsId->ospAOContext->sumbuff) == 
-                             ERROR )
-                        {
-                           ERROR_LOG ("Failed to save coadded data to disk");
-                        }
+                     if ( strcmp(obsId->pOutFileName, "") == 0 )
+                     {
+                        strcpy ( pFileNameString, "coadd.fits" );
                      }
+                     else
+                     {
+                        sprintf( pFileNameString, "%s.coadd.fits", 
+                                 obsId->pOutFileName );
+                     }
+
+                     MESSAGE_LOG1 (MSG_MINDEBUG, "Saving coadded data to %s",
+                                   pFileNameString);
+
+                     if ( detWriteFits (pFileNameString, obsId, 
+                                        obsId->xPixels, obsId->yPixels,
+                                        obsId->ospAOContext->sumbuff) == 
+                          ERROR )
+                     {
+                        ERROR_LOG ("Failed to save coadded data to disk");
+                     }
+#ifdef DEBUG
+                     printf ("ospAoAnalyze: %p \n", obsId->ospAOContext);
+#endif
+                     if ( ospAoAnalyze (obsId->ospAOContext) == ERROR )
+                     {
+                        ERROR_LOG ("Failed to analyze zernikes distribution after coadd");
+                     }
+                  }
                   break;
 
                   case (OSP_MODE_COADD):
@@ -7368,7 +7389,8 @@ uint32 detSigInit
    char         pFullFlatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullRefFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   double       angle;
+   double       angleFG;
+   double       angleAO;
    double       refX, refY;
    double       guideThreshold;
    /*double       tipGain;
@@ -7387,7 +7409,7 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pDarkFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFlatFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&angle);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&angleFG);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&refX);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&refY);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&guideThreshold);
@@ -7397,6 +7419,7 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&modeNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, (char *)&centroidNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12, (char *)&thresholdRate);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, (char *)&angleAO);
 
    /*EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&tipGain);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&tiltGain);*/
@@ -7471,7 +7494,7 @@ uint32 detSigInit
 
    if ( ospUpdate (obsId->ospAOContext,
                    pFullDarkFileName , pFullFlatFileName ,
-                   angle , refX , refY , guideThreshold ,  
+                   angleFG, angleAO , refX , refY , guideThreshold ,  
                    pFullRefFileName ,
                    threshold,
                    pFullMatFileName,

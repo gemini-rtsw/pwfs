@@ -18,6 +18,8 @@
 
 struct OSP_CONTEXT *wfsAddr;
 
+extern double globalAngleAO ; /* add by cb and defined into writeZernikes.c */
+
 #ifdef vxWorks
 int do_it();
 int do_it()
@@ -1031,7 +1033,8 @@ int /*STATUS*/ ospShow(struct OSP_CONTEXT * wfsSpecific)
 	   wfsSpecific->focusscale);
     printf("Gain focus parameter               : %6.3f\n", 
 	   wfsSpecific->gainFocus);
-    printf("Angle                              : %6.3f\n", (wfsSpecific->angle));
+    printf("AngleFG                            : %6.3f\n", (wfsSpecific->angleFG));
+    printf("AngleAO                            : %6.3f\n", (wfsSpecific->angleAO));
     printf("WfsSource (wfs id)                 : %6d\n",wfsSpecific->wfsSource);
     printf("WfsSource (wfs id)                 : %6d\n",wfsSpecific->wfsSource);
     printf("WfsMode (AO = 0 FG = 1)            : %6d\n",wfsSpecific->wfsMode);
@@ -2233,7 +2236,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * INVOCATION:
  * int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
  *                 char *pDarkFileName , char *pFlatFileName ,
- *                 double angle , double refX , double refY ,
+ *                 double angleFG , double angleAO, double refX , double refY ,
  *                 double guideThreshold , 
  *                 char *pRefFileName , double threshold ,
  *                 char *pMatFileName , int modeNb , int centroidNb ,
@@ -2243,7 +2246,8 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
  * (>) pDarkFileName (char *) Name of file containing dark image
  * (>) pFlatFileName (char *) Name of file containing flat fielding
- * (>) angle (double) between CCD and telescope
+ * (>) angleFG (double) between CCD and SCS
+ * (>) angleAO (double) between CCD and PCS
  * (>) refX, refY (double) ideal coord for whole CCD
  * (>) guideThreshold (double) Threshold for FG computation
  * (>) pRefFileName (char *) Name of file containing ref centers for
@@ -2264,6 +2268,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * Added by cb - 23April 1999
  * Modified by cb - 22 June 1999 - add centroidNb
  * Modified by cb - 28 Oct 1999 - remove FG gains
+ * Modified by cb - 16 Dec 1999 - Differentiate between FG and AO angles
  *
  * EXTERNAL VARIABLES:
  * None
@@ -2281,7 +2286,8 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
 int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 char *pDarkFileName , 
                 char *pFlatFileName ,
-                double angle , 
+                double angleFG , 
+                double angleAO , 
                 double refX , double refY ,
                 double guideThreshold , 
                 char *pRefFileName  , 
@@ -2316,9 +2322,12 @@ strncpy ( wfsSpecific->multfile, pFlatFileName, OSP_MAXSTR ) ;
 strncpy ( wfsSpecific->nullfile, pRefFileName, OSP_MAXSTR ) ;
 strncpy ( wfsSpecific->controlfile, pMatFileName, OSP_MAXSTR ) ;
 
-wfsSpecific->angle = angle ; 
-wfsSpecific->cosAngle = (float)cos(angle) ; 
-wfsSpecific->sinAngle = (float)sin(angle) ; 
+wfsSpecific->angleFG = angleFG ; 
+wfsSpecific->cosAngleFG = (float)cos(angleFG) ; 
+wfsSpecific->sinAngleFG = (float)sin(angleFG) ; 
+wfsSpecific->angleAO = angleAO ; 
+wfsSpecific->cosAngleAO = (float)cos(angleAO) ; 
+wfsSpecific->sinAngleAO = (float)sin(angleAO) ; 
 wfsSpecific->xcenter = (double)(refX) ; 
 wfsSpecific->ycenter = (double)(refY) ; 
 wfsSpecific->guideThreshold = (float)guideThreshold ; 
@@ -2326,6 +2335,11 @@ wfsSpecific->thresh = (float)threshold ;
 wfsSpecific->np = modeNb ; 
 wfsSpecific->mp = centroidNb ; 
 wfsSpecific->thresholdRate = (float)thresholdRate ; 
+
+printf ( "angleFG = %f, cos = %f, sin = %f\n" ,
+         wfsSpecific->angleFG , wfsSpecific->cosAngleFG , wfsSpecific->sinAngleFG ) ;
+printf ( "angleAO = %f, cos = %f, sin = %f\n" ,
+         wfsSpecific->angleAO , wfsSpecific->cosAngleAO , wfsSpecific->sinAngleAO ) ;
 
 /********************************************************* Init Dark buffer ***/
 
@@ -3293,12 +3307,16 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     if((fscanf(fp,"%f\n",&iangle))==EOF)
     {
 	status=ERROR; 
-	fprintf(stderr,"Error reading angle\n");
+	fprintf(stderr,"Error reading angleFG\n");
         iangle = 0.0 ;
     }
-    wfsSpecific->angle = (double)(iangle); 
-    wfsSpecific->cosAngle = (float)cos(iangle); 
-    wfsSpecific->sinAngle = (float)sin(iangle); 
+    wfsSpecific->angleFG = (double)(iangle); 
+    wfsSpecific->cosAngleFG = (float)cos(iangle); 
+    wfsSpecific->sinAngleFG = (float)sin(iangle); 
+
+    wfsSpecific->angleAO = (double)(0.0); 
+    wfsSpecific->cosAngleAO = (float)cos((double)0.0); 
+    wfsSpecific->sinAngleAO = (float)sin((double)0.0); 
 
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
@@ -4313,6 +4331,7 @@ int ospCoAddOnly ( float *buffp ,
  * PURPOSE:
  * To rotate centroids
  * Add by cb - 07 feb 1999 
+ * Modified by cb - 16 dec 1999 angle is angleAO now 
  *
  * DESCRIPTION:
  *
@@ -4339,8 +4358,17 @@ int ospRotateCentroids ( struct OSP_CONTEXT *wfsSpecific )
 
    /************************************************** Some initializations ***/
 
-   cosAngle = (float) cos(wfsSpecific->angle) ;
-   sinAngle = (float) sin(wfsSpecific->angle) ;
+   cosAngle = (float) cos (wfsSpecific->angleAO + globalAngleAO);
+   sinAngle = (float) sin (wfsSpecific->angleAO + globalAngleAO);
+
+   printf ( "rotate centroids : globalAngleAO = %f, angle = %f, cosAngle=%f, sinAngle=%f\n" ,
+            globalAngleAO , wfsSpecific->angleAO + globalAngleAO , cosAngle , sinAngle ) ;
+
+   for ( i = 1 ; i <= wfsSpecific->mp ; i = i+2 )
+   {
+       printf ( "subaperture %d : X=%f, Y=%f\n" ,
+	        wfsSpecific->s[i], wfsSpecific->s[i+1]) ;
+   }
 
    /************************************************************** Rotation ***/
 
@@ -4358,6 +4386,12 @@ int ospRotateCentroids ( struct OSP_CONTEXT *wfsSpecific )
        } ;
    }
 
+   printf ( "after rotation\n" ) ;
+   for ( i = 1 ; i <= wfsSpecific->mp ; i = i+2 )
+   {
+       printf ( "subaperture %d : X=%f, Y=%f\n" ,
+	        wfsSpecific->s[i], wfsSpecific->s[i+1]) ;
+   }
    /***************************************************************************/
 
    return (OK) ;
@@ -7486,7 +7520,7 @@ int ospFGCentroidWrapper ( float * buffp,
 
 	      for (jj = 0; jj < wfsSpecific->side; jj++)
 	      {   
-	          /*rowinc = index00 + jj * wfsSpecific->xframesize;*/
+	          rowinc = index00 + jj * wfsSpecific->xframesize;
 	          for (ii = 0; ii < wfsSpecific->side;ii++)
                   {
 		      indxy = ii + rowinc;
@@ -7739,8 +7773,8 @@ int ospTracking ( float * buffp ,
     redsubp = wfsSpecific->redsubbuff ;
     redmulp = wfsSpecific->redmultbuff ;
     localp = localbuff;
-    cosAngle = (float) cos(wfsSpecific->angle) ;
-    sinAngle = (float) sin(wfsSpecific->angle) ;
+    cosAngle = wfsSpecific->cosAngleFG ;
+    sinAngle = wfsSpecific->sinAngleFG ;
 
     /***************************************************** Dark subtraction ***/
 
@@ -8216,8 +8250,8 @@ int ospTrackingAndFocus ( float * buffp ,
     redsubp = wfsSpecific->redsubbuff ;
     redmulp = wfsSpecific->redmultbuff ;
     localp = localbuff;
-    cosAngle = (float) cos(wfsSpecific->angle) ;
-    sinAngle = (float) sin(wfsSpecific->angle) ;
+    cosAngle = wfsSpecific->cosAngleFG ;
+    sinAngle = wfsSpecific->sinAngleFG ;
 
     /***************************************************** Dark subtraction ***/
 
@@ -8598,11 +8632,11 @@ int ospNewTrackingAndFocus ( float * buffp ,
        wfsSpecific->guideError[0] = 0.0 ;
        wfsSpecific->guideError[1] = 0.0 ;
        wfsSpecific->FGZernikes[0] = wfsSpecific->tipscale * 
-       ((wfsSpecific->cosAngle)*(wfsSpecific->guide[0]) - 
-        (wfsSpecific->sinAngle)*(wfsSpecific->guide[1]) ) ;
+       ((wfsSpecific->cosAngleFG)*(wfsSpecific->guide[0]) - 
+        (wfsSpecific->sinAngleFG)*(wfsSpecific->guide[1]) ) ;
        wfsSpecific->FGZernikes[1] = wfsSpecific->tiltscale * 
-       ((wfsSpecific->sinAngle)*(wfsSpecific->guide[0]) + 
-        (wfsSpecific->cosAngle)*(wfsSpecific->guide[1]) ) ;
+       ((wfsSpecific->sinAngleFG)*(wfsSpecific->guide[0]) + 
+        (wfsSpecific->cosAngleFG)*(wfsSpecific->guide[1]) ) ;
        /*printf ( "guide[0]=%f, guide[1] = %f, FGZ[0]= %f, FGZ[1]=%f\n" , 
                 wfsSpecific->guide[0], wfsSpecific->guide[1], 
                 wfsSpecific->FGZernikes[0] , wfsSpecific->FGZernikes[1] ) ;*/
@@ -9444,7 +9478,7 @@ void ospChangeTiltscale(float tiltscale, struct OSP_CONTEXT * wfsSpecific)
 
 void ospChangeAngle(float angle, struct OSP_CONTEXT * wfsSpecific)
 {
-    wfsSpecific->angle = (double)angle;
+    wfsSpecific->angleFG = (double)angle;
     return;
 }
 

@@ -111,9 +111,12 @@ struct OSP_CONTEXT{
     float focusscale;
     float tipCor;
     float tiltCor;
-    double angle ;
-    float cosAngle ;
-    float sinAngle ;
+    double angleFG ; /* 16dec99, cb differentiate angle for FG and AO */
+    double angleAO ;
+    float cosAngleFG ;
+    float sinAngleFG ;
+    float cosAngleAO ;
+    float sinAngleAO ;
     float xcenter;
     float ycenter;
     int osplight ; /* YES or NO */
@@ -260,7 +263,8 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom);
 int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 char *pDarkFileName ,
                 char *pFlatFileName ,
-                double angle ,
+                double angleFG ,
+                double angleAO ,
                 double refX , double refY ,
                 double guideThreshold ,
                 char *pRefFileName ,

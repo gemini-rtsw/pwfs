@@ -393,73 +393,164 @@ void showAo(int wfsNumber)
 
 /* ===================================================================== */
 
-void    showSynchro (const memMap * buffPtr)
+void    testMem (const memMap * buffPtr)
 {
 	/* printout the memory locations of the specified buffer area */
 
-	printf ("\nPage 8  - pwfs1 data\n");
-	printf ("pwfs1		Addr = %p,           \n", &buffPtr->pwfs1.z1);
+	printf ("\nPage 0 - SCS to M2 commands\n");
 
-	printf ("z1		Addr = %p, Value = %f\n", &buffPtr->pwfs1.z1, buffPtr->pwfs1.z1);
-	printf ("z2		Addr = %p, Value = %f\n", &buffPtr->pwfs1.z2, buffPtr->pwfs1.z2);
-	printf ("z3		Addr = %p, Value = %f\n", &buffPtr->pwfs1.z3, buffPtr->pwfs1.z3);
-	printf ("err1		Addr = %p, Value = %f\n", &buffPtr->pwfs1.err1, buffPtr->pwfs1.err1);
-	printf ("err2		Addr = %p, Value = %f\n", &buffPtr->pwfs1.err2, buffPtr->pwfs1.err2);
-	printf ("err3		Addr = %p, Value = %f\n", &buffPtr->pwfs1.err3, buffPtr->pwfs1.err3);
-	printf ("interval	Addr = %p, Value = %f\n", &buffPtr->pwfs1.interval, buffPtr->pwfs1.interval);
-	printf ("time		Addr = %p, Value = %f\n", &buffPtr->pwfs1.time, buffPtr->pwfs1.time);
-	printf ("name		Addr = %p, Value = %s\n",  buffPtr->pwfs1.name, buffPtr->pwfs1.name);
+	printf ("checksum       Addr = %x, Value = %d\n", (unsigned int)&buffPtr->page0.checksum, (int)buffPtr->page0.checksum);
+	printf ("NS             Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page0.NS, (int)buffPtr->page0.NS);
+	printf ("command        Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page0.commandCode, (int)buffPtr->page0.commandCode);
+	printf ("xtiltguide     Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xTiltGuide, buffPtr->page0.xTiltGuide);
+	printf ("ytiltguide     Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.yTiltGuide, buffPtr->page0.yTiltGuide);
+	printf ("zfocusguide    Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.zFocusGuide, buffPtr->page0.zFocusGuide);
+	printf ("axtilt         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.AxTilt, buffPtr->page0.AxTilt);
+	printf ("aytilt         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.AyTilt, buffPtr->page0.AyTilt);
+	printf ("bxtilt         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.BxTilt, buffPtr->page0.BxTilt);
+	printf ("bytilt         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.ByTilt, buffPtr->page0.ByTilt);
+	printf ("cxtilt         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.CxTilt, buffPtr->page0.CxTilt);
+	printf ("cytilt         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.CyTilt, buffPtr->page0.CyTilt);
+	printf ("actuator1      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.actuator1, buffPtr->page0.actuator1);
+	printf ("actuator2      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.actuator2, buffPtr->page0.actuator2);
+	printf ("actuator3      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.actuator3, buffPtr->page0.actuator3);
+	printf ("heartbeat      Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page0.heartbeat, (int)buffPtr->page0.heartbeat);
+	printf ("xDemand        Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xDemand, buffPtr->page0.xDemand);
+	printf ("yDemand        Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.yDemand, buffPtr->page0.yDemand);
+	printf ("central        Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page0.centralBaffle, (int)buffPtr->page0.centralBaffle);
+	printf ("deployable     Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page0.deployBaffle, (int)buffPtr->page0.deployBaffle);
+	printf ("profile        Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page0.chopProfile, (int)buffPtr->page0.chopProfile);
+	printf ("frequency      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.chopFrequency, buffPtr->page0.chopFrequency);
+	printf ("dutycycle      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.chopDutyCycle, buffPtr->page0.chopDutyCycle);
+	printf ("xtilttol       Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xTiltTolerance, buffPtr->page0.xTiltTolerance);
+	printf ("ytilttol       Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.yTiltTolerance, buffPtr->page0.yTiltTolerance);
+	printf ("zfocustol      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.zFocusTolerance, buffPtr->page0.zFocusTolerance);
+	printf ("xpostol        Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xPositionTolerance, buffPtr->page0.xPositionTolerance);
+	printf ("ypostol        Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xPositionTolerance, buffPtr->page0.xPositionTolerance);
+	printf ("bandwidth      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.bandwidth, buffPtr->page0.bandwidth);
+	printf ("xtiltgain      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xTiltGain, buffPtr->page0.xTiltGain);
+	printf ("ytiltgain      Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.yTiltGain, buffPtr->page0.yTiltGain);
+	printf ("zfocusgain     Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.zFocusGain, buffPtr->page0.zFocusGain);
+	printf ("xtiltshift     Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xTiltShift, buffPtr->page0.xTiltShift);
+	printf ("ytiltshift     Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.yTiltShift, buffPtr->page0.yTiltShift);
+	printf ("zfocusshift    Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.zFocusShift, buffPtr->page0.zFocusShift);
+	printf ("xtiltsmooth    Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.xTiltSmooth, buffPtr->page0.xTiltSmooth);
+	printf ("ytiltsmooth    Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.yTiltSmooth, buffPtr->page0.yTiltSmooth);
+	printf ("zfocussmooth   Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page0.zFocusSmooth, buffPtr->page0.zFocusSmooth);
+
+	printf ("\nPage 1 - M2 to SCS responses\n");
+
+	printf ("checksum	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.checksum, (int)buffPtr->page1.checksum);
+	printf ("NR		Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.NR, (int)buffPtr->page1.NR);
+	printf ("xtilt		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.xTilt, buffPtr->page1.xTilt);
+	printf ("ytilt		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.yTilt, buffPtr->page1.yTilt);
+	printf ("zfocus		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.zFocus, buffPtr->page1.zFocus);
+	printf ("actuator1	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.actuator1, buffPtr->page1.actuator1);
+	printf ("actuator2	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.actuator2, buffPtr->page1.actuator2);
+	printf ("actuator3	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.actuator3, buffPtr->page1.actuator3);
+	printf ("inPosition	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.inPosition, (int)buffPtr->page1.inPosition);
+	printf ("chopTrans	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.chopTransition, (int)buffPtr->page1.chopTransition);
+	printf ("statusword	Addr = %x, Value = %x\n", (unsigned int) &buffPtr->page1.statusWord.all, buffPtr->page1.statusWord.all);
+	printf ("heartbeat	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.heartbeat, (int)buffPtr->page1.heartbeat);
+	printf ("beamPosition	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.beamPosition, (int)buffPtr->page1.beamPosition);
+	printf ("xposition	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.xPosition, buffPtr->page1.xPosition);
+	printf ("yposition	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.yPosition, buffPtr->page1.yPosition);
+	printf ("deployable	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.deployBaffle, (int)buffPtr->page1.deployBaffle);
+	printf ("central	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.centralBaffle, (int)buffPtr->page1.centralBaffle);
+	printf ("encoderA	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.baffleEncoderA, buffPtr->page1.baffleEncoderA);
+	printf ("encoderB	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.baffleEncoderB, buffPtr->page1.baffleEncoderB);
+	printf ("encoderC	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.baffleEncoderC, buffPtr->page1.baffleEncoderC);
+	printf ("topEnd		Addr = %x, Value = %d\n", (unsigned int) &buffPtr->page1.topEnd, (int)buffPtr->page1.topEnd);
+	printf ("temperature	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->page1.enclosureTemp, buffPtr->page1.enclosureTemp);
+
+	printf ("\nPage 2 - M2 Diagnostics Data\n");
+	printf ("Diagnostics	Addr = %x,           \n", (unsigned int) &buffPtr->testResults.checksum);
+
+	printf ("\nPage 7 - Event System Data\n");
+	printf ("currentBeam	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->eventData.currentBeam, (int)buffPtr->eventData.currentBeam);
+	printf ("inPosition	Addr = %x, Value = %d\n", (unsigned int) &buffPtr->eventData.inPosition, (int)buffPtr->eventData.inPosition);
+	printf ("xTilt		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->eventData.xTilt, buffPtr->eventData.xTilt);
+	printf ("yTilt		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->eventData.yTilt, buffPtr->eventData.yTilt);
+	printf ("zFocus		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->eventData.zFocus, buffPtr->eventData.zFocus);
+	printf ("xPosition	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->eventData.xPosition, buffPtr->eventData.xPosition);
+	printf ("yPosition	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->eventData.yPosition, buffPtr->eventData.yPosition);
+	printf ("time		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->eventData.time, buffPtr->eventData.time);
+
+	printf ("\nPage 8  - pwfs1 data\n");
+	printf ("pwfs1		Addr = %x,           \n", (unsigned int) &buffPtr->pwfs1.z1);
+
+	printf ("z1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.z1, buffPtr->pwfs1.z1);
+	printf ("z2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.z2, buffPtr->pwfs1.z2);
+	printf ("z3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.z3, buffPtr->pwfs1.z3);
+	printf ("err1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.err1, buffPtr->pwfs1.err1);
+	printf ("err2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.err2, buffPtr->pwfs1.err2);
+	printf ("err3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.err3, buffPtr->pwfs1.err3);
+	printf ("interval	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.interval, buffPtr->pwfs1.interval);
+	printf ("time		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs1.time, buffPtr->pwfs1.time);
+	printf ("name		Addr = %x, Value = %s\n", (unsigned int) buffPtr->pwfs1.name, buffPtr->pwfs1.name);
 
 	printf ("\nPage 9  - pwfs2 data\n");
-	printf ("pwfs2		Addr = %p,           \n", &buffPtr->pwfs2.z1);
-	printf ("z1		Addr = %p, Value = %f\n", &buffPtr->pwfs2.z1, buffPtr->pwfs2.z1);
-	printf ("z2		Addr = %p, Value = %f\n", &buffPtr->pwfs2.z2, buffPtr->pwfs2.z2);
-	printf ("z3		Addr = %p, Value = %f\n", &buffPtr->pwfs2.z3, buffPtr->pwfs2.z3);
-	printf ("err1		Addr = %p, Value = %f\n", &buffPtr->pwfs2.err1, buffPtr->pwfs2.err1);
-	printf ("err2		Addr = %p, Value = %f\n", &buffPtr->pwfs2.err2, buffPtr->pwfs2.err2);
-	printf ("err3		Addr = %p, Value = %f\n", &buffPtr->pwfs2.err3, buffPtr->pwfs2.err3);
-	printf ("interval	Addr = %p, Value = %f\n", &buffPtr->pwfs2.interval, buffPtr->pwfs2.interval);
-	printf ("time		Addr = %p, Value = %f\n", &buffPtr->pwfs2.time, buffPtr->pwfs2.time);
-	printf ("name		Addr = %p, Value = %s\n",  buffPtr->pwfs2.name, buffPtr->pwfs2.name);
+	printf ("pwfs2		Addr = %x,           \n", (unsigned int) &buffPtr->pwfs2.z1);
+	printf ("z1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.z1, buffPtr->pwfs2.z1);
+	printf ("z2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.z2, buffPtr->pwfs2.z2);
+	printf ("z3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.z3, buffPtr->pwfs2.z3);
+	printf ("err1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.err1, buffPtr->pwfs2.err1);
+	printf ("err2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.err2, buffPtr->pwfs2.err2);
+	printf ("err3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.err3, buffPtr->pwfs2.err3);
+	printf ("interval	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.interval, buffPtr->pwfs2.interval);
+	printf ("time		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->pwfs2.time, buffPtr->pwfs2.time);
+	printf ("name		Addr = %x, Value = %s\n", (unsigned int) buffPtr->pwfs2.name, buffPtr->pwfs2.name);
 
 	printf ("\nPage 10 - oiwfs data\n");
-	printf ("oiwfs		Addr = %p,           \n", &buffPtr->oiwfs.z1);
-	printf ("z1		Addr = %p, Value = %f\n", &buffPtr->oiwfs.z1, buffPtr->oiwfs.z1);
-	printf ("z2		Addr = %p, Value = %f\n", &buffPtr->oiwfs.z2, buffPtr->oiwfs.z2);
-	printf ("z3		Addr = %p, Value = %f\n", &buffPtr->oiwfs.z3, buffPtr->oiwfs.z3);
-	printf ("err1		Addr = %p, Value = %f\n", &buffPtr->oiwfs.err1, buffPtr->oiwfs.err1);
-	printf ("err2		Addr = %p, Value = %f\n", &buffPtr->oiwfs.err2, buffPtr->oiwfs.err2);
-	printf ("err3		Addr = %p, Value = %f\n", &buffPtr->oiwfs.err3, buffPtr->oiwfs.err3);
-	printf ("interval	Addr = %p, Value = %f\n", &buffPtr->oiwfs.interval, buffPtr->oiwfs.interval);
-	printf ("time		Addr = %p, Value = %f\n", &buffPtr->oiwfs.time, buffPtr->oiwfs.time);
-	printf ("name		Addr = %p, Value = %s\n",  buffPtr->oiwfs.name, buffPtr->oiwfs.name);
-
-	return;
+	printf ("oiwfs		Addr = %x,           \n", (unsigned int) &buffPtr->oiwfs.z1);
+	printf ("z1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.z1, buffPtr->oiwfs.z1);
+	printf ("z2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.z2, buffPtr->oiwfs.z2);
+	printf ("z3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.z3, buffPtr->oiwfs.z3);
+	printf ("err1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.err1, buffPtr->oiwfs.err1);
+	printf ("err2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.err2, buffPtr->oiwfs.err2);
+	printf ("err3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.err3, buffPtr->oiwfs.err3);
+	printf ("interval	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.interval, buffPtr->oiwfs.interval);
+	printf ("time		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->oiwfs.time, buffPtr->oiwfs.time);
+	printf ("name		Addr = %x, Value = %s\n", (unsigned int) buffPtr->oiwfs.name, buffPtr->oiwfs.name);
 
 	printf ("\nPage 11 - gaos data\n");
-	printf ("gaos		Addr = %p,           \n", &buffPtr->gaos.z1);
-	printf ("z1		Addr = %p, Value = %f\n", &buffPtr->gaos.z1, buffPtr->gaos.z1);
-	printf ("z2		Addr = %p, Value = %f\n", &buffPtr->gaos.z2, buffPtr->gaos.z2);
-	printf ("z3		Addr = %p, Value = %f\n", &buffPtr->gaos.z3, buffPtr->gaos.z3);
-	printf ("err1		Addr = %p, Value = %f\n", &buffPtr->gaos.err1, buffPtr->gaos.err1);
-	printf ("err2		Addr = %p, Value = %f\n", &buffPtr->gaos.err2, buffPtr->gaos.err2);
-	printf ("err3		Addr = %p, Value = %f\n", &buffPtr->gaos.err3, buffPtr->gaos.err3);
-	printf ("interval	Addr = %p, Value = %f\n", &buffPtr->gaos.interval, buffPtr->gaos.interval);
-	printf ("time		Addr = %p, Value = %f\n", &buffPtr->gaos.time, buffPtr->gaos.time);
-	printf ("name		Addr = %p, Value = %s\n",  buffPtr->gaos.name, buffPtr->gaos.name);
+	printf ("gaos		Addr = %x,           \n", (unsigned int) &buffPtr->gaos.z1);
+	printf ("z1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.z1, buffPtr->gaos.z1);
+	printf ("z2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.z2, buffPtr->gaos.z2);
+	printf ("z3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.z3, buffPtr->gaos.z3);
+	printf ("err1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.err1, buffPtr->gaos.err1);
+	printf ("err2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.err2, buffPtr->gaos.err2);
+	printf ("err3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.err3, buffPtr->gaos.err3);
+	printf ("interval	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.interval, buffPtr->gaos.interval);
+	printf ("time		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gaos.time, buffPtr->gaos.time);
+	printf ("name		Addr = %x, Value = %s\n", (unsigned int) buffPtr->gaos.name, buffPtr->gaos.name);
 
 	printf ("\nPage 12 - gyro data\n");
-	printf ("gyro		Addr = %p,           \n", &buffPtr->gyro.z1);
-	printf ("z1		Addr = %p, Value = %f\n", &buffPtr->gyro.z1, buffPtr->gyro.z1);
-	printf ("z2		Addr = %p, Value = %f\n", &buffPtr->gyro.z2, buffPtr->gyro.z2);
-	printf ("z3		Addr = %p, Value = %f\n", &buffPtr->gyro.z3, buffPtr->gyro.z3);
-	printf ("err1		Addr = %p, Value = %f\n", &buffPtr->gyro.err1, buffPtr->gyro.err1);
-	printf ("err2		Addr = %p, Value = %f\n", &buffPtr->gyro.err2, buffPtr->gyro.err2);
-	printf ("err3		Addr = %p, Value = %f\n", &buffPtr->gyro.err3, buffPtr->gyro.err3);
-	printf ("interval	Addr = %p, Value = %f\n", &buffPtr->gyro.interval, buffPtr->gyro.interval);
-	printf ("time		Addr = %p, Value = %f\n", &buffPtr->gyro.time, buffPtr->gyro.time);
-	printf ("name		Addr = %p, Value = %s\n",  buffPtr->gyro.name, buffPtr->gyro.name);
+	printf ("gyro		Addr = %x,           \n", (unsigned int) &buffPtr->gyro.z1);
+	printf ("z1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.z1, buffPtr->gyro.z1);
+	printf ("z2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.z2, buffPtr->gyro.z2);
+	printf ("z3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.z3, buffPtr->gyro.z3);
+	printf ("err1		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.err1, buffPtr->gyro.err1);
+	printf ("err2		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.err2, buffPtr->gyro.err2);
+	printf ("err3		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.err3, buffPtr->gyro.err3);
+	printf ("interval	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.interval, buffPtr->gyro.interval);
+	printf ("time		Addr = %x, Value = %f\n", (unsigned int) &buffPtr->gyro.time, buffPtr->gyro.time);
+	printf ("name		Addr = %x, Value = %s\n", (unsigned int) buffPtr->gyro.name, buffPtr->gyro.name);
 
+	printf ("\nPage 13 - M2 Engineering Data\n");
+
+	printf ("follow1	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.follow1, buffPtr->m2Eng.follow1);
+	printf ("follow2	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.follow2, buffPtr->m2Eng.follow2);
+	printf ("follow3	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.follow3, buffPtr->m2Eng.follow3);
+	printf ("current1	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.current1, buffPtr->m2Eng.current1);
+	printf ("current2	Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.current2, buffPtr->m2Eng.current2);
+	printf ("current3       Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.current3, buffPtr->m2Eng.current3);
+	printf ("kaman1         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.kaman1, buffPtr->m2Eng.kaman1);
+	printf ("kaman2         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.kaman2, buffPtr->m2Eng.kaman2);
+	printf ("kaman3         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.kaman3, buffPtr->m2Eng.kaman3);
+	printf ("integ1         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.integ1, buffPtr->m2Eng.integ1);
+	printf ("integ2         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.integ2, buffPtr->m2Eng.integ2);
+	printf ("integ3         Addr = %x, Value = %f\n", (unsigned int) &buffPtr->m2Eng.integ3, buffPtr->m2Eng.integ3);
 }
 
 /* ===================================================================== */
