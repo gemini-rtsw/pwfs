@@ -1,5 +1,5 @@
 [schematic2]
-uniq 149
+uniq 151
 [tools]
 [detail]
 s 3936 -304 500 512 wfsCadMore.sch
@@ -123,6 +123,15 @@ p 400 1920 100 0 0 FTVD:STRING
 p 384 1216 100 0 1 INAM:epToVxCadInit
 p 384 1152 100 0 1 PV:$(top)$(wfs)
 p 384 1184 100 0 1 SNAM:epToVxCadExecute
+use ecad8 -800 -665 100 0 detSigInitAoThresh
+xform 0 -640 -160
+p -800 -752 100 0 1 DESC:Init Ao thresholds
+p -704 32 100 0 1 FTVA:DOUBLE
+p -704 0 100 0 1 FTVB:DOUBLE
+p -512 -720 100 0 1 INAM:epToVxCadInit
+p -800 -720 100 0 1 PREC:1
+p -512 -784 100 0 1 PV:$(top)$(wfs)
+p -512 -752 100 0 1 SNAM:epToVxCadExecute
 use ecad20 -800 551 100 0 detSigInitAoGain
 xform 0 -640 1440
 p -736 512 100 0 1 DESC:Init aO Gains
@@ -145,7 +154,7 @@ p -688 1120 100 0 1 FTVP:DOUBLE
 p -688 1056 100 0 1 FTVQ:DOUBLE
 p -688 992 100 0 1 FTVR:DOUBLE
 p -688 928 100 0 1 FTVS:DOUBLE
-p -688 864 100 0 1 FTVT:DOUBLE
+p -688 864 100 0 0 FTVT:DOUBLE
 p -736 480 100 0 1 INAM:epToVxCadInit
 p -736 384 100 0 1 PREC:1
 p -736 416 100 0 1 PV:$(top)$(wfs)
@@ -200,10 +209,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2004-08-18 21:50:25 $
+p 3120 -784 200 0 -1 date:$Date: 2004-08-20 21:43:02 $
 p 1888 -432 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.13 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.14 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]
