@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.8 2000-11-11 01:11:53 cboyer Exp $"};
+   "$Id: detControl.c,v 1.9 2000-12-16 03:25:36 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   11 dec 2000: CB - add detSigReset
  *   31 oct 2000: CB - remove error when stop observation not in progress
  *   27 Oct 2000: CB - add possibility to change butterworth filter
  *                     parameters when probe arm guiding
@@ -285,6 +286,10 @@ LOCAL uint32   detSigInitBW (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 LOCAL uint32   detSigModeNone (const char * pRecordPrefix, 
                                CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                                SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detSigReset (const char * pRecordPrefix,
+                            CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                            SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detSigModeDark (const char * pRecordPrefix, 
                                CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
@@ -2030,6 +2035,16 @@ STATUS   detControl
             errorNumber =
             detSigModeNone (pRecordPrefix, cadCmdContext, commandNumber, 
                             sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGRESET)
+         {
+
+            /* Reset the signal processing */
+
+            errorNumber =
+            detSigReset (pRecordPrefix,
+                         cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE_DARK)
@@ -15856,4 +15871,184 @@ uint32 detComputeCoeffButterworth
        *(pCoeffData + i) = coeff[i];
 
    return ( OK );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigReset
+ *
+ *   INVOCATION:
+ *   detSigReset (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pRecordPrefix (const char *)    Record Name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigReset command
+ *
+ *   DESCRIPTION:
+ *   This function resets the signal processing: mode to global guide, 
+ *   thresholds and save circular buffer flags
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+
+uint32 detSigReset
+   (
+   const char *    pRecordPrefix,   /* Record Name Prefix.                    */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId            /* Observation context structure.         */
+   )
+{
+   uint32       errorNumber;    /* Error number reported by task.             */
+   long         sigMode;        /* Signal processing mode.                    */
+   long         nExp;           /* Number of exposure                         */
+   long         outOption;      /* Output option                              */
+   double       expTime;        /* Exposure time                              */
+
+   /*
+    * Initialise the error number and obtain the attributes provided with the
+    * command.
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command cannot be used when an observation is in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY,
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   /*
+    * Define the signal processing mode and associated parameters.
+    * These parameters will be used in detObserveEnd.
+    */
+
+   sigMode = AO_MODE_GG;
+   obsId->sigMode = sigMode;
+
+   MESSAGE_LOG (MSG_LOG,
+                "Signal processing switched to \"Global Guide\" mode");
+   if (epToVxPipeWrite (NULL, "Global Guide",
+                        obsId->pAoProcessModeContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+   }
+
+   /* Init the fields of the observe CAD record */
+
+   nExp = -1 ;          /* mode continuous */
+   outOption = 0 ;      /* NONE */
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      expTime = 0.01 ;  /* 10ms */
+   else
+      expTime = 0.005 ; /* 5ms */
+
+   if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
+        ERROR )
+   {
+      ERROR_LOG ( "Failed to initialise fields of observe record");
+   }
+
+   /*
+    * Reset the thresholds 
+    */
+
+   obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+
+   if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
+                        obsId->pAoThreshContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+   }
+
+   obsId->aoCtrlId->totalThreshold = 0.0;
+
+   if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                        obsId->pAoTotalContext) == ERROR)
+   {
+      ERROR_LOG ("Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+   }
+
+   /* 
+    * Reset the save CB flags 
+    */
+
+   obsId->saveCbIm = FALSE;
+   obsId->saveCbCtrl = FALSE;
+
+   if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbImContext) == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOSAVECBIM_SIR_NAME record");
+   }
+
+   if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbCtrlContext) == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+   }
+
+   /* Initialise the coadd counter used to decide when to save coadded data
+    * to disk.
+    */
+
+   obsId->coaddCounter = 0;
+   obsId->saveCbCounter = 0;
+   obsId->averageRms = 0.0;
+   obsId->averageFlux = 0.0;
+
+   return (errorNumber);
 }

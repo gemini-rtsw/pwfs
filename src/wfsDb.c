@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.10 2000-11-11 01:11:53 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.11 2000-12-16 03:25:36 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 11 December 2000 - cb - add detSigReset
  * 30 October 2000 - cb - add detSigInitBW
  * 12 April 2000 - cb - add detType, detID, dataLabel, intTime, nexpRQ,
  *                      nexp, nframes, bunit, exposedRQ, exposed, utstart, 
@@ -361,6 +362,14 @@ CAD_RECORD pWfsDbCadList [] =
   40.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "-20", {"-63", "25"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "0x80", {NO_ATTRIBUTE_LIMITS}
+ },
+ {
+  RECORD_NAME ("dc:detSigReset"),
+  TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_SIGRESET,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  40.0
  },
  {
   RECORD_NAME ("dc:detSigInit"),

@@ -102,4 +102,11 @@ V1-4 10 November 2000 CB:
     writeWfsToSynchro()
   - remove error when stop an observation not in progress
 
-newDev equivalent to V1-4
+V1-5 15 December 2000 CB:
+-------------------------
+  - bug: butterworth filter was not completely removed in writeWfsToSynchro () 
+  - add detSigReset (Red reset button in the signal processing window)
+  - ttfZero + aoZero in writeZernikes.c modify the formula for compositeAngle,
+    now RT angle - CR angle + PA angle
+
+newDev equivalent to V1-5
