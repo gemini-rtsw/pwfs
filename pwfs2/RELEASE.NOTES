@@ -224,6 +224,13 @@ V3-2 04 March 2002 CB:
   - aoThresholdCompute() and aoThresholdPerSubapCompute(): background now 
     computed between index1 and index2
 
-dev equivalent V3-2
-  - writeWfsToSynchro(): replace the running average for the focus by a
-    second order butterworth filter
+V4-0 27 March 2002 CB:
+----------------------
+  - if writeWfsToSynchro(): replace the running average for the focus by a
+    second order butterworth filter if RUNNING_AVERAGE is not defined
+  - major modifications to have the timing and utility code downloaded from 
+    EEPROMs
+  - remove from the user interface the detReset command
+  - aoP2Lib.c: aoTotalThresholdCompute(): comment out ERROR_SET if N>2
+
+dev equivalent to V4-0

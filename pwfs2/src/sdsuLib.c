@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: sdsuLib.c,v 1.5 2002-01-03 03:39:26 cboyer Exp $"};
+   "$Id: sdsuLib.c,v 1.6 2002-03-28 02:00:53 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -129,6 +129,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   sdsuParamUpload        - upload parameter values to file
  *   sdsuStatusShow         - print SDSU status parameters
  *   sdsuTempShow           - print SDSU temperature parameters
+ *   sdsuFileSymbolDnload   - download symbol table from an OMF file
+ *   sdsuMemorySymbolDnload - download symbol table from local memory
+ *   sdsuClear1RepBuf       - clear first location of the reply buffer
  *
  *
  *   DEFICIENCIES:
@@ -160,7 +163,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Corinne Boyer
  *
  *INDENT-OFF*
- *   13 oct add sdsu_initRepBuf used by detControl.c
+ *   13 oct 1999 - CB add sdsu_initRepBuf used by detControl.c
+ *   20 Mar 2002 - CB add sdsuFileSymbolDnload, sdsuMemorySymbolDnload and 
+ *                 sdsuClear1RepBuf
  *
  *INDENT-ON*
  *-
@@ -452,7 +457,7 @@ LOCAL BOOL   sdsu_isReplyValid (uint32 reply, SDSU_CMD_DEF * pCmdDef);
 LOCAL STATUS sdsu_makeCmd (SDSU_ID pContext, SDSU_CMD_DEF * pCmdDef, 
                            const uint32 sourceId, const uint32 destId, 
                            uint32 * pCmdArg);
-LOCAL int    sdsu_getRecordType (char * pField);
+LOCAL int    sdsu_getRecordType (char * pField, int verbose);
 LOCAL STATUS sdsu_testTDL (SDSU_ID context, const uint32 destId, 
                            const BOOL verbose);
 LOCAL STATUS sdsu_testRDM (SDSU_ID context, const uint32 destId, 
@@ -1096,7 +1101,7 @@ uint32 sdsuVersionGet ( SDSU_ID         context,
     */
 
    if (destId == SDSU_IDENT_HST)
-      return (sdsu_getVersion ("$Revision: 1.5 $"));
+      return (sdsu_getVersion ("$Revision: 1.6 $"));
    
    /*
     * The SDSU context must be valid if the code gets this far, as the version 
@@ -2266,6 +2271,7 @@ STATUS   sdsuPrintRepBuf ( SDSU_ID context )
 
    /*********************************** Print each word of the reply buffer ***/
 
+   printf ("Position in the reply buffer:%d\n", context->repBufCounter);
    printf ("Contents of SDSU Reply Buffer at %p:\n", context->pRepBuffer);
    printf ("--------------------------------------------\n");
 
@@ -2688,7 +2694,11 @@ STATUS sdsuPrimitiveRead ( SDSU_ID      context,
           * expecting a response from some other DSP just now), but there's no 
           * code in here to check that and deal with the consequences.
           */
-         
+
+#ifdef DEBUG
+         sdsuPrintRepBuf (context);
+         sdsuPrintRepBuf (context);
+#endif
          ERROR_SET4 (S_sdsuLib_REPLY_TIMEOUT,
             "Unexpected header word, expected=%#x, actual=%#x, RepBuffer=%p+%d",
             ERROR_LOG_SAVE, (unsigned int)(headerExpected), (unsigned int)(header), context->pRepBuffer,
@@ -3403,7 +3413,7 @@ STATUS sdsuMemoryDnload ( SDSU_ID       context,
       return (ERROR);
    }
 
-   if ((recordType = sdsu_getRecordType (pField)) != OMF_FIELD_IDENT_START)
+   if ((recordType = sdsu_getRecordType (pField, 1)) != OMF_FIELD_IDENT_START)
    {
       ERROR_SET (S_sdsuLib_OMF_PARSE_ERROR, 
                  "START record not found in OMF file", ERROR_LOG_SAVE);
@@ -3454,9 +3464,9 @@ STATUS sdsuMemoryDnload ( SDSU_ID       context,
       return (ERROR);
    }
 
-   while ((recordType = sdsu_getRecordType (pField)) != OMF_FIELD_IDENT_END)
+   while ((recordType = sdsu_getRecordType (pField, 1)) != OMF_FIELD_IDENT_END)
    {
-      switch (recordType = sdsu_getRecordType (pField))
+      switch (recordType = sdsu_getRecordType (pField, 1))
       {
          case (OMF_FIELD_IDENT_DATA):
 
@@ -8439,6 +8449,9 @@ STATUS   sdsuParamRead
       ERROR_SET2 (0, 
       "Failed to read %s parameter from DSP memory at address %#x", 
        ERROR_LOG_SAVE, paramName, (unsigned int)(address));
+#ifdef DEBUG
+       sdsuShow (context, TRUE);
+#endif
       return (ERROR);
    }
 
@@ -10317,10 +10330,11 @@ BOOL   sdsu_isReplyValid
  *   sdsu_getRecordType
  *
  *   INVOCATION:
- *   sdsu_getRecordType (pField)
+ *   sdsu_getRecordType (pField, verbose)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pField   (char *)   pointer to string holding OMF field
+ *   (>) verbose  (int)      verbose
  *
  *   FUNCTION VALUE:
  *   (int)   OMF record type identifier.
@@ -10351,7 +10365,8 @@ BOOL   sdsu_isReplyValid
 
 int   sdsu_getRecordType
    (
-   char *   pField
+   char *   pField,
+   int      verbose
    )
 {
    if (sdsu_areStringsSame (pField, OMF_FIELD_START))      
@@ -10368,8 +10383,11 @@ int   sdsu_getRecordType
       return (OMF_FIELD_IDENT_COMMENT);
    else
    {
-      ERROR_SET1 (S_sdsuLib_INV_OMF_REC_TYPE, "Invalid OMF record-type, %s", 
-                  ERROR_LOG_SAVE, pField);
+      if ( verbose == TRUE )
+      {
+         ERROR_SET1 (S_sdsuLib_INV_OMF_REC_TYPE, "Invalid OMF record-type, %s", 
+                     ERROR_LOG_SAVE, pField);
+      }
       return (OMF_FIELD_IDENT_INVALID);
    }
 }
@@ -10962,3 +10980,454 @@ STATUS sdsu_initRepBuf
    return ( OK ) ;
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   sdsuMemorySymbolDnload
+ *
+ *   INVOCATION:
+ *   sdsuMemorySymbolDnload (context, fd, destId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) context (SDSU_ID)      Context ID
+ *   (>) fd      (FILE *)       Pointer to OMF file stream
+ *   (>) destId  (const uint32) ID of DSP to which data will be downloaded
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)  OK, or ERROR if an error occured while reading the symbols.
+ *
+ *   PURPOSE:
+ *   Read data from a OMF file (".lod" format) and init the symbol table
+ *
+ *   DESCRIPTION:
+ *   This routine reads DSP56000 object code from a OMF file and init
+ *   the symbol table. destId can take one of the values specified in the 
+ *   table below.
+ *
+ *      SDSU_IDENT_HST   =>   Refers to the host CPU
+ *      SDSU_IDENT_VME   =>   Refers to VME DSP
+ *      SDSU_IDENT_TIM   =>   Refers to Timing DSP
+ *      SDSU_IDENT_UTL   =>   Refers to Utility DSP
+ *
+ *   The OMF file will normally be the output from the Motorola utility
+ *   program "cldlod". 
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The OMF file must have been opened before this routine is called.
+ *
+ *   REFERENCES:
+ *   A description of the OMF file structure can be found in Chapter 6
+ *   of the Motorola DSP Simulator Reference Manual, "DSP Object Module
+ *   Format", Published by Motorola 1992.
+ *
+ *   INCLUDE FILES:
+ *   sdsuLib.h
+ *   errorLib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS sdsuMemorySymbolDnload ( SDSU_ID       context,
+                                FILE          *fd,
+                                const uint32  destId)
+{
+   char      pField [OMF_MAX_CHARS_PER_LINE + 1];
+   uint32    memSpace;
+   uint32    address;
+   int       i;
+   int       recordType;
+
+   if (SDSU_ID_IS_INVALID (context))
+   {
+      ERROR_SET (S_sdsuLib_INV_STRUCTURE, "Invalid SDSU context", 
+                 ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+   
+   /*
+    * Read the first field of the first record in the OMF file and
+    * check that this is the "start" record.
+    */
+
+   if (fscanf (fd, "%s", pField) == EOF)
+   {
+      ERROR_SET (0, "Failed to read first field of OMF file", ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   if ((recordType = sdsu_getRecordType (pField, 0)) != OMF_FIELD_IDENT_START)
+   {
+      ERROR_SET (S_sdsuLib_OMF_PARSE_ERROR, 
+                 "START record not found in OMF file", ERROR_LOG_SAVE);
+      printf ( "START record not found in OMF file\n" );
+      return (ERROR);
+   }
+   else
+   {
+      /*
+       * "start" record found. A start record has this format:
+       * "_START <Module id> <Version> <Rev #> <Device #> <Asm Version> 
+       * <Comment>"
+       * Skip over the 6 unwanted parts of the start record.
+       */
+
+#ifdef DEBUG_SYMBOL
+      printf ( "pField=%s is a start\n" , pField );
+#endif
+
+      for (i = 0; i < 6; i++)
+      {
+         if (fscanf (fd, "%s", pField) == EOF)
+         {
+            ERROR_SET (0, "Failed to skip over start record in OMF file", 
+                       ERROR_LOG_SAVE);
+            return (ERROR);
+         }
+#ifdef DEBUG_SYMBOL
+         printf ( "pField=%s skipped\n",  pField );
+#endif
+      }
+   }
+
+   /*
+    * Get the first field of the record, then enter a loop parsing each field 
+    * in turn until an "end" record is read.
+    */
+
+   if (fscanf (fd, "%s", pField) == EOF)
+   {
+      ERROR_SET (0, "Failed to read first field from OMF file", ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   while ((recordType = sdsu_getRecordType (pField, 0)) != OMF_FIELD_IDENT_END)
+   {
+
+      if ( recordType != OMF_FIELD_IDENT_SYMBOL )
+      {
+#ifdef DEBUG_SYMBOL
+         printf ( "pField=%s skipped\n",  pField );
+#endif
+         if (fscanf (fd, "%s", pField) == EOF)
+         {
+            ERROR_SET (0, "Failed to read next field from OMF file", 
+                       ERROR_LOG_SAVE);
+            return (ERROR);
+         }
+      }
+      else
+      {
+         /* This is a symbol record, which looks like:
+          * _SYMBOL <memory space> <symbol definition> ...
+          * where each symbol definition consists of
+          * <name> I <address>
+          * (no idea what the 'I' is for)
+          * Save the symbol information for (eventual) use with parameters.
+          */
+
+#ifdef DEBUG_SYMBOL
+          printf ( "pField=%s is symbol\n",  pField );
+#endif
+             
+          if (fscanf (fd, "%s", pField) == EOF)
+          {
+             ERROR_SET (0, "Failed to read field from OMF file", 
+                        ERROR_LOG_SAVE);
+             return (ERROR);
+          }
+
+          if (sdsu_areStringsSame (pField, "P")) 
+             memSpace = SDSU_MEM_SPACE_P;
+          else if (sdsu_areStringsSame (pField, "X")) 
+             memSpace = SDSU_MEM_SPACE_X;
+          else if (sdsu_areStringsSame (pField, "Y")) 
+             memSpace = SDSU_MEM_SPACE_Y;
+          else if (sdsu_areStringsSame (pField, "N")) 
+             memSpace = SDSU_MEM_SPACE_NONE;
+          else
+          {
+             ERROR_SET1 (S_sdsuLib_INV_MEM_SPACE, 
+                         "Invalid memory space, %s", ERROR_LOG_SAVE,
+                         pField);
+             return (ERROR);
+          }
+
+#ifdef DEBUG_SYMBOL
+          printf ( "pField=%s is symbol memory space\n",  pField );
+#endif
+            
+          /******** The next field is the start of the symbol definitions ***/
+
+          if (fscanf (fd, "%s", pField) == EOF)
+          {
+             ERROR_SET (S_sdsuLib_INV_OMF_FIELD, 
+                        "Failed to read field from OMF file",
+                        ERROR_LOG_SAVE);
+             return (ERROR);
+          }
+
+          /** As long as it's not a record type, it must be a symbol name ***/
+
+          while (!sdsu_isRecordType (pField))
+          {
+             char symName[SDSU_SYM_NAME_LEN + 1];
+               
+#ifdef DEBUG_SYMBOL
+             printf ( "pField=%s is symbol name\n",  pField );
+#endif
+
+             /* Save the name for a moment */
+             strncpy(symName, pField, SDSU_SYM_NAME_LEN);
+               
+             /* Skip the 'I' */
+             if (fscanf (fd, "%s", pField) == EOF)
+             {
+                ERROR_SET (S_sdsuLib_INV_OMF_FIELD, 
+                           "Failed to read field from OMF file",
+                           ERROR_LOG_SAVE);
+                return (ERROR);
+             }
+
+             if (strcmp (pField, "I"))
+             {
+                ERROR_SET1 (S_sdsuLib_INV_OMF_FIELD,
+                "Invalid symbol, %s, read from OMF file - expecting \"I\"",
+                ERROR_LOG_SAVE, pField);
+                return (ERROR);
+             }
+
+#ifdef DEBUG_SYMBOL
+             printf ( "pField=%s is symbol I\n",  pField );
+#endif
+
+             /******************************** Read and convert the address ***/
+
+             if (fscanf (fd, "%s", pField) == EOF)
+             {
+                ERROR_SET (S_sdsuLib_INV_OMF_FIELD, 
+                           "Failed to read field from OMF file",
+                           ERROR_LOG_SAVE);
+                return (ERROR);
+             }
+#ifdef DEBUG_SYMBOL
+             printf ( "pField=%s is symbol address\n",  pField );
+#endif
+
+             address = sdsu_atoiBase16 (pField);
+               
+             /* If it's P but in the E range ...*/
+
+             if ((memSpace == SDSU_MEM_SPACE_P) && 
+                (address >= (SDSU_MEM_START_E & ~SDSU_MEM_SPACE_MASK)) &&
+                (address <= (SDSU_MEM_END_E & ~SDSU_MEM_SPACE_MASK)))
+             {
+                address |= SDSU_MEM_SPACE_E;     /* then mark it as E space */
+             }
+             else
+             {
+                address |= memSpace;   /* OR memory space ID with addresses */
+             }
+               
+             /* Finally make a (unique) entry in the symbol table */
+
+             symRemove(context->paramSyms, symName, (SYM_TYPE) destId);
+             if (symAdd(context->paramSyms, symName, (char *) address, 
+                        (SYM_TYPE) destId, 0))
+             {
+                ERROR_SET1 (0, "Error adding parameter symbol, %s", 
+                            ERROR_LOG_SAVE, symName);
+                return (ERROR);
+             }
+               
+             /* Read the next symbol name and try again */
+
+             if (fscanf (fd, "%s", pField) == EOF)
+             {
+                ERROR_SET (S_sdsuLib_INV_OMF_FIELD, 
+                           "Failed to read field from OMF file", 
+                           ERROR_LOG_SAVE);
+                return (ERROR);
+             }
+          }
+      }
+             
+   }
+
+   /* Finally, return */
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   sdsuFileSymbolDnload
+ *
+ *   INVOCATION:
+ *   sdsuFileSymbolDnload (context, pFileName, destId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) context    (SDSU_ID)      Context ID
+ *   (>) pFileName  (char *)       OMF file name
+ *   (>) destId     (const uint32) ID of DSP to which data will be downloaded
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)  OK, or ERROR if an error occured while downloading.
+ *
+ *   PURPOSE:
+ *   Download symbol from a OMF file (".lod" format) to an SDSU DSP
+ *
+ *   DESCRIPTION:
+ *   This routine reads DSP56k object code from a OMF file to
+ *   construct the symbol table. The OMF file will normally be the output 
+ *   from the Motorola utility program "cldlod".
+ *   The routine provides similar functionality to sdsuMemoryDnload()
+ *   but with a slightly higher-level interface. 
+ *   destId can take one of the values specified in the table below.
+ *
+ *      SDSU_IDENT_HST   =>   Refers to the host CPU
+ *      SDSU_IDENT_VME   =>   Refers to VME DSP
+ *      SDSU_IDENT_TIM   =>   Refers to Timing DSP
+ *      SDSU_IDENT_UTL   =>   Refers to Utility DSP
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   REFERENCES:
+ *   A description of the OMF file structure can be found in Chapter 6
+ *   of the Motorola DSP Simulator Reference Manual, "DSP Object Module
+ *   Format", Published by Motorola 1992.
+ *
+ *   INCLUDE FILES:
+ *   sdsuLib.h
+ *   errorLib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS sdsuFileSymbolDnload ( SDSU_ID      context,
+                              char         *pFileName,
+                              const uint32 destId)
+{
+   char pIoFileName [MAX_CHAR_FILENAME + 1];
+   FILE *pIoFile;
+
+
+   if (SDSU_ID_IS_INVALID (context))
+   {
+      ERROR_SET (S_sdsuLib_INV_STRUCTURE, "Invalid SDSU context", 
+                 ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   /* Get the OMF file name & open the file */
+
+   strncpy (pIoFileName, pFileName, MAX_CHAR_FILENAME);
+   if (strstr (pIoFileName, ".lod") == NULL && 
+       strstr (pIoFileName, ".LOD") == NULL)
+      strcat (pIoFileName, ".lod");
+
+   if ((pIoFile = fopen (pIoFileName, "r")) == NULL)
+   {
+      ERROR_SET1 (0, "Failed to open OMF file, %s", ERROR_LOG_SAVE, 
+                  pIoFileName);
+      return (ERROR);
+   }
+
+   if (sdsuMemorySymbolDnload (context, pIoFile, destId) == ERROR)
+   {
+      ERROR_SET (0, ERROR_MSG_NONE, ERROR_LOG_SAVE);
+      fclose (pIoFile);
+      return (ERROR);
+   }
+   rewind (pIoFile);
+   printf ("%s read OK\n", pIoFileName);
+
+   if (fclose (pIoFile) == ERROR)
+   {
+      ERROR_SET (0, "Failed to close OMF file", ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   sdsuClear1RepBuf
+ *
+ *   INVOCATION:
+ *   sdsuClear1RepBuf (context)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) context (SDSU_ID) Context ID
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK, or ERROR if the context ID is invalid.
+ *
+ *   PURPOSE:
+ *   Clear the first location of the content of SDSU circular reply buffer
+ *
+ *   DESCRIPTION:
+ *
+ *   EXTERNAL VARIABLES:
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   sdsuLib.h
+ *   errorLib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS   sdsuClear1RepBuf ( SDSU_ID context )
+{
+   if (SDSU_ID_IS_INVALID (context))
+   {
+      ERROR_SET (S_sdsuLib_INV_STRUCTURE, "Invalid SDSU context", 
+                 ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   /************************************************** Clear first location ***/
+
+   if (cacheInvalidate (DATA_CACHE, context->pRepBuffer, 
+                        REP_BUF_NWORD * sizeof (uint32)) == ERROR)
+   {
+      ERROR_SET (0, "Cache invalidate for reply buffer failed", ERROR_LOG_SAVE);
+      return (ERROR);
+   }
+
+   if ((context->pRepBuffer) [0] & 0xff000000)
+   {
+      context->pRepBuffer [0] &= 0x00ffffff;
+
+      if (cacheFlush (DATA_CACHE, & (context->pRepBuffer [0]), 4)
+          == ERROR)
+      {
+         ERROR_SET (0, "Cache flush for reply buffer failed", ERROR_LOG_SAVE);
+
+         return (ERROR);
+      }
+   }
+
+   return (OK);
+}
