@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.22 2000-12-18 21:53:52 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.23 2000-12-18 22:27:00 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -32,6 +32,9 @@
 world		-a .
 
 # CVSROOT support
+
+#D	CVSROOT	The CVS root configuration
+#M	CVSROOT	The CVS root configuration
 CVSROOT		-i /home/ajf/bin/mkmodules CVSROOT
 commitinfo	-i /home/ajf/bin/mkmodules CVSROOT commitinfo
 cvswrappers	-i /home/ajf/bin/mkmodules CVSROOT cvswrappers
@@ -41,12 +44,6 @@ loginfo		-i /home/ajf/bin/mkmodules CVSROOT loginfo
 rcsinfo		-i /home/ajf/bin/mkmodules CVSROOT rcsinfo
 rcstemplate	-i /home/ajf/bin/mkmodules CVSROOT rcstemplate
 taginfo		-i /home/ajf/bin/mkmodules CVSROOT taginfo
-
-
-#D	CVSROOT	The CVS root configuration
-#M	CVSROOT	The CVS root configuration
-CVSROOT     CVSROOT
-
 
 # Add more modules here 
 #
@@ -75,6 +72,11 @@ pcs	pcs
 mbec	mbec
 #M	pcstest	Jmaclean Runtime version of the PCS
 pcstest	mbec/pcstest
+#M	comcon	Components Controller
+#D	niri	niri software
+niri	niri
+#M	test	test area
+test	niri/test
 
 #D	scs	Gemini Secondary Control System
 #M	scs	Gemini Secondary Control System
