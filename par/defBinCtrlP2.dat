@@ -1,0 +1,27 @@
+# Init file for control structure of PWFS2
+# Name of the bin dark fits file (string)
+data/defBinP2Dark.fits
+# Name of the bin flat fits file (string)
+data/defBinP2Flat.fits
+# Name of the AO SH reference file (string)
+data/defBinRefP2.dat
+# Number of modes to be corrected
+3
+# Value for the x center for the whole CCD (double)
+20.5
+# Value for the y center for the whole CCD (double)
+20.5
+# Scale factor for tip mode (double)
+-0.1
+# Scale factor for tilt mode (double)
+-0.1
+# Scale factor for focus mode (double)
+-0.003
+# Gain for focus sliding average (double)
+0.001
+# Threshold value for pixel (double)
+50
+# Threshold value for total counts (double)
+0
+# Angle in radians between M2 and PWFS2 (double)
+3.14159

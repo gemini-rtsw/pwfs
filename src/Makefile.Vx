@@ -13,7 +13,7 @@ include .applTop/config/CONFIG
 
 # User compiler and loader flags (NO_EPICS flag is needed for all processors except zero)
 # SNC_FLAGS    =
-USR_CFLAGS = -O2 -D$(APPLIC_SITE)
+USR_CFLAGS = -O2
 # USR_INCLUDES =
 # USR_LDFLAGS  =
 # USR_LDLIBS   =
@@ -28,7 +28,6 @@ LIBSRCS.c	= \
 	../cicsLib.c \
 	../epToVxLib.c \
 	../errorLib.c \
-        ../matrixLib.c \
 	../aoP2Lib.c \
 	../sdsuLib.c \
 	../timeoutLib.c \
@@ -89,7 +88,6 @@ INC	= \
 	../wfsSite.h \
 	../wfsControl.h \
 	../wfsResourceMonitor.h \
-        ../matrixLib.h \
 	../aoP2Lib.h
 
 # MAN1 is installed in INSTALL_MAN/man1
