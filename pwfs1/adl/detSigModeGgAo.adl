@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="12"
-	nstr="54"
-	ndynamic="13"
+	npc="13"
+	nstr="58"
+	ndynamic="14"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="707"
-		height="328"
+		height="358"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2224"
-	nwords_sta="592"
+	nwords_dspy="2386"
+	nwords_sta="616"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1324"
-	osta="732"
-	odynamic="1324"
-	oplot="2212"
-	ord="2212"
-	oes="2212"
-	okd="2212"
-	opd="2224"
-	opo="2224"
+	odyng="1420"
+	osta="804"
+	odynamic="1420"
+	oplot="2374"
+	ord="2374"
+	oes="2374"
+	okd="2374"
+	opd="2386"
+	opo="2386"
 	opc="68"
-	ostr="226"
-	ocmap="732"
-	ocrules="732"
+	ostr="242"
+	ocmap="804"
+	ocrules="804"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="6"
 		y="38"
 		width="690"
-		height="281"
+		height="310"
 		groupid="0"
 	}
 }
@@ -179,7 +179,7 @@ display {
 	object {
 		x="13"
 		y="190"
-		width="618"
+		width="587"
 		height="20"
 		groupid="0"
 	}
@@ -273,13 +273,35 @@ display {
 }
 "text" {
 	object {
-		x="576"
-		y="217"
-		width="83"
+		x="570"
+		y="219"
+		width="26"
 		height="16"
 		groupid="0"
 	}
-	textix="seconds"
+	textix="s"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="12"
+		y="321"
+		width="393"
+		height="16"
+		groupid="0"
+	}
+	textix="D: Pause between 2 aO commands       :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="659"
+		y="322"
+		width="26"
+		height="16"
+		groupid="0"
+	}
+	textix="s"
 	align="horiz. left"
 }
 "message button" {
@@ -852,6 +874,51 @@ display {
 	}
 	control {
 		chan="$(top)detSigModeGgAo.C"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeGgAo.VAL"
+		rulechan[1] = "$(top)detSigModeGgAo.VAL"
+		rulechan[2] = "$(top)detSigModeGgAo.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeGgAo"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="396"
+		y="317"
+		width="256"
+		height="21"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeGgAo.D"
 		clr="0"
 		bclr="6"
 		label="none"
