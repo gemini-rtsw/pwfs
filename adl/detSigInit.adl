@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="23"
-	nstr="62"
-	ndynamic="21"
+	npc="24"
+	nstr="59"
+	ndynamic="22"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="704"
-		height="671"
+		height="695"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3802"
-	nwords_sta="1328"
+	nwords_dspy="3832"
+	nwords_sta="1340"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2386"
-	osta="1058"
-	odynamic="2386"
-	oplot="3790"
-	ord="3790"
-	oes="3790"
-	okd="3790"
-	opd="3802"
-	opo="3802"
+	odyng="2350"
+	osta="1010"
+	odynamic="2350"
+	oplot="3820"
+	ord="3820"
+	oes="3820"
+	okd="3820"
+	opd="3832"
+	opo="3832"
 	opc="68"
-	ostr="368"
-	ocmap="1058"
-	ocrules="1058"
+	ostr="382"
+	ocmap="1010"
+	ocrules="1010"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -76,9 +76,9 @@ display {
 "rectangle" {
 	object {
 		x="5"
-		y="39"
+		y="41"
 		width="690"
-		height="622"
+		height="648"
 		groupid="0"
 	}
 }
@@ -434,7 +434,7 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="9"
 		y="634"
 		width="326"
 		height="16"
@@ -445,13 +445,24 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="9"
 		y="607"
 		width="322"
 		height="16"
 		groupid="0"
 	}
 	textix="Seeing scale factor ... ... ...:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="9"
+		y="662"
+		width="326"
+		height="16"
+		groupid="0"
+	}
+	textix="Seeing coeff. vector file name :"
 	align="horiz. left"
 }
 "message button" {
@@ -1145,7 +1156,7 @@ display {
 }
 "text entry" {
 	object {
-		x="337"
+		x="336"
 		y="483"
 		width="345"
 		height="19"
@@ -1190,7 +1201,7 @@ display {
 }
 "text entry" {
 	object {
-		x="337"
+		x="336"
 		y="511"
 		width="345"
 		height="19"
@@ -1235,7 +1246,7 @@ display {
 }
 "text entry" {
 	object {
-		x="337"
+		x="336"
 		y="453"
 		width="110"
 		height="19"
@@ -1280,7 +1291,7 @@ display {
 }
 "text entry" {
 	object {
-		x="337"
+		x="336"
 		y="537"
 		width="345"
 		height="19"
@@ -1325,7 +1336,7 @@ display {
 }
 "text entry" {
 	object {
-		x="337"
+		x="336"
 		y="632"
 		width="345"
 		height="19"
@@ -1370,7 +1381,7 @@ display {
 }
 "text entry" {
 	object {
-		x="337"
+		x="336"
 		y="602"
 		width="110"
 		height="19"
@@ -1378,6 +1389,51 @@ display {
 	}
 	control {
 		chan="$(top)detSigInit.L"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="336"
+		y="660"
+		width="345"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.N"
 		clr="0"
 		bclr="6"
 		label="none"

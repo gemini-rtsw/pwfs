@@ -251,3 +251,18 @@ V4-2 18 June 2002 CB:
 V4-3 3 July 2002 CB:
 --------------------
   - Implement seeing computation following BE method
+
+V4-4 4 Nov 2002 CB:
+-------------------
+  - GEM8.4
+  - Fix small bug in detControl.c: reset aoCtrlId->seeingCounter
+  - add in par test36FullRefP2.dat, test36BinRefP2.dat, test37FullRefP2.dat 
+    and test37BinRefP2.dat
+  - implement seeing computation according to FR's method
+  - now by default use butterworth filter
+  - colors.adl: replace ERR with ERROR for the color rules
+  - add detPowerOff command
+  - remove errors when starting an observation already in progress
+  - modify detInit to initialize correctly signal processing, butterworth 
+    filters and zero point models
+  - update detAoModP2MK.dat, defBinCtrlP2CP.dat, defFullCtrlP2CP.dat

@@ -1,18 +1,26 @@
 [schematic2]
-uniq 121
+uniq 122
 [tools]
 [detail]
 s 336 2240 500 0 PWFS2 - WFS CAD Records
 s 2464 -704 500 512 wfsCad.sch
 [cell use]
+use ecad2 3744 -345 100 0 detPowerOff
+xform 0 3904 -32
+p 3424 -208 100 0 1 DESC:POWER OFF UTL board
+p 3856 32 100 0 0 FTVA:STRING
+p 3856 -32 100 0 0 FTVB:STRING
+p 3424 -240 100 0 1 INAM:epToVxCadInit
+p 3424 -304 100 0 1 PV:$(top)$(wfs)
+p 3424 -272 100 0 1 SNAM:epToVxCadExecute
 use ecad2 2880 -345 100 0 detPowerOn
 xform 0 3040 -32
-p 3296 96 100 0 1 DESC:POWER ON command for UTL board
+p 2560 -208 100 0 1 DESC:POWER ON UTL board
 p 2992 32 100 0 0 FTVA:STRING
 p 2992 -32 100 0 0 FTVB:STRING
-p 3296 64 100 0 1 INAM:epToVxCadInit
-p 3296 0 100 0 1 PV:$(top)$(wfs)
-p 3296 32 100 0 1 SNAM:epToVxCadExecute
+p 2560 -240 100 0 1 INAM:epToVxCadInit
+p 2560 -304 100 0 1 PV:$(top)$(wfs)
+p 2560 -272 100 0 1 SNAM:epToVxCadExecute
 use ecad2 -800 -505 100 0 detDhsDisplay
 xform 0 -640 -192
 p -736 -544 100 0 1 DESC:Set dhs display
@@ -109,7 +117,7 @@ p 3600 1328 100 0 1 FTVJ:STRING
 p 3600 1296 100 0 1 FTVK:STRING
 p 3600 1264 100 0 1 FTVL:DOUBLE
 p 3600 1232 100 0 1 FTVM:STRING
-p 3600 1200 100 0 0 FTVN:STRING
+p 3600 1200 100 0 1 FTVN:STRING
 p 3600 1168 100 0 0 FTVO:STRING
 p 3600 1136 100 0 0 FTVP:STRING
 p 3600 1104 100 0 0 FTVQ:STRING
@@ -273,10 +281,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2002-07-04 03:43:05 $
-p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.9 2002-07-04 03:43:05 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2002-11-05 00:38:06 $
+p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.10 2002-11-05 00:38:06 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.9 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.10 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]

@@ -89,7 +89,9 @@
 
 /* specify constant definitions */
 
+/*
 #define RUNNING_AVERAGE
+*/
 
 #ifndef PI
 #define PI 3.14159265358979
