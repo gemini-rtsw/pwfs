@@ -76,6 +76,7 @@
  *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   21 Jan 2002: CB - Add pWfsStatus to writeWfsToTcs()
  *   14 Dec 2001: CB - Threshold in real time: add rms, rmsDarkFull, rmsDarkBin
  *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
  *   31 Oct 2001: CB - aoGlobalGuide and aoGuideAndFocus x2 the TT values when
@@ -4417,7 +4418,7 @@ STATUS aoModeCompute (
          };
 
          if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect,
-                            pTime) != OK )
+                            pTime, pWfsStatus) != OK )
          {
             ERROR_SET ( 0, "Failed to write data to the TCS", ERROR_LOG_SAVE);
             return (ERROR);
@@ -5869,7 +5870,7 @@ STATUS aoModeAnalyze (
    };
 
    if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect,
-                      pTime) != OK )
+                      pTime, pWfsStatus) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the TCS", ERROR_LOG_SAVE);
       return (ERROR);

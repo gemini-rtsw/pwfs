@@ -1,4 +1,4 @@
-# $Id: startup.vws,v 1.8 2002-01-03 03:39:27 cboyer Exp $
+# $Id: startup.vws,v 1.9 2002-01-24 21:00:21 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -37,11 +37,11 @@ ld < $(version)/bin/$(arch)/drvVmi5588
 # Load the Gemini astrometric and time libraries
 ld < /gemini/epics3.13.4/slalib/slalib/bin/$(arch)/slalib
 ld < /gemini/epics3.13.4/timelib/timelib/bin/$(arch)/timelib
-ld < /gemini/epics3.13.4/astlib/asttlib/bin/$(arch)/astlib
+ld < /gemini/epics3.13.4/astlib/astlib/bin/$(arch)/astlib
 ld < /gemini/epics3.13.4/cfitsio/cfitsio/bin/$(arch)/cfitsiolib
 
 # Load sequences here
-ld < /gemini/epics3.13.4/timelib/bin/$(arch)/timeSeq
+ld < /gemini/epics3.13.4/timelib/timelib/bin/$(arch)/timeSeq
 
 # Load the Gemini data handling libraries
 ld < /gemini/dhs/external/lib/mv2700/libers.o

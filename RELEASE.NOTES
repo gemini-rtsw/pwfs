@@ -200,3 +200,5 @@ V3-0
   - CB sizes increased
   - aO: replace imageNb parameter with a time parameter, them imageNb is 
     computed from this time and current exposure time
+  - add detPowerOn
+  - Check wfsStatus in writeWfsToTcs()

@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   18 Jan 2002: CB - Add detPowerOn
  *   14 Dec 2001: CB - Add rms sir recordAdd rms sir record
  *   21 Aug 2001: CB - Major modifications to have aO correction with P2 also
  *   02 Apr 2001: CB - add sir adc0, adc1, adc2, adc3
@@ -814,6 +815,7 @@ enum
    DET_CONTROL_CMD_SAVE,       /* Save SDSU controller parameters.            */
    DET_CONTROL_CMD_GEOMETRY,   /* Set detector readout geometry.              */
    DET_CONTROL_CMD_PRIMITIVE,  /* Execute SDSU primitive command.             */
+   DET_CONTROL_CMD_POWER_ON,   /* Execute POWER ON primitive command.         */
    DET_CONTROL_CMD_MODE,       /* Set detector readout mode.                  */
    DET_CONTROL_CMD_OFFSET,     /* Set detector ADC offsets.                   */
    DET_CONTROL_CMD_TEMP        /* Define temperature control params.          */

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.19 2002-01-03 03:39:25 cboyer Exp $"};
+   "$Id: detControl.c,v 1.20 2002-01-24 21:00:19 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   18 Jan 2002: CB - add detPowerOn
  *   02 Jan 2002: CB - detDhsInit started from detControl now
  *   14 Dec 2001: CB - Compute threshold per sub-apertures in real time
  *   30 Nov 2001: CB - Add flag writeToRm to aoGlobalGuide() and 
@@ -317,6 +318,9 @@ LOCAL uint32   detGeometry (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 
 LOCAL uint32   detPrimitive (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detPowerOn (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                           SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detMode   (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                           SDSU_ID sdsuId, OBS_ID obsId);
@@ -1910,6 +1914,15 @@ STATUS   detControl
 
             errorNumber = 
             detPrimitive (cadCmdContext, commandNumber, sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_POWER_ON)
+         {
+
+            /* Execute SDSU POWER ON primitive command. */
+
+            errorNumber =
+            detPowerOn (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_MODE)
@@ -9002,6 +9015,91 @@ uint32 detPrimitive
    {
       ERROR_LOG ("Failed to write message to SDSU primitive reply pipe.");
       if ( errorNumber == 0 ) errorNumber = (uint32) errnoGet();
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detPowerOn
+ *
+ *   INVOCATION:
+ *   detPowerOn (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext        (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber        (int)             Command number
+ *   (>) sdsuId               (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId                (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detPowerOn command
+ *
+ *   DESCRIPTION:
+ *   This function executes POWER ON command for the Bob Leach controller
+ *
+ *   EXTERNAL VARIABLES:
+ *   NONE
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detPowerOn
+   (
+   CAD_CMD_CONTEXT cadCmdContext,  /* CAD command context structure.          */
+   int             commandNumber,  /* Command number.                         */
+   SDSU_ID         sdsuId,         /* SDSU context structure.                 */
+   OBS_ID          obsId           /* Observation context structure.          */
+   )
+{
+   uint32          errorNumber;     /* Error number reported by task.         */
+
+   /*
+    * Initialise the error number.
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU context structure.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Issue the primitive commands to the SDSU controller.
+    */
+
+   if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to init UTILITY DSP with INI command");
+      errorNumber = S_detControl_SDSU_ERROR;
+   }
+
+   if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to init TIMING DSP with LDP command");
+      errorNumber = S_detControl_SDSU_ERROR;
    }
 
    return (errorNumber);
