@@ -8942,10 +8942,10 @@ STATUS aoModFocFileRead (
 
 /*+
  *   FUNCTION NAME:
- *   aoThresholdPerSubapCompute
+ *   aoThresholdPerSubapCompute_OLD
  *
  *   INVOCATION:
- *   aoThresholdPerSubapCompute (pImage, aoCcdId, aoCtrlId, ratePixel, 
+ *   aoThresholdPerSubapCompute_OLD (pImage, aoCcdId, aoCtrlId, ratePixel, 
  *                               pThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -8984,7 +8984,7 @@ STATUS aoModFocFileRead (
  *-
  */
 
-STATUS aoThresholdPerSubapCompute (
+STATUS aoThresholdPerSubapCompute_OLD (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId,
@@ -10170,4 +10170,178 @@ double aoTotalThresholdCompute (
    /* Return it */
 
    return ( totalThreshold );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoThresholdPerSubapCompute
+ *
+ *   INVOCATION:
+ *   aoThresholdPerSubapCompute (pImage, aoCcdId, aoCtrlId, ratePixel, 
+ *                               pThreshold)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pImage         (float *)    Pointer to the image from which to compute
+ *                                   the centroids
+ *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                                   structure
+ *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control context
+ *                                   structure
+ *   (>) ratePixel      (double)     Rate of the brightest pixels to determine
+ *                                   the thresholds - should be between 0 and 1
+ *   (<) pThreshold     (double *)   Pointer to the threshold vector 
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS) OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   To compute the threshold per subaperture
+ *
+ *   DESCRIPTION:
+ *   This routine allows to compute the optimized threshold per subaperture 
+ *   from a PWFS2 spots image pImage according to the following criteria: 
+ *   ratePixel % of the brightest pixels of the subaperture.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoThresholdPerSubapCompute (
+   float *      pImage,
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId,
+   double       ratePixel,
+   double *     pThreshold
+   )
+{
+   int          index1;
+   int          index2;
+   int          gap;
+   int          pixelsNb;
+   int          subapNb;
+   int          i, j;
+   int          l, k;
+   int          m;
+   float        temp;
+   float *      pn;
+   float *      pi;
+   float *      pMin;
+   float *      pMax;
+   double       averageThresh;
+   IMAGE_VECT   newImageVect;
+
+   /* Check range of ratePixel: should be between 0 and 1 */
+
+   if ( (ratePixel < 0.0) || (ratePixel >= 1.0) )
+   {
+      ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
+                   ERROR_LOG_SAVE, ratePixel );
+      return (ERROR);
+   }
+
+   /* Store the pixels of the subaperture into newImageVect */
+
+   m=0;
+   for ( k = 0 ; k < 2 * aoCcdId->ySubapNb ; k ++ )
+   {
+       for ( l = 0 ; l < 2 * aoCcdId->xSubapNb ; l ++ )
+       {
+           subapNb = 2*k*aoCcdId->xSubapNb + l;
+           pn = newImageVect;
+
+           if ( aoCcdId->subapUsedVect[subapNb] == TRUE)
+           {
+              pixelsNb = aoCcdId->xRaster * aoCcdId->yRaster; 
+
+#ifdef DEBUG
+              printf ( "subaperture NB = %d is used\n" , subapNb );
+#endif
+
+              for ( i = 1 ; i <= aoCcdId->yRaster ; i ++ )
+              {
+                  pMin = pImage + ((i-1)*aoCcdId->xPixels) +
+                         (l*aoCcdId->xRaster) +
+                         (k * aoCcdId->xPixels * aoCcdId->yRaster);
+                  pMax = pMin + aoCcdId->xRaster;
+
+                  for ( pi = pMin ; pi < pMax ; pi ++)
+                      *(pn ++) = *pi;
+              }
+
+#ifdef DEBUG
+              pn = newImageVect;
+              printf ( "Pixels = " );
+              for ( i = 0; i < pixelsNb ; i ++ )
+                  printf ( "%f " , *(pn + i));
+              printf ( "\n" );
+#endif
+
+              /* Now sort newImageVector */
+
+              pn = newImageVect;
+
+              for ( gap = pixelsNb/2 ; gap > 0 ; gap /= 2 )
+              {
+                  for ( i = gap ; i < pixelsNb ; i ++ )
+                  {
+                      for ( j = i - gap ; j >= 0 && (*(pn+j)>*(pn+j+gap)) ; 
+                            j -= gap)
+                      {
+                          temp = *(pn+j);
+                          *(pn+j) = *(pn+j+gap);
+                          *(pn+j+gap) = temp;
+                      }
+                  }
+              }
+
+#ifdef DEBUG
+              pn = newImageVect;
+              printf ( "Pixels = " );
+              for ( i = 0; i < pixelsNb ; i ++ )
+                  printf ( "%f " , *(pn + i));
+              printf ( "\n" );
+#endif
+
+              /* Now compute the threshold for this subaperture */
+
+              index2 = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
+
+              if ( ratePixel < 0.5 )
+                 index1 = (int) ceil ((double)(pixelsNb) * ratePixel);
+              else
+                 index1 = 0;
+    
+              pn = newImageVect;
+              averageThresh = 0.0;
+              for ( i = index1 ; i < index2 ; i ++ )
+                  averageThresh += (double)(*(pn + i));
+
+              if (averageThresh < 0.0)
+                 averageThresh = 0.0;
+
+              *(pThreshold + m) = (averageThresh / (double)(index2-index1)) + 
+              (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
+
+#ifdef DEBUG
+              printf ( "index1 = %d, index2 = %d\n", index1, index2);
+              printf ( "threshold[%d] = %f\n" , m , *(pThreshold + m));
+#endif
+              m ++;
+           }
+       }
+   }
+
+   return (OK);
 }
