@@ -282,7 +282,7 @@ V4-6 8 January 2004 CB:
   - read default gains from .dat file when pressing the default button
   - set default of the detSigModeSeq CAD from pv load file (one per site)
 
-dev 9 January 2004 CB:
+V4-6-1 9 January 2004 CB:
 ----------------------
   - aoTotalThresholdCompute(): new fit given by FR
   - implement pause time between 2 aO commands
@@ -291,3 +291,55 @@ dev 9 January 2004 CB:
   - Clamp aO commands above a max threshold
   - Threshold in real time: check average of the background is not < 0, if yes
     force it to 0
+
+V4-7 25 AUG 2004 AAG:
+----------------------
+
+  a) set initial default of the detSigModeSeqDark CAD from pv load 
+     file (one per site)	
+   - capfast/wfsGensub1.sch
+	Added initSigModeSeqDark gensub record
+   - src/pwfs2SetDefCommandMK.pv
+   - src/pwfs2SetDefCommandCP.pv
+	Set up defaults for detSigModeSeqDark CAD commands
+   - src/detControl.c
+	added detInitSigModeSeqDark proc
+   - adl/detSigModeSeqDark.adl
+
+  b) Removed not used parameters of Closed Loop Mode 
+   (which determines threshold in not Real Time) 
+
+   - capfast/wfsCadMore.sch 
+        fields C,D,E,F,G of detSigModeSeq record not used 
+	B field used por aoPause (instead of K)
+   - capfast/wfsGensub1.sch     
+        fields OUTC/D/E/F/G from initSigModeSeq record not used
+	B field used por aoPause (instead of K)
+   - src/wfsDb.c
+        modify dc:detSigModeSeq (attributes C,D,E,F,G not used and 
+           with O.0 value as default)
+	B field used por aoPause (instead of K)
+   - src/detControl.c
+        modify detSigModeSeq procedure to read/use only needed fields
+        modify detObserveStart procedure for CLOSED_LOOP mode
+        modify detObserveEnd procedure for CLOSED_LOOP mode
+   - src/pwfs2SetDefCommandMK.pv
+   - src/pwfs2SetDefCommandCP.pv
+        modify default setting in detSigModeSeq CAD commands 
+   - adl/detSigModeSeq.adl
+        remove 'more' option
+   - adl/detSigModeSeqMore.adl
+        remove display
+
+  d) Others
+   - IMP_StartupMK.pwfs2
+   - IMPS_StartupCP.pwfs2
+   - pwfs2Install
+	IMP_Startup.pwfs2 copied (according to site) before compilation 
+   - src/aoP2Lib.c
+	 fixed small bug in aoCtrlFileRead (assumed no blank/comment line 
+	 at the end of the file)
+   - par/defAoModP2MK.dat
+	updated
+   - startup/startupCP.vws
+	Dhs data Server updated (jughead)
