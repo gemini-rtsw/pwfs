@@ -1,68 +1,35 @@
 [schematic2]
-uniq 126
+uniq 118
 [tools]
 [detail]
-w 2938 43 100 0 n#115 esirs.ybin.FLNK 2784 512 2848 512 2848 32 3088 32 egenSubB.initSigInit.SLNK
-w 2970 651 100 0 n#111 esirs.ybin.VAL 2784 480 2912 480 2912 640 3088 640 egenSubB.initSigInit.INPD
-w 2970 715 100 0 n#110 esirs.xbin.VAL 2784 960 2912 960 2912 704 3088 704 egenSubB.initSigInit.INPB
+w 2938 43 100 0 n#115 esirs.ybin.FLNK 2784 512 2848 512 2848 32 3088 32 egenSub.initSigInit.SLNK
+w 2970 651 100 0 n#111 esirs.ybin.VAL 2784 480 2912 480 2912 640 3088 640 egenSub.initSigInit.INPB
+w 2970 715 100 0 n#110 esirs.xbin.VAL 2784 960 2912 960 2912 704 3088 704 egenSub.initSigInit.INPA
 s 128 2176 500 0 PWFS2 - WFS Detector Status Records
 s 2464 -704 500 512 wfsDetSad.sch
 [cell use]
-use egenSubB 3088 -57 100 0 initSigInit
+use egenSub 3088 -57 100 0 initSigInit
 xform 0 3232 368
 p 3152 -112 100 0 1 DESC:Init the detSigInit record
-p 3184 704 100 0 1 FTB:LONG
-p 3184 640 100 0 1 FTD:LONG
-p 3456 736 100 0 1 FTVA:STRING
-p 3456 704 100 0 1 FTVB:STRING
-p 3456 672 100 0 1 FTVC:STRING
-p 3456 640 100 0 1 FTVD:DOUBLE
-p 3456 608 100 0 1 FTVE:DOUBLE
-p 3456 576 100 0 1 FTVF:DOUBLE
-p 3456 544 100 0 1 FTVG:DOUBLE
-p 3456 512 100 0 1 FTVH:STRING
-p 3456 480 100 0 1 FTVI:STRING
-p 3456 448 100 0 1 FTVJ:STRING
-p 3456 416 100 0 1 FTVK:STRING
-p 3456 96 100 0 1 FTVU:LONG
-p 3152 -208 100 0 1 PV:$(sadtop)$(wfs)
+p 3168 704 100 0 1 FTA:LONG
+p 3168 640 100 0 1 FTB:LONG
+p 3504 720 100 0 1 FTVA:STRING
+p 3504 656 100 0 1 FTVB:STRING
+p 3504 592 100 0 1 FTVC:STRING
+p 3504 528 100 0 1 FTVD:DOUBLE
+p 3504 464 100 0 1 FTVE:DOUBLE
+p 3504 400 100 0 1 FTVF:DOUBLE
+p 3504 336 100 0 1 FTVG:STRING
+p 3152 -224 100 0 1 PV:$(top)$(wfs)
 p 3152 -144 100 0 1 SCAN:Passive
 p 3152 -176 100 0 1 SNAM:detInitSigInit
-p 3616 736 100 0 1 def(OUTA):$(top)$(wfs)detSigInit.A
-p 3616 704 100 0 1 def(OUTB):$(top)$(wfs)detSigInit.B
-p 3616 672 100 0 1 def(OUTC):$(top)$(wfs)detSigInit.C
-p 3616 640 100 0 1 def(OUTD):$(top)$(wfs)detSigInit.D
-p 3616 608 100 0 1 def(OUTE):$(top)$(wfs)detSigInit.E
-p 3616 576 100 0 1 def(OUTF):$(top)$(wfs)detSigInit.F
-p 3616 544 100 0 1 def(OUTG):$(top)$(wfs)detSigInit.G
-p 3616 512 100 0 1 def(OUTH):$(top)$(wfs)detSigInit.H
-p 3616 480 100 0 1 def(OUTI):$(top)$(wfs)detSigInit.I
-p 3616 448 100 0 1 def(OUTJ):$(top)$(wfs)detSigInit.J
-p 3616 416 100 0 1 def(OUTK):$(top)$(wfs)detSigInit.K
-use esirs 2368 -217 100 0 adc3
-xform 0 2576 -64
-p 2432 -256 100 0 1 DESC:ADC 3
-p 2304 -480 100 0 0 FDSC:SDSU parameter T_ADC_OS3
-p 2432 -288 100 0 1 FTVL:LONG
-p 2432 -320 100 0 1 PV:$(sadtop)$(wfs)
-use esirs 1760 -217 100 0 adc2
-xform 0 1968 -64
-p 1824 -256 100 0 1 DESC:ADC 2
-p 1696 -480 100 0 0 FDSC:SDSU parameter T_ADC_OS2
-p 1824 -288 100 0 1 FTVL:LONG
-p 1824 -320 100 0 1 PV:$(sadtop)$(wfs)
-use esirs 1152 -217 100 0 adc1
-xform 0 1360 -64
-p 1216 -256 100 0 1 DESC:ADC 1
-p 1088 -480 100 0 0 FDSC:SDSU parameter T_ADC_OS1
-p 1216 -288 100 0 1 FTVL:LONG
-p 1216 -320 100 0 1 PV:$(sadtop)$(wfs)
-use esirs 544 -217 100 0 adc0
-xform 0 752 -64
-p 608 -256 100 0 1 DESC:ADC 0
-p 480 -480 100 0 0 FDSC:SDSU parameter T_ADC_OS0
-p 608 -288 100 0 1 FTVL:LONG
-p 608 -320 100 0 1 PV:$(sadtop)$(wfs)
+p 3680 720 100 0 1 def(OUTA):$(top)$(wfs)detSigInit.A
+p 3680 656 100 0 1 def(OUTB):$(top)$(wfs)detSigInit.B
+p 3680 592 100 0 1 def(OUTC):$(top)$(wfs)detSigInit.C
+p 3680 528 100 0 1 def(OUTD):$(top)$(wfs)detSigInit.D
+p 3680 464 100 0 1 def(OUTE):$(top)$(wfs)detSigInit.E
+p 3680 400 100 0 1 def(OUTF):$(top)$(wfs)detSigInit.F
+p 3680 336 100 0 1 def(OUTG):$(top)$(wfs)detSigInit.G
 use esirs -64 -217 100 0 outputs
 xform 0 144 -64
 p 0 -256 100 0 1 DESC:Number of outputs
@@ -109,10 +76,10 @@ p 608 224 100 0 1 DESC:Detector head temperature
 p 608 128 100 0 1 EGU:Celsius
 p 480 0 100 0 0 FDSC:Detector head temperature
 p 608 192 100 0 1 FTVL:DOUBLE
-p 784 192 100 0 1 PREC:4
+p 736 192 100 0 0 PREC:4
 p 608 160 100 0 1 PV:$(sadtop)$(wfs)
 p 608 96 100 0 1 SCAN:5 second
-p 800 96 100 0 1 SNAM:detHeadTempGet
+p 608 64 100 0 1 SNAM:detHeadTempGet
 use esirs 544 743 100 0 nresets
 xform 0 752 896
 p 608 704 100 0 1 DESC:Number of resets between exposures
@@ -207,15 +174,24 @@ p 2432 224 100 0 1 DESC:Binning factor in Y direction
 p 2304 0 100 0 0 FDSC:SDSU parameter YBIN
 p 2432 192 100 0 1 FTVL:LONG
 p 2432 160 100 0 1 PV:$(sadtop)$(wfs)
+use notes 3568 -313 100 0 notes#13
+xform 0 3824 -128
+p 4096 -162 100 0 0 AUTHOR:S.M.Beard and N.Dillon
+p 3596 -2 100 0 -1 COMMENT1:This schematic contains the Status records
+p 3596 -34 100 0 -1 COMMENT2:describing the detector controller of
+p 3596 -64 100 0 -1 COMMENT3:one wavefront sensor.
+p 3596 -96 100 0 -1 COMMENT4:It may be duplicated for each wavefront
+p 3596 -128 100 0 -1 COMMENT5:sensor, using the wfs macro to distinguish
+p 3596 -160 100 0 -1 COMMENT6:each one.
 use bd200tr -1024 -920 -100 0 frame
 xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2001-09-04 19:52:58 $
+p 3120 -784 200 0 -1 date:$Date: 2000-11-11 01:11:51 $
 p 2576 2320 200 0 -1 id:
 p 2704 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2608 -496 200 0 -1 revision:$Revision: 1.7 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.4 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Detector Status Records
 [comments]
