@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.73 2005-02-08 19:20:22 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.74 2005-02-08 21:29:39 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -76,29 +76,11 @@ pcs	pcs
 #D	mbec	Matthieu's test area
 mbec	mbec
 
-#M	pcstest	Jmaclean Runtime version of the PCS (obsolete)
-#pcstest	mbec/pcstest
-
-#M	gnaacSrc-mv167-gem5	Niri DC CTRL (actually running on mv162)
-gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
-
-#M	gnaacSrc-ppc-gem6t	Niri temporary backup for ppc target (obsolete)
-#gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
+#M	niri-dc-ctrl-gem5	Niri DC CTRL (GEM5 / 3.12 / mv162)
+niri-dc-ctrl-gem5	mbec/gnaacSrc-mv167-gem5
 
 #M	vaioc	IOC vaio
 vaioc	mbec/vaioc
-
-#M	comcon	Components Controller 3.12 (obsolete)
-#comcon	niri3.12/comcon
-
-#D	niri3.12	Gemini NIRI Software 3.12 (obsolete)
-#niri3.12	niri3.12
-
-#M	gn-4	Detector Controller (1fps coadder) 3.12 (obsolete)
-#gn-4	niri3.12/gn-4
-
-#M	niricnfg	NIRI configurator tool 3.12 (obsolete)
-# niricnfg	niri3.12/niricnfg
 
 #D	niri	Gemini NIRI Software
 niri	niri
@@ -180,14 +162,6 @@ jcs	jcs
 #D	ocssupport	OCS support library
 ocssupport	ocssupport
 
-#M	ocsacqcam	Acquisition Camera (obsolete)
-#ocsacqcam	ocssupport/acqcam
-#M	ocsdhshdr	DHS fits header (obsolete)
-#ocsdhshdr	ocssupport/dhshdr
-#M	ocsgmos	GMOS
-#ocsgmos	ocssupport/gmos (obsolete)
-#M	ocsniri	NIRI
-#ocsniri	ocssupport/niri (obsolete)
 #M	ocsseq	Sequencing library
 ocsseq	ocssupport/seq
 #M	ocstcclib	TCC library
@@ -196,11 +170,6 @@ ocstcclib	ocssupport/tcc
 #D	oiwfs	On-Instrument WFS
 #M	oiwfs	On-Instrument WFS
 oiwfs	oiwfs
-
-## don't think this is used ... (yes, obsolete)
-##D	pfwfs	PWFS
-##M	pfwfs	PWFS
-#pfwfs	pfwfs
 
 #D	pwfs1	P1 WFS
 #M	pwfs1	P1 WFS
