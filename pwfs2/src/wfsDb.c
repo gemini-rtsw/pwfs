@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.20 2002-01-03 03:39:26 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.21 2002-01-24 21:00:20 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 18 Jan 2002 - cb add detPowerOn
  * 14 Dec 2001 - cb add rms sir record
  * 30 Nov 2001 - cb add writeToRm parameter to GG and FG CADs
  * 22 Aug 2001 - cb Major modifications to have aO correction with pwfs2
@@ -365,6 +366,14 @@ CAD_RECORD pWfsDbCadList [] =
   40.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE,  "-20",   {"-63", "25"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG,  "0x80",   {NO_ATTRIBUTE_LIMITS}
+ },
+ {
+  RECORD_NAME ("dc:detPowerOn"),
+  TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_POWER_ON,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  40.0
  },
  {
   RECORD_NAME ("dc:detSigReset"),
