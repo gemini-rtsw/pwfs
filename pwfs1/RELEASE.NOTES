@@ -188,3 +188,9 @@ V2-5 21 December 2001 CB:
   - init zero point model from par file and according to site
 
 newDev equivalent to V2-5
+
+V3-0
+  - Port to epics3.13.4
+  - add detPowerOn
+
+dev equivalent to V3-0

@@ -164,7 +164,7 @@
                                              /* Timeout initialising record.  */
 #define S_epToVxLib_TIMEOUT_WAITING_FOR_PIPE (M_epToVxLib | 7)   
                                              /* Timeout waiting for pipe.     */
-#define S_epToVxLib_CAD_STOP_UNSUPPORTED     (M_epToVxLib | 8)   
+#define S_epToVxLib_menuDirectiveSTOP_UNSUPPORTED     (M_epToVxLib | 8)   
                                              /* STOP directive not supported  */
 #define S_epToVxLib_CAD_CMD_UNSUPPORTED      (M_epToVxLib | 9)   
                                              /* Command not supported.        */

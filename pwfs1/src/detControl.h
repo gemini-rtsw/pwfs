@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   09 Jan 2001: CB - Add detPowerOn
  *   21 Dec 2001: CB - add automatic init of zero point models from par file
  *   06 Jun 2001: CB - add detSigInitModFoc
  *   29 May 2001: CB - add detSigInitModComa
@@ -801,6 +802,7 @@ enum
    DET_CONTROL_CMD_SAVE,       /* Save SDSU controller parameters.            */
    DET_CONTROL_CMD_GEOMETRY,   /* Set detector readout geometry.              */
    DET_CONTROL_CMD_PRIMITIVE,  /* Execute SDSU primitive command.             */
+   DET_CONTROL_CMD_POWER_ON,   /* Execute POWER ON primitive command.         */
    DET_CONTROL_CMD_MODE,       /* Set detector readout mode.                  */
    DET_CONTROL_CMD_OFFSET,     /* Set detector ADC offsets.                   */
    DET_CONTROL_CMD_TEMP        /* Define temperature control params.          */

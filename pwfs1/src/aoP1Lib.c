@@ -5569,7 +5569,7 @@ STATUS aoGuideAndFocus (
    double       tiltScale;
    double       focusScale;
 #endif
-   double       averageFocus;
+   /*double       averageFocus;*/
    FG_VECT      fg;
 
    /* Some initialisations */

@@ -1,8 +1,8 @@
 /* drvVmi5588.c -  Device driver for VMIC VMIVME5588 */
-/* $Id: drvVmi5588.c,v 1.3 1999-06-10 03:56:28 cboyer Exp $
+/* $Id: drvVmi5588.c,v 1.4 2002-01-18 01:27:28 cboyer Exp $
 *
-*	Author:		Andrew Johnson
-*	Date:		10-10-94
+*   Author:    Andrew Johnson
+*   Date:      10-10-94
 *
 * Experimental Physics and Industrial Control System (EPICS)
 *
@@ -26,90 +26,90 @@ INCLUDE FILES: vmi5588.h
 */
 
 /* vxWorks #includes */
-#include	<vxWorks.h>
-#include	<vme.h>
-#include	<rebootLib.h>
-#include	<iv.h>
-#include	<intLib.h>
-#include	<symLib.h>
-#include	<vxLib.h>
-#include	<logLib.h>
-#include	<stdio.h>
-#include	<sysLib.h>
+#include   <vxWorks.h>
+#include   <vme.h>
+#include   <rebootLib.h>
+#include   <iv.h>
+#include   <intLib.h>
+#include   <symLib.h>
+#include   <vxLib.h>
+#include   <logLib.h>
+#include   <stdio.h>
+#include   <sysLib.h>
+#include   <string.h>
 
 #ifndef NO_EPICS
     /* EPICS #includes */
-    #include	    <dbDefs.h>
-    #include	    <dbScan.h>
-    #include	    <drvSup.h>
-    #include	    <devSup.h>
-    #include	    <devLib.h>
-    #include	    <module_types.h>
-    #include	    <task_params.h>
+    #include       <dbDefs.h>
+    #include       <dbScan.h>
+    #include       <drvSup.h>
+    #include       <devSup.h>
+    #include       <devLib.h>
+    #include       <module_types.h>
+    #include       <task_params.h>
 #endif
-#include	"vmi5588.h"
+#include   "vmi5588.h"
 
-/* Board addressing */
+/* Board addressing */
 
-/*#define RM_VME_BASE	0x200000*/
-#define RM_VME_BASE	0xA00000
+#define RM_VME_BASE   0xA00000
 
-#define RM_VME_SPACE    VME_AM_STD_SUP_DATA
+#define RM_VME_SPACE  VME_AM_STD_SUP_DATA
 
 /* Interrupt addressing */
-#define RM_INT_VECTOR	0xb0	/* 4 vectors used, b0 to b3 */
-#define RM_INT_LEVEL	6	/* interrupts are urgent */
+#define RM_INT_VECTOR   0xb0  /* 4 vectors used, b0 to b3 */
+#define RM_INT_LEVEL    6     /* interrupts are urgent */
 
 /* Internal driver sizes */
-#define RM_PAGE_SIZE 0x0400	/* 1024 bytes per page */
-#define RM_NUM_PAGE  255	/* max number of pages */
+#define RM_PAGE_SIZE 0x0400   /* 1024 bytes per page */
+#define RM_NUM_PAGE  255      /* max number of pages */
 
-#define RM_SYM_HASHSIZE    6	/* Hash size for symbol table (log2) */
-#define RM_INPUTLINESIZE 256	/* Input line buffer length */
-#define RM_INPUTTYPESIZE  20	/* type keyword buffer length */
-#define RM_INPUTNAMESIZE 128	/* name buffer length */
+#define RM_SYM_HASHSIZE    6  /* Hash size for symbol table (log2) */
+#define RM_INPUTLINESIZE 256  /* Input line buffer length */
+#define RM_INPUTTYPESIZE  20  /* type keyword buffer length */
+#define RM_INPUTNAMESIZE 128  /* name buffer length */
 
 /* Storage to allocate for each shared rm_data structure */
 #define RM_SIZE_ALOG 16
 #define RM_SIZE_LONG 12
 #define RM_SIZE_STRG 48
-#define RM_SIZE_ARRY 16 /* Plus size of array */
+#define RM_SIZE_ARRY 16       /* Plus size of array */
 
 /* Board identification */
-#define RM_BOARD_5578		0x27
-#define RM_BOARD_5588		0x42
+#define RM_BOARD_5578      0x27
+#define RM_BOARD_5588      0x42
 
 /* intRxStatus bits */
-#define RM_IRS_INT1		0x01
-#define RM_IRS_INT2		0x02
-#define RM_IRS_INT3		0x04
-#define RM_IRS_RX_SIG		0x10
-#define RM_IRS_VIOLATION	0x20
-#define RM_IRS_LATCHED		0x40
-#define RM_IRS_RX_SYNC		0x80
+#define RM_IRS_INT1        0x01
+#define RM_IRS_INT2        0x02
+#define RM_IRS_INT3        0x04
+#define RM_IRS_RX_SIG      0x10
+#define RM_IRS_VIOLATION   0x20
+#define RM_IRS_LATCHED     0x40
+#define RM_IRS_RX_SYNC     0x80
 
 /* boardCsr bits */
-#define RM_CSR_FAST		0x01
-#define RM_CSR_MASK		0x02
-#define RM_CSR_OWN_DATA		0x04
-#define RM_CSR_BAD_DATA		0x08
-#define RM_CSR_TX_EMPTY		0x10
-#define RM_CSR_TX_HALF		0x20
-#define RM_CSR_RX_HALF		0x40
-#define RM_CSR_FAIL		0x80
+#define RM_CSR_FAST        0x01
+#define RM_CSR_MASK        0x02
+#define RM_CSR_OWN_DATA    0x04
+#define RM_CSR_BAD_DATA    0x08
+#define RM_CSR_TX_EMPTY    0x10
+#define RM_CSR_TX_HALF     0x20
+#define RM_CSR_RX_HALF     0x40
+#define RM_CSR_FAIL        0x80
 
 /* cmd_Node bits */
-#define RM_CMD_RESET		0x0000
-#define RM_CMD_INT1		0x0100
-#define RM_CMD_INT2		0x0200
-#define RM_CMD_INT3		0x0300
-#define RM_CMD_BROADCAST	0x4000
+#define RM_CMD_RESET       0x0000
+#define RM_CMD_INT1        0x0100
+#define RM_CMD_INT2        0x0200
+#define RM_CMD_INT3        0x0300
+#define RM_CMD_BROADCAST   0x4000
 
 /* interrupt[n].control bits */
-#define RM_CR_INT_AUTOCLR	0x08
-#define RM_CR_INT_ENABLE	0x10
+#define RM_CR_INT_AUTOCLR   0x08
+#define RM_CR_INT_ENABLE    0x10
 
-/* Local forward reference */
+/* Local forward reference */
 LOCAL void      vmi5588_reboot(int startType);
 
 
@@ -119,25 +119,25 @@ static struct {
     unsigned char   tokType;
 } rmToken[] = {
     {
-	"page", RM_TYPE_PAGE
+   "page", RM_TYPE_PAGE
     },
     {
-	"analogue", RM_TYPE_ALOG
+   "analogue", RM_TYPE_ALOG
     },
     {
-	"long", RM_TYPE_LONG
+   "long", RM_TYPE_LONG
     },
     {
-	"string", RM_TYPE_STRG
+   "string", RM_TYPE_STRG
     },
     {
-	"array", RM_TYPE_ARRY
+   "array", RM_TYPE_ARRY
     },
     {
-	"user", RM_TYPE_USER
+   "user", RM_TYPE_USER
     },
     {
-	NULL, 0
+   NULL, 0
     }
 };
 
@@ -154,9 +154,9 @@ int vmi5588Debug;
 struct {
     long            number;
     struct {
-	short           page;
-	short           lastPageFlag;
-	IOSCANPVT       ioscanpvt;
+   short           page;
+   short           lastPageFlag;
+   IOSCANPVT       ioscanpvt;
     } p[RM_NUM_PAGE];
 } pageIo;
 
@@ -175,34 +175,34 @@ struct {
 
 
 /* Memory layout of the reflective memory board */
-struct {					/* VMIVME5588	 */
-    char                     pad1;		/* unused	 */
-    char                     boardId;		/* BID		 */
-    volatile unsigned char   intRxStatus;	/* IRS		 */
-    char                     pad2;		/* unused	 */
-    unsigned char            nodeId;		/* NID		 */
-    volatile unsigned char   boardCsr;		/* CSR		 */
-    volatile unsigned short  cmd_Node;		/* CMD & CMDN	 */
-    char                     pad3[24];		/* unused	 */
+struct {                     /* VMIVME5588    */
+    char                     pad1;                   /* unused        */
+    char                     boardId;                /* BID           */
+    volatile unsigned char   intRxStatus;            /* IRS           */
+    char                     pad2;                   /* unused        */
+    unsigned char            nodeId;                 /* NID           */
+    volatile unsigned char   boardCsr;               /* CSR           */
+    volatile unsigned short  cmd_Node;               /* CMD & CMDN    */
+    char                     pad3[24];               /* unused        */
     struct {
-	char                     pad4[2];	/* unused	 */
-	volatile unsigned char   senderId;	/* SIDn		 */
-	volatile unsigned char   control;	/* CRn		 */
-    }                        interrupt[4];	/* for n=0 to 3	 */
+   char                      pad4[2];                /* unused        */
+   volatile unsigned char    senderId;               /* SIDn          */
+   volatile unsigned char    control;                /* CRn           */
+    }                        interrupt[4];           /* for n=0 to 3  */
     struct {
-	char                     pad5[3];	/* unused	 */
-	volatile unsigned char   number;	/* VRn		 */
-    }                        vector[4];		/* for n=0 to 3	 */
+   char                      pad5[3];                /* unused        */
+   volatile unsigned char    number;                 /* VRn           */
+    }                        vector[4];              /* for n=0 to 3  */
     /* Below here the card is just reflected RAM */
-    volatile int             test;		/* to check ring */
-    char                     pad6[0x100-0x44];	/* align to xx00 */
-    volatile short           pageFlag[RM_NUM_PAGE];	/* Update flags	 */
-    short                    pad7[256-RM_NUM_PAGE];	/* align to xx00 */
-    char                     pad8[0x100];	/* align to x400 */
-    unsigned char   mem[RM_NUM_PAGE*RM_PAGE_SIZE];	/* data storage */
+    volatile int             test;                   /* to check ring */
+    char                     pad6[0x100-0x44];       /* align to xx00 */
+    volatile short           pageFlag[RM_NUM_PAGE];  /* Update flags  */
+    short                    pad7[256-RM_NUM_PAGE];  /* align to xx00 */
+    char                     pad8[0x100];            /* align to x400 */
+    unsigned char   mem[RM_NUM_PAGE*RM_PAGE_SIZE];   /* data storage  */
 } *prm;
 
-/*****************************************************************************
+/*************************************************************************
 *
 * vmi5588_init - DRVET Init function
 *
@@ -227,48 +227,48 @@ long vmi5588_init
 
     /* Work out what the board is */
     status = sysBusToLocalAdrs(RM_VME_SPACE, (char *) RM_VME_BASE, 
-    				(char **) &prm);
+                               (char **) &prm);
     if (status != OK)
-    	return status;
+       return status;
     
     /* Check if something's out there */
     if (vxMemProbe(&prm->boardId, READ, sizeof(char), &test) != OK) {
-	/* No there isn't, but don't complain about it here */
-	prm = NULL;
+       /* No there isn't, but don't complain about it here */
+       prm = NULL;
     } else {
-    	/* is this the right card? */
-    	if (prm->boardId != RM_BOARD_5578 && prm->boardId != RM_BOARD_5588) {
-    	    prm = NULL;
-    	    return S_dev_wrongDevice;
-    	}
+       /* is this the right card? */
+       if (prm->boardId != RM_BOARD_5578 && prm->boardId != RM_BOARD_5588) {
+           prm = NULL;
+           return S_dev_wrongDevice;
+       }
 
-    	if (vmi5588Debug) {
-    	    printf("vmi5588_init: Found RM card at addr %x\n", (int) prm);
-    	}
+       if (vmi5588Debug) {
+           printf("vmi5588_init: Found RM card at addr %x\n", (int) prm);
+       }
 
-    	/* enable VMEbus interrupts onto the CPU card */
-    	status = sysIntEnable(RM_INT_LEVEL);
-    	if (status != OK)
-    	    return status;
+       /* enable VMEbus interrupts onto the CPU card */
+       status = sysIntEnable(RM_INT_LEVEL);
+       if (status != OK)
+          return status;
 
-    	/* initialise the card interrupters */
-    	for (i = 0; i <= 3; i++) {
-    	    pisr[i] = NULL;
-    	    prm->vector[i].number = RM_INT_VECTOR + i;
-    	}
+       /* initialise the card interrupters */
+       for (i = 0; i <= 3; i++) {
+           pisr[i] = NULL;
+           prm->vector[i].number = RM_INT_VECTOR + i;
+       }
 
-    	/* turn any interrupts off if we do a reboot */
-    	rebootHookAdd((FUNCPTR) vmi5588_reboot);
+       /* turn any interrupts off if we do a reboot */
+       rebootHookAdd((FUNCPTR) vmi5588_reboot);
 
-    	rmMaxAttempts = 0;
+       rmMaxAttempts = 0;
 
-    	/* Finally we turn off the FAIL LED */
-    	prm->boardCsr &= ~RM_CSR_FAIL;
+       /* Finally we turn off the FAIL LED */
+       prm->boardCsr &= ~RM_CSR_FAIL;
     }
     return OK;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * vmi5588_report - DRVET Report function
 *
@@ -292,62 +292,63 @@ long vmi5588_report
 )
 {
     if (prm == NULL)
-	return S_dev_NoInit;
+       return S_dev_NoInit;
 
     printf("vmi5588: RM node 0x%x, status 0x%x, max %d retries\n",
-           prm->nodeId, rmStatus(0L), rmMaxAttempts);
+           prm->nodeId, (int)(rmStatus(0L)), rmMaxAttempts);
 
     if (vmi5588Debug) {
-	unsigned char   irs, csr, icr;
-	int             i;
+       unsigned char   irs, csr, icr;
+       int             i;
 
-    	printf("test address = 0x%x, mem starts at 0x%x\n", (int) &prm->test, (int) prm->mem);
-    	
-	/* read status */
-	irs = prm->intRxStatus;
-	csr = prm->boardCsr;
+       printf("test address = 0x%x, mem starts at 0x%x\n", 
+              (int) &prm->test, (int) prm->mem);
+       
+       /* read status */
+       irs = prm->intRxStatus;
+       csr = prm->boardCsr;
 
-	printf("	Receiver: %s, PLL %s%s%s\n",
-	       irs & RM_IRS_RX_SIG ? "NO INPUT SIGNAL" : "Input signal good",
-	       irs & RM_IRS_VIOLATION ? "RESYNC NEEDED" : "Locked",
-	       irs & RM_IRS_LATCHED ? ", Recent Sync loss" : "",
-	       irs & RM_IRS_RX_SYNC ? ", SYNC BIT HIGH" : "");
+       printf("   Receiver: %s, PLL %s%s%s\n",
+              irs & RM_IRS_RX_SIG ? "NO INPUT SIGNAL" : "Input signal good",
+              irs & RM_IRS_VIOLATION ? "RESYNC NEEDED" : "Locked",
+              irs & RM_IRS_LATCHED ? ", Recent Sync loss" : "",
+              irs & RM_IRS_RX_SYNC ? ", SYNC BIT HIGH" : "");
 
-	printf("	Jumpers:  %s mode, Transfer Error Interrupt %s\n",
-	       csr & RM_CSR_FAST ? "Fast" : "Slow",
-	       csr & RM_CSR_MASK ? "Disabled" : "Enabled");
+       printf("   Jumpers:  %s mode, Transfer Error Interrupt %s\n",
+              csr & RM_CSR_FAST ? "Fast" : "Slow",
+              csr & RM_CSR_MASK ? "Disabled" : "Enabled");
 
-	printf("	Status:   Fibre ring %s, %sFail LED %s\n",
-	       csr & RM_CSR_OWN_DATA ? "Intact" : "BROKEN",
-	       csr & RM_CSR_BAD_DATA ? "TRANSFER ERROR, " : "",
-	       csr & RM_CSR_FAIL ? "ON" : "Off");
+       printf("   Status:   Fibre ring %s, %sFail LED %s\n",
+              csr & RM_CSR_OWN_DATA ? "Intact" : "BROKEN",
+              csr & RM_CSR_BAD_DATA ? "TRANSFER ERROR, " : "",
+              csr & RM_CSR_FAIL ? "ON" : "Off");
 
-	printf("	FIFOs:    Transmitter %s, Receiver %s\n",
-	       csr & RM_CSR_TX_EMPTY ? csr & RM_CSR_TX_HALF ?
-	       "<50% Full" : ">50% FULL" : "Empty",
-	       csr & RM_CSR_RX_HALF ? "<50% Full" : ">50% FULL");
+       printf("   FIFOs:    Transmitter %s, Receiver %s\n",
+              csr & RM_CSR_TX_EMPTY ? csr & RM_CSR_TX_HALF ?
+              "<50% Full" : ">50% FULL" : "Empty",
+              csr & RM_CSR_RX_HALF ? "<50% Full" : ">50% FULL");
 
-	printf("	Int's:    %s%s%s\n",
-	       irs & RM_IRS_INT1 ? "Irq 1 pending " : "",
-	       irs & RM_IRS_INT2 ? "Irq 2 pending " : "",
-	       irs & RM_IRS_INT3 ? "Irq 3 pending " : "");
+       printf("   Int's:    %s%s%s\n",
+              irs & RM_IRS_INT1 ? "Irq 1 pending " : "",
+              irs & RM_IRS_INT2 ? "Irq 2 pending " : "",
+              irs & RM_IRS_INT3 ? "Irq 3 pending " : "");
 
-	for (i = 0; i <= 3; i++) {
-	    icr = prm->interrupt[i].control;
+       for (i = 0; i <= 3; i++) {
+           icr = prm->interrupt[i].control;
 
-	    printf("	   Int %d: %s, Level %d %s, %svector %x\n", i,
-		   pisr[i] != 0 ? "Allocated" : "Not in use",
-		   icr & 7,
-		   icr & RM_CR_INT_ENABLE ? "enabled" : "disabled",
-		   icr & RM_CR_INT_AUTOCLR ? "Auto clear, " : "",
-		   prm->vector[i].number);
-	}
+           printf("      Int %d: %s, Level %d %s, %svector %x\n", i,
+                  pisr[i] != 0 ? "Allocated" : "Not in use",
+                  icr & 7,
+                  icr & RM_CR_INT_ENABLE ? "enabled" : "disabled",
+                  icr & RM_CR_INT_AUTOCLR ? "Auto clear, " : "",
+                  prm->vector[i].number);
+       }
     }
 
     return OK;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * vmi5588_reboot - rebootHook routine
 *
@@ -363,17 +364,17 @@ long vmi5588_report
 
 LOCAL void vmi5588_reboot
 (
-    int startType		/* vxWorks reboot type */
+    int startType      /* vxWorks reboot type */
 )
 {
     int             i;
 
     for (i = 0; i <= 3; i++)
-	prm->interrupt[i].control &= ~RM_CR_INT_ENABLE;
+        prm->interrupt[i].control &= ~RM_CR_INT_ENABLE;
 }
 
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * vmi5588_intr - interrupt handler
 *
@@ -387,32 +388,32 @@ LOCAL void vmi5588_reboot
 
 void vmi5588_intr
 (
-    int irqNumber		/* RM interrupt channel number */
+    int irqNumber      /* RM interrupt channel number */
 )
 {
     if (prm == NULL || irqNumber < 0 || irqNumber > 3) {
-	logMsg("vmi5588_intr: Bad RM Interrupt, parameter = 0x%x", 
-		irqNumber, 0,0,0,0,0);
-	return;
+       logMsg("vmi5588_intr: Bad RM Interrupt, parameter = 0x%x", 
+              irqNumber, 0,0,0,0,0);
+       return;
     }
 
     if (pisr[irqNumber] != NULL) {
-	if (irqNumber > 0)
-	    (*pisr[irqNumber]) (prm->interrupt[irqNumber].senderId);
-	else
-	    (*pisr[irqNumber]) (0);
+       if (irqNumber > 0)
+          (*pisr[irqNumber]) (prm->interrupt[irqNumber].senderId);
+    else
+       (*pisr[irqNumber]) (0);
 
-	/* finally re-initialise the interrupt hardware */
-	prm->interrupt[irqNumber].control = RM_INT_LEVEL | 
-	                                    RM_CR_INT_ENABLE | 
-	                                    RM_CR_INT_AUTOCLR;
+    /* finally re-initialise the interrupt hardware */
+    prm->interrupt[irqNumber].control = RM_INT_LEVEL | 
+                                        RM_CR_INT_ENABLE | 
+                                        RM_CR_INT_AUTOCLR;
     }
     else
-	logMsg("vmi5588_intr: RM Interrupt #%d received while disconnected", 
-		irqNumber, 0,0,0,0,0);
+       logMsg("vmi5588_intr: RM Interrupt #%d received while disconnected", 
+              irqNumber, 0,0,0,0,0);
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmIntConnect - Connect a C routine up to an RM Interrupt
 *
@@ -450,31 +451,31 @@ void vmi5588_intr
 
 long rmIntConnect
 (
-    int irqNumber,		/* RM interrupt channel */
-    VOIDFUNCPTR proutine	/* routine to call on int */
+    int irqNumber,         /* RM interrupt channel */
+    VOIDFUNCPTR proutine   /* routine to call on int */
 )
 {
     long status;
 
     if (prm == NULL)
-	return S_dev_NoInit;
+       return S_dev_NoInit;
     if (irqNumber < 0 || irqNumber > 3)
-	return S_dev_vxWorksVecInstlFail;
+       return S_dev_vxWorksVecInstlFail;
     if (pisr[irqNumber] != NULL)
-	return S_dev_vectorInUse;
+       return S_dev_vectorInUse;
 
     /* plug in our wrapper routine */
     status = intConnect((void *) (RM_INT_VECTOR + irqNumber), 
-    			vmi5588_intr, irqNumber);
+             vmi5588_intr, irqNumber);
     if (status != OK)
-	return status;
+       return status;
 
     /* save the routine pointer */
     pisr[irqNumber] = proutine;
 
     /* clear out card interrupt FIFOs */
     if (irqNumber > 0)
-	prm->interrupt[irqNumber].senderId = 0;
+       prm->interrupt[irqNumber].senderId = 0;
 
     /* finally enable the hardware */
     prm->interrupt[irqNumber].control = RM_INT_LEVEL | 
@@ -483,7 +484,7 @@ long rmIntConnect
     return OK;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmIntDisconnect - Disconnect an RM Interrupt routine
 *
@@ -507,13 +508,13 @@ long rmIntConnect
 
 long rmIntDisconnect
 (
-    int irqNumber		/* RM interrupt channel */
+    int irqNumber      /* RM interrupt channel */
 )
 {
     if (prm == NULL)
- 	return S_dev_NoInit;
-   if (irqNumber < 0 || irqNumber > 3 || pisr[irqNumber] == NULL)
-	return S_dev_vectorNotInUse;
+       return S_dev_NoInit;
+    if (irqNumber < 0 || irqNumber > 3 || pisr[irqNumber] == NULL)
+       return S_dev_vectorNotInUse;
 
     /* disable the hardware */
     prm->interrupt[irqNumber].control &= ~RM_CR_INT_ENABLE;
@@ -524,7 +525,7 @@ long rmIntDisconnect
     return OK;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 * rmIntSend - send an RM interrupt
 *
 * This causes an interrupt to be sent out on the RM bus, using the given
@@ -549,26 +550,26 @@ long rmIntDisconnect
 
 long rmIntSend
 (
-    int irqNumber,		/* RM interrupt channel */
-    int nodeId			/* node number, or -1 for broadcast */
+    int irqNumber,     /* RM interrupt channel */
+    int nodeId         /* node number, or -1 for broadcast */
 )
 {
     if (prm == NULL)
- 	return S_dev_NoInit;
+       return S_dev_NoInit;
     if (irqNumber < 1 || irqNumber > 3 || nodeId == prm->nodeId)
-	return S_dev_badRequest;
+       return S_dev_badRequest;
 
     if (nodeId == -1)
-	/* Broadcast to all nodes */
-	prm->cmd_Node = irqNumber << 8 | RM_CMD_BROADCAST;
+       /* Broadcast to all nodes */
+       prm->cmd_Node = irqNumber << 8 | RM_CMD_BROADCAST;
     else
-	/* Node specific */
-	prm->cmd_Node = irqNumber << 8 | (nodeId & 0xff);
+       /* Node specific */
+       prm->cmd_Node = irqNumber << 8 | (nodeId & 0xff);
 
     return OK;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmNodeId - return my RM Node number
 *
@@ -594,13 +595,13 @@ long rmNodeId
 )
 {
     if (prm == NULL)
-	return S_dev_NoInit;
+       return S_dev_NoInit;
 
     return prm->nodeId;
 }
 
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmStatus - return current RM status information
 *
@@ -654,14 +655,14 @@ long rmNodeId
 
 long rmStatus
 (
-    long reset		/* Status bits to reset */
+    long reset      /* Status bits to reset */
 )
 {
     long            stat;
     static unsigned char testCounter;
 
     if (prm == NULL)
-	return S_dev_NoInit;
+       return S_dev_NoInit;
 
     /*
      * The following combines the two status registers, masks out the bits
@@ -670,18 +671,18 @@ long rmStatus
      * that we lost sync recently, ie someone got turned off & on again.
      */
     stat = ((prm->intRxStatus | prm->boardCsr << 8) &
-	(RM_RESYNC | RM_NOSYNC | RM_NOSIG  | RM_IRQ3 | RM_IRQ2 | RM_IRQ1 |
-	 RM_RXHALF | RM_TXHALF | RM_BADXFR | RM_NORING)) ^
-	(RM_TXHALF | RM_RXHALF | RM_NORING);
+           (RM_RESYNC | RM_NOSYNC | RM_NOSIG  | RM_IRQ3 | RM_IRQ2 | RM_IRQ1 |
+            RM_RXHALF | RM_TXHALF | RM_BADXFR | RM_NORING)) ^
+           (RM_TXHALF | RM_RXHALF | RM_NORING);
 
     /* Clear the R/W status bits */
     if (stat & reset & RM_RESYNC)
-	prm->intRxStatus &= ~RM_IRS_LATCHED;
+       prm->intRxStatus &= ~RM_IRS_LATCHED;
     if (stat & reset & RM_BADXFR)
-	prm->boardCsr &= ~RM_CSR_BAD_DATA;
+       prm->boardCsr &= ~RM_CSR_BAD_DATA;
     if (reset & RM_NORING) {
-	prm->boardCsr &= ~RM_CSR_OWN_DATA;
-	prm->test = (prm->nodeId << 8) + testCounter++;
+       prm->boardCsr &= ~RM_CSR_OWN_DATA;
+       prm->test = (prm->nodeId << 8) + testCounter++;
     }
 
     return stat;
@@ -788,161 +789,161 @@ long rmLoadSymbols
 
     /* create symbol table if not defined */
     if (rmSymTbl == NULL) {
-	rmSymTbl = symTblCreate(RM_SYM_HASHSIZE, FALSE, memSysPartId);
-	if (rmSymTbl == NULL) {
-	    fprintf(stderr, "rmLoadSymbols: Can't create RM symbol table\n");
-	    return S_dev_noMemory;
-	}
+       rmSymTbl = symTblCreate(RM_SYM_HASHSIZE, FALSE, memSysPartId);
+       if (rmSymTbl == NULL) {
+          fprintf(stderr, "rmLoadSymbols: Can't create RM symbol table\n");
+          return S_dev_noMemory;
+       }
     }
 
     status = OK;
 
     /* scan file until EOF */
     while (gets(inputLine)) {
-	lineNumber++;
-	
-	/* ignore if it's a blank line or comment */
-	if (strlen(inputLine) == 0)
-	    continue;
-	if (inputLine[0] == '#')
-	    continue;
+      lineNumber++;
+   
+      /* ignore if it's a blank line or comment */
+      if (strlen(inputLine) == 0)
+         continue;
+      if (inputLine[0] == '#')
+         continue;
 
-	/* split line into <type> [<name> [<number>]] */
-	tokenCount = sscanf(inputLine, "%s%s%hi",
-			    inputType, inputName, &inputNumber);
+      /* split line into <type> [<name> [<number>]] */
+      tokenCount = sscanf(inputLine, "%s%s%hi",
+                   inputType, inputName, &inputNumber);
 
-	if (tokenCount < 1)
-	    continue;
+      if (tokenCount < 1)
+          continue;
 
-	/* look up this type */
-	for (i = 0; rmToken[i].ptokString != NULL; i++)
-	    if (strcmp(inputType, rmToken[i].ptokString) == 0)
-		break;
+      /* look up this type */
+      for (i = 0; rmToken[i].ptokString != NULL; i++)
+          if (strcmp(inputType, rmToken[i].ptokString) == 0)
+             break;
 
-	switch (rmToken[i].tokType) {
-	    case RM_TYPE_PAGE:	/* page [<name> [<number>]] */
+      switch (rmToken[i].tokType) {
+         case RM_TYPE_PAGE:   /* page [<name> [<number>]] */
 
-		/* start a new rm page */
-		pageNumber++;
-		pageOffset = 0;
-		if (tokenCount > 2)
-		    if (inputNumber < 0 || inputNumber > RM_NUM_PAGE) {
-			status = S_dev_badSignalNumber;
-                        fprintf(stderr, 
-                        	"rmLoadSymbols: Bad RM page number at line %d (name %s)\n",
-                        	lineNumber, inputName);
-		    }
-		    else
-			pageNumber = inputNumber;
-		if (tokenCount > 1 && 
-		    symAdd(rmSymTbl, inputName,
-			   (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
-			   RM_TYPE_PAGE, 0)) {
-		    status = S_dev_multDevice;
-		    fprintf(stderr,
-			    "rmLoadSymbols: Duplicate RM page name at line %d: %s\n",
-			    lineNumber, inputName);
-		}
-		break;
+              /* start a new rm page */
+              pageNumber++;
+              pageOffset = 0;
+              if (tokenCount > 2)
+                 if (inputNumber < 0 || inputNumber > RM_NUM_PAGE) {
+                    status = S_dev_badSignalNumber;
+                    fprintf(stderr, 
+                     "rmLoadSymbols: Bad RM page number at line %d (name %s)\n",
+                     lineNumber, inputName);
+                 }
+                 else
+                    pageNumber = inputNumber;
+              if (tokenCount > 1 && 
+                  symAdd(rmSymTbl, inputName, 
+                         (char *)(pageNumber * RM_PAGE_SIZE + pageOffset), 
+                         (SYM_TYPE)RM_TYPE_PAGE, 0)) {
+                 status = S_dev_multDevice;
+                 fprintf(stderr,
+                   "rmLoadSymbols: Duplicate RM page name at line %d: %s\n",
+                   lineNumber, inputName);
+              }
+              break;
 
-	    case RM_TYPE_ALOG:	/* analogue [<name>] */
-		if (tokenCount > 1 && 
-		    symAdd(rmSymTbl, inputName,
-			   (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
-			   RM_TYPE_ALOG, 0)) {
-		    status = S_dev_multDevice;
-		    fprintf(stderr,
-			    "rmLoadSymbols: Duplicate RM analogue symbol at line %d: %s\n",
-			    lineNumber, inputName);
-		}
-		pageOffset += RM_SIZE_ALOG;
-		break;
+         case RM_TYPE_ALOG:   /* analogue [<name>] */
+              if (tokenCount > 1 && 
+                  symAdd(rmSymTbl, inputName,
+                         (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
+                         RM_TYPE_ALOG, 0)) {
+                 status = S_dev_multDevice;
+                 fprintf(stderr,
+                 "rmLoadSymbols: Duplicate RM analogue symbol at line %d: %s\n",
+                 lineNumber, inputName);
+              }
+              pageOffset += RM_SIZE_ALOG;
+              break;
 
-	    case RM_TYPE_LONG:	/* long [<name>] */
-		if (tokenCount > 1 && 
-		    symAdd(rmSymTbl, inputName,
-			   (char *) (pageNumber * RM_PAGE_SIZE + pageOffset),
-			   RM_TYPE_LONG, 0)) {
-		    status = S_dev_multDevice;
-		    fprintf(stderr,
-			    "rmLoadSymbols: Duplicate RM long symbol at line %d: %s\n",
-			    lineNumber, inputName);
-		}
-		pageOffset += RM_SIZE_LONG;
-		break;
+         case RM_TYPE_LONG:   /* long [<name>] */
+              if (tokenCount > 1 && 
+                  symAdd(rmSymTbl, inputName,
+                         (char *) (pageNumber * RM_PAGE_SIZE + pageOffset),
+                         RM_TYPE_LONG, 0)) {
+                 status = S_dev_multDevice;
+                 fprintf(stderr,
+                    "rmLoadSymbols: Duplicate RM long symbol at line %d: %s\n",
+                    lineNumber, inputName);
+              }
+              pageOffset += RM_SIZE_LONG;
+              break;
 
-	    case RM_TYPE_STRG:	/* string [<name>] */
-		if (tokenCount > 1 && 
-		    symAdd(rmSymTbl, inputName,
-			   (char *) (pageNumber * RM_PAGE_SIZE + pageOffset),
-			   RM_TYPE_STRG, 0)) {
-		    status = S_dev_multDevice;
-		    fprintf(stderr,
-			    "rmLoadSymbols: Duplicate RM string symbol at line %d: %s\n",
-			    lineNumber, inputName);
-		}
-		pageOffset += RM_SIZE_STRG;
-		break;
+         case RM_TYPE_STRG:   /* string [<name>] */
+              if (tokenCount > 1 && 
+                  symAdd(rmSymTbl, inputName,
+                         (char *) (pageNumber * RM_PAGE_SIZE + pageOffset),
+                         RM_TYPE_STRG, 0)) {
+              status = S_dev_multDevice;
+              fprintf(stderr,
+                 "rmLoadSymbols: Duplicate RM string symbol at line %d: %s\n",
+                 lineNumber, inputName);
+              }
+              pageOffset += RM_SIZE_STRG;
+              break;
 
-	    case RM_TYPE_USER:	/* user <name> <size> */
-		if (tokenCount < 3) {
-		    status = S_dev_badRequest;
-		    fprintf(stderr, 
-			    "rmLoadSymbols: Missing user parameter(s) at line %d\n", 
-			    lineNumber);
-		}
-		else {
-		    if (symAdd(rmSymTbl, inputName,
-			       (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
-			       RM_TYPE_USER, 0)) {
-			status = S_dev_multDevice;
-			fprintf(stderr,
-			        "rmLoadSymbols: Duplicate RM user symbol at line %d: %s\n",
-			        lineNumber, inputName);
-		    }
-		    pageOffset += (inputNumber & 3) ?
-			(inputNumber & ~3) + 4 : inputNumber;
-		}
-		break;
+         case RM_TYPE_USER:   /* user <name> <size> */
+              if (tokenCount < 3) {
+                 status = S_dev_badRequest;
+                 fprintf(stderr, 
+                    "rmLoadSymbols: Missing user parameter(s) at line %d\n", 
+                    lineNumber);
+              }
+              else {
+                 if (symAdd(rmSymTbl, inputName,
+                            (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
+                            RM_TYPE_USER, 0)) {
+                    status = S_dev_multDevice;
+                    fprintf(stderr,
+                     "rmLoadSymbols: Duplicate RM user symbol at line %d: %s\n",
+                     lineNumber, inputName);
+                  }
+                  pageOffset += 
+                  (inputNumber & 3) ? (inputNumber & ~3) + 4 : inputNumber;
+              }
+              break;
 
-	    case RM_TYPE_ARRY:	/* array <name> <size> */
-		if (tokenCount < 3) {
-		    status = S_dev_badRequest;
-		    fprintf(stderr, 
-			    "rmLoadSymbols: Missing array parameter(s) at line %d\n", 
-			    lineNumber);
-		}
-		else {
-		    if (symAdd(rmSymTbl, inputName,
-			       (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
-			       RM_TYPE_ARRY, 0)) {
-			status = S_dev_multDevice;
-			fprintf(stderr,
-			        "rmLoadSymbols: Duplicate RM array symbol at line %d: %s\n",
-			        lineNumber, inputName);
-		    }
-		    inputNumber += RM_SIZE_ARRY;
-		    pageOffset += (inputNumber & 3) ?
-			(inputNumber & ~3)+4 : inputNumber;
-		}
-		break;
+         case RM_TYPE_ARRY:   /* array <name> <size> */
+              if (tokenCount < 3) {
+                 status = S_dev_badRequest;
+                 fprintf(stderr, 
+                    "rmLoadSymbols: Missing array parameter(s) at line %d\n", 
+                    lineNumber);
+              }
+              else {
+                 if (symAdd(rmSymTbl, inputName,
+                            (char *)(pageNumber * RM_PAGE_SIZE + pageOffset),
+                            RM_TYPE_ARRY, 0)) {
+                    status = S_dev_multDevice;
+                    fprintf(stderr,
+                    "rmLoadSymbols: Duplicate RM array symbol at line %d: %s\n",
+                    lineNumber, inputName);
+                 }
+                 inputNumber += RM_SIZE_ARRY;
+                 pageOffset += 
+                 (inputNumber & 3) ? (inputNumber & ~3)+4 : inputNumber;
+              }
+              break;
 
-	    default:		/* unrecognised */
-		status = S_dev_badRequest;
-		fprintf(stderr,
-		        "rmLoadSymbols: Unrecognised RM type at line %d: %s\n", 
-		        lineNumber, inputType);
-	} /* switch */
+         default:      /* unrecognised */
+              status = S_dev_badRequest;
+              fprintf(stderr,
+                      "rmLoadSymbols: Unrecognised RM type at line %d: %s\n", 
+                      lineNumber, inputType);
+      } /* switch */
 
-	if (pageOffset > RM_PAGE_SIZE) {
-	    status = S_dev_noMemory;
-	    fprintf(stderr,
-		    "rmLoadSymbols: RM Page overflow at line %d, page %d\n", 
-		    lineNumber, pageNumber);
-	    /* Try and recover */
-	    pageNumber += (pageOffset / RM_PAGE_SIZE);
-	    pageOffset = pageOffset % RM_PAGE_SIZE;
-	}
+      if (pageOffset > RM_PAGE_SIZE) {
+          status = S_dev_noMemory;
+          fprintf(stderr,
+             "rmLoadSymbols: RM Page overflow at line %d, page %d\n", 
+             lineNumber, pageNumber);
+          /* Try and recover */
+          pageNumber += (pageOffset / RM_PAGE_SIZE);
+          pageOffset = pageOffset % RM_PAGE_SIZE;
+      }
     } /* while */
 
     clearerr(stdin);
@@ -950,7 +951,7 @@ long rmLoadSymbols
     return status;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmAddr - lookup address in RM symbol table
 *
@@ -991,8 +992,8 @@ long rmLoadSymbols
 
 void *rmAddr
 (
-    char *pname,		/* symbol name to find */
-    int rmType			/* RM_TYPE_??? */
+    char *pname,      /* symbol name to find */
+    int rmType         /* RM_TYPE_??? */
 )
 {
     int             offset;
@@ -1000,16 +1001,16 @@ void *rmAddr
     STATUS          status;
 
     if (prm == NULL)
-	return NULL;
+       return NULL;
 
     status = symFindByNameAndType(rmSymTbl, pname, (char **) &offset, &retType,
-				  (SYM_TYPE) rmType, (SYM_TYPE) ~0);
+                                  (SYM_TYPE) rmType, (SYM_TYPE) ~0);
 
     return status ? NULL : &prm->mem[offset];
 }
 
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmLookup - lookup Address, Page and Offset of RM symbol
 *
@@ -1024,22 +1025,22 @@ void *rmAddr
 
 long rmLookup
 (
-    char *pname,		/* symbol name to find */
-    int rmType, 		/* RM_TYPE_??? */
-    struct rm_data **pprmData,	/* symbol address location */
-    short *prmPage,		/* symbol page location */
-    short *prmOffset		/* symbol offset location */
+    char *pname,                 /* symbol name to find */
+    int rmType,                  /* RM_TYPE_??? */
+    struct rm_data **pprmData,   /* symbol address location */
+    short *prmPage,              /* symbol page location */
+    short *prmOffset             /* symbol offset location */
 )
 {
     int             offset;
     SYM_TYPE        retType;
 
     if (prm == NULL)
-	return S_dev_NoInit;
+       return S_dev_NoInit;
 
     if (symFindByNameAndType(rmSymTbl, pname, (char **) &offset, &retType,
-			     (SYM_TYPE) rmType, (SYM_TYPE) ~0))
-	return S_dev_badSignal;
+                             (SYM_TYPE) rmType, (SYM_TYPE) ~0))
+       return S_dev_badSignal;
 
     *prmPage = offset / RM_PAGE_SIZE;
     *prmOffset = offset % RM_PAGE_SIZE;
@@ -1047,7 +1048,7 @@ long rmLookup
     return OK;
 }
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * printSym - print symbol callback routine.
 *
@@ -1072,17 +1073,17 @@ LOCAL BOOL printSym
     int i;
 
     for (i=0; rmToken[i].ptokString != NULL; i++)
-	if ((type & 0xff) == rmToken[i].tokType)
-	    break;
+        if ((type & 0xff) == rmToken[i].tokType)
+           break;
 
     printf("%-15.15s  %8X   %s\n", pname,
-           (prm == NULL) ? offset : (unsigned long) &prm->mem[offset], 
+           (prm == NULL) ? offset : (unsigned int) &prm->mem[offset], 
            rmToken[i].ptokString);
     return TRUE;
 }
 
 
-/*****************************************************************************
+/*****************************************************************************
 *
 * rmPrintSymbols - display all RM symbols
 *
@@ -1112,7 +1113,6 @@ void rmPrintSymbols
     symEach(rmSymTbl, (FUNCPTR) printSym, 0);
 }
 
-
 #ifndef NO_EPICS
 /*****************************************************************************
 *
@@ -1129,7 +1129,7 @@ void rmPrintSymbols
 
 void vmi5588_pageISR
 (
-    int rmNodeId 		/* source Node Id */
+    int rmNodeId       /* source Node Id */
 )
 {
     short i;
@@ -1141,19 +1141,18 @@ void vmi5588_pageISR
 
     /* check for new data in page */
     for (i = 0; i < pageIo.number; i++)
-	if (prm->pageFlag[pageIo.p[i].page] != pageIo.p[i].lastPageFlag) {
-	    pageIo.p[i].lastPageFlag = prm->pageFlag[pageIo.p[i].page];
+        if (prm->pageFlag[pageIo.p[i].page] != pageIo.p[i].lastPageFlag) {
+           pageIo.p[i].lastPageFlag = prm->pageFlag[pageIo.p[i].page];
 
-	    if (vmi5588Debug) {
-	    	logMsg("Triggering page <%d>\n", pageIo.p[i].page, 0,0,0,0,0);
-	    }
+           if (vmi5588Debug) {
+              logMsg("Triggering page <%d>\n", pageIo.p[i].page, 0,0,0,0,0);
+           }
 
-	    scanIoRequest(pageIo.p[i].ioscanpvt);
-	}
+           scanIoRequest(pageIo.p[i].ioscanpvt);
+        }
 }
 #endif
 
-
 #ifndef NO_EPICS
 /*****************************************************************************
 *
@@ -1170,34 +1169,33 @@ void vmi5588_pageISR
 
 long vmi5588_pageInit
 (
-    short rmPage 		/* rm page number */
+    short rmPage       /* rm page number */
 )
 {
     short pageIndex;
     long status = OK;
 
     for (pageIndex = 0; pageIndex < pageIo.number; pageIndex++)
-	if (rmPage == pageIo.p[pageIndex].page)
-	    return OK;
+        if (rmPage == pageIo.p[pageIndex].page)
+           return OK;
 
     if (pageIndex == 0)
-	if ((status = rmIntConnect(1, vmi5588_pageISR)) != OK)
-	    fprintf(stderr, "vmi5588_pageInit: Can't connect RM irq #1\n");
+       if ((status = rmIntConnect(1, vmi5588_pageISR)) != OK)
+          fprintf(stderr, "vmi5588_pageInit: Can't connect RM irq #1\n");
 
     pageIo.p[pageIndex].page = rmPage;
     scanIoInit(&pageIo.p[pageIndex].ioscanpvt);
     pageIo.number++;
 
     if (vmi5588Debug) {
-    	printf("Init pageIo index <%hd> page <%d>\n",
-    	       pageIndex, pageIo.number);
+       printf("Init pageIo index <%hd> page <%d>\n",
+              pageIndex, (int)pageIo.number);
     }
 
     return status;
 }
 #endif
 
-
 #ifndef NO_EPICS
 /*****************************************************************************
 *
@@ -1213,29 +1211,28 @@ long vmi5588_pageInit
 
 void vmi5588_pvtInit
 (
-    struct rmpvt **ppdpvt,	/* location for private pointer */
-    short rmPage, 		/* rm page number */
-    short rmOffset,		/* offset into rm page */
-    struct rm_data *prmData	/* pointer to shared memory */
+    struct rmpvt **ppdpvt,    /* location for private pointer */
+    short rmPage,             /* rm page number */
+    short rmOffset,           /* offset into rm page */
+    struct rm_data *prmData   /* pointer to shared memory */
 )
 {
-	struct rmpvt   *prmpvt;
+   struct rmpvt   *prmpvt;
 
-	prmpvt = (struct rmpvt *) calloc(1, sizeof(struct rmpvt));
-	prmpvt->page = rmPage;
-	prmpvt->offset = rmOffset;
-	prmpvt->address = prmData;
+   prmpvt = (struct rmpvt *) calloc(1, sizeof(struct rmpvt));
+   prmpvt->page = rmPage;
+   prmpvt->offset = rmOffset;
+   prmpvt->address = prmData;
 
 #ifdef RM_DEBUG
-	printf("page<%x> offset<%x> address<%x>\n", 
-	       rmPage, rmOffset, (unsigned long) prmData);
+   printf("page<%x> offset<%x> address<%x>\n", 
+          rmPage, rmOffset, (unsigned long) prmData);
 #endif
 
-	*ppdpvt = prmpvt;
+   *ppdpvt = prmpvt;
 }
 #endif
 
-
 #ifndef NO_EPICS
 /*****************************************************************************
 *
@@ -1250,18 +1247,18 @@ void vmi5588_pvtInit
 
 long vmi5588_getIoscanpvt
 (
-    struct rmpvt *pdpvt,	/* record private data structure */
-    IOSCANPVT *pscanpvt 	/* location for interrupt data */
+    struct rmpvt *pdpvt,   /* record private data structure */
+    IOSCANPVT *pscanpvt    /* location for interrupt data */
 )
 {
     short i, page;
 
     page = pdpvt->page;
     for (i = 0; i < pageIo.number; i++)
-	if (page == pageIo.p[i].page) {
-	    *pscanpvt = pageIo.p[i].ioscanpvt;
-	    return OK;
-	}
+    if (page == pageIo.p[i].page) {
+       *pscanpvt = pageIo.p[i].ioscanpvt;
+       return OK;
+    }
 
 /* Question: could I call vmi5588_pageInit at this point, since it
    obviously hasn't been done yet?  This would allow a record to be
@@ -1275,7 +1272,6 @@ long vmi5588_getIoscanpvt
 }
 #endif
 
-
 #ifndef NO_EPICS
 /*****************************************************************************
 *
@@ -1291,7 +1287,7 @@ long vmi5588_getIoscanpvt
 
 long vmi5588_trigger
 (
-    short rmPage		/* rm page number */
+    short rmPage      /* rm page number */
 )
 {
     static unsigned char nodeIDcounter;
@@ -1299,8 +1295,8 @@ long vmi5588_trigger
     prm->pageFlag[rmPage] = (prm->nodeId << 8) + nodeIDcounter++;
 
     if (vmi5588Debug) {
-    	logMsg("vmi5588_trigger: Broadcast trigger for page <%hd>\n", 
-    	       rmPage, 0,0,0,0,0);
+       logMsg("vmi5588_trigger: Broadcast trigger for page <%hd>\n", 
+              rmPage, 0,0,0,0,0);
     }
 
     return rmIntSend(1, -1);

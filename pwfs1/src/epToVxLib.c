@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: epToVxLib.c,v 1.4 2000-06-21 01:28:28 cboyer Exp $"};
+	"$Id: epToVxLib.c,v 1.5 2002-01-18 01:27:28 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -148,7 +148,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <selectLib.h>
 #include <aio.h>
 #include <semLib.h>
-#include <ppc.h>
 #include "gemTypes.h"
 #include "timeoutLib.h"
 #include "dbTypes.h"
@@ -165,7 +164,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <dbDefs.h>
 #include <dbEvent.h>
 #include <cad.h>
-#include <car.h>
+#include <menuCarstates.h>
 
 #endif  /* NO_EPICS - END OF INCLUDES COMPILED ONLY FOR THE EPICS ENVIRONMENT */
 
@@ -831,7 +830,7 @@ void   epToVxCaShow
               i,
               (int) pCaDef->pChannelId [i],
               ca_name( pCaDef->pChannelId [i] ),
-              pCaDef->pFieldType [i],
+              (int) pCaDef->pFieldType [i],
               pCaDef->ppFieldValue [i]);
    }
 
@@ -1761,7 +1760,7 @@ STATUS   epToVxCaWriteDaemon
    int       recordType;              /* Record type.                         */
    int       recordNumber;            /* Record number.                       */
    uint32    recordDataType;          /* Record data type.                    */
-   uint16    dbfDataType;             /* Database access type.                */
+   uint16    dbfDataType=DBF_STRING;  /* Database access type.                */
    char      pRecordName [EPICS_MAX_BYTES_RECORD_NAME + 1];
                                       /* Record name.                         */
    struct   fd_set readFds;           /* File descr. structure for select().  */
@@ -2350,14 +2349,14 @@ long   epToVxCadExecute
 
    switch (pcad->dir)
    {
-      case CAD_MARK:
+      case menuDirectiveMARK:
 
          /* MARK is always accepted. */
 
          returnValue = CAD_ACCEPT;
          break;
 
-      case CAD_CLEAR:
+      case menuDirectiveCLEAR:
 
          /*
           * CLEAR causes default attribute values to be loaded into the 
@@ -2504,7 +2503,7 @@ long   epToVxCadExecute
          }
          break;
 
-      case CAD_PRESET:
+      case menuDirectivePRESET:
 
          /* If command pipe has not yet been opened, attempt to open it */
 
@@ -2556,7 +2555,7 @@ long   epToVxCadExecute
 
          if (eptovx_saveAttribs (pcad, context, & offendingAttrib) == ERROR)
          {
-            sprintf (pMessage, "Attribute #%d %.*s", offendingAttrib,
+            sprintf (pMessage, "Attribute #%d %.*s", (int)offendingAttrib,
                      EPICS_MAX_BYTES_STRING_ATTRIB, "conversion failure");
             strncpy (pcad->mess, pMessage, EPICS_MAX_BYTES_STRING_ATTRIB);
             returnValue = CAD_REJECT;
@@ -2564,7 +2563,7 @@ long   epToVxCadExecute
          else if (eptovx_checkAttribs (context, & offendingAttrib, pReason) 
                   == ERROR)
          {
-            sprintf (pMessage, "Attribute #%d %.*s", offendingAttrib,
+            sprintf (pMessage, "Attribute #%d %.*s", (int)offendingAttrib,
                      EPICS_MAX_BYTES_STRING_ATTRIB, pReason);
             strncpy (pcad->mess, pMessage, EPICS_MAX_BYTES_STRING_ATTRIB);
             returnValue = CAD_REJECT;
@@ -2625,14 +2624,14 @@ long   epToVxCadExecute
          }
          break;
 
-      case CAD_STOP:
+      case menuDirectiveSTOP:
 
-         if (! context->stopDirSupported) /* Fall through to CAD_START if STOP*/
+         if (! context->stopDirSupported) /* Fall through to menuDirectiveSTART if STOP*/
                                           /* is supported, otherwise, REJECT  */
                                           /* this STOP directive (this is an  */
                                           /* error condition)                 */
          {
-            ERROR_SET1 (S_epToVxLib_CAD_STOP_UNSUPPORTED, 
+            ERROR_SET1 (S_epToVxLib_menuDirectiveSTOP_UNSUPPORTED, 
                         "STOP directive not supported by %s",
                         ERROR_LOG_NOW, pcad->name);
             strncpy (pcad->mess, "STOP directive not supported", 
@@ -2651,14 +2650,14 @@ long   epToVxCadExecute
          {
             strncpy (pcad->mess, "No PRESET or START", 
                      EPICS_MAX_BYTES_STRING_ATTRIB);
-            ERROR_SET (S_epToVxLib_CAD_STOP_UNSUPPORTED, 
+            ERROR_SET (S_epToVxLib_menuDirectiveSTOP_UNSUPPORTED, 
                        "No PRESET or START issued first",
                        ERROR_LOG_NOW);
             returnValue = CAD_REJECT;
             break;
          }
 
-      case CAD_START:
+      case menuDirectiveSTART:
 
          /*
           * START directive received.
@@ -2696,7 +2695,7 @@ long   epToVxCadExecute
           * command header is written to the command pipe.
           */
 
-         if (pcad->dir == CAD_START)
+         if (pcad->dir == menuDirectiveSTART)
          {
             nByte = context->sizeOfCmdPacket;
             CMD_PKT_COMMAND_MODIFIER (context) = 
@@ -2757,7 +2756,7 @@ long   epToVxCadExecute
          }
 
 #ifdef DEBUG
-         if (pcad->dir == CAD_START)
+         if (pcad->dir == menuDirectiveSTART)
          {
             printf ("epToVxCadExecute: START accepted with client ID = %#x\n", 
                     context->clientId);
@@ -3005,21 +3004,21 @@ long   epToVxCadCopy
 
    switch (pcad->dir)
    {
-      case CAD_MARK:
+      case menuDirectiveMARK:
 
          /* MARK is always accepted. */
 
          returnValue = CAD_ACCEPT;
          break;
 
-      case CAD_CLEAR:
+      case menuDirectiveCLEAR:
 
          /* CLEAR is always accepted. */
 
          returnValue = CAD_ACCEPT;
          break;
 
-      case CAD_PRESET:
+      case menuDirectivePRESET:
 
          /*
           * PRESET - Copy each CAD attribute from the input to the output.
@@ -3162,20 +3161,20 @@ long   epToVxCadCopy
 
          break;
 
-      case CAD_START:
+      case menuDirectiveSTART:
 
          /* START is always accepted. */
 
          returnValue = CAD_ACCEPT;
          break;
 
-      case CAD_STOP:
+      case menuDirectiveSTOP:
 
          /* Reject a STOP with an explanatory message. */
 
          strncpy (pcad->mess, "Cannot be stopped", 
                   EPICS_MAX_BYTES_STRING_ATTRIB);
-         ERROR_SET1 (S_epToVxLib_CAD_STOP_UNSUPPORTED, "%s - cannot be stopped",
+         ERROR_SET1 (S_epToVxLib_menuDirectiveSTOP_UNSUPPORTED, "%s - cannot be stopped",
             ERROR_LOG_NOW, pcad->name);
          returnValue = CAD_REJECT;
          break;
@@ -3270,23 +3269,23 @@ long   epToVxCadReject
 
    switch (pcad->dir)
    {
-      case CAD_MARK:
+      case menuDirectiveMARK:
 
          /* MARK is always accepted. */
 
          returnValue = CAD_ACCEPT;
          break;
 
-      case CAD_CLEAR:
+      case menuDirectiveCLEAR:
 
          /* CLEAR is always accepted. */
 
          returnValue = CAD_ACCEPT;
          break;
 
-      case CAD_PRESET:
-      case CAD_START:
-      case CAD_STOP:
+      case menuDirectivePRESET:
+      case menuDirectiveSTART:
+      case menuDirectiveSTOP:
 
          /* Reject a PRESET, START or STOP with an explanatory message. */
 
@@ -3410,8 +3409,8 @@ STATUS   epToVxGensubInit
       {
          ERROR_SET3 (S_epToVxLib_RECORD_DEFINITION_ERROR,
                      "genSub %s: Number of values mismatch: %d %d",
-                     ERROR_LOG_NOW, pgensub->name, context->nValues, 
-                     pgensub->noj);
+                     ERROR_LOG_NOW, pgensub->name, (int)context->nValues, 
+                     (int)pgensub->noj);
          return (ERROR);
       }
    }
@@ -3421,14 +3420,16 @@ STATUS   epToVxGensubInit
       {
          ERROR_SET3 (S_epToVxLib_RECORD_DEFINITION_ERROR,
             "genSub %s: Number of values mismatch: %d %d",
-            ERROR_LOG_NOW, pgensub->name, context->nValues, pgensub->novj);
+            ERROR_LOG_NOW, pgensub->name, (int)context->nValues, 
+            (int)pgensub->novj);
          return (ERROR);
       }
       else if ( pgensub->noj != pgensub->novj )
       {
          ERROR_SET3 (S_epToVxLib_RECORD_DEFINITION_ERROR,
             "genSub %s: Different number of inputs (%d) and outputs (%d)",
-            ERROR_LOG_NOW, pgensub->name, pgensub->noj, pgensub->novj);
+            ERROR_LOG_NOW, pgensub->name, (int)pgensub->noj, 
+            (int)pgensub->novj);
          return (ERROR);
       }
    }
@@ -3916,7 +3917,7 @@ STATUS   epToVxCarDaemon
     * Set CAR busy and initialise the client ID and error number
     */
 
-   CAR_FIELD_VALUE (pContext) = CAR_BUSY;
+   CAR_FIELD_VALUE (pContext) = menuCarstatesBUSY;
    CAR_FIELD_CLIENT_ID (pContext) = 0;
    CAR_FIELD_ERROR_NUMBER (pContext) = 0;
 
@@ -4000,7 +4001,7 @@ STATUS   epToVxCarDaemon
     * Initialise the CAR state to IDLE.
     */
 
-   CAR_FIELD_VALUE (pContext) = CAR_IDLE;
+   CAR_FIELD_VALUE (pContext) = menuCarstatesIDLE;
 
    /*
     * BUG WORK-AROUND.
@@ -4075,7 +4076,7 @@ STATUS   epToVxCarDaemon
           (int) CMD_PKT_COMMAND_NUMBER (& beginContext)))
       {
          CAR_FIELD_ERROR_NUMBER (pContext) = 0;
-         CAR_FIELD_VALUE (pContext) = CAR_BUSY;
+         CAR_FIELD_VALUE (pContext) = menuCarstatesBUSY;
          strncpy (CAR_FIELD_MESSAGE (pContext), " ", 
                   EPICS_MAX_BYTES_STRING_ATTRIB);
       }
@@ -4083,7 +4084,7 @@ STATUS   epToVxCarDaemon
       {
          ERROR_SET (S_epToVxLib_INVALID_COMMAND_NUM, "Invalid command number", 
                     ERROR_LOG_NOW);
-         CAR_FIELD_VALUE (pContext) = CAR_ERROR;
+         CAR_FIELD_VALUE (pContext) = menuCarstatesERROR;
          CAR_FIELD_ERROR_NUMBER (pContext) = S_epToVxLib_INVALID_COMMAND_NUM;
          strncpy (CAR_FIELD_MESSAGE (pContext), "Invalid command number",
                   EPICS_MAX_BYTES_STRING_ATTRIB);
@@ -4122,7 +4123,7 @@ STATUS   epToVxCarDaemon
              * In VSM simulation mode the CAR is set IDLE immediately.
              */
 
-            CAR_FIELD_VALUE (pContext) = CAR_IDLE;
+            CAR_FIELD_VALUE (pContext) = menuCarstatesIDLE;
             strncpy (CAR_FIELD_MESSAGE (pContext), " ", 
                      EPICS_MAX_BYTES_STRING_ATTRIB);
 
@@ -4165,7 +4166,7 @@ STATUS   epToVxCarDaemon
 
                ERROR_SET (0, "Timeout waiting for command-done packet", 
                           ERROR_LOG_NOW);
-               CAR_FIELD_VALUE (pContext) = CAR_ERROR;
+               CAR_FIELD_VALUE (pContext) = menuCarstatesERROR;
                CAR_FIELD_ERROR_NUMBER (pContext) = 
                S_epToVxLib_TIMEOUT_WAITING_FOR_PIPE;
                strncpy (CAR_FIELD_MESSAGE (pContext), "Timeout", 
@@ -4203,7 +4204,7 @@ STATUS   epToVxCarDaemon
 
                ERROR_SET (0, "Unexpected asynchronous I/O return status", 
                           ERROR_LOG_NOW);
-               CAR_FIELD_VALUE (pContext) = CAR_ERROR;
+               CAR_FIELD_VALUE (pContext) = menuCarstatesERROR;
                CAR_FIELD_ERROR_NUMBER (pContext) = 
                S_epToVxLib_INVALID_PACKET_SIZE;
                strncpy (CAR_FIELD_MESSAGE (pContext), 
@@ -4246,7 +4247,7 @@ STATUS   epToVxCarDaemon
                ERROR_SET (S_epToVxLib_CAD_CAR_SYNCH_ERROR,
                   "Unsynchronised command begin/done packets", ERROR_LOG_NOW);
 
-               CAR_FIELD_VALUE (pContext) = CAR_ERROR;
+               CAR_FIELD_VALUE (pContext) = menuCarstatesERROR;
                CAR_FIELD_CLIENT_ID (pContext) = CAR_CLIENT_ID (& doneContext);
                CAR_FIELD_ERROR_NUMBER (pContext) = 
                S_epToVxLib_CAD_CAR_SYNCH_ERROR;
@@ -4288,7 +4289,7 @@ STATUS   epToVxCarDaemon
 
                MESSAGE_LOG (MSG_WARNING, 
                             "WARNING: Error returned by control task");
-               CAR_FIELD_VALUE (pContext) = CAR_ERROR;
+               CAR_FIELD_VALUE (pContext) = menuCarstatesERROR;
                CAR_FIELD_ERROR_NUMBER (pContext) = 
                CMD_PKT_ERROR_NUMBER (& doneContext);
 
@@ -4325,7 +4326,7 @@ STATUS   epToVxCarDaemon
 
                /* All OK - set the CAR IDLE */
 
-               CAR_FIELD_VALUE (pContext) = CAR_IDLE;
+               CAR_FIELD_VALUE (pContext) = menuCarstatesIDLE;
                CAR_FIELD_ERROR_NUMBER (pContext) = 0;
                strncpy (CAR_FIELD_MESSAGE (pContext), " ", 
                         EPICS_MAX_BYTES_STRING_ATTRIB);
@@ -4600,7 +4601,7 @@ void   eptovx_loadDefaultInputAttribs
          case EPICS_DATA_TYPE_LONG:
 
             sprintf (& pAttrib [i * EPICS_MAX_BYTES_STRING_ATTRIB], "%d",
-                     pContext->pDefault [i].longAttrib);
+                     (int)(pContext->pDefault [i].longAttrib));
             break;
 
          case EPICS_DATA_TYPE_DOUBLE:
@@ -4765,7 +4766,7 @@ STATUS   eptovx_checkAttribs
                   )
                {
                   sprintf (pReason, "!= %d", 
-                           pContext->ppAllowedRange [i][0].longAttrib);
+                           (int)(pContext->ppAllowedRange [i][0].longAttrib));
                   * pOffendingAttrib = i + 1;
                   return (ERROR);
                }
@@ -4777,14 +4778,14 @@ STATUS   eptovx_checkAttribs
                if (longAttrib < pContext->ppAllowedRange [i][0].longAttrib)
                {
                   sprintf (pReason, "< %d", 
-                           pContext->ppAllowedRange [i][0].longAttrib);
+                           (int)(pContext->ppAllowedRange [i][0].longAttrib));
                   * pOffendingAttrib = i + 1;
                   return (ERROR);
                }
                else if (longAttrib > pContext->ppAllowedRange [i][1].longAttrib)
                {
                   sprintf (pReason, "> %d", 
-                           pContext->ppAllowedRange [i][1].longAttrib);
+                           (int)(pContext->ppAllowedRange [i][1].longAttrib));
                   * pOffendingAttrib = i + 1;
                   return (ERROR);
                }
@@ -4845,7 +4846,7 @@ STATUS   eptovx_checkAttribs
 
                ERROR_SET1 (S_epToVxLib_INTERNAL_ERROR,
                           "Unrecognised EPICS data type for attribute %d", 
-                          ERROR_LOG_NOW, (i+1));
+                          ERROR_LOG_NOW, (int)(i+1));
                strncpy (pReason, "Bad data type", 
                         EPICS_MAX_BYTES_STRING_ATTRIB);
                * pOffendingAttrib = i + 1;
@@ -6035,7 +6036,7 @@ STATUS   epToVxDbInitCadCar (void)
                       i, j);
             ERROR_SET2 (S_epToVxLib_BAD_ATTRIBUTE,
                         "CAD %d attribute %d - conversion failure", 
-                        ERROR_LOG_SAVE, i, j);
+                        ERROR_LOG_SAVE, (int)i, (int)j);
             return (ERROR);
          }
 
@@ -6124,7 +6125,7 @@ STATUS   epToVxDbInitCadCar (void)
                      i, j, k);
                   ERROR_SET3 (S_epToVxLib_BAD_ATTRIBUTE,
                      "CAD %d attrib. %d range val. %d - conversion failure",
-                     ERROR_LOG_SAVE, i, j, k);
+                     ERROR_LOG_SAVE, (int)i, (int)j, (int)k);
                   return (ERROR);
                }
             }
@@ -7014,7 +7015,7 @@ STATUS   epToVxPipeWrite
    )
 {
    int              recordType;            /* Record type.                    */
-   int              nByte;                 /* Number of bytes written to pipe */
+   int              nByte=0;               /* Number of bytes written to pipe */
    long             valueLong;
    double           valueDouble;
    DATREC_CONTEXT   pContext;              /* Record context structure.       */
@@ -8743,7 +8744,8 @@ STATUS   epToVxShow
          printf ("OUTPUT\n");
       }
 
-      printf ("epToVxShow: Number of values = %d\n", pGsubContext->nValues);
+      printf ("epToVxShow: Number of values = %d\n", 
+              (int)(pGsubContext->nValues));
 
       printf (
       "epToVxShow: Associated task name = %s, timeout period = %e seconds\n", 
@@ -8815,7 +8817,7 @@ void   epToVxCadContextShow
            (int) pCadContext);
 
    printf ("epToVxCadContextShow: Number of attributes = %d\n", 
-           pCadContext->nAttrib);
+           (int)(pCadContext->nAttrib));
    printf ("epToVxCadContextShow: STOP directive is %ssupported, Simulation mode is %ssupported\n",
       pCadContext->stopDirSupported ? "" : "not ",
       pCadContext->simulationSupported ? "" : "not ");
@@ -8833,8 +8835,8 @@ void   epToVxCadContextShow
          case EPICS_DATA_TYPE_STRING:
 
             printf ("epToVxCadContextShow: "
-                  "Attribute #%d: Type = STRING, Default Value = \"%s\"\n", i,
-                  pCadContext->pDefault [i].pStringAttrib);
+              "Attribute #%d: Type = STRING, Default Value = \"%s\"\n", (int)i,
+              pCadContext->pDefault [i].pStringAttrib);
 
             if (pCadContext->pNumberRangeValues [i] > 0)
             {
@@ -8856,8 +8858,8 @@ void   epToVxCadContextShow
          case EPICS_DATA_TYPE_LONG:
 
             printf (
-    "epToVxCadContextShow: Attribute #%d: Type = LONG, Default Value = %d, ", i,
-    pCadContext->pDefault [i].longAttrib);
+    "epToVxCadContextShow: Attribute #%d: Type = LONG, Default Value = %d, ", 
+    (int)i, (int)pCadContext->pDefault [i].longAttrib);
 
             if (pCadContext->pNumberRangeValues [i] == 0)
             {
@@ -8866,21 +8868,22 @@ void   epToVxCadContextShow
             else if (pCadContext->pNumberRangeValues [i] == 1)
             {
                printf ("Permitted range = %d to %d\n",
-                  pCadContext->ppAllowedRange [i][0].longAttrib,
-                  pCadContext->ppAllowedRange [i][0].longAttrib);
+                  (int)(pCadContext->ppAllowedRange [i][0].longAttrib),
+                  (int)(pCadContext->ppAllowedRange [i][0].longAttrib));
             }
             else if (pCadContext->pNumberRangeValues [i] == 2)
             {
                printf ("Permitted range = %d to %d\n",
-                  pCadContext->ppAllowedRange [i][0].longAttrib,
-                  pCadContext->ppAllowedRange [i][1].longAttrib);
+                  (int)(pCadContext->ppAllowedRange [i][0].longAttrib),
+                  (int)(pCadContext->ppAllowedRange [i][1].longAttrib));
             }
             break;
 
          case EPICS_DATA_TYPE_DOUBLE:
 
             printf (
-  "epToVxCadContextShow: Attribute #%d: Type = DOUBLE, Default Value = %g, ", i,
+  "epToVxCadContextShow: Attribute #%d: Type = DOUBLE, Default Value = %g, ", 
+  (int)i,
                   pCadContext->pDefault [i].doubleAttrib);
 
             if (pCadContext->pNumberRangeValues [i] == 0)
@@ -9060,7 +9063,7 @@ void   epToVxSirContextShow
    }
 
    printf ("epToVxSirContextShow: Number of elements = %d, record ID = %d\n",
-            pSirContext->nElement, pSirContext->recordId);
+            (int)pSirContext->nElement, (int)pSirContext->recordId);
 
    if ( pSirContext->filterEnable )
    {
@@ -9172,7 +9175,7 @@ void   epToVxGsubContextShow
    }
 
    printf ("epToVxGsubContextShow: Number of values = %d\n", 
-           pGsubContext->nValues);
+           (int)pGsubContext->nValues);
 
    printf (
    "epToVxGsubContextShow: Associated task name = %s, timeout = %e sec\n", 
@@ -9810,16 +9813,16 @@ void epToVxCmdPacketShow (const char * ptr)
            (int) ptr);
 
    clientId = *((uint32 *)(int)ptr);
-   printf ("epToVxDataPacketShow: Client ID = %d, ", clientId);
+   printf ("epToVxDataPacketShow: Client ID = %d, ", (int)clientId);
 
    cmdNum = *((uint32 *)(int)(ptr + 4));
-   printf ("command # = %d ", cmdNum);
+   printf ("command # = %d ", (int)cmdNum);
 
    cmdMod = *((uint32 *)(int)(ptr + 8));
-   printf ("modifier = %#x, ", cmdMod);
+   printf ("modifier = %#x, ", (int)cmdMod);
 
    defMask = *((uint32 *)(int)(ptr + 12));
-   printf ("default mask/error number = %#x/%d\n", defMask, defMask);
+   printf ("default mask/error number = %#x/%d\n", (int)defMask, (int)defMask);
 
    argPtr = (uint32 *)(int)(ptr + 15);
    printf ("Command arguments begin at %#x\n", (int) argPtr);
@@ -9840,13 +9843,13 @@ void epToVxDataPacketShow (const char * ptr)
            (int) ptr);
 
    mode = *((uint32 *)(int)ptr);
-   printf ("epToVxDataPacketShow: Mode/Client ID = %d, ", mode);
+   printf ("epToVxDataPacketShow: Mode/Client ID = %d, ", (int)mode);
 
    recordId = *((uint32 *)(int)(ptr + 4));
-   printf ("record/update ID = %d, ", recordId);
+   printf ("record/update ID = %d, ", (int)recordId);
 
    nElement = *((uint32 *)(int)(ptr + 8));
-   printf ("N elements = %d\n", nElement);
+   printf ("N elements = %d\n", (int)nElement);
 
    dataPtr = (uint32 *)(int)(ptr + 12);
 
@@ -9854,7 +9857,7 @@ void epToVxDataPacketShow (const char * ptr)
    for (i=0; i<nElement; i++)
    {
       data = *(dataPtr);
-      printf (" [%d]=%#x/%d", i, data, data);
+      printf (" [%d]=%#x/%d", i, (int)data, (int)data);
       dataPtr++;
    }
    printf (".\n");

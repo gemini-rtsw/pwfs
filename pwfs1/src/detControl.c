@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.26 2001-12-22 00:00:19 cboyer Exp $"};
+   "$Id: detControl.c,v 1.27 2002-01-18 01:27:27 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   09 Jan 2001: CB - Add detPowerOn
  *   21 Dec 2001: CB - reject observe command if outOptions=dhs and dhs is not
  *                     connected
  *                   - detDhsInit is now started from detControl
@@ -109,7 +110,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <math.h>
 #include <selectLib.h>
 #include <sirRecord.h>
-#include "car.h"
+#include "menuCarstates.h"
 
 #include "dhs.h"                    /* Include Data Handling System constants */
 
@@ -131,7 +132,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "wfsControl.h"
 #include "wfsDb.h"
 #include "cicsLib.h"
-/*#include "xycom.h"*/
 
 #include "detControl.h"
 
@@ -256,11 +256,6 @@ extern SEM_ID accessFocusModel;    /* Semaphore Focus model defined in        */
 
 extern void ImpMaster ();
 
-/*************************** Definition of variables for xycom benchmarking ***/
-
-/*extern int swapFlag ;
-extern xycomCard *xycom_ptr ;*/
-
 /******************************** Private functions - one for each command. ***/
 
 STATUS detReadDefaultDspCcdGeometry (SDSU_ID sdsuId, AO_CCD_ID aoCcdId);
@@ -314,6 +309,9 @@ LOCAL uint32   detGeometry (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 
 LOCAL uint32   detPrimitive (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32   detPowerOn (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                           SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detMode   (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                           SDSU_ID sdsuId, OBS_ID obsId);
@@ -622,13 +620,6 @@ STATUS   detControl
    double       rateSampFreq;       /* Cutoff frequency                       */
 
 
-   /* Initialize xycom board for benchmarking */
-
-   /*xycomInit () ;
-#ifdef DEBUG
-   printf ( "xycom board initialize, xycom_ptr = %p\n" , xycom_ptr ) ;
-#endif*/
-
    /* Create and initialise an error context structure for this task */
 
    if (errorInit () == ERROR)
@@ -685,10 +676,9 @@ STATUS   detControl
       return (ERROR);
    }
 
-#ifdef DEBUG
-   printf ("detControl:%s: Alarm timer initialised. Timer ID = %d\n", 
-           pWfsName, (int) timeId);
-#endif
+   MESSAGE_LOG2 (MSG_MINDEBUG, 
+                 "detControl:%s: Alarm timer initialised. Timer ID = %d", 
+                 pWfsName, (int) timeId);
 
    /*
     * Get the CAD command context structure (using the appropriate pipe driver)
@@ -769,7 +759,7 @@ STATUS   detControl
     * As soon as we have the SIR record context, set the "initialising" flag. 
     */
 
-   initState = CAR_BUSY;
+   initState = menuCarstatesBUSY;
    if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext) 
        == ERROR)
    {
@@ -1633,7 +1623,7 @@ STATUS   detControl
     * RUNNING
     */
 
-   initState = CAR_IDLE;
+   initState = menuCarstatesIDLE;
    if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext) 
        == ERROR)
    {
@@ -1906,6 +1896,15 @@ STATUS   detControl
 
             errorNumber = 
             detPrimitive (cadCmdContext, commandNumber, sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_POWER_ON)
+         {
+
+            /* Execute SDSU POWER ON primitive command. */
+
+            errorNumber =
+            detPowerOn (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_MODE)
@@ -2287,11 +2286,9 @@ OBS_ID detObsContextCreate (void)
     * contents to zero.
     */
 
-#ifdef DEBUG
-  printf (
-  "detObsContextCreate: Allocating %d bytes of memory for OBS_ID structure.\n",
-  sizeof (OBS_ID_STRUCT));
-#endif /* DEBUG */
+  MESSAGE_LOG1 ( MSG_MINDEBUG,
+                 "Allocating %d bytes of memory for OBS_ID structure.",
+                 sizeof (OBS_ID_STRUCT));
 
    if ((obsId = (OBS_ID) calloc ((size_t) 1, sizeof (OBS_ID_STRUCT))) == NULL)
    {
@@ -3323,9 +3320,8 @@ uint32 detExposure
    sdsuNframe = (uint32) nframe;
    obsId->totalFrames = nframe;
 
-#ifdef DEBUG
-   printf ("detExposure: Setting T_NFRAME parameter to %lu\n", sdsuNframe);
-#endif /* DEBUG */
+   MESSAGE_LOG1 (MSG_MINDEBUG, 
+                 "Setting T_NFRAME parameter to %lu", sdsuNframe);
 
    if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_NFRAME", sdsuNframe ) == 
         ERROR )
@@ -3339,9 +3335,8 @@ uint32 detExposure
 
    sdsuTexp = (uint32) (exposure / SDSU_EXPOSURE_UNIT);
 
-#ifdef DEBUG
-   printf ("detExposure: Setting T_EXP_TIM parameter to %lu\n", sdsuTexp);
-#endif /* DEBUG */
+   MESSAGE_LOG1 (MSG_MINDEBUG, 
+                 "Setting T_EXP_TIM parameter to %lu", sdsuTexp);
 
    if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_EXP_TIM", sdsuTexp ) 
         == ERROR )
@@ -3357,9 +3352,8 @@ uint32 detExposure
    sdsuId->exposureTicks = (int) (exposure * sysClkRateGet());
    /*printf ( "exposureTicks =%d\n" , sdsuId->exposureTicks ) ;*/
 
-#ifdef DEBUG
-   printf ("detExposure: Setting exposureTicks to %d\n", sdsuId->exposureTicks);
-#endif /* DEBUG */
+   MESSAGE_LOG1 (MSG_MINDEBUG, "Setting exposureTicks to %d", 
+                 sdsuId->exposureTicks);
 
    /*
     * Set up the requested and actual number of exposure/dataset.
@@ -3437,9 +3431,7 @@ uint32 detExposure
       }
    }
 
-#ifdef DEBUG
-   printf ( "dhsQlRate = %d\n", obsId->dhsQlRate );
-#endif
+   MESSAGE_LOG1 ( MSG_MINDEBUG, "dhsQlRate = %d", obsId->dhsQlRate );
 
    return (errorNumber);
 }
@@ -3710,10 +3702,9 @@ uint32 detSetWcs
 
       if ( nread > 0 )
       {
-#ifdef DEBUG
-         printf ("detSetWcs: Point %d: %f %f %f %f\n", p, obsId->pixij[p][0], 
+         MESSAGE_LOG1 (MSG_FULLDEBUG, "Point %d", p);
+         MESSAGE_LOG4 (MSG_FULLDEBUG, "%f %f %f %f", obsId->pixij[p][0], 
                  obsId->pixij[p][1], obsId->fpxy[p][0], obsId->fpxy[p][1]);
-#endif
          p++;
       }
    }
@@ -4186,10 +4177,8 @@ STATUS detDhsConnect
                                   &dhsErrno);
    CHECK_DHS (dhsErrno);
 
-#ifdef DEBUG
-   printf ("dhsConnect: dhsConnection=%ld dhsErrno=%d\n", detDhsConnection,
-           dhsErrno);
-#endif /* DEBUG */
+   MESSAGE_LOG2 (MSG_MINDEBUG, "dhsConnection=%ld dhsErrno=%d", 
+                 detDhsConnection, dhsErrno);
 
    if (dhsErrno != DHS_S_SUCCESS)
    {
@@ -4335,13 +4324,6 @@ STATUS detDhsCheckCmdStatus
     * Note that the DHS allocates a buffer to hold the command status message
     * and returns a pointer to this buffer in "msg".
     */
-
-#ifdef DEBUG
-   printf ("detDhsCheckCmdStatus: dhsStatus\n");
-#endif /* DEBUG */
-
-   /*sendStatus = dhsStatus (dhsTag, &msg, &dhsErrno);
-   CHECK_DHS (dhsErrno);*/
 
    sendStatus = DHS_CS_DONE ;
 
@@ -5268,7 +5250,7 @@ uint32 detObserveStart
       obsId->stopped = FALSE;
       obsId->nframes = 0;
       obsId->outNFrames = 0;
-      observingState = CAR_BUSY;
+      observingState = menuCarstatesBUSY;
       if (epToVxPipeWrite (NULL, (char *) &observingState, 
                            obsId->pDetObservingContext) == ERROR)
       {
@@ -5432,10 +5414,8 @@ uint32 detObserveStart
           * timing DSP Also define the total number of frames in the observation
           * context structure. */
 
-#ifdef DEBUG
-         printf ("detExposure: Setting T_NFRAME parameter to %lu\n",
-                 sdsuNframe);
-#endif /* DEBUG */
+         MESSAGE_LOG1 (MSG_MINDEBUG, "Setting T_NFRAME parameter to %lu",
+                       sdsuNframe);
 
          if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_NFRAME", sdsuNframe )
               == ERROR )
@@ -5450,9 +5430,8 @@ uint32 detObserveStart
 
          expTim = (uint32) (exposure / SDSU_EXPOSURE_UNIT);
 
-#ifdef DEBUG
-         printf ("detExposure: Setting T_EXP_TIM parameter to %lu\n", expTim);
-#endif /* DEBUG */
+         MESSAGE_LOG1 (MSG_MINDEBUG, "Setting T_EXP_TIM parameter to %lu", 
+                       expTim);
 
          if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_EXP_TIM", expTim )
               == ERROR )
@@ -5548,9 +5527,7 @@ uint32 detObserveStart
             }
          }
 
-#ifdef DEBUG
-         printf ( "dhsQlRate = %d\n", obsId->dhsQlRate );
-#endif
+         MESSAGE_LOG1 ( MSG_MINDEBUG, "dhsQlRate = %d", obsId->dhsQlRate );
 
          /*
           * BUG WORK AROUND: Before attempting to query parameters from the 
@@ -5616,10 +5593,8 @@ uint32 detObserveStart
             }
             sdsuId->exposureTicks = 
             (int) (expTim * SDSU_EXPOSURE_UNIT * sysClkRateGet());
-#ifdef DEBUG
-            printf ( "detControl: T_EXP_TIM=%d, exposureTicks=%d\n", 
-                     (int)(expTim) , sdsuId->exposureTicks) ;
-#endif
+            MESSAGE_LOG2 ( MSG_FULLDEBUG, "T_EXP_TIM=%d, exposureTicks=%d", 
+                           (int)(expTim) , sdsuId->exposureTicks) ;
          }
       }
 
@@ -5654,10 +5629,8 @@ uint32 detObserveStart
                     ERROR_LOG_NOW);
       }
 
-#ifdef DEBUG
-      printf ("detObserveStart: Time at observation start: %f seconds.\n", 
-              obsId->rawtStart);
-#endif
+      MESSAGE_LOG1 (MSG_MINDEBUG, "Time at observation start: %f seconds.", 
+                    obsId->rawtStart);
 
 
       /*
@@ -5676,7 +5649,7 @@ uint32 detObserveStart
          {
             ERROR_LOG ("Failed to start simple readout process");
             obsId->observing = FALSE;
-            observingState = CAR_ERROR;
+            observingState = menuCarstatesERROR;
             if (epToVxPipeWrite (NULL, (char *) &observingState, 
                                  obsId->pDetObservingContext) == ERROR)
             {
@@ -5701,7 +5674,7 @@ uint32 detObserveStart
          {
             ERROR_LOG ("Failed to start simple readout process");
             obsId->observing = FALSE;
-            observingState = CAR_ERROR;
+            observingState = menuCarstatesERROR;
             if (epToVxPipeWrite (NULL, (char *) &observingState, 
                                  obsId->pDetObservingContext) == ERROR)
             {
@@ -5767,7 +5740,7 @@ uint32 detObserveStart
          {
             ERROR_SET (0, "Failed to set alarm timer", ERROR_LOG_NOW);
             obsId->observing = FALSE;
-            observingState = CAR_ERROR;
+            observingState = menuCarstatesERROR;
             if (epToVxPipeWrite (NULL, (char *) &observingState, 
                                  obsId->pDetObservingContext)
                == ERROR)
@@ -6051,9 +6024,8 @@ uint32 detObserveStart
          ERROR_LOG ("Failed to set UT at start of observation SIR record");
       }
 
-#ifdef DEBUG
-      printf ( "obsId->utStartString = %s\n" , obsId->utStartString ) ;
-#endif
+      MESSAGE_LOG1 ( MSG_FULLDEBUG, "obsId->utStartString = %s" , 
+                     obsId->utStartString ) ;
 
 
       /*
@@ -6678,7 +6650,7 @@ uint32 detAbort(
    {
 
       obsId->observing = FALSE;
-      observingState = CAR_IDLE;
+      observingState = menuCarstatesIDLE;
       if (epToVxPipeWrite (NULL, (char *) &observingState,
           obsId->pDetObservingContext) == ERROR)
       {
@@ -6822,7 +6794,7 @@ uint32 detInit
 
    /* Set the initialisation state to BUSY. */
 
-   initState = CAR_BUSY;
+   initState = menuCarstatesBUSY;
    if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext) 
        == ERROR)
    {
@@ -6895,7 +6867,7 @@ uint32 detInit
 
       /* Set the initialisation state to ERROR. */
 
-      initState = CAR_ERROR;
+      initState = menuCarstatesERROR;
       if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext) 
           == ERROR)
       {
@@ -6993,7 +6965,7 @@ uint32 detInit
 
          /* Set the initialisation state to ERROR. */
 
-         initState = CAR_ERROR;
+         initState = menuCarstatesERROR;
          if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext)
              == ERROR)
          {
@@ -7368,7 +7340,7 @@ uint32 detInit
    {
       epToVxSetHealth( pRecordPrefix, "GOOD" );
 
-      initState = CAR_IDLE;
+      initState = menuCarstatesIDLE;
       if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext) 
           == ERROR)
       {
@@ -7381,7 +7353,7 @@ uint32 detInit
    }
    else
    {
-      initState = CAR_ERROR;
+      initState = menuCarstatesERROR;
       if (epToVxPipeWrite (NULL, (char *) &initState, obsId->pDetInitContext) 
           == ERROR)
       {
@@ -7988,7 +7960,7 @@ uint32 detTest
 
    /* Set the testing state to BUSY. */
 
-   testState = CAR_BUSY;
+   testState = menuCarstatesBUSY;
    if (epToVxPipeWrite (NULL, (char *) &testState, obsId->pDetTestContext) 
        == ERROR)
    {
@@ -8043,7 +8015,7 @@ uint32 detTest
          ERROR_LOG ("Failed to write test results");
       }
 
-      testState = CAR_ERROR;
+      testState = menuCarstatesERROR;
       if (epToVxPipeWrite (NULL, (char *) &testState, obsId->pDetTestContext) 
           == ERROR)
       {
@@ -8060,7 +8032,7 @@ uint32 detTest
          ERROR_LOG ("Failed to write test results");
       }
 
-      testState = CAR_IDLE;
+      testState = menuCarstatesIDLE;
       if (epToVxPipeWrite (NULL, (char *) &testState, obsId->pDetTestContext) 
           == ERROR)
       {
@@ -8900,6 +8872,91 @@ uint32 detPrimitive
    {
       ERROR_LOG ("Failed to write message to SDSU primitive reply pipe.");
       if ( errorNumber == 0 ) errorNumber = (uint32) errnoGet();
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detPowerOn
+ *
+ *   INVOCATION:
+ *   detPowerOn (cadCmdContext, commandNumber, sdsuId, obsId) 
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext        (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber        (int)             Command number
+ *   (>) sdsuId               (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId                (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detPowerOn command
+ *
+ *   DESCRIPTION:
+ *   This function executes POWER ON command for the Bob Leach controller
+ *
+ *   EXTERNAL VARIABLES:
+ *   NONE
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detPowerOn
+   (
+   CAD_CMD_CONTEXT cadCmdContext,  /* CAD command context structure.          */
+   int             commandNumber,  /* Command number.                         */
+   SDSU_ID         sdsuId,         /* SDSU context structure.                 */
+   OBS_ID          obsId           /* Observation context structure.          */
+   )
+{
+   uint32          errorNumber;     /* Error number reported by task.         */
+
+   /*
+    * Initialise the error number.
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU context structure.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Issue the primitive commands to the SDSU controller.
+    */
+
+   if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to init UTILITY DSP with INI command");
+      errorNumber = S_detControl_SDSU_ERROR;
+   }
+
+   if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to init TIMING DSP with LDP command");
+      errorNumber = S_detControl_SDSU_ERROR;
    }
 
    return (errorNumber);
@@ -10137,17 +10194,6 @@ void detObserveEnd
        * Unscramble the data. The algorithm used depends on the number of 
        * detector outputs, obtained earlier.
        */
-
-      /*if ( swapFlag == 0 )
-      {
-         xycom_ptr->port7 = 0x0 ;
-         swapFlag = 1;
-      }
-      else
-      {
-         xycom_ptr->port7 = 0x1;
-         swapFlag = 0;
-      }*/
 
       if ( detFrameUnscramble( obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels,
                                (int) obsId->aoCcdId->outputsNb,
@@ -11691,7 +11737,7 @@ void detObserveEnd
       /* Reset the observing flag */
 
       obsId->observing = FALSE;
-      observingState = CAR_IDLE;
+      observingState = menuCarstatesIDLE;
       if (epToVxPipeWrite (NULL, (char *) &observingState, 
                            obsId->pDetObservingContext) == ERROR)
       {
@@ -11779,7 +11825,7 @@ ERROR_EXIT:
    }
 
    obsId->observing = FALSE;
-   observingState = CAR_ERROR;
+   observingState = menuCarstatesERROR;
    if (epToVxPipeWrite (NULL, (char *) &observingState, 
                         obsId->pDetObservingContext) == ERROR)
    {
@@ -12002,7 +12048,7 @@ void detObserveTimeout
       "Observation timed out - trying to read data anyway...");
 
       obsId->observing = FALSE;
-      observingState = CAR_ERROR;
+      observingState = menuCarstatesERROR;
       if (epToVxPipeWrite (NULL, (char *) &observingState,
           obsId->pDetObservingContext) == ERROR)
       {

@@ -3,6 +3,12 @@
 # Install script for Gemini PWFS1 system
 #
 
+astlib_dir=/gemini/epics3.13.4/astlib/astlib
+slalib_dir=/gemini/epics3.13.4/slalib/slalib
+timelib_dir=/gemini/epics3.13.4/timelib/timelib
+cfitsio_dir=/gemini/epics3.13.4/cfitsio/cfitsio
+dhs_dir=/gemini/dhs
+
 host=`hostname`
 if [ "`egrep $host /etc/hosts | egrep '^10\.'`" -ne "" ]; then
     site=MK;
@@ -10,29 +16,24 @@ else
     site=CP;
 fi
 
-applSetup -T svgm5 -s Makefile.subdirs -I docs -I dspsrc -I par -X sys -X ar \
-          -depends /gemini/astlib -depends /gemini/slalib \
-          -depends /gemini/timelib -depends /gemini/cfitsio/cfitsio \
-          -depends /gemini/dhs -site $site $1 > pwfs1Build.log 2>&1
-
-applSetup  >> pwfs1Build.log 2>&1
+applSetup.pl -T ppc604 -I adl -I capfast -I src -I startup\
+             -I docs -I dspsrc -I par -I db\
+             -d $astlib_dir -d $slalib_dir \
+             -d $timelib_dir -d $cfitsio_dir\
+             -d $dhs_dir -S $site $1 > pwfs1Build.log 2>&1
 
 editUAE()
 {
 ed UAE.dist << eof >/dev/null
-/^FILES4
-a
-FILES6 = ( \${APPLIC_INSTALL}/bin/asm56000 )
-FILES7 = ( \${APPLIC_INSTALL}/IMP_Startup.pwfs1 )
-.
-w
 $
 a
 
-(\${FILES6}) -> (\${HOSTS})
+(\${APPLIC_INSTALL}/bin/asm56000) -> (\${DIST_HOST})
         install -R \${DIST_PATH}/bin/asm56000;
-(\${FILES7}) -> (\${HOSTS})
+(\${APPLIC_INSTALL}/IMP_Startup.pwfs1) -> (\${DIST_HOST})
         install -R \${DIST_PATH}/IMP_Startup.pwfs1;
+(\${APPLIC_INSTALL}/RELEASE.NOTES) -> (\${DIST_HOST})
+        install -R \${DIST_PATH}/RELEASE.NOTES;
 .
 w
 q

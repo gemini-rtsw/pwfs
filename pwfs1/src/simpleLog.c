@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: simpleLog.c,v 1.4 2000-06-21 01:28:37 cboyer Exp $"};
+	"$Id: simpleLog.c,v 1.5 2002-01-18 01:27:28 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -54,7 +54,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <ioLib.h>
 #include <selectLib.h>
 #include <string.h>
-#include <ppc.h>
 #include "gemTypes.h"
 
 #define SYSEXT_MAX_N_PROC   15
@@ -143,10 +142,7 @@ STATUS   simpleLog (
 
    /* Variables associated with the log file. */
 
-   char           pLogFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                                   /* Name of log file.                       */
-
-   FILE *         logFileFp;       /* File descriptor for log file.           */
+   FILE *         logFileFp=NULL;  /* File descriptor for log file.           */
    BOOL           logFileEnabled = FALSE;
                                    /* Flag set TRUE when log file open.       */
 
