@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1.1.1 1999-05-18 22:01:44 cboyer Exp $
+# $Id: Makefile,v 1.2 1999-05-18 22:39:25 cboyer Exp $
 #
 
 include .applTop/config/CONFIG

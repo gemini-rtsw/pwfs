@@ -120,9 +120,9 @@ xform 0 1504 1120
 p 2496 -352 200 0 1 author:S.M.Beard
 p 3008 -384 100 0 0 border:D
 p 2496 -432 200 0 1 checked:A.Foster
-p 2992 -448 200 0 -1 date:$Date: 1999-05-18 22:01:51 $
-p 2480 2656 200 0 -1 id:$Id: sequenceCad.sch,v 1.1.1.1 1999-05-18 22:01:51 cboyer Exp $
+p 2992 -448 200 0 -1 date:$Date: 1999-05-18 22:39:43 $
+p 2480 2656 200 0 -1 id:$Id: sequenceCad.sch,v 1.2 1999-05-18 22:39:43 cboyer Exp $
 p 3008 -96 200 0 -1 project:Gemini PWFS1
-p 2496 -176 200 0 -1 revision:$Revision: 1.1.1.1 $
+p 2496 -176 200 0 -1 revision:$Revision: 1.2 $
 p 3008 -224 200 0 -1 title:Sequence CAD Records
 [comments]

@@ -107,9 +107,9 @@ xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 1 checked:B.Goodrich
-p 1776 16 100 0 -1 date:$Date: 1999-05-18 22:01:49 $
-p 1552 2368 100 0 -1 id:$Id: wfsCar.sch,v 1.1.1.1 1999-05-18 22:01:49 cboyer Exp $
+p 1776 16 100 0 -1 date:$Date: 1999-05-18 22:39:51 $
+p 1552 2368 100 0 -1 id:$Id: wfsCar.sch,v 1.2 1999-05-18 22:39:51 cboyer Exp $
 p 1792 176 100 0 -1 project:Gemini PWFS1
-p 1552 144 100 0 -1 revision:$Revision: 1.1.1.1 $
+p 1552 144 100 0 -1 revision:$Revision: 1.2 $
 p 1792 112 100 0 -1 title:Wavefront Sensor CAR Records
 [comments]

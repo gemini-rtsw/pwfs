@@ -245,11 +245,11 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-05-18 22:01:49 $
-p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.1.1.1 1999-05-18 22:01:49 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 1999-05-18 22:39:50 $
+p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.2 1999-05-18 22:39:50 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.1.1.1 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.2 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 use notes 2560 -345 100 0 notes#13
 xform 0 2816 -160

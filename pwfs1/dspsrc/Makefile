@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.1.1.1 1999-05-18 22:02:03 cboyer Exp $
+# $Id: Makefile,v 1.2 1999-05-18 22:40:10 cboyer Exp $
 #
 
 APPLIC_DIR_TYPE = src

@@ -20,9 +20,9 @@ xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 1 checked:B.Goodrich
-p 1776 16 100 0 -1 date:$Date: 1999-05-18 22:01:50 $
-p 1552 2368 100 0 -1 id:$Id: agwpsSadTop2.sch,v 1.1.1.1 1999-05-18 22:01:50 cboyer Exp $
+p 1776 16 100 0 -1 date:$Date: 1999-05-18 22:39:33 $
+p 1552 2368 100 0 -1 id:$Id: agwpsSadTop2.sch,v 1.2 1999-05-18 22:39:33 cboyer Exp $
 p 1792 176 100 0 -1 project:Gemini Wavefront Sensing System
-p 1552 144 100 0 -1 revision:$Revision: 1.1.1.1 $
+p 1552 144 100 0 -1 revision:$Revision: 1.2 $
 p 1792 112 100 0 -1 title:Top Level Status Alarm Database - 2
 [comments]

@@ -10,10 +10,10 @@ xform 0 1312 1040
 p 2208 -96 100 0 -1 author:S.M.Beard
 p 2432 -112 100 0 -1 border:C
 p 2208 -128 100 0 1 checked:A.Foster
-p 2432 -144 100 0 -1 date:$Date: 1999-05-18 22:01:50 $
-p 2208 2208 100 0 -1 id:$Id: errorLogCad.sch,v 1.1.1.1 1999-05-18 22:01:50 cboyer Exp $
+p 2432 -144 100 0 -1 date:$Date: 1999-05-18 22:39:34 $
+p 2208 2208 100 0 -1 id:$Id: errorLogCad.sch,v 1.2 1999-05-18 22:39:34 cboyer Exp $
 p 2448 16 100 0 -1 project:Gemini Wavefront Sensing System
-p 2208 -16 100 0 -1 revision:$Revision: 1.1.1.1 $
+p 2208 -16 100 0 -1 revision:$Revision: 1.2 $
 p 2448 -48 100 0 -1 title:Error Log CAD Records
 use ecad2 1328 967 100 0 errorLogClear
 xform 0 1488 1280

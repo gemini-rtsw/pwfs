@@ -551,7 +551,7 @@ wfsWriteVersion()
 	Else
 	{
 		Write the RCS revision number to the version record using
-		  epToVxPipeWrite ("version", "$Revision: 1.1.1.1 $", 0)
+		  epToVxPipeWrite ("version", "$Revision: 1.2 $", 0)
 		{
 			epToVxPipeWrite - see description in "wfsControl" task
 		}
