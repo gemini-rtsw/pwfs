@@ -76,6 +76,8 @@
  *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   12 Jun 2002: CB - aoModeCompute(): add imageStatus in invocation to check
+ *                     wether to coadd the image or not
  *   25 Feb 2002: CB - aoThresholdCompute() and aoThresholdPerSubapCompute()
  *                     background now computed between index1 and index2
  *   07 Feb 2002: CB - Add flip in header of fg and ao circular buffers in order
@@ -4215,15 +4217,16 @@ STATUS aoCentroidsCompute (
  *   aoModeCompute
  *
  *   INVOCATION:
- *   aoModeCompute (pImage, aoCcdId, aoCtrlId, imageNb, pThreshVect, 
- *                  aoCbAoCtrlId)
+ *   aoModeCompute (pImage, imageStatus, aoCcdId, aoCtrlId, imageNb, 
+ *                  pThreshVect, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage    (float *)    Pointer to the float buffer which contains the
- *                              image to be coadded
- *   (>) aoCcdId   (AO_CCD_ID)  Pointer to the AO CCD geometry context
- *   (!) aoCtrlId  (AO_CTRL_ID) Pointer to the AO control structure
- *   (>) imageNb   (int)        Number of images to average
+ *   (>) pImage       (float *)          Pointer to the float buffer which 
+ *                                       contains the image to be coadded
+ *   (>) imageStatus  (int)              Image status of the image to be coadded
+ *   (>) aoCcdId      (AO_CCD_ID)        Pointer to the AO CCD geometry context
+ *   (!) aoCtrlId     (AO_CTRL_ID)       Pointer to the AO control structure
+ *   (>) imageNb      (int)              Number of images to average
  *   (>) pThreshVect  (int)              Vector of the image current threshold 
  *                                       vector
  *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the aO control circular 
@@ -4258,6 +4261,7 @@ STATUS aoCentroidsCompute (
 
 STATUS aoModeCompute (
    float *          pImage,
+   int              imageStatus,
    AO_CCD_ID        aoCcdId,
    AO_CTRL_ID       aoCtrlId,
    int              imageNb,
@@ -4302,7 +4306,7 @@ STATUS aoModeCompute (
        printf ( "aoModeCompute: pThreshVect[%d]=%f\n", k, *(pThreshVect + k));
 #endif
 
-   if ( aoCtrlId->coaddCounter < imageNb )
+   if ( (imageStatus != AO_SH_OFF) && (aoCtrlId->coaddCounter < imageNb) )
    {
       if ( aoCtrlId->coaddCounter == 0 )
       {

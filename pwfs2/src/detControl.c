@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.25 2002-05-23 03:53:41 cboyer Exp $"};
+   "$Id: detControl.c,v 1.26 2002-06-18 21:00:32 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   12 Jun 2002: CB - aoModeCompute modified to reject raw frame with status
+ *                     AO_SH_OFF (purpose:aO + chopping)
  *   22 May 2002: CB - Modify detSigInitFgGain to reinit defFocusScale100Hz
  *                     when changing the focus gain
  *                     Add SIR fgFocusGain100
@@ -10484,6 +10486,7 @@ void detObserveEnd
    int            i;
    int            j;
    int            k;
+   int            imageStatus=OK;
    int            indexIm;
    int            indexFgCtrl;
    int            indexCtrl;
@@ -10509,6 +10512,9 @@ void detObserveEnd
    double         elapsed;
    double         rms;
    double         mean;
+   WFS_VECT       tempTotalVect;
+   WFS_VECT       tempCentroidsVect;
+   WFS_VECT       tempErrorCentroidsVect;
 
    /* File names. */
 
@@ -11256,10 +11262,21 @@ void detObserveEnd
                   ERROR_LOG ("Failed to subtract DARK from current frame");
                }
 
+               /* Determine status of the image: use aoCentroidsCompute() */
+
+               if ( aoCentroidsCompute ( pImage, obsId->aoCcdId, 
+                                         obsId->aoCtrlId, pThresh,
+                                         tempTotalVect, tempCentroidsVect,
+                                         tempErrorCentroidsVect, &imageStatus) 
+                    == ERROR )
+               {
+                  ERROR_LOG ("Failed to compute centroids on raw image");
+               }
+
 #ifdef DEBUG
-               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
-                       pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
-                       pThresh, obsId->aoCbAoCtrlId);
+               printf ("aoModeCompute (%p, %d, %p, %p, %d, %p, %p)\n",
+                       pImage, imageStatus, obsId->aoCcdId, obsId->aoCtrlId, 
+                       nCoadds, pThresh, obsId->aoCbAoCtrlId);
 #endif
                if ( obsId->updateAoScale == TRUE )
                {
@@ -11272,9 +11289,9 @@ void detObserveEnd
                   obsId->updateAoScale = FALSE ;
                } ;
 
-               if ( aoModeCompute (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                   nCoadds, pThresh, obsId->aoCbAoCtrlId) 
-                    == ERROR )
+               if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
+                                   obsId->aoCtrlId, nCoadds, pThresh, 
+                                   obsId->aoCbAoCtrlId) == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
                }
@@ -11288,14 +11305,13 @@ void detObserveEnd
                 */
 
                nCoadds = (int) obsId->nCoaddFrames;
+
 #ifdef DEBUG
-               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
-                       pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                       pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                       (int)obsId->writeToRm);
-               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
-                       pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
-                       pThresh, obsId->aoCbAoCtrlId);
+               printf (
+                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                 pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
+                 (int)obsId->writeToRm);
 #endif
 
                if ( obsId->updateFgScale == TRUE )
@@ -11329,10 +11345,18 @@ void detObserveEnd
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                }
-               
-               if ( aoModeCompute (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                   nCoadds, pThresh, obsId->aoCbAoCtrlId) 
-                    == ERROR )
+
+               imageStatus = *pWfsStatus;
+
+#ifdef DEBUG
+               printf ("aoModeCompute (%p, %d, %p, %p, %d, %p, %p)\n",
+                       pImage, imageStatus, obsId->aoCcdId, obsId->aoCtrlId, 
+                       nCoadds, pThresh, obsId->aoCbAoCtrlId);
+#endif
+
+               if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
+                                   obsId->aoCtrlId, nCoadds, pThresh, 
+                                   obsId->aoCbAoCtrlId) == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
                }
@@ -11696,9 +11720,6 @@ void detObserveEnd
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
                pWfsStatus, (int)obsId->writeToRm);
-               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
-                       pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
-                       pThresh, obsId->aoCbAoCtrlId);
 #endif
 
                if ( obsId->updateFgScale == TRUE )
@@ -11734,6 +11755,8 @@ void detObserveEnd
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
+
+               imageStatus = *pWfsStatus;
                
                if ( obsId->threshRealTimeFlag == TRUE )
                {
@@ -11746,9 +11769,15 @@ void detObserveEnd
                   }
                }
 
-               if ( aoModeCompute (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                   nCoadds, pThresh, obsId->aoCbAoCtrlId) 
-                    == ERROR )
+#ifdef DEBUG
+               printf ("aoModeCompute (%p, %d, %p, %p, %d, %p, %p)\n",
+                       pImage, imageStatus, obsId->aoCcdId, obsId->aoCtrlId, 
+                       nCoadds, pThresh, obsId->aoCbAoCtrlId);
+#endif
+
+               if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
+                                   obsId->aoCtrlId, nCoadds, pThresh, 
+                                   obsId->aoCbAoCtrlId) == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
                }
@@ -12041,6 +12070,8 @@ void detObserveEnd
                      ERROR_LOG ("Failed to run FG correction");
                   }
 
+                  imageStatus = *pWfsStatus;
+
                   if ( obsId->threshRealTimeFlag == TRUE )
                   {
                      if ( aoThresholdPerSubapCompute (pImage, obsId->aoCcdId,
@@ -12055,7 +12086,7 @@ void detObserveEnd
 
                   if ( obsId->aoFlag == TRUE )
                   {
-                     if ( aoModeCompute (pImage, obsId->aoCcdId, 
+                     if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
                                          obsId->aoCtrlId,
                                          nCoadds, pThresh, obsId->aoCbAoCtrlId) 
                           == ERROR )
