@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.2 1999-07-17 02:14:01 cboyer Exp $"};
+   "$Id: detControl.c,v 1.3 1999-11-10 23:59:35 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -35,6 +35,13 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   2 Nov 99: CB - debug detGeometry, allow binning x2,y2
+ *                  modify ospUpdate, ospNewTrackingAndFocus
+ *   1 Nov 99: CB - Create detCreateFileName -> combine path and file
+ *                  name and remove .fits at the end
+ *                  New observe command + new DHS I/F + new signal
+ *                  processing commands
+ *   13 Oct 99: CB - Download the DSP until it works
  *   9 Apr 99: CB - simplified version for PWFS2 only
  *INDENT-ON*
  *-
@@ -87,6 +94,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 /****************************************************************** Defines ***/
 
 /*#define DEBUG*/                   /* Define this macro to enable debug messages */
+
+#define DEBUG_DOWNLOAD          /* Define this macro to enable debug messages */
+                                /* when downloading DSP code                  */
 
 #define DHS_WAIT_TIMEOUT   3600 /* Timeout waiting for DHS semaphore 60s      */
 
@@ -206,9 +216,9 @@ LOCAL uint32   detTemp  (const char * pWfsName, const char * pRecordPrefix,
 LOCAL uint32   detSigInit   (const char * pWfsName, const char * pRecordPrefix, 
                              CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
-LOCAL uint32   detSigUpdate (const char * pWfsName, const char * pRecordPrefix, 
-                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                             SDSU_ID sdsuId, OBS_ID obsId);
+LOCAL uint32   detSigInitGain (const char * pWfsName, const char * pRecordPrefix, 
+                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                               SDSU_ID sdsuId, OBS_ID obsId);
 LOCAL uint32   detSigMode   (const char * pWfsName, const char * pRecordPrefix, 
                              CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
@@ -313,6 +323,9 @@ STATUS   detControl
 
    uint32       detControlStopMask; /* Mask for detecting which detControlStop*/
                                     /* bit refers to this detector controller.*/
+
+   uint32       tryDownload ;       /* Counter to stop attempt for downloading*/
+                                    /* DSP code                               */
 
    /* Variables used to define the buffer to be used for storing data.   */
 
@@ -614,107 +627,135 @@ STATUS   detControl
        detObsIdP2 = obsId;
     }
 
-      /*
-       * Download the default OMF code to the SDSU controller automatically on 
-       * startup. The health is set to WARNING if this fails
-       */
+    /*
+     * Download the default OMF code to the SDSU controller automatically on 
+     * startup. The health is set to WARNING if this fails
+     */
 
-      if (detDownloadDefault (pWfsName, pRecordPrefix, sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to download default DSP code on startup");
-         initFailed = TRUE;
-      }
+#ifdef DEBUG_DOWNLOAD
+    sdsuPrintRepBuf (sdsuId) ;
+#endif
 
-      /*
-       * Compare the default detector geometry contained in the DSP code with 
-       * the values written to xPixels and yPixels from the DET_CONTROL 
-       * software constants. (The DSP code describes what the detector 
-       * controller is capable of and the DET_CONTROL constants are used to 
-       * define the default parameter limits of CAD commands). After calling
-       * detCheckGeometry, xMax and yMax should contain the maximum possible 
-       * data array size, allowing a data buffer of a suitable size to be 
-       * allocated.
-       *
-       */
+    tryDownload = 0 ;
+    while ( (detDownloadDefault (pWfsName, pRecordPrefix, sdsuId) == ERROR) 
+            && (tryDownload < 10) )
+    {
+          /* RESET REP BUFFER, VME and CONTROLLER */
+#ifdef DEBUG_DOWNLOAD
+          sdsuPrintRepBuf (sdsuId) ;
+#endif
+          if ( sdsu_initRepBuf (sdsuId) == ERROR )
+             ERROR_LOG ("Failed to reset to zero the reply buffer ");
+#ifdef DEBUG_DOWNLOAD
+          sdsuPrintRepBuf (sdsuId) ;
+#endif
+          if ( sdsuReset (sdsuId, SDSU_RESET_VME | SDSU_RESET_CONTROLLER) == ERROR )
+             ERROR_LOG ("Failed to reset SDSU interface and controller");
+#ifdef DEBUG_DOWNLOAD
+          sdsuPrintRepBuf (sdsuId) ;
+#endif
 
-      if (detCheckGeometry (pWfsName, sdsuId, &xMax, &yMax, &xPixels, &yPixels) 
-          == ERROR)
-      {
-         ERROR_LOG (
-         "Error while checking default detector geometry on startup");
-         initFailed = TRUE;
-      }
+          tryDownload ++ ;
+    }
 
-      /*
-       * Create data buffer to hold several frames of data, using the xPixels 
-       * and yPixels determined above.
-       */
+    if ( tryDownload == 10 )
+    {
+       ERROR_LOG ("Failed to download default DSP code on startup");
+       initFailed = TRUE;
+    }
 
-      if (sdsuBufferCreate (sdsuId, (xMax * yMax), maxFrames) == ERROR)
-      {
-         ERROR_LOG ("Failed to create data buffer on startup");
-         initFailed = TRUE;
-      }
+    /*
+     * Compare the default detector geometry contained in the DSP code with 
+     * the values written to xPixels and yPixels from the DET_CONTROL 
+     * software constants. (The DSP code describes what the detector 
+     * controller is capable of and the DET_CONTROL constants are used to 
+     * define the default parameter limits of CAD commands). After calling
+     * detCheckGeometry, xMax and yMax should contain the maximum possible 
+     * data array size, allowing a data buffer of a suitable size to be 
+     * allocated.
+     *
+     */
 
-      /*
-       * Initialise the readout process with our frame callback.
-       * There is no packet callback in this version of the code.
-       * INTERRUPTS DISABLED. SWITCH TO SIMPLE VERSION.
-       */
+    if (detCheckGeometry (pWfsName, sdsuId, &xMax, &yMax, &xPixels, &yPixels) 
+        == ERROR)
+    {
+       ERROR_LOG (
+       "Error while checking default detector geometry on startup");
+       initFailed = TRUE;
+    }
+
+    obsId->binningFlag = FALSE ;
+
+    /*
+     * Create data buffer to hold several frames of data, using the xPixels 
+     * and yPixels determined above.
+     */
+
+    if (sdsuBufferCreate (sdsuId, (xMax * yMax), maxFrames) == ERROR)
+    {
+       ERROR_LOG ("Failed to create data buffer on startup");
+       initFailed = TRUE;
+    }
+
+    /*
+     * Initialise the readout process with our frame callback.
+     * There is no packet callback in this version of the code.
+     * INTERRUPTS DISABLED. SWITCH TO SIMPLE VERSION.
+     */
    
-      if (sdsuSimpleReadoutOpen (sdsuId, NULL, detObserveEnd, 0, TRUE) 
-          == ERROR)
-      {
-         ERROR_LOG ("Failed to start readout task on startup");
-         initFailed = TRUE;
-      }
+    if (sdsuSimpleReadoutOpen (sdsuId, NULL, detObserveEnd, 0, TRUE) 
+        == ERROR)
+    {
+       ERROR_LOG ("Failed to start readout task on startup");
+       initFailed = TRUE;
+    }
 
-      /*
-       * Create a signal processing geometry structure and initialise it with
-       * the default detector geometry.
-       */
+    /*
+     * Create a signal processing geometry structure and initialise it with
+     * the default detector geometry.
+     */
 
-      obsId->ospGeometry = 
-      (struct OSP_GEOMETRY *) calloc (1, sizeof(struct OSP_GEOMETRY));
-      if ( obsId->ospGeometry == NULL )
-      {
-         ERROR_SET (0, "Failed to create OSP geometry structure on startup", 
-                    ERROR_LOG_NOW);
-         initFailed = TRUE;
-      }
+    obsId->ospGeometry = 
+    (struct OSP_GEOMETRY *) calloc (1, sizeof(struct OSP_GEOMETRY));
+    if ( obsId->ospGeometry == NULL )
+    {
+       ERROR_SET (0, "Failed to create OSP geometry structure on startup", 
+                  ERROR_LOG_NOW);
+       initFailed = TRUE;
+    }
 
-      if ( !sdsuId->simulate )
-      {
-         if (detCopyGeometry (pWfsName, sdsuId, obsId->ospGeometry) == ERROR)
-         {
-            ERROR_LOG (
-            "Error while copying default detector geometry on startup");
-            initFailed = TRUE;
-         }
+    if ( !sdsuId->simulate )
+    {
+       if (detCopyGeometry (pWfsName, sdsuId, obsId->ospGeometry) == ERROR)
+       {
+          ERROR_LOG (
+          "Error while copying default detector geometry on startup");
+          initFailed = TRUE;
+       }
 
-         strcpy (obsId->pWfsName, "PWFS2");
-      }
-      else
-      {
-         /* In simulation mode use default values for the parameters. */
+       strcpy (obsId->pWfsName, "PWFS2");
+    }
+    else
+    {
+       /* In simulation mode use default values for the parameters. */
 
-         obsId->ospGeometry->sectors =     4;
-         obsId->ospGeometry->xstart =      0;
-         obsId->ospGeometry->ystart =      0;
-         obsId->ospGeometry->xbin =        1;
-         obsId->ospGeometry->ybin =        1;
-         obsId->ospGeometry->xraster =     xPixels / 2;
-         obsId->ospGeometry->yraster =     yPixels / 2;
-         obsId->ospGeometry->xspace =      0;
-         obsId->ospGeometry->yspace =      0;
-         obsId->ospGeometry->xsubap =      1;
-         obsId->ospGeometry->ysubap =      1;
-         obsId->ospGeometry->xarraysize =  xPixels;
-         obsId->ospGeometry->yarraysize =  yPixels;
-         obsId->ospGeometry->framesizeflag = 1;
+       obsId->ospGeometry->sectors =     4;
+       obsId->ospGeometry->xstart =      0;
+       obsId->ospGeometry->ystart =      0;
+       obsId->ospGeometry->xbin =        1;
+       obsId->ospGeometry->ybin =        1;
+       obsId->ospGeometry->xraster =     xPixels / 2;
+       obsId->ospGeometry->yraster =     yPixels / 2;
+       obsId->ospGeometry->xspace =      0;
+       obsId->ospGeometry->yspace =      0;
+       obsId->ospGeometry->xsubap =      1;
+       obsId->ospGeometry->ysubap =      1;
+       obsId->ospGeometry->xarraysize =  xPixels;
+       obsId->ospGeometry->yarraysize =  yPixels;
+       obsId->ospGeometry->framesizeflag = 1;
 
-         strcpy (obsId->pWfsName, "PWFS2");
-      }
+       strcpy (obsId->pWfsName, "PWFS2");
+    }
 
    /*
     * Create a signal processing context structure appropriate for the given 
@@ -1082,13 +1123,13 @@ STATUS   detControl
             detSigInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
                         sdsuId, obsId);
          }
-         else if (commandNumber == DET_CONTROL_CMD_SIGUPDATE)
+         else if (commandNumber == DET_CONTROL_CMD_SIGINITGAIN)
          {
 
             /* Update closed loop gains when closed loop */
 
             errorNumber = 
-            detSigUpdate (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
+            detSigInitGain (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
                           sdsuId, obsId);
          }
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE)
@@ -2013,6 +2054,7 @@ uint32 detObserveStart
    /* Variables used to specify data label and file names. */
 
    long            outOptions;    /* Output options (0=none, 1=DHS, 2=file).  */
+   long            dhsOutOptions; /* DHS output options (0=PERM, 1=TEMP, 2=QL)*/
 
    char *          pLabelFromDhs; /* Data label provided by DHS server.       */
 
@@ -2034,7 +2076,7 @@ uint32 detObserveStart
    /* Other DHS variables (see dhstests.c) */
 
    DHS_STATUS     dhsErrno;
-   /*char *         axisLabel[2]={"Xaxis","Yaxis"};*/
+   char *         axisLabel[2]={"Xaxis","Yaxis"};
    uint32         dims[1];
    uint32         axisSize[2];
    uint32         origin[2];
@@ -2052,10 +2094,13 @@ uint32 detObserveStart
                                    /* to (x,y) in radians.                    */
    struct WCS_CTX ctx;             /* World Coordinate System context.        */
    struct WCS     wcs;             /* Basic TCS World Coordinate System.      */
-   struct WCS     wcsij;           /* Transformed World Coordinate System for */
-                                   /* IJ.                                     */
+   struct WCS     wcsij;           /* Transformed WCS for IJ.                 */
+   double         trackRA;         /* TCS track Right Ascension.              */
+   double         trackDec;        /* TCS track Declination.                  */
+
    FRAMETYPE      trackFrame;      /* TCS track frame                         */
    struct EPOCH   trackEquinox;    /* TCS track equinox.                      */
+   struct EPOCH   trackEpoch;      /* TCS track epoch.                        */
    double         trackWavelength; /* Track wavelength in microns.            */
    double         timeTAI;         /* International Atomic Time.              */
    double         rawTimeWcs;      /* Gemini raw time at which WCS info is    */
@@ -2064,11 +2109,26 @@ uint32 detObserveStart
                                    /* refers.                                 */
    int            p;               /* Point counter.                          */
 
+   char           raString[16];    /* String which contains the RA value      */
+   char           decString[16];   /* String which contains the Dec value     */
+   float          crpix1Float;     /* Float value of crpix1                   */
+   float          crpix2Float;     /* Float value of crpix2                   */
+   float          cd1_1Float;      /* Float value of cd1_1                    */
+   float          cd1_2Float;      /* Float value of cd1_2                    */
+   float          cd2_1Float;      /* Float value of cd2_1                    */
+   float          cd2_2Float;      /* Float value of cd2_2                    */
+
+
    /* Variables associated with the frame buffers. */
 
    int            nPixels;         /* Total number of pixels.                 */
 
    /* SDSU parameters. */
+
+   long           nframe;          /* Number of frames.                       */
+   double         exposure;        /* Exposure time in seconds.               */
+
+   uint32         sdsuNframe;      /* Value for SDSU parameter NFRAME.        */
 
    uint32         expTim;          /* Exp. time in SDSU units from T_EXPTIM.  */
    double         readoutTimeout;  /* Readout timeout in seconds.             */
@@ -2150,12 +2210,62 @@ uint32 detObserveStart
 
       /* Obtain the attributes */
 
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pDataLabel);
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                             (char *) &nframe);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
+                             (char *) &exposure);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
                              (char *) &outOptions);
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFilePath);
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pOutFileName);
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, pSimFileName);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pDataLabel);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4,
+                             (char *) &dhsOutOptions);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, pFilePath);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, pOutFileName);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, pSimFileName);
+
+      /* Check the number of frames is sensible */
+
+      if ( (nframe <= 0) && (nframe != -1) )
+      {
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE, "Invalid number of frames, %ld",
+                     ERROR_LOG_NOW, nframe);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+
+      /*
+       * Check the exposure time is sensible. The SDSU controller measures
+       * exposures in units of 81.92 microseconds and stores the exposure in a
+       * 32 bit integer, so the upper limit in seconds is 2**32 * 0.000008192 =
+       * 351,843 seconds
+       */
+
+      if ( (exposure < 0.0) || (exposure > 351843.0) )
+      {
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
+                     "Invalid exposure time, %f seconds.",
+                     ERROR_LOG_NOW, exposure);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+
+      /* Check if the number of frames fits with the dhs output */
+      /* Permanent storage should be used with nframe = 1 */
+
+      if ( (outOptions == 1) && (dhsOutOptions == 0) && (nframe != 1) )
+      {
+         ERROR_SET (S_detControl_BAD_ATTRIBUTE,
+               "For permanent DHS storage, the number of frame should be 1",
+               ERROR_LOG_NOW);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+
+      /* Combine file and path name for output file name */
+
+      detCreateFileName ( pFilePath ,
+                          pOutFileName ,
+                          pFullOutFileName ) ;
 
       /*
        * Combine the file path and file names, ignoring the path if not 
@@ -2164,12 +2274,12 @@ uint32 detObserveStart
 
       if ( strcmp (pFilePath, "") == 0 )
       {
-        strncpy (pFullOutFileName, pOutFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
+        /*strncpy (pFullOutFileName, pOutFileName, EPICS_MAX_BYTES_STRING_ATTRIB);*/
         strncpy (pFullSimFileName, pSimFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
       }
       else
       {
-        if ( strcmp(pOutFileName, "NONE") == 0 )
+        /*if ( strcmp(pOutFileName, "NONE") == 0 )
         {
            strncpy (pFullOutFileName, pOutFileName, 
                     EPICS_MAX_BYTES_STRING_ATTRIB);
@@ -2177,7 +2287,7 @@ uint32 detObserveStart
         else
         {
            sprintf (pFullOutFileName, "%s/%s", pFilePath, pOutFileName );
-        }
+        }*/
 
         if ( strcmp(pSimFileName, "NONE") == 0 )
         {
@@ -2195,13 +2305,26 @@ uint32 detObserveStart
        * name, and the name in question is not "NONE".
        */
 
-      if ((strcmp(pFullOutFileName, "NONE") != 0) && 
+      /*if ((strcmp(pFullOutFileName, "NONE") != 0) && 
           (strstr (pFullOutFileName, ".fits") == NULL))
-         strncat (pFullOutFileName, ".fits", EPICS_MAX_BYTES_STRING_ATTRIB);
+         strncat (pFullOutFileName, ".fits", EPICS_MAX_BYTES_STRING_ATTRIB);*/
 
       if ((strcmp(pFullSimFileName, "NONE") != 0) && 
           (strstr (pFullSimFileName, ".fits") == NULL))
          strncat (pFullSimFileName, ".fits", EPICS_MAX_BYTES_STRING_ATTRIB);
+
+      /*
+       * Init ccdSec, dataSec, origSec. Because for the moment binning and
+       * windowing are not available, these strings are identical and contain
+       * default values for full frame
+       */
+
+      sprintf ( obsId->dataSec , "[1:%d,1:%d]" ,
+                obsId->xPixels , obsId->yPixels ) ;
+      sprintf ( obsId->ccdSec , "[1:%d,1:%d]" ,
+                obsId->xPixels , obsId->yPixels ) ;
+      sprintf ( obsId->origSec , "[1:%d,1:%d]" ,
+                obsId->xPixels , obsId->yPixels ) ;
 
       /*
        * If a request has been made to send data to the DHS, check that the 
@@ -2232,6 +2355,7 @@ uint32 detObserveStart
       obsId->observing = TRUE;
       obsId->stopped = FALSE;
       obsId->nframes = 0;
+      obsId->outNFrames = 0;
       observingState = CAR_BUSY;
       if (epToVxPipeWrite (NULL, (char *) &observingState, 
                            obsId->pDetObservingContext) == ERROR)
@@ -2292,6 +2416,7 @@ uint32 detObserveStart
       /* Load up the observation ID structure with the new information. */
 
       obsId->outOptions = (int) outOptions;
+      obsId->dhsOutOptions = (int) dhsOutOptions;
       strncpy( obsId->pDataLabel, pDataLabel, EPICS_MAX_BYTES_STRING_ATTRIB);
       strncpy( obsId->pOutFileName, pFullOutFileName, 
                EPICS_MAX_BYTES_STRING_ATTRIB*2 );
@@ -2315,6 +2440,98 @@ uint32 detObserveStart
       }
       else
       {
+         if ( nframe == -1 )
+         {
+            MESSAGE_LOG1 (MSG_LOG,
+            "Setting up for an infinite series of exposures of %f seconds each",
+            exposure);
+
+            /* BUG WORK AROUND: THE SDSU CONTROLLER RETURNS FRAME COUNT=1
+             * WHEN ASKED FOR AN INFINITE
+             * NUMBER OF FRAMES, WHICH DETCONTROL THEN ASSUMES MEANS THE
+             * LAST FRAME HAS BEEN RECEIVED.
+             * UNTIL THE SDSU CODE IS FIXED, SET A FLAG TO INDICATE THE FRAME
+             * COUNT IS INFINITE.
+             */
+
+            nframe = 0;/* DSP code assumes 0 means infinite number of frames. */
+
+            obsId->continuous = TRUE;
+
+            obsId->totalFrames = nframe;
+
+            sdsuNframe = (uint32) nframe;
+         }
+         else if ( nframe == 1 )
+         {
+            MESSAGE_LOG1 (MSG_LOG,
+                    "Setting up for one exposure of %f seconds", exposure);
+
+            /* BUG WORK AROUND */
+            obsId->continuous = FALSE;
+
+            obsId->totalFrames = nframe;
+
+            sdsuNframe = (uint32) nframe;
+         }
+         else
+         {
+            MESSAGE_LOG2 (MSG_LOG,
+            "Setting up for %ld exposures of %f seconds each",
+            nframe, exposure);
+
+            /* BUG WORK AROUND */
+            obsId->continuous = FALSE;
+            obsId->totalFrames = nframe;
+
+            sdsuNframe = (uint32) 0;  /* Modif 01 nov 1999 - cb */
+         }
+
+         /* Set the number of frames by writing to the T_NFRAME parameter in the
+          * timing DSP Also define the total number of frames in the observation
+          * context structure. */
+
+         /*sdsuNframe = (uint32) nframe;*/  /* Modif 23 sept 1999 - cb */
+         /*sdsuNframe = (uint32) 1; */
+
+         /*obsId->totalFrames = nframe;*/
+
+#ifdef DEBUG
+         printf ("detExposure: Setting T_NFRAME parameter to %lu\n",
+                 sdsuNframe);
+#endif /* DEBUG */
+
+         if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_NFRAME", sdsuNframe )
+              == ERROR )
+         {
+            ERROR_LOG ("Error setting number of frames parameter");
+            errorNumber = S_detControl_SDSU_ERROR;
+         }
+
+         /* Set the exposure time by writing to the T_EXP_TIM parameter in
+          * the timing DSP
+          */
+
+         expTim = (uint32) (exposure / SDSU_EXPOSURE_UNIT);
+
+#ifdef DEBUG
+         printf ("detExposure: Setting T_EXP_TIM parameter to %lu\n", expTim);
+#endif /* DEBUG */
+
+         if ( sdsuParamWrite (sdsuId, SDSU_IDENT_TIM, "T_EXP_TIM", expTim )
+              == ERROR )
+         {
+            ERROR_LOG ("Error setting exposure time parameter");
+            errorNumber = S_detControl_SDSU_ERROR;
+         }
+
+         /* Update the requested total exposure time in the observation context
+          * structure.
+          */
+
+         obsId->exposedRQ = nframe * exposure;
+         sdsuId->exposureTicks = (int) (exposure * sysClkRateGet());
+
          /*
           * BUG WORK AROUND: Before attempting to query parameters from the 
           * timing board, send an ABT command to the VME board. This should 
@@ -2407,19 +2624,38 @@ uint32 detObserveStart
       MESSAGE_LOG2 (MSG_MINDEBUG, 
                     "Starting exposure of %f seconds in %d frames...",
                     obsId->exposed, obsId->totalFrames);
-      if (sdsuSimpleReadoutStart (sdsuId, obsId->totalFrames, (void *) obsId) 
-          == ERROR)
+      if ( obsId->totalFrames > 1 )
       {
-         ERROR_LOG ("Failed to start simple readout process");
-         obsId->observing = FALSE;
-         observingState = CAR_ERROR;
-         if (epToVxPipeWrite (NULL, (char *) &observingState, 
-                              obsId->pDetObservingContext) == ERROR)
+         if (sdsuSimpleReadoutStart (sdsuId, 0, (void *) obsId) == ERROR)
          {
-            ERROR_LOG ("Also failed to set observing state to ERROR.");
+            ERROR_LOG ("Failed to start simple readout process");
+            obsId->observing = FALSE;
+            observingState = CAR_ERROR;
+            if (epToVxPipeWrite (NULL, (char *) &observingState, 
+                                 obsId->pDetObservingContext) == ERROR)
+            {
+               ERROR_LOG ("Also failed to set observing state to ERROR.");
+            }
+            errorNumber = S_detControl_SDSU_ERROR;
+            return (errorNumber);
          }
-         errorNumber = S_detControl_SDSU_ERROR;
-         return (errorNumber);
+      }
+      else
+      {
+         if (sdsuSimpleReadoutStart (sdsuId, obsId->totalFrames, (void *) obsId) 
+             == ERROR)
+         {
+            ERROR_LOG ("Failed to start simple readout process");
+            obsId->observing = FALSE;
+            observingState = CAR_ERROR;
+            if (epToVxPipeWrite (NULL, (char *) &observingState, 
+                                 obsId->pDetObservingContext) == ERROR)
+            {
+               ERROR_LOG ("Also failed to set observing state to ERROR.");
+            }
+            errorNumber = S_detControl_SDSU_ERROR;
+            return (errorNumber);
+         }
       }
 
       /*
@@ -2511,9 +2747,15 @@ uint32 detObserveStart
        * (Default values will be supplied if the TCS is not available).
        */
 
-      wfsGetTrackFrame (&trackFrame, &(trackEquinox.type), 
-                        &(trackEquinox.year), &trackWavelength);
+      wfsGetTrackFrame (&trackFrame, &(trackEquinox.type),
+         &(trackEquinox.year), &trackWavelength,
+         &trackRA, &trackDec, &(trackEpoch.type), &(trackEpoch.year));
+
       obsId->equinox = trackEquinox.year;
+      obsId->epoch   = trackEpoch.year;
+      obsId->RA      = trackRA;
+      obsId->Dec     = trackDec;
+
 
       /*
        * If sufficient WCS calibration points are available, define the WCS
@@ -2701,8 +2943,11 @@ uint32 detObserveStart
          printf ("cd1_2    = %f\n", obsId->cd1_2);
          printf ("cd2_1    = %f\n", obsId->cd2_1);
          printf ("cd2_2    = %f\n", obsId->cd2_2);
+         printf ("RA       = %f hours\n", obsId->RA);
+         printf ("Dec      = %f degrees\n", obsId->Dec);
          printf ("radecsys = %s\n", obsId->radecsys);
          printf ("equinox  = %f\n", obsId->equinox);
+         printf ("epoch    = %f\n", obsId->epoch);
          printf ("mjd-obs  = %f\n", obsId->mjdobs);
 #endif
       }
@@ -2720,6 +2965,26 @@ uint32 detObserveStart
          obsId->mjdobs = timeTAI;
          obsId->wcsStatus = -1;
       }
+
+      /*
+       * Convert the time stamps from Gemini raw time into Universal Time
+       * and construct these into character strings.
+       */
+
+      if (timeThenC( obsId->rawtStart, UT1, 2, obsId->timeArrayStart ) != OK)
+      {
+         ERROR_SET (0,
+            "Failed to convert time stamp at observation start to date/time",
+            ERROR_LOG_NOW);
+      }
+      sprintf (obsId->utStartString, "%04d-%02d-%02d:%02d:%02d:%02d",
+               obsId->timeArrayStart[0], obsId->timeArrayStart[1], obsId->timeArrayStart[2],
+               obsId->timeArrayStart[3], obsId->timeArrayStart[4], obsId->timeArrayStart[5]);
+
+#ifdef DEBUG
+      printf ( "obsId->utStartString = %s\n" , obsId->utStartString ) ;
+#endif
+
 
       /*
        * If the DHS is being used then create a dataset to hold the 
@@ -2745,7 +3010,8 @@ uint32 detObserveStart
           * mode) (see ICD 3).
           */
 
-         if ( obsId->totalFrames == 1 )                  /* only one exposure */
+         /*if ( obsId->totalFrames == 1 )*/                  /* only one exposure */
+         if ( dhsOutOptions == 0 )
          {
             dhsBdCtl(obsId->dhsConnection, DHS_BD_CTL_LIFETIME, 
                      obsId->pDataLabel, DHS_BD_LT_PERMANENT, &dhsErrno);
@@ -2784,7 +3050,10 @@ uint32 detObserveStart
                             0, NULL, pDetDhsClientName, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataset, "telescope", DHS_DT_STRING, 
-                            0, NULL, "Gemini", &dhsErrno);
+                            0, NULL, "Gemini_North", &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataset, "observatory", DHS_DT_STRING,
+                            0, NULL, "Gemini_North", &dhsErrno);
             CHECK_DHS (dhsErrno);
          }
 
@@ -2828,51 +3097,111 @@ uint32 detObserveStart
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "axisSize", DHS_DT_INT32, 
                             1, dims, axisSize, &dhsErrno);
-            /*CHECK_DHS (dhsErrno);
-            dhsBdAttribAdd (obsId->dhsDataFrame, "axisLabel", DHS_DT_STRING, 
-                            1, dims, axisLabel, &dhsErrno);*/
             CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "axisLabel", DHS_DT_STRING, 
+                            1, dims, axisLabel, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "obstype", DHS_DT_STRING, 0,
+                            NULL, obsId->pObsType, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "exptime", DHS_DT_DOUBLE, 0,
+                            NULL, obsId->exposed, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "darktime", DHS_DT_DOUBLE, 0,
+                            NULL, obsId->exposed, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+
 
             /* World Coordinate System attributes */
 
             if ( wcsStatus == 0 )
             {
-               dhsBdAttribAdd (obsId->dhsDataFrame, "ctype1", DHS_DT_STRING, 
+               dhsBdAttribAdd (obsId->dhsDataFrame, "ctype1", DHS_DT_STRING,
                                0, NULL, obsId->ctype1, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "crpix1", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->crpix1), &dhsErrno);
+               crpix1Float = (float)(obsId->crpix1);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CRPIX1", DHS_DT_FLOAT, 0,
+                               NULL, crpix1Float, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "crval1", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->crval1), &dhsErrno);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CRVAL1", DHS_DT_DOUBLE, 0,
+                               NULL, obsId->crval1, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "ctype2", DHS_DT_STRING, 
-                               0, NULL, obsId->ctype1, &dhsErrno);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "ctype2", DHS_DT_STRING, 0,
+                               NULL, obsId->ctype2, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "crpix2", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->crpix2), &dhsErrno);
+               crpix2Float = (float)(obsId->crpix2);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CRPIX2", DHS_DT_FLOAT, 0,
+                               NULL, crpix2Float, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "crval2", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->crval2), &dhsErrno);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CRVAL2", DHS_DT_DOUBLE, 0,
+                               NULL, obsId->crval2, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "cd1_1", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->cd1_1), &dhsErrno);
+               cd1_1Float = (float)(obsId->cd1_1);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CD1_1", DHS_DT_FLOAT, 0,
+                               NULL, cd1_1Float, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "cd1_2", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->cd1_2), &dhsErrno);
+               cd1_2Float = (float)(obsId->cd1_2);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CD1_2", DHS_DT_FLOAT, 0,
+                               NULL, cd1_2Float, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "cd2_1", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->cd2_1), &dhsErrno);
+               cd2_1Float = (float)(obsId->cd2_1);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CD2_1", DHS_DT_FLOAT, 0,
+                               NULL, cd2_1Float, &dhsErrno);
                CHECK_DHS (dhsErrno);
-               dhsBdAttribAdd (obsId->dhsDataFrame, "cd2_2", DHS_DT_DOUBLE, 
-                               0, NULL, &(obsId->cd2_2), &dhsErrno);
+               cd2_2Float = (float)(obsId->cd2_2);
+               dhsBdAttribAdd (obsId->dhsDataFrame, "CD2_2", DHS_DT_FLOAT, 0,
+                               NULL, cd2_2Float, &dhsErrno);
                CHECK_DHS (dhsErrno);
             }
 
-            dhsBdAttribAdd (obsId->dhsDataFrame, "mjdobjs", DHS_DT_DOUBLE, 
-                            0, NULL, &(obsId->mjdobs), &dhsErrno);
+            sprintf ( raString , "%lf" , obsId->RA ) ;
+            sprintf ( decString , "%lf" , obsId->Dec ) ;
+
+            dhsBdAttribAdd (obsId->dhsDataFrame, "RA", DHS_DT_STRING, 0, NULL,
+                            raString, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "DEC", DHS_DT_STRING, 0, NULL,
+                            decString, &dhsErrno);
             CHECK_DHS (dhsErrno);
 
+            dhsBdAttribAdd (obsId->dhsDataFrame, "equinox", DHS_DT_DOUBLE, 0,
+                            NULL, obsId->equinox, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+
+            dhsBdAttribAdd (obsId->dhsDataFrame, "epoch", DHS_DT_DOUBLE, 0,
+                            NULL, obsId->epoch, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+
+            dhsBdAttribAdd (obsId->dhsDataFrame, "mjd-obs", DHS_DT_DOUBLE, 
+                            0, NULL, &(obsId->mjdobs), &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "xbin", DHS_DT_INT32,
+                            0, NULL, obsId->ospGeometry->xbin, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "ybin", DHS_DT_INT32,
+                            0, NULL, obsId->ospGeometry->ybin, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "datasec", DHS_DT_STRING,
+                            0, NULL, obsId->dataSec, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "ccdsec", DHS_DT_STRING,
+                            0, NULL, obsId->ccdSec, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "origsec", DHS_DT_STRING,
+                            0, NULL, obsId->origSec, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            dhsBdAttribAdd (obsId->dhsDataFrame, "utstart", DHS_DT_STRING,
+                            0, NULL, obsId->utStartString, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            strcpy ( obsId->detType , "CCD39+SDSUII" ) ;
+            dhsBdAttribAdd (obsId->dhsDataFrame, "dettype", DHS_DT_STRING,
+                            0, NULL, obsId->detType, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+            strcpy ( obsId->detId , "a5207-2-13" ) ;
+            dhsBdAttribAdd (obsId->dhsDataFrame, "detid", DHS_DT_STRING,
+                            0, NULL, obsId->detId, &dhsErrno);
+
+            CHECK_DHS (dhsErrno);
          }
 
          if (dhsErrno != DHS_S_SUCCESS)
@@ -3116,6 +3445,7 @@ void detObserveEnd
     */
 
    if ( obsId->continuous ) frameCount = 0;
+   if ( obsId->totalFrames > 1 ) frameCount = 0;  /* MODIF 01 nov 99 */
 
    /*
     * Report the frame counter and the number of frames remaining.
@@ -3290,8 +3620,11 @@ void detObserveEnd
          goto ERROR_EXIT;
       }
 
-      /* Check if packetCount again... */
-      
+      obsId->outNFrames ++ ;
+#ifdef DEBUG
+      printf ( "outNFrames = %d\n" , obsId->outNFrames ) ;
+#endif
+
       /*
        * If a signal processing context has been initialised, process the data.
        */
@@ -3326,6 +3659,7 @@ void detObserveEnd
                   {
                      ERROR_LOG ("Failed to subtract DARK from current frame");
                   }
+
                   break;
 
                case (OSP_MODE_FG):
@@ -3364,72 +3698,75 @@ void detObserveEnd
                    * Fast Guide and Coadd mode.
                    */
 
-                  nCoadds = (int) obsId->nCoaddFrames;
+                  if ( obsId->binningFlag == FALSE )
+                  {
+                     nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
-                  printf ("ospTracking: %p %p\n", obsId->pCurFrame, 
-                          obsId->ospFGContext);
+                     printf ("ospTracking: %p %p\n", obsId->pCurFrame, 
+                             obsId->ospFGContext);
 #endif
-                  if ( obsId->updateGain == TRUE )
-                  {
-                     /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
-                     obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
-                     obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
-                     obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
-                     obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
-                     obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
+                     if ( obsId->updateGain == TRUE )
+                     {
+                        /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
+                        obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
+                        obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
+                        obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
+                        obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
+                        obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
 
-                     obsId->updateGain = FALSE ;
-                     /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
-                  };
+                        obsId->updateGain = FALSE ;
+                        /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
+                     };
 
-                  if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
-                       == ERROR )
-                  {
-                     ERROR_LOG ("Failed to run Tracking correction");
-                  }
+                     if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
+                          == ERROR )
+                     {
+                        ERROR_LOG ("Failed to run Tracking correction");
+                     }
 #ifdef DEBUG
-                  printf ("ospCoAddOnly: %p %d %p\n", obsId->pCurFrame, 
-                          nCoadds, obsId->ospFGContext);
+                     printf ("ospCoAddOnly: %p %d %p\n", obsId->pCurFrame, 
+                             nCoadds, obsId->ospFGContext);
 #endif
-                  if ( ospCoAddOnly (obsId->pCurFrame, nCoadds,
-                                     obsId->ospFGContext) == ERROR )
-                  {
-                     ERROR_LOG ("Failed to coadd data");
-                  }
+                     if ( ospCoAddOnly (obsId->pCurFrame, nCoadds,
+                                        obsId->ospFGContext) == ERROR )
+                     {
+                        ERROR_LOG ("Failed to coadd data");
+                     }
 
-                  /*
-                   * Increment the coadd counter and when it reaches nCoadds 
-                   * save the coadded data to disk. Coadded data are only 
-                   * saved once per observation.
-                   */
-
-                  obsId->coaddCounter++;
-                  if ( obsId->coaddCounter == nCoadds )
-                  {
                      /*
-                      * Make up a file name by adding the string ".coadd" to 
-                      * the given file name. Use a default file name if one 
-                      * has not been given.
+                      * Increment the coadd counter and when it reaches nCoadds 
+                      * save the coadded data to disk. Coadded data are only 
+                      * saved once per observation.
                       */
 
-                     if ( strcmp(obsId->pOutFileName, "") == 0 )
+                     obsId->coaddCounter++;
+                     if ( obsId->coaddCounter == nCoadds )
                      {
-                        strcpy ( pFileNameString, "Coadd.fits" );
-                     }
-                     else
-                     {
-                        sprintf( pFileNameString, "%s.coadd", 
-                                 obsId->pOutFileName );
-                     }
+                        /*
+                         * Make up a file name by adding the string ".coadd.fits" to 
+                         * the given file name. Use a default file name if one 
+                         * has not been given.
+                         */
 
-                     MESSAGE_LOG1 (MSG_MINDEBUG, 
-                     "Saving coadded data to %s", pFileNameString);
+                        if ( strcmp(obsId->pOutFileName, "") == 0 )
+                        {
+                           strcpy ( pFileNameString, "coadd.fits" );
+                        }
+                        else
+                        {
+                           sprintf( pFileNameString, "%s.coadd.fits", 
+                                    obsId->pOutFileName );
+                        }
 
-                     if ( detWriteFits (pFileNameString, obsId, 
-                          obsId->xPixels, obsId->yPixels,
-                          obsId->ospFGContext->sumbuff) == ERROR )
-                     {
-                        ERROR_LOG ("Failed to save coadded data to disk");
+                        MESSAGE_LOG1 (MSG_MINDEBUG, 
+                        "Saving coadded data to %s", pFileNameString);
+
+                        if ( detWriteFits (pFileNameString, obsId, 
+                             obsId->xPixels, obsId->yPixels,
+                             obsId->ospFGContext->sumbuff) == ERROR )
+                        {
+                           ERROR_LOG ("Failed to save coadded data to disk");
+                        }
                      }
                   }
                   break;
@@ -3449,7 +3786,7 @@ void detObserveEnd
                        obsId->ospFGContext->redsubbuff, obsId->ospFGContext) 
                        == ERROR )
                   {
-                    ERROR_LOG ("Failed to subtract DARK from current frame");
+                     ERROR_LOG ("Failed to subtract DARK from current frame");
                   }
                   if ( ospCoAddOnly (obsId->pCurFrame, nCoadds,
                                      obsId->ospFGContext) == ERROR )
@@ -3467,18 +3804,18 @@ void detObserveEnd
                   if ( obsId->coaddCounter == nCoadds )
                   {
                      /*
-                      * Make up a file name by adding the string ".coadd" to 
+                      * Make up a file name by adding the string ".coadd.fits" to 
                       * the given file name. Use a default file name if one 
                       * has not been given.
                       */
 
                      if ( strcmp(obsId->pOutFileName, "") == 0 )
                      {
-                        strcpy ( pFileNameString, "Coadd.fits" );
+                        strcpy ( pFileNameString, "coadd.fits" );
                      }
                      else
                      {
-                        sprintf( pFileNameString, "%s.coadd", 
+                        sprintf( pFileNameString, "%s.coadd.fits", 
                                  obsId->pOutFileName );
                      }
 
@@ -3500,45 +3837,47 @@ void detObserveEnd
                    * Calibrate Reference Vector mode.
                    */
 
-                  nCoadds = (int) obsId->nCoaddFrames;
-                  frameNb = (int) 100;
+                  if ( obsId->binningFlag == FALSE )
+                  {
+                     nCoadds = (int) obsId->nCoaddFrames;
+                     frameNb = (int) 100;
 
 #ifdef DEBUG
-                  printf ("ospCalibrateRefVector: %p %d %d %p\n", 
-                          obsId->pCurFrame, nCoadds, frameNb,
-                          obsId->ospFGContext);
+                     printf ("ospCalibrateRefVector: %p %d %d %p\n", 
+                             obsId->pCurFrame, nCoadds, frameNb,
+                             obsId->ospFGContext);
 #endif
-                  if ( obsId->updateGain == TRUE )
-                  {
-                     /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
-                     obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
-                     obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
-                     obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
-                     obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
-                     obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
-
-                     obsId->updateGain = FALSE ;
-                     /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
-                  } ;
-                  if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
-                       == ERROR )
-                  {
-                     ERROR_LOG ("Failed to run Tracking correction");
-                  };
-
-                  if ( obsId->coaddCounter < frameNb )
-                  {
-                     obsId->coaddCounter++;
-                  }
-                  else
-                  {
-                     if ( ospCalibrateRefVector (obsId->pCurFrame, nCoadds,
-                          obsId->ospFGContext) == ERROR )
+                     if ( obsId->updateGain == TRUE )
                      {
-                        ERROR_LOG ("Failed to calibrate reference vector");
+                        /*printf ( "detObserveEnd: Modify gains\n" ) ;*/
+                        obsId->ospFGContext->tipscale = (float)(obsId->tipGain) ;
+                        obsId->ospFGContext->tiltscale = (float)(obsId->tiltGain) ;
+                        obsId->ospFGContext->focusscale = (float)(obsId->focusGain) ;
+                        obsId->ospFGContext->gainFocus = (float)(obsId->focusAverageGain) ;
+                        obsId->ospFGContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
+
+                        obsId->updateGain = FALSE ;
+                        /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
+                     } ;
+                     if ( ospTracking (obsId->pCurFrame , obsId->ospFGContext) 
+                          == ERROR )
+                     {
+                        ERROR_LOG ("Failed to run Tracking correction");
+                     };
+
+                     if ( obsId->coaddCounter < frameNb )
+                     {
+                        obsId->coaddCounter++;
+                     }
+                     else
+                     {
+                        if ( ospCalibrateRefVector (obsId->pCurFrame, nCoadds,
+                             obsId->ospFGContext) == ERROR )
+                        {
+                           ERROR_LOG ("Failed to calibrate reference vector");
+                        }
                      }
                   }
-
                   break;
 
                case (OSP_MODE_FG_FOCUS):
@@ -3549,8 +3888,8 @@ void detObserveEnd
 
                   nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
-                  printf ("ospNewTrackingAndFocus: %p %p\n", 
-                          obsId->pCurFrame , obsId->ospFGContext);
+                  printf ("ospNewTrackingAndFocus: %p %p %d\n", 
+                          obsId->pCurFrame , obsId->ospFGContext, obsId->binningFlag);
 #endif
                   if ( obsId->updateGain == TRUE )
                   {
@@ -3565,7 +3904,7 @@ void detObserveEnd
                      /*printf ( "detObserveEnd: updateGain = %d\n" , obsId->updateGain );*/
                   } ;
                   if ( ospNewTrackingAndFocus (obsId->pCurFrame ,  
-                       obsId->ospFGContext) == ERROR )
+                       obsId->ospFGContext , obsId->binningFlag ) == ERROR )
                   {
                      ERROR_LOG (
                      "Failed to run Tracking and Focus correction");
@@ -3589,6 +3928,29 @@ void detObserveEnd
       {
          MESSAGE_LOG (MSG_MINDEBUG, "Sending data to DHS...");
 
+         if ( obsId->totalFrames == 1 )
+         {
+            /*
+             * Convert the time stamps from Gemini raw time into Universal Time
+             * and construct these into character strings.
+             */
+
+            if (timeThenC( obsId->rawtEnd, UT1, 2, obsId->timeArrayEnd ) != OK)
+            {
+               ERROR_SET (0,
+                  "Failed to convert time stamp at observation end to date/time",
+                  ERROR_LOG_NOW);
+            }
+
+            sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
+                     obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], obsId->timeArrayEnd[2],
+                     obsId->timeArrayEnd[3], obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
+
+            dhsBdAttribAdd (obsId->dhsDataFrame, "utend", DHS_DT_STRING,
+                            0, NULL, obsId->utEndString, &dhsErrno);
+            CHECK_DHS (dhsErrno);
+         }
+
 #ifdef DEBUG
          dhsBdDsPrint (obsId->dhsDataset, &dhsErrno);
          CHECK_DHS (dhsErrno);
@@ -3602,14 +3964,33 @@ void detObserveEnd
        (int) obsId->dhsConnection, obsId->pDataLabel, (int) obsId->dhsDataset);
 #endif /* DEBUG */
 
-         if ( obsId->totalFrames == 1 )
-            putTag = dhsBdPut (obsId->dhsConnection, obsId->pDataLabel, 
-                               DHS_BD_PT_DS, DHS_TRUE,
-                               obsId->dhsDataset, NULL, &dhsErrno);
+         if ( obsId->dhsOutOptions == 2 ) /* QL only */
+         {
+            if ( obsId->totalFrames == 1 )
+               putTag = dhsBdPut (obsId->dhsConnection, obsId->pDataLabel, 
+                                  DHS_BD_PT_DS_QL, DHS_TRUE,
+                                  obsId->dhsDataset, NULL, &dhsErrno);
+            else
+               putTag = dhsBdPut (obsId->dhsConnection, obsId->pDataLabel, 
+                                  DHS_BD_PT_DS_QL, DHS_FALSE,
+                                  obsId->dhsDataset, NULL, &dhsErrno);
+         }
          else
-            putTag = dhsBdPut (obsId->dhsConnection, obsId->pDataLabel, 
-                               DHS_BD_PT_DS, DHS_FALSE,
-                               obsId->dhsDataset, NULL, &dhsErrno);
+         {
+            if ( obsId->totalFrames == 1 )
+            {
+               putTag =
+               dhsBdPut (obsId->dhsConnection, obsId->pDataLabel,
+               DHS_BD_PT_DS, DHS_TRUE, obsId->dhsDataset, NULL, &dhsErrno);
+            }
+            else
+            {
+               putTag =
+               dhsBdPut (obsId->dhsConnection, obsId->pDataLabel,
+                         DHS_BD_PT_DS, DHS_FALSE, obsId->dhsDataset, NULL,
+                         &dhsErrno);
+            }
+         }
 
          CHECK_DHS (dhsErrno);
 
@@ -3696,15 +4077,14 @@ void detObserveEnd
 
          /* Save the unscrambled data to a FITS file. */
 
-         if ( obsId->nframes <= 1 )
+         if ( obsId->totalFrames != 1 )
          {
-            strncpy( pFileNameString, obsId->pOutFileName, 
-                     ((EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 + 3) );
+            sprintf( pFileNameString, "%s.%d.fits", obsId->pOutFileName,
+                     obsId->outNFrames );
          }
          else
          {
-            sprintf( pFileNameString, "%s.%d", obsId->pOutFileName, 
-                     obsId->nframes );
+            sprintf( pFileNameString, "%s.fits", obsId->pOutFileName ); 
          }
 
          MESSAGE_LOG2 (MSG_MINDEBUG, 
@@ -3723,6 +4103,15 @@ void detObserveEnd
          MESSAGE_LOG (MSG_MINDEBUG, "... file saved ok");
       }
 
+      /* If obsId->totalFrames > 1 and obsId->outNFrames = obsId->totalFrames */
+      /* stop the observation */
+
+#ifdef DEBUG
+      printf ( "detObserveEnd : ouNFrames = %d, totalFrames = %d\n" ,
+               obsId->outNFrames , obsId->totalFrames ) ;
+#endif
+      if ( (obsId->totalFrames > 1) && (obsId->outNFrames == obsId->totalFrames) )
+         obsId->stopped = TRUE ;
    }
 
    /*
@@ -3745,12 +4134,16 @@ void detObserveEnd
 
    if ( obsId->stopped )
    {
+      /* add 27 sept 99 for slow stop pb */
+      printf ( "detObserveEnd() -> sdsuReadoutAbort()\n" ) ;
       obsAlreadyAborted = TRUE;
       if (sdsuReadoutAbort (sdsuId) == ERROR)
       {
          ERROR_LOG ("Failed to abort readouts on receipt of STOP instruction");
          goto ERROR_EXIT;
       }
+      /* add 27 sept 99 for slow stop pb */
+      printf ( "detObserveEnd() -> sdsuReadoutAbort() done \n" ) ;
    }
 
 
@@ -3772,8 +4165,10 @@ void detObserveEnd
     * Otherwise set a timeout on the receipt of the next frame.
     */
 
+   /*printf ( "frameCount=%d, stopped=%d\n" , frameCount , obsId->stopped);*/
    if ( (frameCount == 1) || (obsId->stopped) )
    {
+      /*printf ( "sdsuId->frameErrors=%d\n" , sdsuId->frameErrors ) ;*/
       if ( sdsuId->frameErrors <= 0 )
       {
          MESSAGE_LOG1 (MSG_LOG, "Observation completed successfully, frames lost: %d", sdsuFrameLost);
@@ -3868,6 +4263,7 @@ ERROR_EXIT:
     * via the "observing" record.
     */
 
+   /*printf ( "ERROR_EXIT\n" ) ;*/
    if ( !obsAlreadyAborted )
    {
       if (sdsuReadoutAbort (sdsuId) == ERROR)
@@ -4235,6 +4631,8 @@ uint32 detStop
     */
 
    obsId->stopped = TRUE;
+   /* add 27 sept 99 for slow stop pb */
+   printf ( "detStop(): obsId->stopped=TRUE\n" );
 
    return (errorNumber);
 }
@@ -5728,6 +6126,7 @@ uint32 detGeometry
 
       xTotalSize = xSize * 2;
       yTotalSize = ySize * 2;
+      printf ( "detGeometry: USCAN=%d\n" , uscan ) ;
    }
    else
    {
@@ -5756,7 +6155,7 @@ uint32 detGeometry
    if ( (!sdsuId->simulate) && (packetSize > 0) )
    {
       nPackets = 
-      (int) ceil ( (double) (nPixels * outputs) / (double) packetSize );
+      (int) ceil ( (double) (nPixels) / (double) packetSize );
    }
    else
    {
@@ -5770,7 +6169,7 @@ uint32 detGeometry
     */
 
    if ( (xSubap == 1) && (ySubap == 1) && (xStart == 0) && (yStart == 0) &&
-        (xSpace == 0) && (ySpace == 0)
+        (xSpace == 0) && (ySpace == 0) 
       )
    {
       fullFrameFlag = 1;
@@ -5875,30 +6274,58 @@ uint32 detGeometry
 
    if ( (obsId->ospFGContext != NULL) && (obsId->ospGeometry != NULL) )
    {
-
-      obsId->ospGeometry->sectors =     (int) outputs;
-      obsId->ospGeometry->xstart =      (int) xStart;
-      obsId->ospGeometry->ystart =      (int) yStart;
-      obsId->ospGeometry->xbin =        (int) xBin;
-      obsId->ospGeometry->ybin =        (int) yBin;
-      obsId->ospGeometry->xraster =     (int) xRas;
-      obsId->ospGeometry->yraster =     (int) yRas;
-      obsId->ospGeometry->xspace =      (int) xSpace;
-      obsId->ospGeometry->yspace =      (int) ySpace;
-      obsId->ospGeometry->xsubap =      (int) xSubap;
-      obsId->ospGeometry->ysubap =      (int) ySubap;
-      obsId->ospGeometry->xarraysize =  80;
-      obsId->ospGeometry->yarraysize =  80;
-      obsId->ospGeometry->framesizeflag = fullFrameFlag;
-
-      if ( ospChangeGeometry (obsId->ospGeometry, obsId->ospFGContext) == 
-           ERROR )
+      if ( (xStart == 0) && (yStart == 0) && (xBin == 2) && (yBin == 2) &&
+           (xRas == 20) && (yRas == 20) && (xSpace == 0) && (ySpace == 0) &&
+           (xSubap == 1) && (ySubap == 1) )
       {
-         ERROR_LOG (
-         "Failed to update signal processing geometry parameters");
-         errorNumber = S_detControl_INTERNAL;
-         return (errorNumber);
+
+         obsId->ospFGContext->ospxraster = xRas ; 
+         obsId->ospFGContext->ospyraster = yRas ; 
+         obsId->ospFGContext->xframesize = xRas * outputs / 2 ;  
+         obsId->ospFGContext->yframesize = yRas * outputs / 2 ; 
+         obsId->ospFGContext->buffsize = (xRas * outputs / 2) * (yRas * outputs / 2) ;
+         
+         if ( obsId->binningFlag == FALSE )
+         {
+            obsId->ospFGContext->xcenter = (obsId->ospFGContext->xcenter - 0.5)/2 + 0.5 ;
+            obsId->ospFGContext->ycenter = (obsId->ospFGContext->ycenter - 0.5)/2 + 0.5 ;
+         }
+         obsId->binningFlag = TRUE ;
       }
+      else
+      {
+         obsId->ospGeometry->sectors =     (int) outputs;
+         obsId->ospGeometry->xstart =      (int) xStart;
+         obsId->ospGeometry->ystart =      (int) yStart;
+         obsId->ospGeometry->xbin =        (int) xBin;
+         obsId->ospGeometry->ybin =        (int) yBin;
+         obsId->ospGeometry->xraster =     (int) xRas;
+         obsId->ospGeometry->yraster =     (int) yRas;
+         obsId->ospGeometry->xspace =      (int) xSpace;
+         obsId->ospGeometry->yspace =      (int) ySpace;
+         obsId->ospGeometry->xsubap =      (int) xSubap;
+         obsId->ospGeometry->ysubap =      (int) ySubap;
+         obsId->ospGeometry->xarraysize =  80;
+         obsId->ospGeometry->yarraysize =  80;
+         obsId->ospGeometry->framesizeflag = fullFrameFlag;
+
+         if ( obsId->binningFlag == TRUE )
+         {
+            obsId->ospFGContext->xcenter = (obsId->ospFGContext->xcenter - 0.5)*2 + 0.5 ;
+            obsId->ospFGContext->ycenter = (obsId->ospFGContext->ycenter - 0.5)*2 + 0.5 ;
+         }
+         obsId->binningFlag = FALSE ;
+
+         if ( ospChangeGeometry (obsId->ospGeometry, obsId->ospFGContext) == 
+              ERROR )
+         {
+            ERROR_LOG (
+            "Failed to update signal processing geometry parameters");
+            errorNumber = S_detControl_INTERNAL;
+            return (errorNumber);
+         }
+      }
+         
    }
 
    return (errorNumber);
@@ -6866,10 +7293,10 @@ uint32 detSigInit
    char         pFullRefFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    double       refX, refY;
    double       threshold;
-   double       tipGain;
+   /*double       tipGain;
    double       tiltGain;
    double       focusGain;
-   double       focusAverageGain;
+   double       focusAverageGain;*/
    double       angle;
 
    /*
@@ -6885,11 +7312,12 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&angle);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&refX);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&refY);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&tipGain);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, pRefFileName);
+
+   /*EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&tipGain);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&tiltGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, pRefFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&focusGain);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, (char *)&focusAverageGain);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, (char *)&focusAverageGain);*/
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -6961,9 +7389,8 @@ uint32 detSigInit
                    pFullDarkFileName , pFullFlatFileName ,
                    threshold , angle , 
                    refX, refY, 
-                   tipGain , tiltGain ,
                    pFullRefFileName ,
-                   focusGain , focusAverageGain ) == ERROR )
+                   obsId->binningFlag ) == ERROR )
    {
       ERROR_SET (0, "Failed to update OSP context", ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
@@ -6977,11 +7404,11 @@ uint32 detSigInit
 
 /*+
  *   FUNCTION NAME:
- *   detSigUpdate
+ *   detSigInitGain
  *
  *   INVOCATION:
- *   detSigUpdate (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
- *                 sdsuId, obsId)
+ *   detSigInitGain (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
+ *                   sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pWfsName      (const char *)    Name of wavefront sensor p2
@@ -6995,10 +7422,10 @@ uint32 detSigInit
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigUpdate command
+ *   Execute detSigInitGain command
  *
  *   DESCRIPTION:
- *   This function updates closed loop gains
+ *   This function updates FG gains in open and closed loop
  *
  *   EXTERNAL VARIABLES:
  *   None. (The function needs to be reentrant)
@@ -7014,7 +7441,7 @@ uint32 detSigInit
  *-
  */
 
-uint32 detSigUpdate
+uint32 detSigInitGain
    (
    const char *    pWfsName,      /* Name of wavefront sensor.                */
    const char *    pRecordPrefix, /* Record name prefix.                      */
@@ -7064,28 +7491,44 @@ uint32 detSigUpdate
    }
 #endif
 
-   /*
-    * The command can only be used when an observation is in progress.
-    */
-
-   if ( !obsId->observing )
+   if ( obsId->ospFGContext == NULL )
    {
-      ERROR_SET (S_detControl_INTERNAL, "Observation not in progress", 
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Signal processing context not initialised", 
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
-   }
+   };
 
    /*
-    * Update data 
+    * The command can be used when an observation is or is not in progress.
     */
 
-   obsId->tipGain = tipGain ;
-   obsId->tiltGain = tiltGain ;
-   obsId->focusGain = focusGain ;
-   obsId->focusAverageGain = focusAverageGain ;
-   obsId->updateGain = TRUE ;
-   /*printf ( "detSigUpdate : updateGain = %d\n" , obsId->updateGain );*/
+   if ( obsId->observing )
+   {
+#ifdef DEBUG
+      printf ( "Init FG Gain when observation in progress\n" ) ;
+#endif
+
+      obsId->tipGain = tipGain ;
+      obsId->tiltGain = tiltGain ;
+      obsId->focusGain = focusGain ;
+      obsId->focusAverageGain = focusAverageGain ;
+      obsId->updateGain = TRUE ;
+      /*printf ( "detSigInitGain : updateGain = %d\n" , obsId->updateGain );*/
+   }
+   else
+   {
+#ifdef DEBUG
+      printf ( "Init FG Gain when observation is not in progress\n" ) ;
+#endif
+
+      obsId->ospFGContext->tipscale = (float)(tipGain) ;
+      obsId->ospFGContext->tiltscale = (float)(tiltGain) ;
+      obsId->ospFGContext->focusscale = (float)(focusGain) ;
+      obsId->ospFGContext->gainFocus = (float)(focusAverageGain) ;
+      obsId->ospFGContext->one_gainFocus = 1.0 - (float)(focusAverageGain) ;
+   }
     
    return (errorNumber);
 }
@@ -8458,8 +8901,6 @@ STATUS detWriteFits
    int            nPixels;          /* Number of pixels.                      */
    int            i;                /* Counter.                               */
    FILE *         fp;               /* File descriptor.                       */
-   int            timeArrayStart[7];/* Array of year/month/day/hour/min/sec   */
-   int            timeArrayEnd[7];  /* Array of year/month/day/hour/min/sec   */
 
    int            headerCount;      /* Count of header items written.         */
 
@@ -8495,19 +8936,23 @@ STATUS detWriteFits
     * and construct these into character strings.
     */
 
-   if (timeThenC( obsId->rawtStart, UT1, 2, timeArrayStart ) != OK)
+   /*if (timeThenC( obsId->rawtStart, UT1, 2, timeArrayStart ) != OK)
    {
       ERROR_SET (0, 
          "Failed to convert time stamp at observation start to date/time",
          ERROR_LOG_NOW);
-   }
+   }*/
 
-   if (timeThenC( obsId->rawtEnd, UT1, 2, timeArrayEnd ) != OK)
+   if (timeThenC( obsId->rawtEnd, UT1, 2, obsId->timeArrayEnd ) != OK)
    {
       ERROR_SET (0, 
          "Failed to convert time stamp at observation end to date/time",
          ERROR_LOG_NOW);
    }
+
+   sprintf (obsId->utEndString, "%04d-%02d-%02d:%02d:%02d:%02d",
+            obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], obsId->timeArrayEnd[2],
+            obsId->timeArrayEnd[3], obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
 
    fp = fopen (filename, "w");
 
@@ -8533,20 +8978,25 @@ STATUS detWriteFits
    headerCount++;
    fprintf (fp, "EXTEND  =                    T /                                                ");
    headerCount++;
-   fprintf (fp, "UTSTART ='%04d-%02d-%02d:%02d:%02d:%02d' /                                                ",
-            timeArrayStart[0], timeArrayStart[1], timeArrayStart[2], 
-            timeArrayStart[3], timeArrayStart[4], timeArrayStart[5]);
+   fprintf (fp, "UTSTART ='%20s'/                                                ", obsId->utStartString);
    headerCount++;
-   fprintf (fp, "UTEND   ='%04d-%02d-%02d:%02d:%02d:%02d' /                                                ",
-            timeArrayEnd[0], timeArrayEnd[1], timeArrayEnd[2], 
-            timeArrayEnd[3], timeArrayEnd[4], timeArrayEnd[5]);
+   fprintf (fp, "UTEND   ='%20s'/                                                ", obsId->utEndString);
    headerCount++;
-
    fprintf (fp, "EXPTIME =      %15f /                                                ", obsId->exposed);
+   headerCount++;
+   fprintf (fp, "DARKTIME=      %15f /                                                ", obsId->exposed);
    headerCount++;
    fprintf (fp, "ELAPSED =      %15f /                                                ", (obsId->rawtEnd - obsId->rawtStart));
    headerCount++;
+   fprintf (fp, "TELESCOP='%20s'/                                                ", "Gemini_North");
+   headerCount++;
    fprintf (fp, "INSTRUME='%20s'/                                                ", obsId->pWfsName);
+   headerCount++;
+   fprintf (fp, "OBSERVAT='%20s'/                                                ", "Gemini_North");
+   headerCount++;
+   fprintf (fp, "BUNIT   ='%20s'/                                                ", "SDSU ADC units");
+   headerCount++;
+   fprintf (fp, "UNITS   ='%20s'/                                                ", "SDSU ADC units");
    headerCount++;
    fprintf (fp, "OBSTYPE ='%20s'/                                                ", obsId->pObsType);
    headerCount++;
@@ -8573,12 +9023,31 @@ STATUS detWriteFits
       headerCount++;
       fprintf (fp, "CD2_2   =      %15f /                                                ", obsId->cd2_2);
       headerCount++;
-      fprintf (fp, "EQUINOX =      %15f /                                                ", obsId->equinox);
-      headerCount++;
       fprintf (fp, "RADECSYS='%20s'/                                                ", obsId->radecsys);
       headerCount++;
    }
+
+   fprintf (fp, "RA      =      %15f /                                                ", obsId->RA);
+   headerCount++;
+   fprintf (fp, "DEC     =      %15f /                                                ", obsId->Dec);
+   headerCount++;
+   fprintf (fp, "EQUINOX =      %15f /                                                ", obsId->equinox);
+   headerCount++;
    fprintf (fp, "MJDOBS  =      %15f /                                                ", obsId->mjdobs);
+   headerCount++;
+   fprintf (fp, "XBIN    =                %5d /                                                ", obsId->ospGeometry->xbin);
+   headerCount++;
+   fprintf (fp, "YBIN    =                %5d /                                                ", obsId->ospGeometry->ybin);
+   headerCount++;
+   fprintf (fp, "DATASEC ='%20s'/                                                ", obsId->dataSec);
+   headerCount++;
+   fprintf (fp, "CCDSEC  ='%20s'/                                                ", obsId->ccdSec);
+   headerCount++;
+   fprintf (fp, "ORIGSEC ='%20s'/                                                ", obsId->origSec);
+   headerCount++;
+   fprintf (fp, "DETTYPE ='%20s'/                                                ", obsId->detType);
+   headerCount++;
+   fprintf (fp, "DETID   ='%20s'/                                                ", obsId->detId);
    headerCount++;
    fprintf (fp, "END                                                                             ");
    headerCount++;
@@ -9739,6 +10208,11 @@ STATUS detCheckGeometry
          return (ERROR);
       }
 
+      printf ( "detCheckGeometry: XSIZE=%d, YSIZE=%d, XRAS=%d, YRAS=%d\n" ,
+               xChip, yChip, xRas, yRas ) ;
+      printf ( "detCheckGeometry: XSUBAP=%d, YSUBAP=%d, T_OUTPUTS=%d, PSIZE=%d\n" ,
+               xSubap, ySubap, outputs, packetSize ) ;
+
       /*
        * xSize=(xRas*xSubap) and ySize=(yRas*ySubap) represent the number of 
        * pixels per output. The arrangement depends on the number of outputs. 
@@ -9983,6 +10457,9 @@ STATUS detCopyGeometry
       return (ERROR);
    }
 
+   printf ( "detCopyGeometry: XSTART=%d, YSTART=%d, XBIN=%d, YBIN=%d\n" ,
+            xStart, yStart, xBin, yBin ) ;
+   printf ( "detCopyGeometry: XSPACE=%d, YSPACE=%d\n" , xSpace, ySpace) ;
    /*
     * xOutputSize and yOutputSize represent the size of each output in pixels,
     * which can be used to calculate ther full array size).
@@ -10082,4 +10559,129 @@ void detPokeObserving
    obsId->observing = newValue;
 
    return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detCreateFileName
+ *
+ *   INVOCATION:
+ *   detCreateFileName (pFilePath, pOutFileName, pFullOutFileName)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pFilePath        (char *)  Pointer to the file path name         
+ *   (>) pOutFileName     (char *)  Pointer to the output file name       
+ *   (<) pFullOutFileName (char *)  Pointer to the combined path and file name 
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)	always OK
+ *
+ *   PURPOSE:
+ *   Combine path and file name 
+ *
+ *   DESCRIPTION:
+ *   Combine path and file name and cancel the .fits at the end if this 
+ *   one exists
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ * 
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detCreateFileName 
+   ( 
+   char *   pFilePath,         /* Pointer to the file path name               */
+   char *   pOutFileName,      /* Pointer to the output file name             */
+   char *   pFullOutFileName   /* Pointer to the combined path and file name  */
+                               /* Size of path and file name is               */
+                               /* EPICS_MAX_BYTES_STRING_ATTRIB + 1           */
+                               /* Size of full file name is                   */
+                               /* 2*(EPICS_MAX_BYTES_STRING_ATTRIB + 1)       */
+   )
+{
+   char     firstPartOutFileName [ EPICS_MAX_BYTES_STRING_ATTRIB + 1 ] ;
+   char     lastCharOutFileName [ EPICS_MAX_BYTES_STRING_ATTRIB + 1 ] ;
+   int      sizeOutFileName ;
+   int      sizeFits ;
+   int      i, j ;
+
+   sizeFits = strlen ( ".fits" ) ;
+
+   /* Check if pOutFileName contains a string */
+
+   if ( strcmp ( pOutFileName, "" ) == 0 )
+   {
+      /* Default file name hrwfs.fits */
+
+      if ( strcmp ( pFilePath, "" ) == 0 )
+         strcpy ( pFullOutFileName, "pwfs1" ) ;
+      else
+         sprintf ( pFullOutFileName, "%s/pwfs1" , pFilePath ) ;
+      
+      return ( OK ) ;
+   }
+
+   /* Check if pOutFileName contains the string .fits */
+
+   if ( strstr ( pOutFileName, ".fits" ) != NULL )
+   {
+      sizeOutFileName = strlen ( pOutFileName ) ;
+
+      if ( sizeOutFileName < sizeFits )
+         strncpy ( firstPartOutFileName , pOutFileName , 
+                   EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+      else
+      {
+         /* Check if the last 5 char are .fits */
+         i = 0 ;
+	 for ( j = sizeOutFileName - sizeFits ; j < sizeOutFileName ; j ++ )
+	 {
+	     lastCharOutFileName[i] = pOutFileName[j];
+	     i ++ ;
+	 }
+	 lastCharOutFileName [i] = '\0' ;
+
+	 if ( strcmp ( lastCharOutFileName , ".fits" ) == 0 )
+	 {
+            /* Read the first part of pOutFileName witout .fits */
+	    for ( j = 0 ; j < sizeOutFileName - sizeFits ; j ++ )
+	    {
+                firstPartOutFileName[j] = pOutFileName[j];
+	    }
+	    firstPartOutFileName [j] = '\0' ;
+	 }
+	 else
+	 {
+            strncpy ( firstPartOutFileName , pOutFileName , 
+                      EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+	 }
+
+      }
+   }
+   else
+   {
+      strncpy ( firstPartOutFileName , pOutFileName , 
+                EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+   }
+
+   /* Now combine firstPartOutFileName and pFilePath */
+
+   if ( strcmp ( pFilePath , "" ) == 0 )
+      strncpy ( pFullOutFileName, firstPartOutFileName, 
+                EPICS_MAX_BYTES_STRING_ATTRIB ) ;
+   else
+      sprintf ( pFullOutFileName, "%s/%s" , pFilePath , firstPartOutFileName ) ;
+
+   return ( OK ) ;
 }

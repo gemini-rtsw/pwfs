@@ -13,6 +13,9 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   2 nov 99 - cb add new parameter binningFlag
+ *   1 nov 99 - cb add new parameters dhsOutOptions, outNFrames + fits keywords 
+ *              and WCS in the structure
  *INDENT-ON*
  *-
  */
@@ -153,6 +156,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT   pDetObservingContext;
                            /* Observing record context.                       */
    int          totalFrames;/* Total frames for observation.                  */
+   int          outNFrames;/* Frame counter for output display.               */
    int          nframes;   /* Frame counter for this observation.             */
    SEM_ID       syncSem;   /* Observation synchronsisation semaphore.         */
 
@@ -170,6 +174,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Data handling information.                      */
                            /* --------------------------                      */
    int          outOptions;/* Output options (0=none, 1=DHS, 2=file).         */
+   int          dhsOutOptions;/* DHS Output options (0=PERM, 1=TEMP, 2=QL).   */
    DHS_CONNECT  dhsConnection;/* DHS connection ID.                           */
    DHS_BD_DATASET dhsDataset; /* DHS dataset ID.                              */
    DHS_BD_FRAME dhsDataFrame; /* DHS data frame ID.                           */
@@ -188,6 +193,19 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* data.   */
                            /* (This file is used for engineering only).       */
 
+                           /* Fits keywords                                   */
+                           /* -------------                                   */
+
+   char          dataSec[22];
+   char          ccdSec[22];
+   char          origSec[22];
+   int           timeArrayStart[7];/* Array of year/month/day/hour/min/sec    */
+   char          utStartString[20];/* String which contains UTSTART data      */
+   int           timeArrayEnd[7];  /* Array of year/month/day/hour/min/sec    */
+   char          utEndString[20];  /* String to contain UTEND data            */
+   char          detType[16];
+   char          detId[16];
+
                            /* Signal processing information.                  */
                            /* ------------------------------                  */
     struct OSP_CONTEXT *
@@ -195,6 +213,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    struct OSP_GEOMETRY *
              ospGeometry;  /* Pointer to signal processing geometry struct.   */
    long         sigMode;   /* Signal processing mode.                         */
+   int          binningFlag; 
+                           /* TRUE or FALSE if binning or not                 */
    long         nCoaddFrames;   
                            /* Number of frames to coadd.                      */
    int          coaddCounter;   
@@ -236,9 +256,13 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       cd1_2;     /* xj rotation/skew matrix element.                */
    double       cd2_1;     /* yi rotation/skew matrix element.                */
    double       cd2_2;     /* yj rotation/skew matrix element.                */
+   double       RA;        /* Right Ascension in hours.                       */
+   double       Dec;       /* Declination in degrees.                         */
+
    char         radecsys[9];/* Type of RA/Dec (for celestial coordinate).     */
    double       equinox;   /* Epoch of mean equator & equinox (celestial      */
                            /* coords).                                        */
+   double       epoch;     /* Epoch of observation as a year.                 */
    double       mjdobs;    /* Epoch of observation as a modified Julian date. */
 } OBS_ID_STRUCT, * OBS_ID;
 
@@ -282,7 +306,7 @@ enum
    DET_CONTROL_CMD_STOP,       /* Stop observation.                           */
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
    DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
-   DET_CONTROL_CMD_SIGUPDATE,  /* Update closed loop gains.                   */
+   DET_CONTROL_CMD_SIGINITGAIN,/* Init FG gains.                              */
    DET_CONTROL_CMD_SIGMODE,    /* Configure signal processing.                */
 
    /* genSub commands. */
