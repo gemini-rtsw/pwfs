@@ -1,4 +1,4 @@
-# $Id: startup.vws,v 1.11 2002-03-28 01:00:59 cboyer Exp $
+# $Id: startup.vws,v 1.12 2002-11-26 03:07:10 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -24,9 +24,9 @@ pwd
 hostAdd ("archie","10.2.4.56")
 
 # Load EPICS core sequencer and pvload
-ld < /gemini/external/GEM7/base/bin/$(arch)/iocCore
-ld < /gemini/external/GEM7/base/bin/$(arch)/seq
-ld < /gemini/external/GEM7/extensions/bin/$(arch)/pvload
+ld < /gemini/external/GEM8.4/base/bin/$(arch)/iocCore
+ld < /gemini/external/GEM8.4/base/bin/$(arch)/seq
+ld < /gemini/external/GEM8.4/extensions/bin/$(arch)/pvload
 
 # Records, device and driver support for a Gemini base system
 ld < $(version)/bin/$(arch)/gemini$(dbname).Support
