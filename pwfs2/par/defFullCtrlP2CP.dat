@@ -45,3 +45,5 @@ data/defSeeingCoeffMatP2CP.dat
 data/defSeeingCoeffVectP2CP.dat
 # Scale factor for seeing computation (double)
 1.02
+# Threshold above which the aO gain is increased (double)
+0.5

@@ -80,6 +80,7 @@
  *   aoNewSeeingCompute () - Compute the seeing according to FR's method
  * 
  *INDENT-OFF*
+ *   04 Feb 2003: CB - Implement proportional law for aO
  *   25 Sep 2002: CB - Implement seeing computation according FR's method
  *   18 Jun 2002: CB - Implement seeing computation according BE's method
  *   12 Jun 2002: CB - aoModeCompute(): add imageStatus in invocation to check
@@ -2873,6 +2874,41 @@ STATUS aoCtrlContextInit (
             aoCtrlId->seeingScaleFactor );
 #endif
 
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the AO init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): %s\n", comment );
+#endif
+
+   /* Read aO threshold above which the aO gain is increased */
+
+   if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read aO threshold from the AO init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+   aoCtrlId->aoThreshold = value;
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): aoThreshold = %f\n",
+            aoCtrlId->aoThreshold );
+#endif
+
    /* End - close and return */
 
    aoCtrlId->initFlag = TRUE;
@@ -2911,7 +2947,7 @@ STATUS aoCtrlContextInit (
  *                        pFgContMatFileName, pSeeingCoeffMatFileName,
  *                        pSeeingCoeffVectFileName, xCenter, yCenter, 
  *                        angleWithM2, angleWithM1, 
- *                        seeingScaleFactor, aoCcdId, aoCtrlId)
+ *                        seeingScaleFactor, aoThreshold, aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pDarkFileName            (char *)     Pointer to the dark file name 
@@ -2933,6 +2969,7 @@ STATUS aoCtrlContextInit (
  *   (>) angleWithM2              (double)     New angle between M2 and P2 
  *   (>) angleWithM1              (double)     New angle between M1 and P2 
  *   (>) seeingScaleFactor        (double)     Seeing Scale factor
+ *   (>) aoThreshold              (double)     aO threshold
  *   (>) aoCcdId                  (AO_CCD_ID)  Pointer to the AO CCD geometry 
  *                                             context structure 
  *   (<) aoCtrlId                 (AO_CTRL_ID) Pointer to the AO control context
@@ -2984,6 +3021,7 @@ STATUS aoCtrlContextUpdate (
    double     angleWithM2,
    double     angleWithM1,
    double     seeingScaleFactor,
+   double     aoThreshold,
    AO_CCD_ID  aoCcdId,
    AO_CTRL_ID aoCtrlId
    )
@@ -3255,6 +3293,15 @@ STATUS aoCtrlContextUpdate (
             aoCtrlId->seeingScaleFactor );
 #endif
 
+   /* Init the aO threshold */
+
+   aoCtrlId->aoThreshold = aoThreshold;
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): aoThreshold = %f\n",
+            aoCtrlId->aoThreshold );
+#endif
+
    /* End */
 
    aoCtrlId->initFlag = TRUE;
@@ -3493,6 +3540,7 @@ STATUS aoCtrlContextShow (
    printf ( "r0: %f\n" , aoCtrlId->r0 );
    printf ( "jitter: %f\n" , aoCtrlId->jitter );
    printf ( "seeingScaleFactor: %f\n" , aoCtrlId->seeingScaleFactor );
+   printf ( "aoThreshold: %f\n" , aoCtrlId->aoThreshold );
 
    return (OK);
 }
@@ -6752,7 +6800,7 @@ STATUS aoDarkUpdate (
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName,
  *                   pFgCmFileName, pSeeingCmFileName, pSeeingCvFileName,
  *                   pRms, pThresh, pTotalThresh, pAngleM2, pAngleM1, 
- *                   pSeeingGain)
+ *                   pSeeingGain, pAoThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName     (char *)   Pointer to the AO init file name 
@@ -6775,6 +6823,7 @@ STATUS aoDarkUpdate (
  *   (<) pAngleM2          (double *) Pointer to the angle with M2
  *   (<) pAngleM1          (double *) Pointer to the angle with M1
  *   (<) pSeeingGain       (double *) Pointer to the seeing scale factor
+ *   (<) pAoThreshold      (double *) Pointer to the aO threshold
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK if successful, ERROR if unsuccessful
@@ -6817,7 +6866,8 @@ STATUS aoCtrlFileRead (
    double * pTotalThresh,
    double * pAngleM2,
    double * pAngleM1,
-   double * pSeeingGain
+   double * pSeeingGain,
+   double * pAoThreshold
    )
 {
    FILE *     pFile;
@@ -7432,6 +7482,35 @@ STATUS aoCtrlFileRead (
 
 #ifdef DEBUG
    printf ( "aoCtrlFileRead(): seeing scale factor = %f\n", *pSeeingGain );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read aO threshold */
+
+   if ( (fscanf (pFile, "%lf\n", pAoThreshold)) == EOF )
+   {
+      printf ( "Failed to read aO threshold from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): aoThreshold = %f\n", *pAoThreshold );
 #endif
 
    /* End - close and return */

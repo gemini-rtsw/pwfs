@@ -268,3 +268,9 @@ V4-4 4 Nov 2002 CB:
   - update detAoModP2MK.dat, defBinCtrlP2CP.dat, defFullCtrlP2CP.dat
   - detControl.c: add testTDL()
   - startupCP.vws: change IP address of reggie
+
+V4-5 4 February 2003 CB:
+------------------------
+  - Fix a bug in detSigInit (angleWitM2 and angleWithM1 were already 
+    defined as global)
+  - Implement proportional law for aO gains

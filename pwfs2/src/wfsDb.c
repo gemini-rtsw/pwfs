@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.26 2002-11-05 00:38:08 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.27 2003-02-05 01:29:32 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 04 Feb 2003 - cb Add aoThreshold detSigInitAoGain
  * 08 Oct 2002 - cb add detPowerOff
  * 24 Sep 2002 - cb Implement seeing computation according FR's method (add r0,
  *                  jitter + seeingCoeffVectInit SIR records, detSigInit 
@@ -473,7 +474,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_P, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_Q, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_R, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_T, EPICS_DATA_TYPE_DOUBLE, "0.5", {"0.01", "10.0"}
  },
 #if (MK)
  {
