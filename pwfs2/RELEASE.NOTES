@@ -35,6 +35,7 @@ dev
   - equivalent to V0-6
 
 V1-0 10 July 2000 CB:
+---------------------
   - tidy up src directory:
     remove config_hkbaja47.h config_mv167_16MB.h config_mv167_32MB.h 
     dhstests.c epToVxLib2.c global_edit makeLint simpleLog2.c wfsDb2.c 
@@ -64,5 +65,13 @@ V1-0 10 July 2000 CB:
   - IF with TCS done
   - add detDhsDisplay + detSigModeFgCoadd rename fast guide by global guide...
 
+V1-1 24 July 2000 CB:
+--------------------- 
+  - fix a bug in aoThresholdCompute(): replace ratePixel by (1.0 - ratePixel)
+  - add allowedSubapOff in aoP2Lib.c -> change Fast Guide, Fast Guide and Coadd
+    and sequence closed loop
+  - sumVect in aoCtrlContextInit was not completely set to zero (2xSUBAP_NB) 
+    instead of CCD_SIZE
+
 newDev 
-  - equivalent to V1-0
+  - equivalent to V1-1

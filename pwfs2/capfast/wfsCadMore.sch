@@ -17,6 +17,7 @@ p 3728 1264 100 0 1 FTVG:DOUBLE
 p 3728 1232 100 0 1 FTVH:LONG
 p 3728 1200 100 0 1 FTVI:DOUBLE
 p 3728 1168 100 0 1 FTVJ:STRING
+p 3728 1136 100 0 1 FTVK:LONG
 p 3680 -144 100 0 1 INAM:epToVxCadInit
 p 3680 -80 100 0 1 PREC:1
 p 3680 -208 100 0 1 PV:$(top)$(wfs)
@@ -91,9 +92,9 @@ use ecad8 2240 1319 100 0 detSigModeFgCoadd
 xform 0 2400 1824
 p 2304 1248 100 0 1 DESC:Set FG and Focus and coadd dark mode
 p 2336 2016 100 0 1 FTVA:LONG
-p 2336 1984 100 0 1 FTVB:STRING
+p 2336 1984 100 0 1 FTVB:LONG
 p 2336 1952 100 0 1 FTVC:STRING
-p 2336 1920 100 0 0 FTVD:STRING
+p 2336 1920 100 0 1 FTVD:STRING
 p 2336 1888 100 0 0 FTVE:STRING
 p 2336 1856 100 0 0 FTVF:STRING
 p 2304 1200 100 0 1 INAM:epToVxCadInit
@@ -103,6 +104,7 @@ p 2304 1152 100 0 1 SNAM:epToVxCadExecute
 use ecad2 1536 1543 100 0 detSigModeFgFocus
 xform 0 1696 1856
 p 1616 1488 100 0 1 DESC:Set fast guide and focus mode
+p 1632 1888 100 0 1 FTVA:LONG
 p 1616 1456 100 0 1 INAM:epToVxCadInit
 p 1616 1392 100 0 1 PV:$(top)$(wfs)
 p 1616 1424 100 0 1 SNAM:epToVxCadExecute
@@ -129,10 +131,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2000-07-10 21:47:05 $
-p 2592 2304 200 0 -1 id:$Id: wfsCadMore.sch,v 1.1 2000-07-10 21:47:05 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2000-07-24 20:51:33 $
+p 2592 2304 200 0 -1 id:$Id: wfsCadMore.sch,v 1.2 2000-07-24 20:51:33 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.1 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.2 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]
