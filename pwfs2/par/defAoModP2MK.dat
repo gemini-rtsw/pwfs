@@ -1,10 +1,10 @@
 # Init file for aO zero point models
 # Astig 0 = a1*cos(X+p1) + a2*cos(2*X+p2) + a3*cos(4*X+p3) + c (double)
 # a1 a2 a3 p1 p2 p3 c
-0.3 3.0 -0.15 15 265 85 -0.6
+0.68 3.21 0.0 -33 -101 0 -0.32
 # Astig 45 = b1*sin(X+pp1) + b2*sin(2*X+pp2) + b3*sin(4*X+pp3) + d (double)
 # b1 b2 b3 pp1 pp2 pp3 d
--0.51 3.0 0.08 -20 85 85 0.2
+-0.61 3.25 0.0 -44 83 0 0.05
 # Gain for astigmatism 0 and 45 rotation matrix (double)
 1.0 1.0
 # Offset for astigmatism 0 and 45 on the measurement (double)
