@@ -228,4 +228,15 @@ V4-2 17 June 2002 CB:
   - Allow ao + chopping: aoModeCompute() modified to check the status of the
     raw image
 
-dev equivalent to V4-2
+V4-3 15 Nov 2002 CB:
+--------------------
+  - wfsDb.c detSigModeTotal.A can take the values 0, 1, 2
+  - colors.adl: rules fixed (ERROR instead of ERR)
+  - now by default use butterworth filter
+  - remove errors when starting an observation already in progress
+  - add detPowerOff
+  - detControl.c: modify detInit to initialize correctly signal processing,
+    butterworth filters and zero point models
+  - GEM8.4
+  - update defFullCtrlP1CP.dat, defBinCtrlP1CP.dat, defDetContP1CP.dat, 
+    defAoModP1CP.dat

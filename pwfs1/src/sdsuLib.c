@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: sdsuLib.c,v 1.8 2002-03-28 01:00:59 cboyer Exp $"};
+   "$Id: sdsuLib.c,v 1.9 2002-11-16 01:09:48 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -167,6 +167,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   18 apr 2000 - CB add timeout for semTake when IT in sdsu_simpleTask
  *   20 Mar 2002 - CB add sdsuFileSymbolDnload, sdsuMemorySymbolDnload and
  *                    sdsuClear1RepBuf
+ *   08 Oct 2002 - CB add POF command to the sdsuCmdTable
  *-
  */
 
@@ -388,6 +389,7 @@ LOCAL SDSU_CMD_DEF sdsuCmdTable [] =
                                                 /* debugging.                 */
    {"INI", 0, 0, 10000000, BIT_FIELD_REPLY_DON | BIT_FIELD_REPLY_POE},
                                                 /* Initialise.                */
+   {"POF", 0, 0, 10000, BIT_FIELD_REPLY_DON},   /* Turn OFF voltages          */
    {"LDA", 1, 0, 200000, BIT_FIELD_REPLY_DON},  /* Load application.          */
    {"LDP", 0, 0, 0, BIT_FIELD_REPLY_NONE},      /* Load parameters.           */
    {"RDC", 0, 0, 2000000, BIT_FIELD_REPLY_DON}, /* Readout CCD.               */
@@ -1100,7 +1102,7 @@ uint32 sdsuVersionGet ( SDSU_ID         context,
     */
 
    if (destId == SDSU_IDENT_HST)
-      return (sdsu_getVersion ("$Revision: 1.8 $"));
+      return (sdsu_getVersion ("$Revision: 1.9 $"));
    
    /*
     * The SDSU context must be valid if the code gets this far, as the version 

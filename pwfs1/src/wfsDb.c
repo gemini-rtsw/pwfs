@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.26 2002-06-05 04:11:37 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.27 2002-11-16 01:09:48 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  *INDENT-OFF*
+ * 18 Oct 2002 - cb add detPowerOff
  * 23 May 2002 - cb add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw,
  *               cfTipTiltBw and fgFocusGain100 sir records
  * 28 Mar 2002 - cb implement threshold in real time and per subaperture
@@ -381,6 +382,14 @@ CAD_RECORD pWfsDbCadList [] =
   40.0
  },
  {
+  RECORD_NAME ("dc:detPowerOff"),
+  TASK_NAME ("p1", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_POWER_OFF,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  40.0
+ },
+ {
   RECORD_NAME ("dc:detSigReset"),
   TASK_NAME ("p1", DET_CONTROL_TASK_NAME),
   DET_CONTROL_CMD_SIG_RESET,
@@ -466,7 +475,7 @@ CAD_RECORD pWfsDbCadList [] =
   180.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0001", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0002", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0003", {NO_ATTRIBUTE_LIMITS}
  },
 #else
@@ -479,7 +488,7 @@ CAD_RECORD pWfsDbCadList [] =
   180.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0001", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0002", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0003", {NO_ATTRIBUTE_LIMITS}
  },
 #endif
@@ -653,7 +662,7 @@ CAD_RECORD pWfsDbCadList [] =
   STOP_DIRECTIVE_UNSUPPORTED,
   SIMULATION_MODE_SUPPORTED,
   40.0,
-  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "1"},
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "2"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.0", {"0.0", NO_HI_LIMIT},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "10.0", {"0.0", "100.0"},

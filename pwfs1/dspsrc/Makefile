@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2002-03-28 01:00:55 cboyer Exp $
+# $Id: Makefile,v 1.6 2002-11-16 01:09:47 cboyer Exp $
 #
 
 include .applTop
@@ -19,7 +19,7 @@ INSTALL_DSP = $(APPLIC_TOP)/bin/asm56000
 
 # The following gives the location of the asm56000 utilities
 # (Edit for your current location)
-ASM56000_DIR = /usr/local/asm56000
+ASM56000_DIR = /usr/software/dev/packages/asm56000
 ASM56K = $(ASM56000_DIR)/asm56000
 DSPLNK = $(ASM56000_DIR)/dsplnk
 CLDLOD = $(ASM56000_DIR)/cldlod
