@@ -1,0 +1,502 @@
+		Gemini A&G WAVEFRONT PROCESSING SYSTEM
+		======================================
+
+		Code Executed by "wfsControl" task - a typical application task
+		===============================================================
+
+1) The wfsControl task is spawned from the startup script after iocInit() and
+   database initialisation with epToVxCaInitRecords() and executes wfsControl().
+
+wfsControl()
+{
+
+	Create and initialise an error context structure for this task using errorInit().
+	Report error if the task is not executing with floating point coprocessor support.
+
+	Get the CPU processor number on which the task is executing using sysextProcNumGet().
+	If the processor number is zero then
+	{
+		Use the pipe creation function of the standard pipe driver, pipeDevCreate.
+	}
+	Else
+	{
+		Use the pipe creation function of the multi-processor pipe driver, mpPipeDevCreate.
+	}
+
+	For each SIR record, xxx, used by this task
+	{
+		Initialise the context structure using
+		  epToVxRecContextGet (pRecordName=WFS_CONTROL_xxx_SIR_NAME,
+		                       pContext=& pXxxContext, recordType=NULL)
+		{
+			If pRecordName does not contain the TOP prefix then
+			{
+				Add the TOP prefix to the beginning of the record name.
+			}
+
+			Look up the record in the epToVxSymtab symbol table and obtain
+			  pContext and record type.
+
+			if pRecordType is not NULL then
+			{
+				Return the record type in the location pointed to by pRecordType.
+			}
+		}
+	} next SIR record
+
+	For each SIR record that needs an initial value
+	{
+		Set xxxVal to the required value.
+		Set the initial value using
+		  epToVxPipeWrite( pRecordName=NULL, pValue=(char *) &xxxVal,
+		                   pContextKnown=pXxxContext )
+		{
+			If pContextKnown is not NULL then
+			{
+				Set the local context, pContext, to pContextKnown.
+				If the channel access definition structure, pContext->caContext, is not
+				  NULL then
+				{
+					Obtain the record type from the channel access definition structure.
+				}
+				Else
+				{
+					The record type is unknown.
+				}
+			}
+			Else
+			{
+				Get the context structure for the record using
+				  epToVxRecContextGet( pRecordName=pRecordName, pContext=& pContext,
+				                       recordType=& recordType)
+				{
+					epToVxRecContextGet - as above
+				}
+			}
+
+			If the record type is not a SIR then
+			{
+				Report an error - only SIR record types are supported.
+			}
+
+			If filtering has been enabled for this record, as defined in
+			  pContext->filterEnable, then
+			{
+				Filter the current value using
+				  updateFilteredValue = filter (pContext=pContext, pValue=pValue)
+				{
+					## Unfinished - always returns TRUE.
+				}
+			}
+
+			If the record type (pContext->type) is a STRING or
+			  updateFilteredValue is TRUE then
+			{
+				If the record type is LONG then
+				{
+					Convert the filtered value to LONG.
+
+					If the first write has not been done or
+					  the filtered value differs from the last written value
+					  by more than the hysteresis then
+					{
+						Flag that hysteresis has been exceeded.
+						Update the last value written and first write done.
+						Write the filtered value to the value part of the data packet using
+						  * (long *) DATA_PKT_VALUE_PTR (pContext) = valueLong
+						{
+							NOTE: DATA_PKT_VALUE_PTR (pContext) translates to
+							pContext->pDataPacket + 12, which is a pointer to the
+							beginning of the data packet plus 12 bytes to jump over
+							the header.
+
+							An appropriate amount of memory for the data packet has
+							already been allocated in epToVxCaInitSir().
+						}
+						Set the number of bytes to be written to sizeof(long).
+					}
+					Else
+					{
+						Flag that hysteresis has not been exceeded.
+					}
+				}
+				Else if the record type is DOUBLE then
+				{
+					Convert the filtered value to DOUBLE.
+
+					If the first write has not been done or
+					  the filtered value differs from the last written value
+					  by more than the hysteresis then
+					{
+						Flag that hysteresis has been exceeded.
+						Update the last value written and first write done.
+						Write the filtered value to the value part of the data packet using
+						  * (double *) DATA_PKT_VALUE_PTR (pContext) = valueDouble
+						{
+							See note on DATA_PKT_VALUE_PTR, above.
+						}
+						Set the number of bytes to be written to sizeof(double).
+					}
+					Else
+					{
+						Flag that hysteresis has not been exceeded.
+					}
+				}
+				Else if the record type is STRING then
+				{
+					Always flag that hysteresis has been exceeded.
+					Copy the string value to the location pointed to by
+					  DATA_PKT_VALUE_PTR (pContext).
+					{
+						See note on DATA_PKT_VALUE_PTR, above.
+					}
+					Set the number of bytes to the length of the string just copied,
+					  strlen (DATA_PKT_VALUE_PTR (pContext))
+					If the string is less than the maximum permitted size then
+					{
+						Increment the number of bytes by 1 to allow for the NULL terminating
+						  character.
+					}
+				}
+				Else
+				{
+					Report error - unknown data type.
+				}
+
+				If hysteresis has been exceeded then
+				{
+					Increment the number of bytes by the data packet header size.
+					Write the data packet pointed to by pContext->pDataPacket to the
+					  epToVxPipeWriteFd pipe.
+				}
+			}
+		}
+	} next SIR record
+
+	Create and initialise a CAD context using the appropriate pipe driver, using
+	  cadCmdContext = epToVxCmdInit( pTaskName=NULL, pipeCreate=pipeCreate )
+	{
+
+		If the task name provided, pTaskName, is NULL then
+		{
+			Set the task name to the name of the current task.
+		}
+
+		For every CAD record, cadRecNum, defined in pCadList[] do
+		{
+			If the task name assigned to this CAD record matches the current task name then
+			{
+				If this CAD has a command number higher than highestCmdNum,
+				  update highestCmdNum with this value.
+			}
+		} next CAD record
+
+		If highestCmdNum has not changed then
+		{
+			Report error - no CAD's found for this task.
+		}
+
+		Wait for the CAD records in the local EPICS database to be initialised, i.e.
+		  for (pRecordInitialised [CAD_RECORD_TYPE] == TRUE), or until a timeout occurs.
+		If a timeout occurs, report an error.
+
+		Allocate memory for a CAD command context structure and store a pointer to it
+		  in pCadCmdContext.
+
+		Allocate memory for sufficient CAD context structures for all commands up to
+		  the (highestCmdNum + 1), and store a pointer to the start of the memory in
+		  pCadCmdContext->ppCadContext.
+
+		Set pCadCmdContext->highestCmdNumber to the highest command number, highestCmdNum,
+		  found above.
+
+		For every CAD record, cadRecNum, defined in pCadList[] do   ## AGAIN
+		{
+			If the task name assigned to this CAD record matches the current task name then
+			{
+				Increment the number of commands found, nCommandsFound
+				Store the command number from pCadList[cadRecNum].commandNumber in cmdNum.
+
+				Look up the CAD record in the epToVxSymtab symbol table and return a
+				  pointer in pOldContext.
+
+				Copy the pOldContext pointer into pCadCmdContext->ppCadContext[cmdNum].
+
+				## Why do you need to do this? I don't understand.
+
+				Copy across the number of attributes, attribute type pointer, attribute
+				defaults pointer and timeout from the pOldContext structure to the
+				pCadCmdContext->ppCadContext[cmdNum] structure.
+
+				Remember the largest pOldContext->maxSizeCmdPacket found so far and
+				store it in maxSizeCmdPacket.
+			}
+			Abort the loop if the number of commands found exceeds the highest command
+			number, highestCmdNum.
+		} next CAD record
+
+
+		Set pCadCmdContext->maxSizeCmdPacket to the largest command packet found,
+		  maxSizeCmdPacket.
+
+		If pipeCreate is not NULL then
+		{
+			Create and open the Cad to Task pipe, storing the file descriptor in
+			  pCadCmdContext->cadPipeFd, using
+			  epToVxPipeOpen( fullNameProvided=FALSE, pName=pTaskName1,
+			                  pNameExtension=CAD_TO_TASK_PIPE_NAME_EXT,
+			                  pipeCreate=pipeCreate, nMsgSlots=EPTOVX_CAD_CAR_PIPES_NMSGS,
+			                  maxMsgSize=(int) maxSizeCmdPacket, mode=O_RDONLY,
+			                  ioctlFunction=-1, timeoutPeriod=0.0, timeoutDelay=0.0 )
+			{
+				If fullNameProvided then
+				{
+					Use the pipe name provided
+				}
+				else
+				{
+					Generate the pipe name by concatenating
+					  "/pipe/" + pName + pNameExtension
+				}
+
+				If the pipeCreate function is not NULL then
+				{
+					Create the pipe with pipeCreate( pPipeName, nMsgSlots, maxMsgSize )
+				}
+
+				Wait until the pipe exists using
+				  waitPipeExists( pPipeName, timeoutPeriod, timeoutDelay)
+				{
+					If the pipe doesn't already exist and a non-zero timeoutPeriod is
+					  specified
+					{
+						Check for the pipe's existence every timeoutDelay seconds until
+						  the pipe exists or a timeout occurs.
+						If a timeout occurs report an ERROR.
+					}
+				}
+
+				Open the pipe in the required mode, fd = open(pPipeName, mode, 0).
+				If an ioctl function was specified, execute it.
+			}
+
+			Create and open the Task to Car pipe, storing the file descriptor in
+			  pCadCmdContext->carPipeFd, using
+			  epToVxPipeOpen( fullNameProvided=FALSE, pName=pTaskName1,
+			                  pNameExtension=TASK_TO_CAR_PIPE_NAME_EXT,
+			                  pipeCreate=pipeCreate, nMsgSlots=EPTOVX_CAD_CAR_PIPES_NMSGS,
+			                  maxMsgSize=CMD_PKT_HEADER_SIZE_BYTES, mode=O_WRONLY,
+			                  ioctlFunction=-1, timeoutPeriod=0.0, timeoutDelay=0.0 )
+			{
+				epToVxPipeOpen - same as above
+			}
+
+		}
+		Allocate sufficient memory for the largest command packet, and store a
+		  pointer to it in pCadCmdContext->pCmdPacket.
+
+		Return pCadCmdContext.
+	}
+
+	Repeat until the "wfsControlStop" flag is triggered.
+	{
+		Initialise the current error number.
+
+		Read the command pipe and obtain a command number using
+		  commandNumber = epToVxCmdRead( pCadCmdContext=cadCmdContext )
+		{
+			Read pCadCmdContext->maxSizeCmdPacket bytes from the command pipe,
+			  pCadCmdContext->cadPipeFd, and store the result in pCadCmdContext->pCmdPacket.
+
+			Get the command number from the command packet using
+			  cmdNumber = CMD_PKT_COMMAND_NUMBER (pCadCmdContext)
+
+			If less than CMD_PKT_HEADER_SIZE_BYTES were read from the command pipe then
+			{
+				Return -1
+			}
+
+			If the command number obtained is not valid (as decided by
+			  EPTOVX_IS_VALID_CMD_NUM (pCadCmdContext, cmdNumber), which tests whether
+			  the command number is less than or equal to the highest command number)
+			  then
+			{
+				Return -1
+			}
+			Return cmdNumber
+		}
+
+		If running in FAST or FULL simulation mode, as indicated by
+		  EPTOVX_IS_SIMULATION (cadCmdContext, mode), which translates to
+		  (((* (uint32 *) ((cadCmdContext)->pCmdPacket + 8)) & EPTOVX_SIM_MODE_MASK) == mode) then
+		{
+			Do nothing except log a message. The simulation is dealt with in
+			  epToVxCmdFinish() later on.
+		}
+		Else if not running in simulation mode then
+		{
+			If commandNumber is SIMULATE then
+			{
+				Obtain the attribute using
+				  EPTOVX_CAD_ATTRIB_GET(cadCmdContext, commandNumber, 0, (char *) & simMode)
+				  which translates to
+				  epToVxCmdAttribGet( pContext=cadCmdContext->ppCadContext[commandNumber],
+				                      attribNumber=0,
+				                      pAttribDest=(char *) & simMode,
+				                      pCmdPacket=cadCmdContext->pCmdPacket )
+				{
+					If pCmdPacket is NULL (not in this case) then
+					{
+						Get the default mask from pContext->pCmdPacket (+12) using
+						  defaultMask = CMD_PKT_DEFAULT_MASK (pContext)
+					}
+					Else
+					{
+						Get the default mask from the specified pCmdPacket (+12) using
+						  defaultMask = CMD_PKT_DEFAULT_MASK_1 (pContext)
+					}
+
+					If the default bit in the bit mask is not set then
+					{
+						Get the location where the attribute sting is stored
+						  using getAttribSourceAddrs (pContext, pCmdPacket,
+						                              attribNumber, defaultMask)
+						{
+							If the default bit for this attribute is set then
+							{
+								pSource = NULL
+							}
+										Else
+							{
+								Initialise pSource to point to pCmdPacket plus
+								  CMD_PKT_HEADER_SIZE_BYTES.
+
+								For each attribute, attribute, less than the
+								  current attribute, attribNumber
+								{
+									If the default bit for attribute is not set
+									{
+										If the attribute type is a STRING then
+										{
+											Increment pSource by
+											  EPICS_MAX_BYTES_STRING_ATTRIB
+										}
+										Else if the attribute type is LONG then
+										{
+											Increment pSource by sizeof(long)
+										}
+										Else if the attribute type is DOUBLE then
+										{
+											Increment pSource by sizeof(double)
+										}
+
+									}
+								} next attribute
+							}
+							Return pSource
+						}
+
+						If the attribute type is a STRING then
+						{
+							Copy from pSource to pAttribDest as a string
+						}
+						Else if the attribute type is a LONG then
+						{
+							Copy from pSource to pAttribDest as a LONG
+						}
+						Else if the attribute type is a DOUBLE then
+						{
+							Copy from pSource to pAttribDest as a DOUBLE
+						}
+					}
+					Else (the default bit is set for this attribute)
+					{
+						If the attribute type is a STRING then
+						{
+							Copy the default string from
+							  pContext->pDefault[attribNumber].pStringAttrib
+							  to pAttribDest as a string
+						}
+						Else if the attribute type is a LONG then
+						{
+							Copy the default LONG value from
+							  pContext->pDefault[attribNumber].longAttrib
+							  to pAttribDest as a LONG
+						}
+						Else if the attribute type is a DOUBLE then
+						{
+							Copy the default DOUBLE value from
+							  pContext->pDefault[attribNumber].doubleAttrib
+							  to pAttribDest as a DOUBLE
+						}
+					}
+				}
+
+				Set the desired simulation mode using
+				  epToVxCadSimMode( simMode=simMode )
+				{
+					cadSimulationMode = simMode & EPTOVX_SIM_MODE_MASK;
+				}
+				Write the simulation mode to the EPICS database using
+				  epToVxPipeWrite( pRecordName="simMode", pValue=pSimMode,
+				                   pContextKnown=NULL )
+				{
+					epToVxPipeWrite - as above
+				}
+			}
+			Else if commandNumber is INIT, TEST, PARK, or any other legitimate command then
+			{
+				Obtain the attributes using EPTOVX_CAD_ATTRIB_GET() as above.
+				Carry out that command, using epToVxPipeWrite() to update the
+				  EPICS database...
+				errorNumber = error number (if any)
+			}
+			Else
+			{
+				Report error - command not currently implemented
+			}
+		}
+
+		Finish the command using
+		  epToVxCmdFinish( pCadCmdContext=cadCmdContext, errorNumber=errorNumber )
+		{
+			If the command was issued in FULL simulation mode
+			  (tested using EPTOVX_IS_FULL_SIMULATION (pCadCmdContext)) then
+			{
+				Get the command number from the comamnd context using
+				  cmdNumber = CMD_PKT_COMMAND_NUMBER (pCadCmdContext)
+
+				Calculate a time delay of 1/10th of the command timeout in
+				  pCadCmdContext->ppCadContext[cmdNumber]->timeout.tv_sec
+
+				Wait for this amount of time.
+				Set errorNumber to 0.
+				}
+
+			Overwrite the command modifier word in the command packet header and
+			  set the "command done" bit using
+			  CMD_PKT_COMMAND_MODIFIER (pCadCmdContext) =
+			  (CMD_PKT_COMMAND_MODIFIER (pCadCmdContext) & ~CAD_COMMAND_MODE_MASK)
+			  | CAD_COMMAND_MODE_DONE
+
+			Copy the error number into the command packet header using
+			  CMD_PKT_ERROR_NUMBER (pCadCmdContext) = errorNumber
+
+			Write the command packet header from pCadCmdContext->pCmdPacket
+			  pCadCmdContext->pCmdPacket to the Task to Car pipe opened on
+			  file descriptor pCadCmdContext->carPipeFd.
+			}
+
+		Change the state back to "RUNNING" using
+		  epToVxPipeWrite( pRecordName=NULL, pValue="RUNNING",
+		                   pContextKnown=pStateContext )
+		{
+			epToVxPipeWrite - as above
+		}
+	} Go back and repeat
+
+	The task has been stopped. Tidy up with
+	epToVxCmdFree (cadCmdContext);
+	errorFlush();
+	errorFree();
+}

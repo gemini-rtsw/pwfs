@@ -1,0 +1,24 @@
+<MIFFile 5.00>
+ <Para 
+  <Unique 2821>
+  <PgfTag `Heading1'>
+  <Pgf 
+   <PgfPlacement PageTop>
+  > # end of Pgf
+  <PgfNumString `\t4.0\t'>
+  <ParaLine 
+   <String `Appendix '>
+   <Char EmDash>
+   <String ` Summary of Internal Functions'>
+  >
+ > # end of Para
+ <Para 
+  <Unique 2828>
+  <PgfTag `Body'>
+  <ParaLine 
+   <String `These are private functions used internally by the library and not accessible externally. Their description will be '>
+  >
+  <ParaLine 
+   <String `of interest only to developers of the library itself.'>
+  >
+ > # end of Para

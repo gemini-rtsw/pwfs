@@ -1,0 +1,18 @@
+/*+
+ *
+ *	This file contains an extra piece of comment block which can be inserted
+ *	at the beginning of a source file to cause the "wflman" utility to
+ *	generate a document containing a description only of the private
+ *	functions used by a module. This allows two sets of manuals to be
+ *	generated - one aimed at users of the library and the other aimed at
+ *	developers of the library.
+ *
+ *	See the "Wflman" manual for a description of what the following
+ *	paragraph does.
+ *
+ *
+ *	MAN translate paragraphs:
+ *		Ignored function name	=	Routine name; Internal function name
+ *		Function name		=	Ignored routine name
+ *-
+ */

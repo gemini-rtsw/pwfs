@@ -1,0 +1,9 @@
+;
+; Example World Coordinate System calibration for OIWFS
+;
+; Pixel i, Pixel j, Focal plane x, Focal plane y
+     0.0      0.0      0.0           0.0
+    48.0      0.0      6.0           0.0
+     0.0     48.0      0.0           6.0
+    48.0     48.0      6.0           6.0
+    24.0     24.0      3.0           3.0

@@ -1,0 +1,410 @@
+		Gemini A&G WAVEFRONT PROCESSING SYSTEM
+		======================================
+
+		Code Executed by "CAR Daemon" task
+		==================================
+
+1) The CAR Daemon task is spawned from the startup script after iocInit(),
+   database initialisation with epToVxCaInitRecords(), and spawning of
+   application tasks, and executes epToVxCarDaemon( pRecordName ). pRecordName
+   is supplied by the shell for each task.
+
+epToVxCarDaemon( pRecordName )
+{
+	Create and initialise an error context structure for this task using errorInit().
+
+	Look up record pRecordName in the epToVxSymtab symbol table and return a pointer to its
+	  context structure in (char **) & pContext
+
+	Set the CAR value field to BUSY using
+	  CAR_FIELD_VALUE( pContext ) = CAR_BUSY
+	{
+		CAR_FIELD_VALUE(pContext) translates to
+		  * (long *) (pContext->caContext->ppFieldValue[3])
+	}
+
+	Set the CAR client ID to zero using
+	  CAR_FIELD_CLIENT_ID( pContext ) = 0
+	{
+		CAR_FIELD_CLIENT_ID(pContext) translates to
+		  * (long *) (pContext->caContext->ppFieldValue[0])
+	}
+
+	Set the CAR error number to zero using
+	  CAR_FIELD_ERROR_NUMBER (pContext) = 0
+	{
+		CAR_FIELD_ERROR_NUMBER(pContext) translates to
+		  * (long *) (pContext->caContext->ppFieldValue[1])
+	}
+
+	Set the CAR message field using
+	  strcpy (CAR_FIELD_MESSAGE (pContext), "Initialisation in progress")
+	{
+		CAR_FIELD_MESSAGE(pContext) translates to
+		  (char *) (pContext->caContext->ppFieldValue[2])
+	}
+
+	Update the CAR record by channel access using
+	  epToVxCaWrite( pCaContext=pContext->caContext )
+	{
+		If pCaContext is NULL then report an error.
+
+		For each field, fieldNumber, within the channel access definition structure, pCaContext,
+		  up to pCaContext->nField do
+		{
+			If there is a valid channel access ID structure,
+			  pCaContext->pChannelId[fieldNumber] then
+			{
+				Call ca_array_put( type=pCaContext->pFieldType[fieldNumber], count=1,
+				                   chid=pCaContext->pChannelId[fieldNumber],
+				                   pvalue=pCaContext->ppFieldValue[fieldNumber] )
+				  to write the value for this field to the database record.
+			}
+		} next field
+
+		Call ca_flush_io() to flush any pending Channel Access I/O.
+	}
+
+	Open the Task to Car pipe and store its file descriptor in commandDoneFd, using
+	  epToVxPipeOpen( fullNameProvided=FALSE, pName=pContext->pTaskName,
+	                  pNameExtension=TASK_TO_CAR_PIPE_NAME_EXT, pipeCreate=NULL,
+	                  nMsgSlots=0, maxMsgSize=0, mode=O_RDONLY, ioctlFunction=-1,
+	                  timeoutPeriod=CAR_TIMEOUT_OPENPIPE, timeoutDelay=CAR_DELAY_OPENPIPE)
+	{
+		If fullNameProvided then
+		{
+			Use the pipe name provided
+		}
+		else
+		{
+			Generate the pipe name by concatenating "/pipe/" + pName + pNameExtension
+		}
+
+		If the pipeCreate function is not NULL then
+		{
+			Create the pipe with pipeCreate( pPipeName, nMsgSlots, maxMsgSize )
+		}
+
+		Wait until the pipe exists using
+		  waitPipeExists( pPipeName, timeoutPeriod, timeoutDelay)
+		{
+			If the pipe doesn't already exist and a non-zero timeoutPeriod is specified
+			{
+				Check for the pipe's existence every timeoutDelay seconds until
+				  the pipe exists or a timeout occurs.
+				If a timeout occurs report an ERROR.
+			}
+		}
+
+		Open the pipe in the required mode, fd = open(pPipeName, mode, 0).
+		If an ioctl function was specified, execute it.
+	}
+
+	Open the Cad to Car pipe and store its file descriptor in commandBeginFd, using
+	  epToVxPipeOpen( fullNameProvided=FALSE, pName=pContext->pTaskName,
+	                  pNameExtension=CAD_TO_CAR_PIPE_NAME_EXT,
+	                  pipeCreate=pipeDevCreate, nMsgSlots=EPTOVX_CAD_CAR_PIPES_NMSGS,
+	                  maxMsgSize=CMD_PKT_HEADER_SIZE_BYTES, mode=O_RDONLY, ioctlFunction=-1,
+	                  timeoutPeriod=0.0, timeoutDelay=0.0 )
+	{
+		epToVxPipeOpen - as above
+	}
+
+	Zero all the bytes in the aioControlBlock structure, then initialise the control block with
+	aioControlBlock.aio_fildes = commandDoneFd;
+	aioControlBlock.aio_offset = 0;
+	aioControlBlock.aio_buf = (void *) doneContext.pCmdPacket;
+	aioControlBlock.aio_nbytes = CMD_PKT_HEADER_SIZE_BYTES;
+	aioControlBlock.aio_reqprio = CAR_COMMAND_DONE_AIO_PRIORITY; (=0)
+
+	Load the address of the aioControlBlock into the aioList[0] pointer.
+
+	Set the CAR value field to IDLE using
+	  CAR_FIELD_VALUE( pContext ) = CAR_BUSY
+	{
+		CAR_FIELD_VALUE(pContext) translates to
+		  * (long *) (pContext->caContext->ppFieldValue[3])
+	}
+
+	Set the CAR message field using
+	  strcpy (CAR_FIELD_MESSAGE (pContext), "Initialisation done")
+	{
+		CAR_FIELD_MESSAGE(pContext) translates to
+		  (char *) (pContext->caContext->ppFieldValue[2])
+	}
+
+	Update the CAR record by channel access using
+	  epToVxCaWrite( pCaContext=pContext->caContext )
+	{
+		epToVxCaWrite - as above
+	}
+
+	Obtain the CAD command context for this task specifying the name of the task for which
+	  this CAR record is responsible using
+	  pCadCmdContext = epToVxCmdInit( pTaskName=pContext->pTaskName, pipeCreate=NULL )
+	{
+		If the task name provided, pTaskName, is NULL then
+		{
+			Set the task name to the name of the current task.
+		}
+
+		For every CAD record, cadRecNum, defined in pCadList[] do
+		{
+			If the task name assigned to this CAD record matches the current task name then
+			{
+				If this CAD has a command number higher than highestCmdNum,
+				  update highestCmdNum with this value.
+			}
+		} next CAD record
+
+		If highestCmdNum has not changed then
+		{
+			Report error - no CAD's found for this task.
+		}
+
+		Wait for the CAD records in the local EPICS database to be initialised, i.e.
+		  for (pRecordInitialised [CAD_RECORD_TYPE] == TRUE), or until a timeout occurs.
+		If a timeout occurs, report an error.
+
+		Allocate memory for a CAD command context structure and store a pointer to it
+		  in pCadCmdContext.
+
+		Allocate memory for sufficient CAD context structures for all commands up to
+		  the (highestCmdNum + 1), and store a pointer to the start of the memory in
+		  pCadCmdContext->ppCadContext.
+
+		Set pCadCmdContext->highestCmdNumber to the highest command number, highestCmdNum,
+		  found above.
+
+		For every CAD record, cadRecNum, defined in pCadList[] do   ## AGAIN
+		{
+			If the task name assigned to this CAD record matches the current task name then
+			{
+				Increment the number of commands found, nCommandsFound
+				Store the command number from pCadList[cadRecNum].commandNumber in cmdNum.
+
+				Look up the CAD record in the epToVxSymtab symbol table and return a
+				  pointer in pOldContext.
+
+				Copy the pOldContext pointer into pCadCmdContext->ppCadContext[cmdNum].
+
+				## Why do you need to do this? I don't understand.
+
+				Copy across the number of attributes, attribute type pointer, attribute
+				defaults pointer and timeout from the pOldContext structure to the
+				pCadCmdContext->ppCadContext[cmdNum] structure.
+
+				Remember the largest pOldContext->maxSizeCmdPacket found so far and
+				store it in maxSizeCmdPacket.
+			}
+			Abort the loop if the number of commands found exceeds the highest command
+			number, highestCmdNum.
+		} next CAD record
+
+
+		Set pCadCmdContext->maxSizeCmdPacket to the largest command packet found,
+		  maxSizeCmdPacket.
+
+		If pipeCreate is not NULL then
+		{
+			Create and open the Cad to Task pipe, storing the file descriptor in
+			  pCadCmdContext->cadPipeFd, using
+			  epToVxPipeOpen( fullNameProvided=FALSE, pName=pTaskName1,
+			                  pNameExtension=CAD_TO_TASK_PIPE_NAME_EXT,
+			                  pipeCreate=pipeCreate, nMsgSlots=EPTOVX_CAD_CAR_PIPES_NMSGS,
+			                  maxMsgSize=(int) maxSizeCmdPacket, mode=O_RDONLY,
+			                  ioctlFunction=-1, timeoutPeriod=0.0, timeoutDelay=0.0 )
+			{
+				If fullNameProvided then
+				{
+					Use the pipe name provided
+				}
+				else
+				{
+					Generate the pipe name by concatenating
+					  "/pipe/" + pName + pNameExtension
+				}
+
+				If the pipeCreate function is not NULL then
+				{
+					Create the pipe with pipeCreate( pPipeName, nMsgSlots, maxMsgSize )
+				}
+
+				Wait until the pipe exists using
+				  waitPipeExists( pPipeName, timeoutPeriod, timeoutDelay)
+				{
+					If the pipe doesn't already exist and a non-zero timeoutPeriod is
+					  specified
+					{
+						Check for the pipe's existence every timeoutDelay seconds until
+						  the pipe exists or a timeout occurs.
+						If a timeout occurs report an ERROR.
+					}
+				}
+
+				Open the pipe in the required mode, fd = open(pPipeName, mode, 0).
+				If an ioctl function was specified, execute it.
+			}
+
+			Create and open the Task to Car pipe, storing the file descriptor in
+			  pCadCmdContext->carPipeFd, using
+			  epToVxPipeOpen( fullNameProvided=FALSE, pName=pTaskName1,
+			                  pNameExtension=TASK_TO_CAR_PIPE_NAME_EXT,
+			                  pipeCreate=pipeCreate, nMsgSlots=EPTOVX_CAD_CAR_PIPES_NMSGS,
+			                  maxMsgSize=CMD_PKT_HEADER_SIZE_BYTES, mode=O_WRONLY,
+			                  ioctlFunction=-1, timeoutPeriod=0.0, timeoutDelay=0.0 )
+			{
+				epToVxPipeOpen - same as above
+			}
+		}
+		Allocate sufficient memory for the largest command packet, and store a
+		  pointer to it in pCadCmdContext->pCmdPacket.
+
+		Return pCadCmdContext.
+	}
+
+	Repeat forever - this task never stops
+	{
+
+		Read a command begin packet from the commandBeginFd pipe, specifying that
+		  CMD_PKT_HEADER_SIZE_BYTES be read and written to beginContext.pCmdPacket
+
+		Extract the client ID and command number from the command begin packet
+		  using CAR_FIELD_CLIENT_ID (pContext) = CAR_CLIENT_ID (& beginContext)
+		{
+			CAR_FIELD_CLIENT_ID(pContext) is described above.
+
+			CAR_CLIENT_ID(& beginContext) translates to
+			  ((CMD_PKT_COMMAND_MODIFIER (& beginContext) & CAD_COMMAND_MODIFIER_MASK) << 24)
+			  ((CMD_PKT_COMMAND_NUMBER (& beginContext) & 0x0fff) << 16) |
+			  (CMD_PKT_CLIENT_ID (& beginContext) & 0xffff)
+
+			{
+				CMD_PKT_COMMAND_MODIFIER(& beginContext) translates to
+				  * (uint32 *) ((& beginContext))->pCmdPacket + 8)
+			}
+			{
+				CAD_COMMAND_MODIFIER_MASK = 0x0f
+			}
+			{
+				CMD_PKT_COMMAND_NUMBER(& beginContext) translates to
+				  * (uint32 *) ((& beginContext)->pCmdPacket + 4)
+			}
+			{
+				CMD_PKT_CLIENT_ID(& beginContext) translates to
+				  * (uint32 *) ((& beginContext)->pCmdPacket)
+			}
+			## A hideously complicated macro!
+		}
+
+		If the command number in the command packet is valid (as decided by
+		  EPTOVX_IS_VALID_CMD_NUM( pCadCmdContext,
+		                           (int) CMD_PKT_COMMAND_NUMBER (& beginContext)) ),
+		  which tests whether the command number is less than or equal to the highest command
+		  number) then
+		{
+			Set the CAR error number to 0 using CAR_FIELD_ERROR_NUMBER (pContext) = 0
+			Set the CAR value to BUSY using CAR_FIELD_VALUE (pContext) = CAR_BUSY
+			Set the CAR message to blank using strcpy (CAR_FIELD_MESSAGE (pContext), " ")
+		}
+		Else
+		{
+			Set the CAR value to ERROR using CAR_FIELD_VALUE (pContext) = CAR_ERROR
+			Set the CAR error number to S_epToVxLib_INVALID_COMMAND_NUM using
+			  CAR_FIELD_ERROR_NUMBER (pContext) = S_epToVxLib_INVALID_COMMAND_NUM
+			Set the CAR message using
+			  strcpy (CAR_FIELD_MESSAGE (pContext), "Invalid command number")
+		}
+
+		Update the CAR record with channel access using
+		  epToVxCaWrite( pContext->caContext )
+		{
+			epToVxCaWrite - as above
+		}
+
+		Extract the simulation mode from the command begin packet using
+		  CMD_PKT_COMMAND_MODIFIER (& beginContext) & EPTOVX_SIM_MODE_MASK
+
+		If the simulation mode is VSM then
+		{
+			Set the CAR value to IDLE immediately using
+			  CAR_FIELD_VALUE (pContext) = CAR_IDLE;
+			  strcpy (CAR_FIELD_MESSAGE (pContext), " ");
+			  epToVxCaWrite( pContext->caContext )
+			{
+				epToVxCaWrite - as above
+			}
+		}
+		Else if the simulation mode is anything else (FAST, FULL or NONE) then
+		{
+			Read a command done packet from the commandDoneFd pipe using an asynchronous read
+			  as specified in the aioControlBlock initialised above.
+
+			Determine the command timeout from
+			  CAR_PIPE_TIMEOUT( pCadCmdContext, CMD_PKT_COMMAND_NUMBER (& beginContext) )
+			{
+				CAR_PIPE_TIMEOUT( pCadCmdContext, CMD_PKT_COMMAND_NUMBER (& beginContext) )
+				  translates to
+				  pCadCmdContext->ppCadContext[CMD_PKT_COMMAND_NUMBER (& beginContext)]->timeout
+			}
+
+			If a timeout has occurred while waiting for the command done packet then
+			{
+				Set the CAR field value to ERROR.
+				Set the CAR error number to S_epToVxLib_TIMEOUT_WAITING_FOR_PIPE
+				Set the CAR message field to "Timeout".
+				Update the CAR record with epToVxCaWrite( pContext->caContext )
+				{
+					epToVxCaWrite - as above
+				}
+			}
+			Else if the number of bytes read differs from CMD_PKT_HEADER_SIZE_BYTES then
+			{
+				Set the CAR field value to ERROR.
+				Set the CAR error number to S_epToVxLib_INVALID_PACKET_SIZE
+				Set the CAR message field to "Invalid Message Packet Size".
+				Update the CAR record with epToVxCaWrite( pContext->caContext )
+				{
+					epToVxCaWrite - as above
+				}
+			}
+			Else if the client ID and command number from the command done packet does not match
+			  the client ID and command number from the command begin packet
+			  (with the aid of CMD_PKT_CLIENT_ID() and CMD_PKT_COMMAND_NUMBER()
+			{
+				Set the CAR field value to ERROR.
+				Set the CAR error number to S_epToVxLib_CAD_CAR_SYNCH_ERROR
+				Set the CAR message field to "Synchronisation Error".
+				Update the CAR record with epToVxCaWrite( pContext->caContext )
+				{
+					epToVxCaWrite - as above
+				}
+			}
+			Else if the command done packet contains a non-zero error number, as
+			  contained in CMD_PKT_ERROR_NUMBER (& doneContext) then
+			{
+				Set the CAR field value to ERROR.
+				Set the CAR error number to CMD_PKT_ERROR_NUMBER (& doneContext)
+				Set the CAR message field to "Command failed".
+
+				## This is an unhelpful message. Can a more descriptive message be
+				## returned in the command done packet?
+
+				Update the CAR record with epToVxCaWrite( pContext->caContext )
+				{
+					epToVxCaWrite - as above
+				}
+			}
+			Else (the task has completed succesfully)
+			{
+				Set the CAR field value to IDLE.
+				Set the CAR error number to zero
+				Set the CAR message field to blank.
+				Update the CAR record with epToVxCaWrite( pContext->caContext )
+				{
+					epToVxCaWrite - as above
+				}
+			}
+		}
+	} Go back and repeat forever
+}

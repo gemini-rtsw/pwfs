@@ -1,0 +1,572 @@
+		Gemini A&G WAVEFRONT PROCESSING SYSTEM
+		======================================
+
+		Code Executed by "tShell" VxWorks shell - READ THIS ONE FIRST
+		=============================================================
+
+The following functions are executed from the VxWorks startup script:
+
+1) Object code is loaded.
+
+2) On processor zero the database records are loaded.
+
+3) The WFS system is initialised with
+
+wfsSysInit( processorNumber, logErrorsToPipe )
+{
+	Create and initialise an error context structure for this task using errorInit().
+	Initialise the wfsLib library
+	wfsLibInit()
+	{
+		Check that the number of processors in the numProcessor variable initialised in
+		  wfsSite.c is sensible.
+		For each processor, procNum, from 0 to (numProcessor-1) do
+		{
+			Check that the target type stored in pWfsArchProcessor[procNum].targetType
+			  is recognised.
+			Check that the clock rate (pWfsArchProcessor[procNum].procClockRate)
+			  and RAM size (pWfsArchProcessor[procNum].procRamSize) are sensible.
+		} next processor
+	}
+
+	Check the processor number argument, processorNumber, is between 0 and (numProcessor-1).
+
+	Set the processor number
+	sysextProcNumSet( processorNumber )
+	{
+		sysextProcNumSet - details not important at the moment.
+	}
+
+	Set the bus arbitration mode
+	sysextVmeReqRelInit (& pWfsArchProcessor [processorNumber].vmeMode)
+	{
+		sysextVmeReqRelInit - details not important at the moment.
+	}
+
+	For each processor, procNum,  from 0 to (numProcessor-1) do
+	{
+		Copy the target type from pWfsArchProcessor[procNum].targetType
+		  to pTargetType[procNum]
+	} next processor
+
+	Initialise the VME network
+	sysextVmeNetworkInit( numProcessor, pTargetType )
+	{
+		sysextVmeNetworkInit - details not important at the moment.
+	}
+
+	If the current processor is processor zero then
+	{
+		## Why is the timeout library not initialised?
+
+		Set the epicsDbIsLocal flag to TRUE.
+
+		Initialise the multiprocessor pipe driver with finite timeout and bus reset
+		mpPipeDrv( timeoutSecs=PIPE_DRV_TIMEOUT_PROC_0, resetBusOnTimeout=1 )
+		{
+			mpPipeDrv - details not important at the moment.
+		}
+	}
+	Else for other processors
+	{
+		Initialise the timeout library
+		timeoutInit()
+		{
+			timeoutInit - sets the system real time clock resolution
+			  based on the system clock rate. (??)
+		}
+
+		Initialise the multiprocessor pipe driver with infinite timeout and no bus reset
+		mpPipeDrv( timeoutSecs=PIPE_DRV_TIMEOUT_PROC_N, resetBusOnTimeout=0 )
+		{
+			mpPipeDrv - details not important at the moment.
+		}
+	}
+
+	If the current processor is not zero (note that on processor zero CAD records are
+	   initialised during iocInit()) and pRecordInitialised[CAD_RECORD_TYPE] shows
+	  that CAD records have not been initialised then
+	{
+		taskLock()
+		epToVxDbInitCadCar()
+		{
+			epToVxInit()
+			{
+				taskLock()
+				If the epToVxSymtab symbol table does not yet exist then
+				{
+					Create the epToVxSymtab symbol table.
+				}
+				taskUnlock()		### Nested taskLock()
+			}
+
+			Allocate memory for an array of CAD context structure pointers, ppCadContext.
+
+			For each CAD definition, i, contained in the array pCadList[] do
+			{
+				Allocate memory for the CAD context structure for this record,
+				  ppCadContext[i].
+				Copy the number of attributes for this record from pCadList[i],
+				  with the aid of getNumberAttribs().
+
+				Add symbol for this record to the epToVxSymtab symbol table,
+				  specifying ppCadContext[i].
+
+				Populate the CAD definition with information from pCadList[i].
+				Allocate memory for the attributes description structures for this
+				  record.
+
+				Initialise the command packet size for this record to
+				  CMD_PKT_HEADER_SIZE_BYTES.
+
+				For each attribute, j, owned by this record do
+				{
+					Copy the attribute type from pCadList to the CAD definition structure.
+					Increment the command packet header size by the number of bytes
+					  required to store an attribute of this type.
+
+					If the attribute type is a string then
+					{
+						Allocate memory to hold a string of size
+						  EPICS_MAX_BYTES_STRING_ATTRIB, and store the pointer in
+						  ppCadContext[i]->pDefault[j].pStringAttrib
+					}
+
+					Store the default value of the attribute using the following
+					  dodgy piece of code...
+					attribStringToUnion ( ppCadContext[i]->pType[j],
+					                      pCadList[i].pAttrib[j].pDefault,
+					                      & ppCadContext[i]->pDefault[j] )
+					{
+						If the attribute is a string then
+						{
+							Copy from pCadList[i].pAttrib[j].pDefault to
+							  ppCadContext[i]->pDefault[j]->pStringAttrib (created above)
+						}
+						Else if the attribute is a LONG then
+						{
+							If pCadList[i].pAttrib[j].pDefault == "NO_LO_LIMIT" then
+							{
+								Write the minimum integer value to the same memory
+								  location that would have held the pointer to the
+								  the string attribute (defined in a union), i.e.
+								ppCadContext[i]->pDefault[j]->longAttrib = LONG_MIN;
+							}
+							Else if pCadList[i].pAttrib[j].pDefault == "NO_HI_LIMIT" then
+							{
+								Write the maximum integer value to the same memory
+								  location that would have held the pointer to the
+								  the string attribute (defined in a union), i.e,
+								ppCadContext[i]->pDefault[j]->longAttrib = LONG_MAX;
+							}
+							Else
+							{
+								Convert pCadList[i].pAttrib[j].pDefault into a LONG
+								  and store the result in pAttrib->longAttrib.
+								Return a bad status if the conversion failed.
+							}
+						}
+						Else if the attribute is a DOUBLE then
+						{
+							Ditto for a LONG, except conversion is to a DOUBLE.
+							Return a bad status if the conversion failed.
+						}
+						End if
+					}
+
+					Get the number of range values associated with this with attribute,
+					  with the aid of getNumberAttribRangeValues(), which searches through
+					  the list of attribute range strings until it find the first NULL
+					  pointer.
+					Report an error if a non-string attribute has more than two range values.
+
+					If there are more than zero range values for this attribute then
+					{
+						Allocate memory to hold the pointers to the range values, and store
+						a pointer to this in ppCadContext[i]->ppAllowedRange[j]
+
+						If the attribute type is a string then
+						{
+							For each range value, k, do
+							{
+								Allocate memory to hold a string of size
+								  EPICS_MAX_BYTES_STRING_ATTRIB, and store the pointer in
+								  ppCadContext[i]->ppAllowedRange[j][k].pStringAttrib
+							} next range value
+						}
+
+						For each range value, k, do
+						{
+							Store this range value of the attribute using the following
+							  dodgy piece of code...
+							attribStringToUnion ( ppCadContext[i]->pType[j],
+					                     pCadList[i].pAttrib[j].pAllowedRange[k],
+					                     & ppCadContext [i]->ppAllowedRange[j][k])
+							{
+								attribStringToUnion - same as above...
+							}
+						} next range value
+
+						If the attribute is of type LONG or DOUBLE, and the highest range
+						  value is smaller than the lowest then
+						{
+							Swap the range values.
+						}
+					}
+				} next attribute
+
+				Allocate memory for the CAD command packet, and store a pointer to this
+				  in ppCadContext[i]->pCmdPacket
+
+				Copy the command number for this CAD from pCadList [i].commandNumber
+				  to CMD_PKT_COMMAND_NUMBER (ppCadContext [i])
+				
+			} next CAD definition
+
+			Mark all the CAD records as initialised by setting
+			  pRecordInitialised [CAD_RECORD_TYPE] = TRUE
+		}
+		taskUnlock()
+
+		Initialise the pipe used to connect to the "Record Daemon" task
+		epToVxPipeInit( procNumber=processorNumber )
+		{
+			If the epToVxPipeWriteFd has not been defined then
+			{
+				If the EPICS database is local, as indicated by the epicsDbIsLocal flag then
+				{
+					Use the conventional pipe driver.
+				}
+				Else
+				{
+					Use the multi-processor pipe driver.
+				}
+
+				Construct a pipe name extension, pNameExtension, from procNum.
+				Open the EPICS record daemon pipe, storing the file descriptor in
+				  epToVxPipeWriteFd using
+				  epToVxPipeOpen( fullNameProvided=FALSE, pName=CA_WRITE_PIPE_NAME,
+				                  pNameExtension=pNameExtension, pipeCreate=pipeCreate,
+				                  nMsgSlots=DATA_PKT_PIPE_WRITE_NMSGS,
+				                  maxMsgSize=DATA_PKT_PIPE_WRITE_MAX_BYTES,
+				                  mode=O_WRONLY, ioctlFunction=-1, timeoutPeriod=0.0,
+				                  timeoutDelay=0.0 )
+				{
+					If fullNameProvided then
+					{
+						Use the pipe name provided
+					}
+					else
+					{
+						Generate the pipe name by concatenating
+						  "/pipe/" + pName + pNameExtension
+					}
+
+					If the pipeCreate function is not NULL then
+					{
+						Create the pipe with pipeCreate( pPipeName, nMsgSlots, maxMsgSize )
+					}
+
+					Wait until the pipe exists using
+					  waitPipeExists( pPipeName, timeoutPeriod, timeoutDelay)
+					{
+						If the pipe doesn't already exist and a non-zero timeoutPeriod
+						  is specified
+						{
+							Check for the pipe's existence every timeoutDelay seconds until
+							  the pipe exists or a timeout occurs.
+							If a timeout occurs report an ERROR.
+						}
+					}
+
+					Open the pipe in the required mode, fd = open(pPipeName, mode, 0).
+					If an ioctl function was specified, execute it.
+				}
+			}
+		}
+	}
+
+	If the logErrorsToPipe flag is set then
+	{
+		Redirect errors to error log pipe
+		P_errorLogPipeSet ()
+		{
+			Get the processor number, procNum
+			sysextProcNumGet ()
+			{
+				sysextProcNumGet - details not important at the moment.
+			}
+
+			If the current processor is processor zero then
+			{
+				Use the conventional pipe driver
+			}
+			Else
+			{
+				Use the multi-processor pipe driver
+			}
+
+			Construct a pipe name extension, pNameExtension, from procNum.
+			Open a pipe to the error logging task and store the file descriptor in fd using
+			  epToVxPipeOpen( fullNameProvided=FALSE, pName=LOGTASK_PIPE_NAME,
+			                  pNameExtension=pNameExtension, pipeCreate=pipeCreate,
+			                  nMsgSlots=WFSLIB_LOGPIPE_NMSG_SLOTS,
+			                  maxMsgSize=ERROR_LOG_BUFFER_SIZE, mode=O_WRONLY,
+			                  ioctlFunction=-1, timeoutPeriod=0.0, timeoutDelay=0.0 )
+			{
+				epToVxPipeOpen - see above
+			}
+
+			Set the global error log file descriptor
+			taskLock()
+			errorGlobalFdSet( fd )
+			{
+				errorGlobalFdSet - details not important at the moment.
+			}
+			taskUnlock()
+		}
+	}
+}
+
+4) On processor zero iocInit() is executed.
+   The "CA client" task is spawned.
+   The "CA client" task begins executing epToVxCadInit() for each CAD record (see
+   description of "CA client" task).
+
+5) The initialisation of the EPICS database is completed.
+   On processor zero epToVxCaInitRecords() is executed.
+   On other processors epToVxDbInitSir() is executed.
+
+epToVxCaInitRecords()
+{
+	Initialise the channel access library with ca_task_initialize()
+
+	(CAD records have already been initialised by epToVxCadInit() in the "ca_client" task).
+
+	Initialise the CAR records
+	epToVxCaInitCar()
+	{
+		epToVxInit()
+		{
+			taskLock()
+			If the epToVxSymtab symbol table does not yet exist then
+			{
+				Create the epToVxSymtab symbol table.
+				}
+			taskUnlock()
+		}
+
+		Allocate memory for the CAR record table and store a pointer to it in
+		  ppCaDefTable[CAR_RECORD_TYPE]
+
+		For each CAR record, i
+		{
+			Allocate memory for the CAR context structure and store a pointer to it in
+			  pContext.
+			Allocate memory for the channel access definition structure and store a pointer
+			 to this in pContext->caContext.
+
+			Copy the task name from pCarList[i].pTaskName to pContext->pTaskName.
+
+			Add a symbol for this CAR record to epToVxSymtab, specifying pContext.
+
+			Initialise the channel access definition structure using
+			  epToVxCaInit( recordType=CAR_RECORD_TYPE, pRecordName=pCarList[i].pRecordName,
+			                pCaDef=pContext->caContext )
+			{
+				Copy the record type from recordType into pCaDef->recordType.
+
+				Search through the array of field names for records of this type in
+				  pppRecFieldName[recordType][field], count how many fields are defined
+				  for this type of record and store in pCaDef->nField.
+
+				Allocate memory for an array of channel ID structures (a structure for
+				  each field) and store a pointer to it in pCaDef->pChannelId.
+
+				Allocate memory for an array of field types (one element for each field)
+				  and store a pointer to it in pCaDef->pFieldType.
+
+				Allocate memory for an array of field value pointers (one element for each
+				 field) and store a pointer to it in pCaDef->ppFieldValue.
+
+				For each field, fieldNumber
+				{
+					Make up a field name by concatenating pRecordName and
+					  pppRecFieldName[recordType][fieldNumber]
+					Call ca_search() to search for this field and return a channel access
+					  ID in pCaDef->pChannelId[fieldNumber]
+
+					Copy the field type from the channel access ID structure into
+					  pCaDef->pFieldType[fieldNumber], with the aid of ca_field_type()
+
+					Allocate some memory to hold the value of this field, and store
+					  a pointer to it in pCaDef->ppFieldValue[fieldNumber], using the size
+					  obtained from dbr_size().
+
+				} next field
+
+				Call ca_pend_io() to allow channel access to tidy up.
+			}
+			Copy the channel access definition structure pointer from
+			  pContext->caContext to ppCaDefTable [CAR_RECORD_TYPE][i]
+
+			In debug mode, display information about this CAR record.
+
+		} next CAR record
+
+		Mark all CAR records as initialised, pRecordInitialised[CAR_RECORD_TYPE] = TRUE.
+	}
+
+	Initialise the SIR records
+	epToVxCaInitSir()
+	{
+		epToVxInit()
+		{
+			taskLock()
+			If the epToVxSymtab symbol table does not yet exist then
+			{
+				Create the epToVxSymtab symbol table.
+			}
+			taskUnlock()
+		}
+
+		Initialise the SIR records in the database with
+		  epToVxDbInitSir()
+		{
+			epToVxInit()
+			{
+				epToVxInit - same as above - already done but needed for processors other
+				             than processor 0.
+			}
+
+			For each SIR record, i, in pSirList[]
+			{
+				Allocate memory for the SIR context structure and store a pointer to it in
+				  pContext.
+
+				If the SIR record type in pSirList [i].type is LONG then
+				{
+					Set the size of the data packet to
+					  size(long) + DATA_PKT_HEADER_SIZE_BYTES.
+				}
+				else if the SIR record type in pSirList [i].type is DOUBLE then
+				{
+					Set the size of the data packet to
+					  size(double) + DATA_PKT_HEADER_SIZE_BYTES.
+				}
+				else the SIR record type in pSirList [i].type is STRING then
+				{
+					Set the size of the data packet to
+					  EPICS_MAX_BYTES_STRING_ATTRIB + DATA_PKT_HEADER_SIZE_BYTES.
+				}
+				else
+				{
+					Invalid data type - report error
+				}
+
+				Allocate memory for the data packet and store a pointer to it in
+				  pContext->pDataPacket.
+
+				Copy the record type from pSirList[i].type to pContext->type.
+				Set pContext->nElement to 1.
+				Set pContext->recordId to a combination of SIR_RECORD_TYPE and
+				  record number, i.
+				Initialise the filter and hysteresis parameters, and initialise
+				  the channel access context structure pContext->caContext to NULL.
+
+				Initialise the mode, record ID and number of elements in the data packet
+				  header, with the aid of DATA_PKT_MODE(), DATA_PKT_RECORD_ID() and
+				  DATA_PKT_N_ELEMENT().
+
+				Add a symbol for this SIR to the epToVxSymtab symbol table, specifying
+				  pContext.
+
+			} next SIR record
+
+			If the EPICS database is not local, mark all the SIR records as initialised
+			  with pRecordInitialised [SIR_RECORD_TYPE] = TRUE.
+
+		}
+		If the EPICS database resides on this CPU, ignore any error reported by the
+		  above function.
+
+		Allocate memory for an array of channel access definition structures, and store
+		  a pointer to it in ppCaDefTable [SIR_RECORD_TYPE].
+
+		For each SIR record, i
+		{
+			Find this record in the epToVxSymtab symbol table and return its context in
+			  pContext.
+
+			Allocate memory for a channel access context structure and store a pointer
+			  to this in (char *) pContext->caContext.
+
+			Initialise the channel access definition structure using
+			  epToVxCaInit( recordType=SIR_RECORD_TYPE, pRecordName=pSirList [i].pRecordName,
+			                pCaDef=(CA_DEF) pContext->caContext )
+			{
+				epToVxCaInit - same as above.
+			}
+			Copy the channel access definition structure pointer from
+			(CA_DEF) pContext->caContext to ppCaDefTable [SIR_RECORD_TYPE][i]
+
+			In debug mode, display information about this SIR record.
+
+		} next SIR record
+
+		Mark all the SIR records as initialised with
+		  pRecordInitialised [SIR_RECORD_TYPE] = TRUE.
+	}
+}
+
+1) In the startup script for processors other than processor 0
+
+epToVxDbInitSir()
+{
+	Same as above, but note that the lines
+
+	epToVxInit()
+	pRecordInitialised [SIR_RECORD_TYPE] = TRUE
+
+	will execute.
+}
+
+epToVxCaInitSir()
+{
+	epToVxInitSir - see above
+}
+
+6) In the startup script for processor zero the system version number is initialised
+
+wfsWriteVersion()
+{
+	If the code has not been built using RCS then
+	{
+		Write the compile date and time to the version record using
+		  epToVxPipeWrite ("version", COMPILE_DATE_AND_TIME, 0)
+		{
+			epToVxPipeWrite - see description in "wfsControl" task
+		}
+	}
+	Else
+	{
+		Write the RCS revision number to the version record using
+		  epToVxPipeWrite ("version", "$Revision: 1.1.1.1 $", 0)
+		{
+			epToVxPipeWrite - see description in "wfsControl" task
+		}
+	}
+}
+
+7) In the startup script for processor zero the "Record Daemon" task is spawned,
+   which starts executing epToVxCaWriteDaemon() (see the description of the "Record Daemon"
+   task).
+
+8) In the startup script for processor zero the error logging task is spawned,
+   which starts executing errorLog() (not described yet).
+
+9) Application tasks are spawned. See the description of the "wfs_control" task as
+   an example.
+
+10) In the startup script for processor zero the "Car Daemon" tasks are spawned - one
+    for each application task (see the description of a "Car Daemon" task).

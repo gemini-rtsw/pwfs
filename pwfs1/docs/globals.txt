@@ -1,0 +1,110 @@
+		Gemini A&G WAVEFRONT PROCESSING SYSTEM
+		======================================
+
+		Global variables and shared memory access
+		=========================================
+
+Most of the communication between tasks in the AGWPS takes place through
+messages sent along pipes. However, there are some global variables and data
+structures used as central repository of information, and these are listed
+here.
+
+Object				Defined in		Scope		Used by				Access mode		Protection
+------				----------		------		-------				-----------		----------
+pCadList +			wfsDb.c			Global		wfsDb.c				Initialise		None needed.
+nCadRecord			  "				  "			   "				   "
+												epToVxDbInitCadCar	Read
+												epToVxCmdInit		Read
+
+pCarList +			wfsDb.c			Global		wfsDb.c				Initialise		None needed.
+nCarRecord			  "				  "			   "				   "
+												epToVxCaInitRecords	Read
+												epToVxCaInitCar		Read
+
+pSirList +			wfsDb.c			Global		wfsDb.c				Initialise		None needed.
+nSirRecord			  "				  "			   "				   "
+												epToVxCaInitRecords	Read
+												epToVxCaInitSir		Read
+												epToVxCaWriteDaemon	Read
+												epToVxDbInitSir		Read
+
+pRecordInitialised	wfsDb.c			Global		wfsDb.c				Initialise		None needed.
+												wfsSysInit			Write
+												wfsShow				Read
+												epToVxCaInitRecords	Modify
+												epToVxCaInitCar		Modify
+												epToVxCaInitSir		Modify
+												epToVxCadInit		Modify
+												epToVxDbInitCadCar	Modify
+												epToVxDbInitSir		Modify
+												epToVxCadExecute	Read
+												epToVxCmdInit		Read
+
+epicsDbIsLocal		wfsDb.c			Global		wfsDb.c				Initialise		None needed.
+												wfsSysInit			Write
+												wfsShow				Read
+												epToVxCaInitRecords	Read
+												epToVxCaInitSir		Read
+												epToVxDbInitSir		Read
+												epToVxPipeInit		Read
+
+
+pppRecFieldName		wfsDb.c			Global		wfsDb.c				Initialise		None needed.
+												epToVxCaInit		Read
+
+ppCaDefTable		epToVxLib.c		Local		epToVxCaInitRecords	Write			CaDefSem
+												epToVxCaInitCar		Write
+												epToVxCaInitSir		Write
+												epToVxCaWriteDaemon	Modify
+												epToVxCarDaemon		None ??? (uses CAR CONTEXT)
+
+epToVxSymtab		epToVxLib.c		Global		epToVxInit			Write  (table create)
+												epToVxCaInitRecords	Modify
+												epToVxCaInitCar		Modify (symbol add and lookup)
+												epToVxCaInitSir		Modify (symbol add and lookup)
+												epToVxDbInitCadCar	Modify (symbol add)
+												epToVxDbInitSir		Modify (symbol add)
+												epToVxCadInit		Read   (symbol lookup)
+												epToVxCadExecute	Read   (symbol lookup)
+												epToVxCarDaemon		Read   (symbol lookup)
+												epToVxCmdInit		Read   (symbol lookup)
+												epToVxRecContextGet	Read   (symbol lookup)
+												epToVxShow			Read   (symbol lookup)
+
+cadSimulationMode	epToVxLib.c		Local		epToVxLib.c			Initialise
+												epToVxDbInitCadCar	Write
+												epToVxCadExecute	Modify
+
+epToVxPipeWriteFd	epToVxLib.c		Local		epToVxPipeInit		Write			epToVxPipeWriteSem
+												epToVxPipeWrite		Read
+
+
+pWfsArchProcessor	wfsSite.c		Global		wfsSite.c			Initialise		None needed.
+numProcessor		   "			  "			   "				   "
+												wfsLibInit			Read
+												wfsTargetTypeGet	Read
+												wfsNumProcsGet		Read
+												wfsSysInit			Read
+												wfsShow				Read
+
+
+
+The following are not explicit global objects, but are areas of shared memory
+associated with each EPICS record, which are accessed through pointers stored
+in the epToVxSymtab symbol table.
+
+Object				Defined in		Scope		Used by				Access mode		Protection
+------				----------		------		-------				-----------		----------
+CAD context			epToVxLib.c		Global		epToVxDbInitCadCar	Write			None.
+												epToVxCadExecute	Modify
+												epToVxCmdInit		Read
+												epToVxShow			Read
+
+
+CAR context			epToVxLib.c		Global		epToVxCaInitCar		Write			None.
+												epToVxCarDaemon		Modify
+												epToVxShow			Read
+
+SIR context			epToVxLib.c		Global		epToVxDbInitSir		Write			None.
+												epToVxCaWriteDaemon	None ??? (uses ppCaDefTable)
+												epToVxShow			Read

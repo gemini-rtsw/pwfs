@@ -1,0 +1,647 @@
+		Gemini A&G WAVEFRONT PROCESSING SYSTEM
+		======================================
+
+		Code Executed by "CA client" task
+		=================================
+
+1) During iocInit(), epToVxCadInit() is executed for each CAD record
+   in the EPICS database.
+
+epToVxCadInit()
+{
+	If this is the very first CAD record to be initialised then
+	{
+		taskLock()
+		epToVxDbInitCadCar()
+		{
+			epToVxInit()
+			{
+				taskLock()
+				If the epToVxSymtab symbol table does not yet exist then
+				{
+					Create the epToVxSymtab symbol table.
+				}
+				taskUnlock()		### Nested taskLock()
+			}
+
+			Allocate memory for an array of CAD context structure pointers, ppCadContext.
+
+			For each CAD definition, i, contained in the array pCadList[] do
+			{
+				Allocate memory for the CAD context structure for this record,
+				  ppCadContext[i].
+				Copy the number of attributes for this record from pCadList[i],
+				  with the aid of getNumberAttribs().
+
+				Add symbol for this record to the epToVxSymtab symbol table,
+				  specifying ppCadContext[i].
+
+				Populate the CAD definition with information from pCadList[i].
+				Allocate memory for the attributes description structures for this
+				  record.
+
+				Initialise the command packet size for this record to
+				  CMD_PKT_HEADER_SIZE_BYTES.
+
+				For each attribute, j, owned by this record do
+				{
+					Copy the attribute type from pCadList to the CAD definition structure.
+					Increment the command packet header size by the number of bytes
+					  required to store an attribute of this type.
+
+					If the attribute type is a string then
+					{
+						Allocate memory to hold a string of size
+						  EPICS_MAX_BYTES_STRING_ATTRIB, and store the pointer in
+						  ppCadContext[i]->pDefault[j].pStringAttrib
+					}
+
+					Store the default value of the attribute using the following
+					  dodgy piece of code...
+					attribStringToUnion ( ppCadContext[i]->pType[j],
+					                      pCadList[i].pAttrib[j].pDefault,
+					                      & ppCadContext[i]->pDefault[j] )
+					{
+						If the attribute is a string then
+						{
+							Copy from pCadList[i].pAttrib[j].pDefault to
+							  ppCadContext[i]->pDefault[j]->pStringAttrib (created above)
+						}
+						Else if the attribute is a LONG then
+						{
+							If pCadList[i].pAttrib[j].pDefault == "NO_LO_LIMIT" then
+							{
+								Write the minimum integer value to the same memory
+								  location that would have held the pointer to the
+								  the string attribute (defined in a union), i.e.
+								ppCadContext[i]->pDefault[j]->longAttrib = LONG_MIN;
+							}
+							Else if pCadList[i].pAttrib[j].pDefault == "NO_HI_LIMIT" then
+							{
+								Write the maximum integer value to the same memory
+								  location that would have held the pointer to the
+								  the string attribute (defined in a union), i.e,
+								ppCadContext[i]->pDefault[j]->longAttrib = LONG_MAX;
+							}
+							Else
+							{
+								Convert pCadList[i].pAttrib[j].pDefault into a LONG
+								  and store the result in pAttrib->longAttrib.
+								If the conversion failed report an error.
+							}
+						}
+						Else if the attribute is a DOUBLE then
+						{
+							Ditto for a LONG, except conversion is to a DOUBLE.
+							If the conversion failed report an error.
+						}
+						End if
+					}
+
+					Get the number of range values associated with this with attribute,
+					  with the aid of getNumberAttribRangeValues(), which searches through
+					  the list of attribute range strings until it find the first NULL
+					  pointer.
+					Report an error if a non-string attribute has more than two range values.
+
+					If there are more than zero range values for this attribute then
+					{
+						Allocate memory to hold the pointers to the range values, and store
+						a pointer to this in ppCadContext[i]->ppAllowedRange[j]
+
+						If the attribute type is a string then
+						{
+							For each range value, k, do
+							{
+								Allocate memory to hold a string of size
+								  EPICS_MAX_BYTES_STRING_ATTRIB, and store the pointer in
+								  ppCadContext[i]->ppAllowedRange[j][k].pStringAttrib
+							} next range value
+						}
+
+						For each range value, k, do
+						{
+							Store this range value of the attribute using the following
+							  dodgy piece of code...
+							attribStringToUnion ( ppCadContext[i]->pType[j],
+					                     pCadList[i].pAttrib[j].pAllowedRange[k],
+					                     & ppCadContext [i]->ppAllowedRange[j][k])
+							{
+								attribStringToUnion - same as above...
+							}
+						} next range value
+
+						If the attribute is of type LONG or DOUBLE, and the highest range
+						  value is smaller than the lowest then
+						{
+							Swap the range values.
+						}
+
+					}
+				} next attribute
+
+				Allocate memory for the CAD command packet, and store a pointer to this
+				  in ppCadContext[i]->pCmdPacket
+
+				Copy the command number for this CAD from pCadList [i].commandNumber
+				  to CMD_PKT_COMMAND_NUMBER (ppCadContext [i])
+				
+			} next CAD definition
+
+			Mark all the CAD records as initialised by setting
+			  pRecordInitialised [CAD_RECORD_TYPE] = TRUE
+
+		}
+		taskUnlock()
+	}
+
+	Find this CAD's context structure in the epToVxSymtab symbol table.
+
+	In debug mode, display information about this CAD record.
+}
+
+
+2) epToVxCadExecute is executed each time a CAD directive is received
+
+epToVxCadExecute( pcad )
+{
+
+	If CAD records have not been initialised, report an error.
+
+	Look up this CAD record, pcad->name, in the epToVxSymtab symbol table and return
+	  its context structure in context.
+
+	If the MARK directive has been requested then
+	{
+		Return CAD_ACCEPT.
+	}
+	Else if the CLEAR directive has been requested then
+	{
+		Load the default attribute values into the attribute string inputs with
+		  loadDefaultInputAttribs( pContext=context, pcad=pcad )
+		{
+			Initialise the pointer pAttrib to point to pcad->a
+			For each attribute, i
+			{
+				If the data type in pContext->pType[i] is a string then
+				{
+					Copy a string from pContext->pDefault [i].pStringAttrib to
+					  pAttrib [i * EPICS_MAX_BYTES_STRING_ATTRIB]
+					## Dodgy piece of code - makes assumptions about pcad structure.
+				}
+				Else if the data type is a LONG then
+				{
+					Copy a long value from pContext->pDefault [i].longAttrib to
+					  pAttrib [i * EPICS_MAX_BYTES_STRING_ATTRIB]
+					## Dodgy piece of code - makes assumptions about pcad structure.
+				}
+				Else if the data type is a DOUBLE then
+				{
+					Copy a double from pContext->pDefault [i].doubleAttrib to
+					  pAttrib [i * EPICS_MAX_BYTES_STRING_ATTRIB]
+					## Dodgy piece of code - makes assumptions about pcad structure.
+				}
+			} next attribute
+		}
+
+		postEventsInputAttribs( pContext=context, pcad=pcad )
+		{
+			Initialise the pointer pAttrib to point to pcad->a
+			For each attribute, i
+			{
+				Call db_post_events (pcad, & pAttrib [i * EPICS_MAX_BYTES_STRING_ATTRIB], 1)
+				## Dodgy piece of code - makes assumptions about pcad structure.
+			} next attribute
+		}
+		Return CAD_ACCEPT.
+	}
+	Else if the PRESET directive has been requested then
+	{
+		If the CAD_to_TASK pipe has not yet been opened then
+		{
+			Open the CAD_to_TASK pipe and store the file descriptor in
+			  context->cadToTaskPipeFd using
+			  epToVxPipeOpen( fullNameProvided=FALSE, pName=context->pTaskName,
+			                  pNameExtension=CAD_TO_TASK_PIPE_NAME_EXT, pipeCreate=NULL,
+		 	                  nMsgSlots=0, maxMsgSize=0, mode=O_WRONLY, ioctlFunction=-1,
+		  	                  timeoutPeriod=0.0, timeoutDelay=0.0 )
+			{
+				If fullNameProvided then
+				{
+					Use the pipe name provided
+				}
+				else
+				{
+					Generate the pipe name by concatenating "/pipe/" + pName + pNameExtension
+				}
+
+				If the pipeCreate function is not NULL then
+				{
+					Create the pipe with pipeCreate( pPipeName, nMsgSlots, maxMsgSize )
+				}
+
+				Wait until the pipe exists using
+				  waitPipeExists( pPipeName, timeoutPeriod, timeoutDelay)
+				{
+					If the pipe doesn't already exist and a non-zero timeoutPeriod is specified
+					{
+						Check for the pipe's existence every timeoutDelay seconds until
+						  the pipe exists or a timeout occurs.
+						If a timeout occurs report an ERROR.
+					}
+				}
+
+				Open the pipe in the required mode, fd = open(pPipeName, mode, 0).
+				If an ioctl function was specified, execute it.
+			}
+
+			If the CAD_to_CAR pipe has not yet been opened then
+			{
+				Open the CAD_to_CAR pipe and store the file descriptor in
+				  context->cadToCarPipeFd using
+				  epToVxPipeOpen( fullNameProvided=FALSE, pName=context->pTaskName,
+		                  pNameExtension=CAD_TO_CAR_PIPE_NAME_EXT, pipeCreate=NULL,
+	 	                  nMsgSlots=0, maxMsgSize=0, mode=O_WRONLY,
+				          ioctlFunction=FIOFLUSH, timeoutPeriod=0.0, timeoutDelay=0.0 )
+				{
+					epToVxPipeOpen - open pipe, as above. timeoutPeriod=0.0 so the 
+					 function will not wait for the pipe to exist.
+				}
+			}
+
+			Copy the attributes from the CAD record into the CAD context structure using
+			  saveAttributes (pcad=pcad, pContext=context)
+			{
+				Initialise the pointer pAttribSource to point to pcad->a.
+				Reset the default mask word,
+				 CMD_PKT_DEFAULT_MASK (pContext) = 0
+				Set the initial size of
+				  pContext->sizeOfCmdPacket to CMD_PKT_HEADER_SIZE_BYTES
+
+				For each attribute, i, in the CAD context structure
+				{
+					attribPutCmdPacket (pContext=pContext, attribNumber=i,
+					  pAttribString=& pAttribSource [i * EPICS_MAX_BYTES_STRING_ATTRIB])
+					  ## Dodgy piece of code - makes assumptions about pcad structure.
+					{
+						If pAttribString matches the magic CAD_ATTRIBUTE_DEFAULT_STRING code
+						{
+							Set the "default bit" corresponding to this attribute in the
+							  default bit mask of the command packet, using
+							  CMD_PKT_DEFAULT_MASK( pContext ) |= 1 << attribNumber
+						}
+						Else
+						{
+							Assume the destination address for this attribute is at the end
+							  of the current command packet, i.e.
+							  pDestination = pContext->pCmdPacket +
+							                 pContext->sizeOfCmdPacket
+
+							If the attribute type in pContext->pType[attribNumber] is STRING
+							{
+								If pAttribString happens to match the default string,
+								  pContext->pDefault[attribNumber].pStringAttrib then
+								{
+									Set the "default bit" corresponding to this attribute in
+									  the default bit mask of the command packet, using
+									  CMD_PKT_DEFAULT_MASK( pContext ) |= 1 << attribNumber
+								}
+								Else
+								{
+									Copy pAttribString to pDestination
+									Increment pContext->sizeOfCmdPacket by
+									  EPICS_MAX_BYTES_STRING_ATTRIB.
+								}
+							}
+							Else if the attribute type is LONG then
+							{
+								If pAttribString happens to match the default value,
+								  pContext->pDefault[attribNumber].longAttrib then
+								{
+									Set the "default bit" corresponding to this attribute in
+									  the default bit mask of the command packet, using
+									  CMD_PKT_DEFAULT_MASK( pContext ) |= 1 << attribNumber
+								}
+								Else
+								{
+									Convert pAttribString to LONG and write it to
+									  pDestination
+									Report an error if the conversion fails.
+									Increment pContext->sizeOfCmdPacket by sizeof(long).
+								}
+							}
+							Else if the attribute type is DOUBLE then
+							{
+								If pAttribString happens to match the default value,
+								  pContext->pDefault[attribNumber].doubleAttrib then
+								{
+									Set the "default bit" corresponding to this attribute in
+									  the default bit mask of the command packet, using
+									  CMD_PKT_DEFAULT_MASK( pContext ) |= 1 << attribNumber
+								}
+								Else
+								{
+									Convert pAttribString to DOUBLE and write it to
+									  pDestination
+									Report an error if the conversion fails.
+									Increment pContext->sizeOfCmdPacket by sizeof(double).
+								}
+							}
+						}
+					}
+
+				} next attribute
+			}
+
+			Check the attributes are within their desired ranges using
+			  checkAttributes( pContext=context, pOffendingAttrib=& offendingAttrib,
+			                   pReason=pReason)
+			{
+				For each attribute, i
+				{
+					If the number of range values pContext->pNumberRangeValues[i] is greater
+					  than zero then
+					{
+						If the attribute type in pContext->pType[i] is STRING then
+						{
+							Get the string attribute using
+							  epToVxCmdAttribGet( pContext=pContext, attribNumber=i,
+							                      pAttribDest=pStringAttrib,
+							                      pCmdPacket=NULL )
+							{
+								If pCmdPacket is NULL (as it is in this case) then
+								{
+									Get the default mask from pContext->pCmdPacket using
+									  defaultMask = CMD_PKT_DEFAULT_MASK (pContext)
+								}
+								Else
+								{
+									Get the default mask from the specified pCmdPacket using
+									  defaultMask = CMD_PKT_DEFAULT_MASK_1 (pContext)
+								}
+
+								If the default bit in the bit mask is not set then
+								{
+									Get the location where the attribute sting is stored
+									  using getAttribSourceAddrs (pContext, pCmdPacket,
+									                              attribNumber, defaultMask)
+									{
+										If the default bit for this attribute is set then
+										{
+											pSource = NULL
+										}
+										Else
+										{
+											Initialise pSource to point to pCmdPacket plus
+											  CMD_PKT_HEADER_SIZE_BYTES.
+
+											For each attribute, attribute, less than the
+											  current attribute, attribNumber
+											{
+												If the default bit for attribute is not set
+												{
+													If the attribute type is a STRING then
+													{
+														Increment pSource by
+														  EPICS_MAX_BYTES_STRING_ATTRIB
+													}
+													Else if the attribute type is LONG then
+													{
+														Increment pSource by sizeof(long)
+													}
+													Else if the attribute type is DOUBLE then
+													{
+														Increment pSource by sizeof(double)
+													}
+
+												}
+											} next attribute
+										}
+										Return pSource
+									}
+
+									If the attribute type is a STRING then
+									{
+										Copy from pSource to pAttribDest as a string
+									}
+									Else if the attribute type is a LONG then
+									{
+										Copy from pSource to pAttribDest as a LONG
+									}
+									Else if the attribute type is a DOUBLE then
+									{
+										Copy from pSource to pAttribDest as a DOUBLE
+									}
+								}
+								Else (the default bit is set for this attribute)
+								{
+									If the attribute type is a STRING then
+									{
+										Copy the default string from
+										  pContext->pDefault[attribNumber].pStringAttrib
+										  to pAttribDest as a string
+									}
+									Else if the attribute type is a LONG then
+									{
+										Copy the default LONG value from
+										  pContext->pDefault[attribNumber].longAttrib
+										  to pAttribDest as a LONG
+									}
+									Else if the attribute type is a DOUBLE then
+									{
+										Copy the default DOUBLE value from
+										  pContext->pDefault[attribNumber].doubleAttrib
+										  to pAttribDest as a DOUBLE
+									}
+								}
+							}
+
+							For each attribute range value, j
+							{
+								Check whether the string attribute value, pStringAttrib,
+								  obtained above matches this attribute range value,
+								  pContext->ppAllowedRange [i][j].pStringAttrib
+								Flag is there is a match.
+							} next attribute range value
+
+							If there are no matches then
+							{
+								Reject the attribute - not in list
+							}
+
+						}
+						Else if the attribute type is LONG then
+						{
+							Get the long attribute using
+							  epToVxCmdAttribGet( pContext=pContext, attribNumber=i,
+							                      pAttribDest=(char *) & longAttrib,
+							                      pCmdPacket=NULL )
+							{
+								epToVxCmdAttribGet - as above.
+							}
+
+							If there is only one attribute range value then
+							{
+								Reject the attribute if it does not exactly match
+								  the range value.
+							}
+
+							Assume there are two range values.
+							If the attribute value is less than the minimum range value
+							  or greater than the maximum range value then
+							{
+								Reject the attribute.
+							}
+						}
+						Else if the attribute type is DOUBLE then
+						{
+							Get the double attribute using
+							  epToVxCmdAttribGet( pContext=pContext, attribNumber=i,
+							                      pAttribDest=(char *) & doubleAttrib,
+							                      pCmdPacket=NULL )
+							{
+								epToVxCmdAttribGet - as above.
+							}
+
+							If there is only one attribute range value then
+							{
+								Reject the attribute if it does not exactly match
+								  the range value.
+							}
+
+							Assume there are two range values.
+							If the attribute value is less than the minimum range value
+							  or greater than the maximum range value then
+							{
+								Reject the attribute.
+							}
+						}
+						Else
+						{
+							Invalid attribute type - report error
+						}
+					}
+
+				} next attribute
+			}
+
+			If the attributes have all been accepted then
+			{
+				Check whether the CAD command pipe is ready to accept a command using
+				  readyToAcceptCommand( pContext=context )
+				{
+					Query the status of the pContext->cadToTaskPipeFd pipe from the pipe 
+					  driver using ioctl() with function FIONMSGS and return the number of
+					  occupied message queue slots.
+					The pipe is ready to accept a command if there is a least one free slot.
+				}
+				Report an error there isn't a free slot in the command pipe.
+			}
+
+			If an attribute has been rejected or something else has gone wrong then
+			{
+				Return CAD_REJECT - "reason"
+			}
+			Else
+			{
+				Write the output attributes using
+				  writeCadOutputAttribs( pContext=context, pcad=pcad )
+				{
+
+					## Do horrible things!! Comment out this function!!
+
+				}
+				Return CAD_ACCEPT
+			}
+		}
+	}
+	Else if the START or STOP directive has been requested then
+	{
+		If a STOP directive has been requested then
+		{
+			If the stop directive is not supported (as defined in context->stopDirSupported)
+			{
+				Return CAD_REJECT - Stop not supported
+			}
+
+			If the context->cadToTaskPipeFd pipe has not been opened then
+			{
+				Return CAD_REJECT - No PRESET or START first
+
+			}
+		}
+
+		Increment the client ID, wrapping at CAD_MAX_TRANSACTION_NUMBER
+
+		Set the client ID using CMD_PKT_CLIENT_ID (context) = context->clientId
+
+		If simulation is supported (as defined in context->simulationSupported) then
+		{
+			Use the simulation mode stored in cadSimulationMode
+		}
+		else
+		{
+			Set the simulation mode to EPTOVX_SIM_MODE_NONE
+		}
+
+		If a START directive has been requested then
+		{
+			Set the number of bytes to the size of the command packet for this command
+			  (context->sizeOfCmdPacket).
+			Set the command packet modifier to a combination of the simulation mode,
+			  BEGIN bit mask and START directive code.
+		}
+		Else
+		{
+			Set the number of bytes to CMD_PKT_HEADER_SIZE_BYTES.
+			Set the command packet modifier to a combination of the simulation mode,
+			  BEGIN bit mask and STOP directive code.
+		}
+
+		Write the command packet header to the context->cadToCarPipeFd pipe, which
+		  should make the CAR record go BUSY.
+
+		## DESIGN FLAW: This should only happen when a START directive is received.
+
+		If the simulation mode is either NONE, FULL or FAST then
+		{
+			Write the complete command packet to the context->cadToTaskPipeFd pipe,
+			  which should start or stop the action.
+		}
+		In debug mode issue a message.
+	}
+	Else
+	{
+		Unrecognised CAD directive - report error and reject.
+	}
+
+	Set pcal->val to the appropriate value.
+	postEventsOutputAttribs( pContext=context, pcad=pcad )
+	{
+		## Really dodgy code - comment out!
+	}
+}
+
+2) epToVxCadReject is executed each time a CAD directive for an unimplemented
+   command is received.
+
+epToVxCadReject( pcad )
+{
+
+	If the MARK directive has been requested then
+	{
+		Return CAD_ACCEPT.
+	}
+	Else if the CLEAR directive has been requested then
+	{
+		Return CAD_ACCEPT.
+	}
+	Else if the PRESET, START or STOP directive has been requested then
+	{
+		Return CAD_REJECT - command not supported.
+	}
+	Else
+	{
+		Unrecognised CAD directive - report error and reject.
+	}
+}
