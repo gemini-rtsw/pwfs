@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2968"
+	nwords_dspy="2990"
 	nwords_sta="128"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1694"
-	osta="1566"
-	odynamic="1694"
-	oplot="2156"
-	ord="2156"
-	oes="2956"
-	okd="2956"
-	opd="2968"
-	opo="2968"
+	odyng="1716"
+	osta="1588"
+	odynamic="1716"
+	oplot="2178"
+	ord="2178"
+	oes="2978"
+	okd="2978"
+	opd="2990"
+	opo="2990"
 	opc="68"
 	ostr="206"
-	ocmap="1566"
-	ocrules="1566"
+	ocmap="1588"
+	ocrules="1588"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -511,9 +511,9 @@ display {
 	}
 	selfkill="off"
 	display[0] {
-		label="SET EXPOSURE PARAMETERS"
-		name="det_exposure.dl"
-		args="top=$(top),sensor=$(sensor),cad=detExposure,car=det"
+		label="SET CHOP MASK"
+		name="det_chop.dl"
+		args="top=$(top),sensor=$(sensor),cad=detChop,car=det"
 	}
 	display[1] {
 		label="SET OBSERVATION TYPE"
@@ -526,19 +526,19 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detSetWcs,car=det"
 	}
 	display[3] {
-		label="SET CHOP MASK"
-		name="det_chop.dl"
-		args="top=$(top),sensor=$(sensor),cad=detChop,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[4] {
-		label="LOAD PARAMETERS"
-		name="det_setup.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSetup,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[5] {
-		label="SAVE PARAMETERS"
-		name="det_save.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSave,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[6] {
 		label=""
@@ -794,14 +794,14 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detOffset,car=det"
 	}
 	display[3] {
-		label=""
-		name=""
-		args=""
+		label="LOAD PARAMETERS"
+		name="det_setup.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSetup,car=det"
 	}
 	display[4] {
-		label=""
-		name=""
-		args=""
+		label="SAVE PARAMETERS"
+		name="det_save.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSave,car=det"
 	}
 	display[5] {
 		label=""
