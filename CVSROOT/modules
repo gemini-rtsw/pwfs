@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.13 2000-08-30 18:55:23 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.14 2000-08-30 18:57:48 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -67,9 +67,3 @@ pcs	pcs
 
 #D	mbec	Matthieu's playground
 mbec	mbec
-
-#M	pcstest	PCS test version
-pcstest	mbec/pcstest
-#D	pcstest2	second test
-#M	pcstest2	second test
-pcstest2	mbec/pcstest2
