@@ -1,0 +1,16 @@
+# Set up environment variables for location of Gemini libraries if they 
+# exist.
+
+if [ -e $EPICS/extensions/src/gemini ] && [ -e /gemini ] ; then
+
+    export GEMINI_LIB=$EPICS/extensions/src/gemini ;
+    export GEMINI_SLALIB=$GEMINI_LIB/slalib ;
+    export GEMINI_TIMELIB=$GEMINI_LIB/timelib ;
+    export GEMINI_ASTLIB=/home/cboyer/wfs_lib/astlib-ppc ;
+    export GEMINI_CFITSIO=/home/cboyer/wfs_lib/cfitsio-ppc ;
+    export GEMINI_DHS=/home/cboyer/wfs_lib/dhs-ppc ;
+    export DRAMA_DIR=/home/cboyer/wfs_lib/dhs-ppc/sys/drama ;
+else
+
+    echo "*** Gemini library directories not found." ;
+fi
