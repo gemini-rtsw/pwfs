@@ -17,8 +17,6 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
- * 13 Sep 2001: CB - Add aoThresholdPerSubapCompute(), thresholdVect, 
- *                   thresholdDarkFull and thresholdDarkBin
  * 08 Aug 2001: CB - Major modifications to have ao correction with P2 also
  * 08 Feb 2001: CB - Add zernikesVectAfterRot in circular buffer AO_CB_CTRL_ID 
  * 25 Oct 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
@@ -65,9 +63,6 @@
 
 #define AO_TIME_NOW_ERROR    -5.55e9   /* If time Now returns an error, time  */
                                        /* is set to this value                */
-
-#define ZP_MODEL_SEM_TIMEOUT 100       /* Timeout for zero point model        */
-                                       /* semaphore                           */
 
 /********************************************************************* Enum ***/
 
@@ -351,15 +346,8 @@ typedef struct
    double       thresholdMultCoeff;    /* Multiplicative coefficient for      */
                                        /* threshold computation               */
 
-   double       thresholdDarkFull;     /* Threshold computed during sequence  */
-                                       /* dark when no binning - save         */ 
-
-   double       thresholdDarkBin;      /* Threshold computed during sequence  */
-                                       /* dark when binning - save            */ 
-
-   WFS_VECT     thresholdVect;         /* Threshold computed for each         */
-                                       /* subaperture                         */
-
+   double       thresholdDark;         /* Threshold computed during sequence  */
+                                       /* dark - save                         */ 
    double       averageTotal;          /* Average of the total counts for the */
                                        /* whole CCD                           */
 
@@ -790,13 +778,12 @@ STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels,
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       double * pTotalCountsVect, double * pGuidesVect, 
                       double * pFgVect, double * pFgVectAfterRot,
-                      double * pFgErrorsVect, double * pTime, int * pWfsStatus,
-                      int writeToRm);
+                      double * pFgErrorsVect, double * pTime, int * pWfsStatus);
 STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId, 
                               AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
                               double * pGuidesVect, double * pFgVect, 
                               double * pFgVectAfterRot, double * pFgErrorsVect, 
-                              double * pTime, int * pWfsStatus, int writeToRm);
+                              double * pTime, int * pWfsStatus);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
 STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
@@ -821,7 +808,7 @@ STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                         double *pTotalCountsVect, double * pCentroidsVect, 
                         double * pErrorCentroidsVect, double * pFgVect, 
                         double * pFgVectAfterRot, double * pFgErrorsVect, 
-                        double * pTime, int * pWfsStatus, int writeToRm);
+                        double * pTime, int * pWfsStatus);
 STATUS aoModeAnalyze (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                       AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCentroidsWrite ( char * pCentroidsFileName, double * pCentroids, 
@@ -841,24 +828,6 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
                   FOCUS_ZP_MODEL_ID focModelId);
-STATUS aoModAstFileRead (char * pInitFileName, double * pA1, double * pA2,
-                         double * pA3, double * pP1, double * pP2,
-                         double * pP3, double * pC, double * pB1,
-                         double * pB2, double * pB3, double * pPp1,
-                         double * pPp2, double * pPp3, double * pD,
-                         double * pGain0, double * pGain45,
-                         double * pOffset0, double * pOffset45, int * pApply);
-STATUS aoModTrefFileRead (char * pInitFileName, double * pA, double * pP,
-                          double * pC, double * pB, double * pPp, double * pD,
-                          int * pApply);
-STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
-                          double * pC, double * pB, double * pPp,
-                          double * pD, int * pApply);
-STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1, 
-                         double * pA2, double * pP2, double * pC,
-                         int * pApply);
-STATUS aoThresholdPerSubapCompute (float * pImage, AO_CCD_ID aoCcdId, 
-                                   double ratePixel, double * pThreshold);
 #endif
 
 #endif /* __INCaoP2Libh */

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.18 2001-12-03 19:47:58 cboyer Exp $"};
+   "$Id: detControl.c,v 1.15 2001-09-04 19:53:14 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,8 +31,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- *   30 Nov 2001: CB - Add flag writeToRm to aoGlobalGuide() and 
- *                     aoGuideAndFocus()
  *   21 Aug 2001: CB - Major modifications to have aO correction with P2 also
  *                     In fact detControl.c is now a copy of pwfs1
  *   15 Jun 2001: CB - reject observe command if exposure time < 0.01 and no
@@ -219,9 +217,6 @@ extern AO_CB_FG_CTRL_ID aoCbFgCtrlIdP2; /* Pointer to the FG control circular */
 extern AO_CB_IM_ID aoCbImIdP2;     /* Pointer to the image circular buffer    */
                                    /* defined in writeZernikes.c              */
 
-extern AO_CTRL_ID aoCtrlIdP2 ;     /* Pointer to the aO control context       */
-                                   /* structure defined in writeZernikes.c    */
-
 extern double sampleData[5][3];    /* Samples for butterworth filter          */
                                    /* defined in writeZernikes.c              */
 
@@ -250,14 +245,6 @@ extern FOCUS_ZP_MODEL_ID_STRUCT focusModel;
                                    /* Focus model defined in writeZernikes.c  */
 
 extern SEM_ID accessFocusModel;    /* Semaphore Focus model defined in        */
-                                   /* writeZernikes.c                         */
-
-extern double angleWithM1;         /* Angle with M1 (equivalent to the one    */
-                                   /* contained in aoCtrlIdP2) defined in     */
-                                   /* writeZernikes.c                         */
-
-extern double angleWithM2;         /* Angle with M2 (equivalent to the one    */
-                                   /* contained in aoCtrlIdP2) defined in     */
                                    /* writeZernikes.c                         */
 
 /******************************************************* External functions ***/
@@ -597,12 +584,13 @@ STATUS   detControl
    timer_t      timeId;             /* Alarm timer ID.                        */
 
    /* Zero point model temporary variables */
-
+/*
    AST_ZP_MODEL_ID_STRUCT   tempAstModel;
    TREF_ZP_MODEL_ID_STRUCT  tempTrefModel;
    COMA_ZP_MODEL_ID_STRUCT  tempComaModel;
    FOCUS_ZP_MODEL_ID_STRUCT tempFocModel;
    char         modInitFileName [ STRING_SIZE ] ;
+*/
                                     /* Name of the model init file            */
 
    /* Other general variables. */
@@ -742,7 +730,6 @@ STATUS   detControl
    obsId->saveCbFgCtrl = FALSE;
    obsId->sigMode = AO_MODE_NONE;
    obsId->dhsQlRate = 100;
-   obsId->writeToRm = 1;
 
    /*
     * Get the context structures for the SIR records. 
@@ -806,7 +793,6 @@ STATUS   detControl
    };
 
    obsId->aoCtrlId = aoCtrlId;
-   aoCtrlIdP2 = aoCtrlId;
 
    aoCbImId = aoCbImContextCreate();
 
@@ -1312,9 +1298,6 @@ STATUS   detControl
 
       if ( aoCtrlId->initFlag == TRUE )
       {
-         angleWithM1 = aoCtrlId->angleWithM1;
-         angleWithM2 = aoCtrlId->angleWithM2;
-
          if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext) 
              == ERROR)
          {
@@ -1426,6 +1409,7 @@ STATUS   detControl
     * Init the ao zero point models 
     */
 
+/*
 #if (MK)
    strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE);
 #else
@@ -1443,92 +1427,12 @@ STATUS   detControl
       {
          ERROR_LOG ( "Failed to init zero point models on startup" );
       }
-
-      /* Now init the real models */
-
-      if (semTake (accessAstigModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-      {
-         ERROR_LOG ( "Timeout on mutex acess to astigModel" );
-      }
-      else
-      {
-         astigModel.a1 = tempAstModel.a1;
-         astigModel.a2 = tempAstModel.a2;
-         astigModel.a3 = tempAstModel.a3;
-         astigModel.p1 = tempAstModel.p1;
-         astigModel.p2 = tempAstModel.p2;
-         astigModel.p3 = tempAstModel.p3;
-         astigModel.c = tempAstModel.c;
-         astigModel.b1 = tempAstModel.b1;
-         astigModel.b2 = tempAstModel.b2;
-         astigModel.b3 = tempAstModel.b3;
-         astigModel.pp1 = tempAstModel.pp1;
-         astigModel.pp2 = tempAstModel.pp2;
-         astigModel.pp3 = tempAstModel.pp3;
-         astigModel.d = tempAstModel.d;
-         astigModel.applyModel = tempAstModel.applyModel;
-         astigModel.gain0 = tempAstModel.gain0;
-         astigModel.gain45 = tempAstModel.gain45;
-         astigModel.offsetAstig0 = tempAstModel.offsetAstig0;
-         astigModel.offsetAstig45 = tempAstModel.offsetAstig45;
-
-         semGive (accessAstigModel); 
-      }
-
-      if (semTake (accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-      {
-         ERROR_LOG ( "Timeout on mutex acess to trefoilModel" );
-      }
-      else
-      {
-         trefoilModel.a = tempTrefModel.a;
-         trefoilModel.p = tempTrefModel.p;
-         trefoilModel.c = tempTrefModel.c;
-         trefoilModel.b = tempTrefModel.b;
-         trefoilModel.pp = tempTrefModel.pp;
-         trefoilModel.d = tempTrefModel.d;
-         trefoilModel.applyModel = tempTrefModel.applyModel;
-
-         semGive (accessTrefoilModel);
-      }
-
-      if (semTake (accessComaModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-      {
-         ERROR_LOG ( "Timeout on mutex acess to comaModel" );
-      }
-      else
-      {
-         comaModel.a = tempComaModel.a;
-         comaModel.p = tempComaModel.p;
-         comaModel.c = tempComaModel.c;
-         comaModel.b = tempComaModel.b;
-         comaModel.pp = tempComaModel.pp;
-         comaModel.d = tempComaModel.d;
-         comaModel.applyModel = tempComaModel.applyModel;
-
-         semGive (accessComaModel);
-      }
-
-      if (semTake (accessFocusModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-      {
-         ERROR_LOG ( "Timeout on mutex acess to focusModel" );
-      }
-      else
-      {
-         focusModel.a1 = tempFocModel.a1;
-         focusModel.a2 = tempFocModel.a2;
-         focusModel.p1 = tempFocModel.p1;
-         focusModel.p2 = tempFocModel.p2;
-         focusModel.c = tempFocModel.c;
-         focusModel.applyModel = tempFocModel.applyModel;
-
-         semGive (accessFocusModel);
-      }
    }
    else
    {
       MESSAGE_LOG ( MSG_LOG, "aO zero point model not initialized");
    }
+*/
 
    /*
     * If the DHS has initialised successfully, attempt to connect to it.
@@ -4704,7 +4608,7 @@ uint32 detObserveStart
 
    uint32       errorNumber;  /* Error number reported by task.               */
    
-   int          i, j, k;
+   int          i, j;
 
    /* Variables describing the observation. */
 
@@ -5034,14 +4938,7 @@ uint32 detObserveStart
             obsId->nAverageDataThreshComp = 0;
          else
          {
-            if ( obsId->aoCcdId->binningFlag == FALSE )
-               obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
-            else
-               obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
-
-            for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
-                obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
-
+            obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
             if (epToVxPipeWrite (NULL, 
                 (char *)(int)& (obsId->aoCtrlId->threshold), 
                 obsId->pAoThreshContext) == ERROR)
@@ -9775,7 +9672,6 @@ void detObserveEnd
    
    int            i;
    int            j;
-   int            k;
    int            indexIm;
    int            indexFgCtrl;
    int            indexCtrl;
@@ -9797,7 +9693,6 @@ void detObserveEnd
    double *       pErrorsFg;
    double *       pTime;
    double         elapsed;
-   double         t1, t2;
 
    /* File names. */
 
@@ -10155,10 +10050,9 @@ void detObserveEnd
                 */
 #ifdef DEBUG
                printf (
-                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                  pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                 (int)obsId->writeToRm);
+                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10175,8 +10069,7 @@ void detObserveEnd
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId, 
                                    pTotal, pGuides, pFg, pFgAfterRot, pErrorsFg,
-                                   pTime, pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                   pTime, pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                };
@@ -10192,10 +10085,9 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                  pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus, 
-                 (int)obsId->writeToRm);
+                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10212,8 +10104,7 @@ void detObserveEnd
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                    pTotal, pGuides, pFg, pFgAfterRot, 
-                                   pErrorsFg, pTime, pWfsStatus, 
-                                   (int)obsId->writeToRm) == ERROR )
+                                   pErrorsFg, pTime, pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                }
@@ -10346,10 +10237,10 @@ void detObserveEnd
                   nCoadds = (int) obsId->nAverageDataThreshComp;
 #ifdef DEBUG
                   printf (
-                  "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                  "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                   pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
                   pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, 
-                  pTime, pWfsStatus, (int)obsId->writeToRm);
+                  pTime, pWfsStatus);
 #endif
                   if ( obsId->updateFgScale == TRUE )
                   {
@@ -10367,8 +10258,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                         pTotal, pCentroids, pErrorCentroids,
                                         pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                        pWfsStatus, (int)obsId->writeToRm) 
-                       == ERROR )
+                                        pWfsStatus) == ERROR )
                   {
                      ERROR_LOG (
                            "Failed to run fast guide and focus correction");
@@ -10404,31 +10294,14 @@ void detObserveEnd
 #endif
                   if ( obsId->coaddCounter == nCoadds )
                   {
-                     if ( timeNow (&t1) != OK )
-                     {
-#ifdef DEBUG
-                        ERROR_SET (0, "Failed to get time stamp",
-                                   ERROR_LOG_NOW);
-#endif
-                        t1 = (double)AO_TIME_NOW_ERROR ;
-                     }
-                     if ( aoThresholdPerSubapCompute (obsId->aoCtrlId->sumVect,
+                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
                                               obsId->aoCcdId, 
                                               obsId->rateBrightPixThreshComp,
-                                              obsId->aoCtrlId->thresholdVect) 
+                                              &obsId->aoCtrlId->threshold) 
                                               == ERROR )
                      {
                        ERROR_LOG ("Failed to subtract DARK from current frame");
                      }
-                     if ( timeNow (&t2) != OK )
-                     {
-#ifdef DEBUG
-                        ERROR_SET (0, "Failed to get time stamp",
-                                   ERROR_LOG_NOW);
-#endif
-                        t2 = (double)AO_TIME_NOW_ERROR ;
-                     }
-                     printf ( "t1=%f, t2=%f\n", t1, t2 );
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
                            obsId->pAoThreshContext) == ERROR)
@@ -10469,16 +10342,8 @@ void detObserveEnd
                      obsId->aoCtrlId->threshold = 
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
 
-                     if ( obsId->aoCcdId->binningFlag == FALSE )
-                        obsId->aoCtrlId->thresholdDarkFull =
-                        obsId->aoCtrlId->threshold ;
-                     else
-                        obsId->aoCtrlId->thresholdDarkBin =
-                        obsId->aoCtrlId->threshold ;
-
-                     for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
-                         obsId->aoCtrlId->thresholdVect[k] =
-                         obsId->aoCtrlId->threshold;
+                     obsId->aoCtrlId->thresholdDark =
+                     obsId->aoCtrlId->threshold ;
 
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
@@ -10555,10 +10420,9 @@ void detObserveEnd
 
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
-               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                       pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                       (int)obsId->writeToRm);
+                       pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus);
                printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
                        obsId->aoCbAoCtrlId);
@@ -10590,8 +10454,7 @@ void detObserveEnd
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                    pTotal, pGuides, pFg, pFgAfterRot, 
-                                   pErrorsFg, pTime, pWfsStatus,
-                                   (int)obsId->writeToRm) == ERROR )
+                                   pErrorsFg, pTime, pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                }
@@ -10629,8 +10492,7 @@ void detObserveEnd
                      /*if ( aoGlobalGuide (pImage, obsId->aoCcdId, 
                                          obsId->aoCtrlId, pTotal, pGuides, 
                                          pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                         pWfsStatus, (int) obsId->writeToRm) 
-                         == ERROR )
+                                         pWfsStatus) == ERROR )
                      {
                         ERROR_LOG ("Failed to run FG correction");
                      }*/
@@ -10639,8 +10501,7 @@ void detObserveEnd
                                            obsId->aoCtrlId,
                                            pTotal, pCentroids, pErrorCentroids,
                                            pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                           pWfsStatus, (int)obsId->writeToRm) 
-                          == ERROR )
+                                           pWfsStatus) == ERROR )
                      {
                         ERROR_LOG (
                               "Failed to run fast guide and focus correction");
@@ -10676,10 +10537,10 @@ void detObserveEnd
                 */
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10697,8 +10558,7 @@ void detObserveEnd
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId, 
                                      pTotal, pCentroids, pErrorCentroids, 
                                      pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                };
@@ -10714,10 +10574,10 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime,
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
 
 #endif
                if ( obsId->updateFgScale == TRUE )
@@ -10736,8 +10596,7 @@ void detObserveEnd
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pTotal, pCentroids, pErrorCentroids,
                                      pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
@@ -10807,10 +10666,10 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime,
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10828,8 +10687,7 @@ void detObserveEnd
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pTotal, pCentroids, pErrorCentroids,
                                      pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
@@ -10933,10 +10791,10 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
                printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
                        obsId->aoCbAoCtrlId);
@@ -10968,8 +10826,7 @@ void detObserveEnd
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pTotal, pCentroids, pErrorCentroids, pFg, 
-                                     pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                                     (int)obsId->writeToRm) 
+                                     pFgAfterRot, pErrorsFg, pTime, pWfsStatus) 
                     == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
@@ -11086,16 +10943,8 @@ void detObserveEnd
                      obsId->aoCtrlId->threshold =
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
 
-                     if ( obsId->aoCcdId->binningFlag == FALSE )
-                        obsId->aoCtrlId->thresholdDarkFull =
-                        obsId->aoCtrlId->threshold ;
-                     else
-                        obsId->aoCtrlId->thresholdDarkBin =
-                        obsId->aoCtrlId->threshold ;
-
-                     for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
-                         obsId->aoCtrlId->thresholdVect[k] =
-                         obsId->aoCtrlId->threshold;
+                     obsId->aoCtrlId->thresholdDark =
+                     obsId->aoCtrlId->threshold ;
 
                      if (epToVxPipeWrite (NULL,
                            (char *)(int)& (obsId->aoCtrlId->threshold),
@@ -11145,8 +10994,7 @@ void detObserveEnd
     
                   if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                       pTotal, pGuides, pFg, pFgAfterRot, 
-                                      pErrorsFg, pTime, pWfsStatus, 
-                                      (int)obsId->writeToRm) == ERROR )
+                                      pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run fast guide correction");
                   }
@@ -11162,8 +11010,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pTotal, pCentroids, 
                                         pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int) obsId->writeToRm) == ERROR )
+                                        pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -11180,10 +11027,10 @@ void detObserveEnd
                   if ( obsId->coaddCounter ==
                        (obsId->nAverageDataThreshComp + obsId->fgFrame) )
                   {
-                     if ( aoThresholdPerSubapCompute (obsId->aoCtrlId->sumVect,
+                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
                                               obsId->aoCcdId,
                                               obsId->rateBrightPixThreshComp,
-                                              obsId->aoCtrlId->thresholdVect)
+                                              &obsId->aoCtrlId->threshold)
                           == ERROR )
                      {
                         ERROR_LOG ("Failed to compute threshold") ;
@@ -11206,8 +11053,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pTotal, pCentroids,
                                         pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int)obsId->writeToRm) == ERROR )
+                                        pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -11240,8 +11086,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pTotal, pCentroids, 
                                         pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int)obsId->writeToRm) == ERROR )
+                                        pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -12866,7 +12711,6 @@ uint32 detFrameSize
     */
 
    int          updateAoCtrlFlag = FALSE;
-   long         k;
    char         path[STRING_SIZE];        
    char         darkFileName[STRING_SIZE];
    char         fullDarkFileName[STRING_SIZE];
@@ -13464,20 +13308,8 @@ uint32 detFrameSize
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       }
 
-/*
       obsId->aoCtrlId->threshold = thresh;
-*/
-      if ( obsId->aoCcdId->binningFlag == FALSE )
-         obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
-      else
-         obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
-      for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
-          obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
-
       obsId->aoCtrlId->totalThreshold = totalThresh;
-
-      angleWithM1 = obsId->aoCtrlId->angleWithM1;
-      angleWithM2 = obsId->aoCtrlId->angleWithM2;
 
       aoCtrlContextShow (obsId->aoCcdId, obsId->aoCtrlId, FALSE);
 
@@ -14350,8 +14182,6 @@ STATUS detObsShow
            (obsId->threshFlag ? "TRUE" : "FALSE") );
    printf ("nFramesAverageFlux               : %d\n", 
            (int)(obsId->nFramesAverageFlux) );
-   printf ("writeToRm flag                   : %s\n",
-           (obsId->writeToRm ? "TRUE" : "FALSE") );
    printf ("Time with FG only                : %f sec\n", (obsId->fgTime) );
    printf ("saveCbFgCtrlClosedLoopTime       : %f sec\n",
            obsId->saveCbFgCtrlClosedLoopTime);
@@ -14598,9 +14428,6 @@ uint32 detSigInit
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
-
-   angleWithM1 = obsId->aoCtrlId->angleWithM1;
-   angleWithM2 = obsId->aoCtrlId->angleWithM2;
 
    aoCtrlContextShow (obsId->aoCcdId, obsId->aoCtrlId, FALSE);
 
@@ -15387,7 +15214,6 @@ uint32 detSigModeGg
    long         sigMode;        /* Signal processing mode.                    */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15396,7 +15222,6 @@ uint32 detSigModeGg
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&flag);
    sigMode = AO_MODE_GG;
 
    /*
@@ -15432,9 +15257,8 @@ uint32 detSigModeGg
       return (errorNumber);
    }
 
-   MESSAGE_LOG1 (MSG_LOG,
-                 "Signal processing switched to \"Global Guide\" mode, flag=%d",
-                 (int)flag);
+   MESSAGE_LOG (MSG_LOG,
+                "Signal processing switched to \"Global Guide\" mode");
    if (epToVxPipeWrite (NULL, "Global Guide",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15448,8 +15272,6 @@ uint32 detSigModeGg
     */
 
    obsId->sigMode = sigMode;
-
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -15535,7 +15357,6 @@ uint32 detSigModeGgAo
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15546,7 +15367,6 @@ uint32 detSigModeGgAo
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
 
    sigMode = AO_MODE_GG_AO;
 
@@ -15583,10 +15403,10 @@ uint32 detSigModeGgAo
       return (errorNumber);
    }
 
-   MESSAGE_LOG3 (MSG_LOG,
+   MESSAGE_LOG2 (MSG_LOG,
        "Signal processing switched to \"Global Guide and aO correction\" mode "
-       "imageNb=%d, allowedSubapOff=%d, flag=%d",
-       (int)imageNb, (int)subapOff, (int)flag);
+       "imageNb=%d, allowedSubapOff=%d",
+       (int)imageNb, (int)subapOff);
    if (epToVxPipeWrite (NULL, "Global guide and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15602,7 +15422,6 @@ uint32 detSigModeGgAo
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = imageNb;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -15836,7 +15655,6 @@ uint32 detSigModeFgFocus
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15846,7 +15664,6 @@ uint32 detSigModeFgFocus
 
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&flag);
 
    sigMode = AO_MODE_FG_FOCUS;
 
@@ -15883,9 +15700,9 @@ uint32 detSigModeFgFocus
       return (errorNumber);
    }
 
-   MESSAGE_LOG2 (MSG_LOG,
+   MESSAGE_LOG1 (MSG_LOG,
            "Signal processing switched to \"FG and Focus\" mode "
-           "allowedSubapOff=%d, flag=%d", (int)subapOff, (int)flag);
+           "allowedSubapOff=%d", (int)subapOff);
    if (epToVxPipeWrite (NULL, "Fast Guide and Focus",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15900,7 +15717,6 @@ uint32 detSigModeFgFocus
 
    obsId->sigMode = sigMode;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -16152,7 +15968,6 @@ uint32 detSigModeFgFocusAo
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -16163,7 +15978,6 @@ uint32 detSigModeFgFocusAo
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
 
    sigMode = AO_MODE_FG_FOCUS_AO;
 
@@ -16200,10 +16014,10 @@ uint32 detSigModeFgFocusAo
       return (errorNumber);
    }
 
-   MESSAGE_LOG3 (MSG_LOG,
+   MESSAGE_LOG2 (MSG_LOG,
            "Signal processing switched to \"FG and Focus and aO\" mode "
-           "imageNb=%d, allowedSubapOff=%d, flag=%d",
-           (int)imageNb, (int)subapOff, (int)flag);
+           "imageNb=%d, allowedSubapOff=%d",
+           (int)imageNb, (int)subapOff);
    if (epToVxPipeWrite (NULL, "Fast Guide, Focus and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -16215,8 +16029,6 @@ uint32 detSigModeFgFocusAo
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = imageNb;
@@ -16464,11 +16276,9 @@ uint32 detSigModeThresh
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
    long         method;         /* Method for threshold computation.          */
-   long         i;              /* Index                                      */
    long         nAverageData;   /* Number of data to average.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeff;      /* Multiplicative coefficients for rms value  */
@@ -16490,8 +16300,6 @@ uint32 detSigModeThresh
                           (char *) & multCoeff);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4,
                           (char *) & threshold);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&flag);
-
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16532,15 +16340,11 @@ uint32 detSigModeThresh
             "Signal processing switched to \"Threshold Computation\" mode - "
             "method=%d, nAverageData=%d, rateBright=%f, multCoeff=%f",
             (int)method, (int)nAverageData, rateBright, multCoeff);
-   MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
-
 
    /*
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->methodThreshComp = method;
    obsId->aoCtrlId->thresholdMethod = method;
@@ -16548,9 +16352,6 @@ uint32 detSigModeThresh
    {
       /* no computation requested */
       obsId->aoCtrlId->threshold = threshold;
-
-      for ( i = 0 ; i < obsId->aoCcdId->subapUsedNb ; i ++ )
-          obsId->aoCtrlId->thresholdVect[i] = threshold;
 
       if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
@@ -16658,7 +16459,6 @@ uint32 detSigModeGgCoadd
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
@@ -16677,7 +16477,6 @@ uint32 detSigModeGgCoadd
                           (char *) & nCoaddFrames);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&flag);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16711,9 +16510,9 @@ uint32 detSigModeGgCoadd
       return (errorNumber);
    }
 
-   MESSAGE_LOG2 (MSG_LOG,
-   "Signal processing switched to \"GG + Coadd\" mode - nCoaddFrames=%ld, flag=%d",
-   nCoaddFrames, (int)flag);
+   MESSAGE_LOG1 (MSG_LOG,
+         "Signal processing switched to \"GG + Coadd\" mode - nCoaddFrames=%ld",
+         nCoaddFrames);
    if (epToVxPipeWrite (NULL, "Global Guide and Coadd",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -16731,8 +16530,6 @@ uint32 detSigModeGgCoadd
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = nCoaddFrames;
@@ -16835,7 +16632,6 @@ uint32 detSigModeSeq
    long         aoFlag;         /* aO flag (yes or no)                        */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
@@ -16880,7 +16676,7 @@ uint32 detSigModeSeq
                           (char *) & saveCbFgCtrlEveryTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 14, (char *) & aoFlag);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 15, (char *)&flag);
+
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16932,7 +16728,6 @@ uint32 detSigModeSeq
    MESSAGE_LOG2 (MSG_LOG, "saveCbAoCtrlFlag=%d, saveCbAoCtrlEveryTime=%f",
       (int)saveCbAoCtrlClosedLoopFlag, saveCbAoCtrlEveryTime);
    MESSAGE_LOG1 (MSG_LOG, "pFilePath=%s", pFilePath);
-   MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
 
    if (epToVxPipeWrite (NULL, "Sequence closed loop",
                         obsId->pAoProcessModeContext) == ERROR)
@@ -16947,8 +16742,6 @@ uint32 detSigModeSeq
     */
 
    obsId->sigMode = sigMode;
-
-   obsId->writeToRm = flag;
 
    obsId->fgTime = fgTime;
    obsId->saveCbFgCtrlClosedLoop = saveCbFgCtrlClosedLoopFlag;
@@ -17063,7 +16856,6 @@ uint32 detSigModeTotal
                                 /* the average flux                           */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
    double       thresholdFlux;  /* threshold for flux value                   */
@@ -17083,7 +16875,6 @@ uint32 detSigModeTotal
                           (char *) & nFramesFlux);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3,
                           (char *) & multCoeffFlux);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&flag);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -17124,14 +16915,11 @@ uint32 detSigModeTotal
             "Signal processing switched to \"Average Flux computation\" mode - "
             "method=%d, thresholdFlux=%f, nFramesFlux=%d, multCoeffFlux=%f",
              (int)method, thresholdFlux, (int)nFramesFlux, multCoeffFlux);
-   MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
 
    /*
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->methodFluxComp = method;
    obsId->aoCtrlId->totalMethod = method;
@@ -17544,7 +17332,6 @@ uint32 detSigMeasAoIm
    sigMode = AO_MODE_MEAS_IM;
    subapOff = 0;
 
-   obsId->writeToRm = TRUE;
    obsId->sigMode = sigMode;
    obsId->nMode = nMode - 1;
    obsId->amplitude = amplitude;
@@ -18645,7 +18432,6 @@ uint32 detSigReset
    )
 {
    uint32       errorNumber;    /* Error number reported by task.             */
-   long         k;              /* Index                                      */
    long         sigMode;        /* Signal processing mode.                    */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
@@ -18698,11 +18484,9 @@ uint32 detSigReset
 
    sigMode = AO_MODE_GG;
    obsId->sigMode = sigMode;
-   obsId->writeToRm = TRUE;
 
-   MESSAGE_LOG1 (MSG_LOG,
-                "Signal processing switched to \"Global Guide\" mode, flag=%d",
-                (int)obsId->writeToRm);
+   MESSAGE_LOG (MSG_LOG,
+                "Signal processing switched to \"Global Guide\" mode");
    if (epToVxPipeWrite (NULL, "Global Guide",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -18729,17 +18513,7 @@ uint32 detSigReset
     * Reset the thresholds 
     */
 
-   if ( obsId->aoCcdId->binningFlag == FALSE )
-      obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
-   else
-      obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
-
-   for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
-       obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
-
-/*
    obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
-*/
 
    if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                         obsId->pAoThreshContext) == ERROR)
@@ -20250,7 +20024,7 @@ uint32 detSigInitModAst
     * Update the astigModel structure
     */
 
-   if (semTake (accessAstigModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+   if (semTake (accessAstigModel, 100) != OK)
    {
       ERROR_SET (S_detControl_INTERNAL, "Timeout on mutex acess to astigModel",
                  ERROR_LOG_NOW);
@@ -20384,7 +20158,7 @@ uint32 detSigInitModTref
     * Update the trefoilModel structure
     */
 
-   if (semTake (accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+   if (semTake (accessTrefoilModel, 100) != OK)
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "Timeout on mutex acess to trefoilModel",
@@ -20507,7 +20281,7 @@ uint32 detSigInitModComa
     * Update the comaModel structure
     */
 
-   if (semTake (accessComaModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+   if (semTake (accessComaModel, 100) != OK)
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "Timeout on mutex acess to comaModel",
@@ -20628,7 +20402,7 @@ uint32 detSigInitModFoc
     * Update the focusModel structure
     */
 
-   if (semTake (accessFocusModel, ZP_MODEL_SEM_TIMEOUT) != OK)
+   if (semTake (accessFocusModel, 100) != OK)
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "Timeout on mutex acess to focusModel",
@@ -20649,593 +20423,4 @@ uint32 detSigInitModFoc
    }
 
    return (errorNumber);
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detZpModShow
- *
- *   INVOCATION:
- *   detZpModShow ()
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *
- *   FUNCTION VALUE:
- *   (uint32)   Error number. 0 if command successful.
- *
- *   PURPOSE:
- *   Execute detZpModShow command
- *
- *   DESCRIPTION:
- *   This function shows the contents of the zero point models 
- * 
- *   EXTERNAL VARIABLES:
- *   astigModel
- *   focusModel
- *   comaModel
- *   trefoilModel
- *
- *   PRIOR REQUIREMENTS:
- *   None
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None known
- *-
- */
-
-uint32 detZpModShow
-   (
-   )
-{
-   uint32                   errorNumber; 
-   AST_ZP_MODEL_ID_STRUCT   tempAstModel;
-   TREF_ZP_MODEL_ID_STRUCT  tempTrefModel;
-   COMA_ZP_MODEL_ID_STRUCT  tempComaModel;
-   FOCUS_ZP_MODEL_ID_STRUCT tempFocModel;
-
-   /*
-    * Initialise the error number 
-    */
-
-   errorNumber = 0;
-
-   /*
-    * Show the astigModel structure
-    */
-
-   if (semTake (accessAstigModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-   {
-      ERROR_SET (S_detControl_INTERNAL, 
-                 "Timeout on mutex acess to astigModel",
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-   else
-   {
-      tempAstModel.a1 = astigModel.a1;
-      tempAstModel.a2 = astigModel.a2;
-      tempAstModel.a3 = astigModel.a3;
-      tempAstModel.p1 = astigModel.p1;
-      tempAstModel.p2 = astigModel.p2;
-      tempAstModel.p3 = astigModel.p3;
-      tempAstModel.c = astigModel.c;
-      tempAstModel.b1 = astigModel.b1;
-      tempAstModel.b2 = astigModel.b2;
-      tempAstModel.b3 = astigModel.b3;
-      tempAstModel.pp1 = astigModel.pp1;
-      tempAstModel.pp2 = astigModel.pp2;
-      tempAstModel.pp3 = astigModel.pp3;
-      tempAstModel.d = astigModel.d;
-      tempAstModel.applyModel = astigModel.applyModel;
-      tempAstModel.gain0 = astigModel.gain0;
-      tempAstModel.gain45 = astigModel.gain45;
-      tempAstModel.offsetAstig0 = astigModel.offsetAstig0;
-      tempAstModel.offsetAstig45 = astigModel.offsetAstig45;
-
-      semGive (accessAstigModel);
-   }
-
-   printf ( "Zero point model for astigmatism\n\n" ); 
-
-   printf ( "Astig0 = a1*cos(X+p1) + a2*cos(2*X+p2) + a3*cos(4*X+p3) + c\n" );
-   printf ("a1=%f microns, a2=%f microns, a3=%f microns\n",
-           (float)tempAstModel.a1, (float)tempAstModel.a2, (float)tempAstModel.a3);
-   printf ("p1=%f deg, p2=%f deg, p3=%f deg\n",
-           (float)tempAstModel.p1, (float)tempAstModel.p2, (float)tempAstModel.p3);
-   printf ("c=%f microns\n\n", (float)tempAstModel.c);
-
-   printf ( "Astig45 = b1*sin(X+pp1) + b2*sin(2*X+pp2) + b3*sin(4*X+pp3) + d\n" );
-   printf ("b1=%f microns, b2=%f microns, b3=%f microns\n",
-           (float)tempAstModel.b1, (float)tempAstModel.b2, (float)tempAstModel.b3);
-   printf ("pp1=%f deg, pp2=%f deg, pp3=%f deg\n",
-           (float)tempAstModel.pp1, (float)tempAstModel.pp2, (float)tempAstModel.pp3);
-   printf ("d=%f microns\n\n", (float)tempAstModel.d);
-
-   printf ("Astig model applied : %s\n\n",
-           (tempAstModel.applyModel ? "TRUE" : "FALSE") );
-
-   printf ( "Astig 0 gain: %f, Astig 45 gain: %f\n" ,
-            (float)tempAstModel.gain0, (float)tempAstModel.gain45 );
-   printf ( "Astig 0 offset: %f, Astig 45 offset: %f\n\n" ,
-            (float)tempAstModel.offsetAstig0, (float)tempAstModel.offsetAstig45 );
-   
-   /*
-    * Show the trefoilModel structure
-    */
-
-   if (semTake (accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-   {
-      ERROR_SET (S_detControl_INTERNAL, 
-                 "Timeout on mutex acess to trefoilModel",
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-   else
-   {
-      tempTrefModel.a = trefoilModel.a;
-      tempTrefModel.p = trefoilModel.p;
-      tempTrefModel.c = trefoilModel.c;
-      tempTrefModel.b = trefoilModel.b;
-      tempTrefModel.pp = trefoilModel.pp;
-      tempTrefModel.d = trefoilModel.d;
-      tempTrefModel.applyModel = trefoilModel.applyModel;
-
-      semGive (accessTrefoilModel);
-   }
-
-   printf ( "Zero point model for trefoil\n\n" ); 
-
-   printf ( "Cos Trefoil = a*cos(3*X+p) + c\n" );
-   printf ("a=%f microns, p=%f deg, c=%f microns\n",
-           (float)tempTrefModel.a, (float)tempTrefModel.p, (float)tempTrefModel.c);
-
-   printf ( "Sin Trefoil = b*sin(3*X+pp) + d\n" );
-   printf ("b=%f microns, pp=%f deg, d=%f microns\n\n",
-           (float)tempTrefModel.b, (float)tempTrefModel.pp, (float)tempTrefModel.d);
-
-   printf ("Trefoil model applied : %s\n\n",
-           (tempTrefModel.applyModel ? "TRUE" : "FALSE") );
-
-   /*
-    * Show the comaModel structure
-    */
-
-   if (semTake (accessComaModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-   {
-      ERROR_SET (S_detControl_INTERNAL, 
-                 "Timeout on mutex acess to comaModel",
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-   else
-   {
-      tempComaModel.a = comaModel.a;
-      tempComaModel.p = comaModel.p;
-      tempComaModel.c = comaModel.c;
-      tempComaModel.b = comaModel.b;
-      tempComaModel.pp = comaModel.pp;
-      tempComaModel.d = comaModel.d;
-      tempComaModel.applyModel = comaModel.applyModel;
-
-      semGive (accessComaModel);
-   }
-
-   printf ( "Zero point model for coma\n\n" ); 
-
-   printf ( "coma X = a*cos(X+p) + c\n" );
-   printf ("a=%f microns, p=%f deg, c=%f microns\n",
-           (float)tempComaModel.a, (float)tempComaModel.p, (float)tempComaModel.c);
-
-   printf ( "coma Y = b*sin(X+pp) + d\n" );
-   printf ("b=%f microns, pp=%f deg, d=%f microns\n\n",
-           (float)tempComaModel.b, (float)tempComaModel.pp, (float)tempComaModel.d);
-
-   printf ("Coma model applied : %s\n\n",
-           (tempComaModel.applyModel ? "TRUE" : "FALSE") );
-
-   /*
-    * Show the focusModel structure
-    */
-
-   if (semTake (accessFocusModel, ZP_MODEL_SEM_TIMEOUT) != OK)
-   {
-      ERROR_SET (S_detControl_INTERNAL, 
-                 "Timeout on mutex acess to focusModel",
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   }
-   else
-   {
-      tempFocModel.a1 = focusModel.a1;
-      tempFocModel.a2 = focusModel.a2;
-      tempFocModel.p1 = focusModel.p1;
-      tempFocModel.p2 = focusModel.p2;
-      tempFocModel.c = focusModel.c;
-      tempFocModel.applyModel = focusModel.applyModel;
-
-      semGive (accessFocusModel);
-   }
-
-   printf ( "Zero point model for focus\n\n" ); 
-
-   printf ( "focus = a1*cos(X+p1) + a2*cos(2*X+p2) + c\n" );
-   printf ("a1=%f microns, p1=%f deg\n" ,
-           (float)tempFocModel.a1, (float)tempFocModel.p1);
-   printf ("a2=%f microns, p2=%f deg, c=%f microns\n",
-           (float)tempFocModel.a2, (float)tempFocModel.p2, 
-           (float)tempFocModel.c);
-
-   printf ("Focus model applied : %s\n\n",
-           (tempFocModel.applyModel ? "TRUE" : "FALSE") );
-
-   /*
-    * Return and exit 
-    */
-
-   return (errorNumber);
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detInitSigInitModAst
- *
- *   INVOCATION:
- *   detInitSigInitModAst (struct genSubRecord *pgsub)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (<) pgsub (struct genSubRecord *) Pointer to initModAst gsub record
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Init the detSigInitModAst input fields 
- *
- *   DESCRIPTION:
- *   For this record, I have decided to use Epics facilities and not 
- *   epToVxLib. Faster and simpler. CB - 11 September 2001
- *
- *   EXTERNAL VARIABLES:
- *   None.
- *
- *   PRIOR REQUIREMENTS:
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None
- *-
- */
-
-STATUS detInitSigInitModAst
-   (
-   struct genSubRecord * pgsub      /* Pointer to "initModAst" gensub record */
-   )
-{
-   char defFileName[STRING_SIZE];
-   char modInitFileName[STRING_SIZE];
-   double a1;
-   double a2;
-   double a3;
-   double p1;
-   double p2;
-   double p3;
-   double c;
-   double b1;
-   double b2;
-   double b3;
-   double pp1;
-   double pp2;
-   double pp3;
-   double d;
-   double gain0;
-   double gain45;
-   double offset0;
-   double offset45;
-   int apply;
-
-   /* Read default parameters from par file */
-
-#if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
-#else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
-#endif
-
-   if ( strcmp (defFileName, "NONE") != 0 )
-   {
-      strcpy ( modInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
-      strcat ( modInitFileName , "/" ) ;
-      strcat ( modInitFileName , defFileName ) ;
-
-      if ( aoModAstFileRead ( modInitFileName, &a1, &a2, &a3, &p1, &p2, 
-                              &p3, &c, &b1, &b2, &b3, &pp1, &pp2, &pp3,
-                              &d, &gain0, &gain45, &offset0, &offset45,
-                              &apply ) == ERROR )
-      {
-         ERROR_LOG ("Failed to read model file parameters\n");
-         return (ERROR);
-      }
-
-      *(double *)pgsub->vala = a1;
-      *(double *)pgsub->valb = a2;
-      *(double *)pgsub->valc = a3;
-      *(double *)pgsub->vald = p1;
-      *(double *)pgsub->vale = p2;
-      *(double *)pgsub->valf = p3;
-      *(double *)pgsub->valg = c;
-      *(double *)pgsub->valh = b1;
-      *(double *)pgsub->vali = b2;
-      *(double *)pgsub->valj = b3;
-      *(double *)pgsub->valk = pp1;
-      *(double *)pgsub->vall = pp2;
-      *(double *)pgsub->valm = pp3;
-      *(double *)pgsub->valn = d;
-      *(long *)pgsub->valo = apply;
-      *(double *)pgsub->valp = gain0;
-      *(double *)pgsub->valq = gain45;
-      *(double *)pgsub->valr = offset0;
-      *(double *)pgsub->vals = offset45;
-   }
-
-   return (OK) ;
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detInitSigInitModTref
- *
- *   INVOCATION:
- *   detInitSigInitModTref (struct genSubRecord *pgsub)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (<) pgsub (struct genSubRecord *) Pointer to initModTref gsub record
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Init the detSigInitModTref input fields 
- *
- *   DESCRIPTION:
- *   For this record, I have decided to use Epics facilities and not 
- *   epToVxLib. Faster and simpler. CB - 11 September 2001
- *
- *   EXTERNAL VARIABLES:
- *   None.
- *
- *   PRIOR REQUIREMENTS:
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None
- *-
- */
-
-STATUS detInitSigInitModTref
-   (
-   struct genSubRecord * pgsub      /* Pointer to "initModTref" gensub record */
-   )
-{
-   char defFileName[STRING_SIZE];
-   char modInitFileName[STRING_SIZE];
-   double a;
-   double p;
-   double c;
-   double b;
-   double pp;
-   double d;
-   int apply;
-
-   /* Read default parameters from par file */
-
-#if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
-#else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
-#endif
-
-   if ( strcmp (defFileName, "NONE") != 0 )
-   {
-      strcpy ( modInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
-      strcat ( modInitFileName , "/" ) ;
-      strcat ( modInitFileName , defFileName ) ;
-
-      if ( aoModTrefFileRead ( modInitFileName, &a, &p, &c, &b, &pp, 
-                               &d, &apply ) == ERROR )
-      {
-         ERROR_LOG ("Failed to read model file parameters\n");
-         return (ERROR);
-      }
-
-      *(double *)pgsub->vala = a;
-      *(double *)pgsub->valb = p;
-      *(double *)pgsub->valc = c;
-      *(double *)pgsub->vald = b;
-      *(double *)pgsub->vale = pp;
-      *(double *)pgsub->valf = d;
-      *(long *)pgsub->valg = apply;
-   }
-
-   return (OK) ;
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detInitSigInitModComa
- *
- *   INVOCATION:
- *   detInitSigInitModComa (struct genSubRecord *pgsub)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (<) pgsub (struct genSubRecord *) Pointer to initModComa gsub record
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Init the detSigInitModComa input fields 
- *
- *   DESCRIPTION:
- *   For this record, I have decided to use Epics facilities and not 
- *   epToVxLib. Faster and simpler. CB - 11 September 2001
- *
- *   EXTERNAL VARIABLES:
- *   None.
- *
- *   PRIOR REQUIREMENTS:
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None
- *-
- */
-
-STATUS detInitSigInitModComa
-   (
-   struct genSubRecord * pgsub      /* Pointer to "initModComa" gensub record */
-   )
-{
-   char defFileName[STRING_SIZE];
-   char modInitFileName[STRING_SIZE];
-   double a;
-   double p;
-   double c;
-   double b;
-   double pp;
-   double d;
-   int apply;
-
-   /* Read default parameters from par file */
-
-#if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
-#else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
-#endif
-
-   if ( strcmp (defFileName, "NONE") != 0 )
-   {
-      strcpy ( modInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
-      strcat ( modInitFileName , "/" ) ;
-      strcat ( modInitFileName , defFileName ) ;
-
-      if ( aoModComaFileRead ( modInitFileName, &a, &p, &c, &b, &pp, 
-                               &d, &apply ) == ERROR )
-      {
-         ERROR_LOG ("Failed to read model file parameters\n");
-         return (ERROR);
-      }
-
-      *(double *)pgsub->vala = a;
-      *(double *)pgsub->valb = p;
-      *(double *)pgsub->valc = c;
-      *(double *)pgsub->vald = b;
-      *(double *)pgsub->vale = pp;
-      *(double *)pgsub->valf = d;
-      *(long *)pgsub->valg = apply;
-   }
-
-   return (OK) ;
-}
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
- *   detInitSigInitModFoc
- *
- *   INVOCATION:
- *   detInitSigInitModFoc (struct genSubRecord *pgsub)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (<) pgsub (struct genSubRecord *) Pointer to initModFoc gsub record
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if command successful, ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Init the detSigInitModFoc input fields 
- *
- *   DESCRIPTION:
- *   For this record, I have decided to use Epics facilities and not 
- *   epToVxLib. Faster and simpler. CB - 11 September 2001
- *
- *   EXTERNAL VARIABLES:
- *   None.
- *
- *   PRIOR REQUIREMENTS:
- *
- *   INCLUDE FILES:
- *   detControl.h
- *
- *   DEFICIENCIES:
- *   None
- *-
- */
-
-STATUS detInitSigInitModFoc
-   (
-   struct genSubRecord * pgsub      /* Pointer to "initModFoc" gensub record */
-   )
-{
-   char defFileName[STRING_SIZE];
-   char modInitFileName[STRING_SIZE];
-   double a1;
-   double p1;
-   double a2;
-   double p2;
-   double c;
-   int apply;
-
-   /* Read default parameters from par file */
-
-#if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
-#else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
-#endif
-
-   if ( strcmp (defFileName, "NONE") != 0 )
-   {
-      strcpy ( modInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
-      strcat ( modInitFileName , "/" ) ;
-      strcat ( modInitFileName , defFileName ) ;
-
-      if ( aoModFocFileRead ( modInitFileName, &a1, &p1, &a2, &p2, 
-                              &c, &apply ) == ERROR )
-      {
-         ERROR_LOG ("Failed to read model file parameters\n");
-         return (ERROR);
-      }
-
-      *(double *)pgsub->vala = a1;
-      *(double *)pgsub->valb = a2;
-      *(double *)pgsub->valc = p1;
-      *(double *)pgsub->vald = p2;
-      *(double *)pgsub->vale = c;
-      *(long *)pgsub->valf = apply;
-   }
-
-   return (OK) ;
 }

@@ -163,31 +163,7 @@ V2-0 08 August 2001 CB:
     WARNING: the SCS has to be modified to read this variable instead of the 
     time
 
-V2-1 04 September 2001 CB:
---------------------------
+V2-1 equivalent to V2-0
   - Major modifications to include astigmatism correction for pwfs2
 
-V2-2 13 September 2001 CB:
---------------------------
-  - Modification to display aO data before rotation but after subtraction
-    of a fix model
-  - Now angleWithM1 is taking into account in compositeAngle of aoZero, 
-    angleWithM2 has been moved in the compositeAngle of ttfZero 
-    (writeZernikes.c)
-  - New defAoModP2CP and MK.dat files have been created to have different models
-    according to the site. During the init process, model init file is read 
-    and the models are initialized
-
-V2-3 17 September 2001 CB:
---------------------------
-  - Threshold per subaperture implemented
-
-V2-4 28 November 2001 CB:
--------------------------
-  - TT guide values x 2 when binning. Gains for TT divided by 2 in par files.
-
-V2-5 03 December 2001 CB:
--------------------------
-  - add writeToRm flag when doing guiding
-
-newDev equivalent to V2-5
+test equivalent to V2-0

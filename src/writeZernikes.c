@@ -29,8 +29,6 @@
  *                     outputs for display
  * showCbDiag        - Write diagnostic data from cb structure to gensub
  *                     outputs for display 
- * showThreshDiagP2  - Write diagnostic data from ao control structure to 
- *                     gensub outputs for display
  * gensubFanDouble   - receive array of doubles on port A, write elements to
  *                     individual output ports
  * 
@@ -75,8 +73,6 @@
  * 29-Mar-2001: cb - fix bug for rotation matrix (two bugs which compensate 
  *                   each others)
  * 22-Aug-2001: cb - Major modifications to have ao Correction with P2 also
- * 14-Sep-2001: cb - Add showThreshDiagP2()
- * 30-Nov-2001: cb - add writeToRm to writeWfsToSynchro
  *
  */
 /* INDENT ON */
@@ -185,7 +181,7 @@ frame   *ag2m2;
 frame   *ag2tcs;
 wfs     *ptrPwfs2;
 double  ttfData[AO_ARRAY_SIZE+2];
-double  aoData[AO_ARRAY_SIZE+2+2]; /* add 2 data for astig0 and astig45 */
+double  aoData[AO_ARRAY_SIZE+2];
 float   data[AO_ARRAY_SIZE+2];
 float   errors[AO_ARRAY_SIZE+2];
 SEM_ID  wfsLock;
@@ -194,32 +190,28 @@ WFS_VECT localCentroidsVect;
 WFS_VECT localTotalCountsVect;
 WFS_VECT localFgCentroidsVect;
 WFS_VECT localFgTotalCountsVect;
-WFS_VECT localThresholdVect;
-SEM_ID   accessAoData=NULL;
-SEM_ID   accessFgData=NULL;
+SEM_ID   accessAoData;
+SEM_ID   accessFgData;
 
 AO_CCD_ID aoCcdIdP2;
 AO_CB_AO_CTRL_ID aoCbAoCtrlIdP2;
 AO_CB_FG_CTRL_ID aoCbFgCtrlIdP2;
 AO_CB_IM_ID aoCbImIdP2;
-AO_CTRL_ID aoCtrlIdP2;
-double angleWithM1=0.0;
-double angleWithM2=0.0;
 
 double sampleData[5][3];
 double coeffData[5];
 
 AST_ZP_MODEL_ID_STRUCT astigModel;
-SEM_ID  accessAstigModel=NULL;
+SEM_ID  accessAstigModel;
 
 TREF_ZP_MODEL_ID_STRUCT trefoilModel;
-SEM_ID  accessTrefoilModel=NULL;
+SEM_ID  accessTrefoilModel;
 
 COMA_ZP_MODEL_ID_STRUCT comaModel;
-SEM_ID  accessComaModel=NULL;
+SEM_ID  accessComaModel;
 
 FOCUS_ZP_MODEL_ID_STRUCT focusModel;
-SEM_ID  accessFocusModel=NULL;
+SEM_ID  accessFocusModel;
 
 /* declare prototypes */
 
@@ -503,30 +495,6 @@ long gensubToTcsInit
       {
              printf ("unable to create accessAstigModel sem\n");
       }
-
-      /* init structure astigModel */
-
-      astigModel.a1 = 0.0;
-      astigModel.a2 = 0.0;
-      astigModel.a3 = 0.0;
-      astigModel.p1 = 0.0;
-      astigModel.p2 = 0.0;
-      astigModel.p3 = 0.0;
-      astigModel.c = 0.0;
-      astigModel.b1 = 0.0;
-      astigModel.b2 = 0.0;
-      astigModel.b3 = 0.0;
-      astigModel.pp1 = 0.0;
-      astigModel.pp2 = 0.0;
-      astigModel.pp3 = 0.0;
-      astigModel.d = 0.0;
-      astigModel.astig0 = 0.0;
-      astigModel.astig45 = 0.0;
-      astigModel.applyModel = 0.0;
-      astigModel.gain0 = 1.0;
-      astigModel.gain45 = 1.0;
-      astigModel.offsetAstig0 = 0.0;
-      astigModel.offsetAstig45 = 0.0;
    }
 
    /* create semaphore to prevent multiple access to trefoilModel data */
@@ -539,18 +507,6 @@ long gensubToTcsInit
       {
              printf ("unable to create accessTrefoilModel sem\n");
       }
-
-      /* init structure trefoilModel */
-
-      trefoilModel.a = 0.0;
-      trefoilModel.p = 0.0;
-      trefoilModel.c = 0.0;
-      trefoilModel.b = 0.0;
-      trefoilModel.pp = 0.0;
-      trefoilModel.d = 0.0;
-      trefoilModel.costref = 0.0;
-      trefoilModel.sintref = 0.0;
-      trefoilModel.applyModel = 0.0;
    }
 
    /* create semaphore to prevent multiple access to comaModel data */
@@ -563,18 +519,6 @@ long gensubToTcsInit
       {
              printf ("unable to create accessComaModel sem\n");
       }
-
-      /* init structure comaModel */
-
-      comaModel.a = 0.0;
-      comaModel.p = 0.0;
-      comaModel.c = 0.0;
-      comaModel.b = 0.0;
-      comaModel.pp = 0.0;
-      comaModel.d = 0.0;
-      comaModel.comaX = 0.0;
-      comaModel.comaY = 0.0;
-      comaModel.applyModel = 0.0;
    }
 
    /* create semaphore to prevent multiple access to focusModel data */
@@ -587,16 +531,64 @@ long gensubToTcsInit
       {
              printf ("unable to create accessFocusModel sem\n");
       }
-
-      /* init structure focusModel */
-
-      focusModel.a1 = 0.0;
-      focusModel.a2 = 0.0;
-      focusModel.p1 = 0.0;
-      focusModel.p2 = 0.0;
-      focusModel.c = 0.0;
-      focusModel.focus = 0.0;
    }
+
+   /* init structure astigModel */
+
+   astigModel.a1 = 0.0;
+   astigModel.a2 = 0.0;
+   astigModel.a3 = 0.0;
+   astigModel.p1 = 0.0;
+   astigModel.p2 = 0.0;
+   astigModel.p3 = 0.0;
+   astigModel.c = 0.0;
+   astigModel.b1 = 0.0;
+   astigModel.b2 = 0.0;
+   astigModel.b3 = 0.0;
+   astigModel.pp1 = 0.0;
+   astigModel.pp2 = 0.0;
+   astigModel.pp3 = 0.0;
+   astigModel.d = 0.0;
+   astigModel.astig0 = 0.0;
+   astigModel.astig45 = 0.0;
+   astigModel.applyModel = 0.0;
+   astigModel.gain0 = 1.0;
+   astigModel.gain45 = 1.0;
+   astigModel.offsetAstig0 = 0.0;
+   astigModel.offsetAstig45 = 0.0;
+
+   /* init structure trefoilModel */
+
+   trefoilModel.a = 0.0;
+   trefoilModel.p = 0.0;
+   trefoilModel.c = 0.0;
+   trefoilModel.b = 0.0;
+   trefoilModel.pp = 0.0;
+   trefoilModel.d = 0.0;
+   trefoilModel.costref = 0.0;
+   trefoilModel.sintref = 0.0;
+   trefoilModel.applyModel = 0.0;
+
+   /* init structure comaModel */
+
+   comaModel.a = 0.0;
+   comaModel.p = 0.0;
+   comaModel.c = 0.0;
+   comaModel.b = 0.0;
+   comaModel.pp = 0.0;
+   comaModel.d = 0.0;
+   comaModel.comaX = 0.0;
+   comaModel.comaY = 0.0;
+   comaModel.applyModel = 0.0;
+
+   /* init structure focusModel */
+
+   focusModel.a1 = 0.0;
+   focusModel.a2 = 0.0;
+   focusModel.p1 = 0.0;
+   focusModel.p2 = 0.0;
+   focusModel.c = 0.0;
+   focusModel.focus = 0.0;
 
    /* create structure holding angle and null values for ao data */
 
@@ -819,8 +811,6 @@ long gensubToTcsAo
    int index = 0;
    double zernikes[19];
    double errors[19];
-   double astig0;
-   double astig45;
 
    /* write array to TCS system */
 
@@ -837,9 +827,6 @@ long gensubToTcsAo
          errors[index] = aoData[index+21];
       }
 
-      astig0 = aoData[40];
-      astig45 = aoData[41];
-
       /* write whole array to valj for the TCS to pick up */
 
       memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
@@ -851,14 +838,6 @@ long gensubToTcsAo
       /* write error values to valb for display */
 
       memcpy (pgsub->valb, errors, 19 * sizeof (double));
-
-      /* write astig0 to valc for display */
-   
-      *(double *)pgsub->valc = astig0 ;
-
-      /* write astig45 to vald for display */
-
-      *(double *)pgsub->vald = astig45 ;
 
       semGive(wfsLock);
    }
@@ -934,7 +913,6 @@ STATUS writeWfsToTcs
    )
 {
    int       i=0;
-   int       index;
    frame     *f;
    converted result;
    double    *pz;
@@ -1113,12 +1091,6 @@ STATUS writeWfsToTcs
          aoData[21+i] = *(pAoErrorsVect +i);
       }
 
-      /* Copy intermediate values astig0 and astig45 */
-
-      index = 2*(aoCtrlId->aoModeNb) + 2;
-      aoData[index] = astig0;
-      aoData[index+1] = astig45;
-
       /* release mutex */
 
       semGive(wfsLock);
@@ -1142,7 +1114,7 @@ STATUS writeWfsToTcs
  *
  * STATUS writeWfsToSynchro(AO_CTRL_ID aoCtrlId, double *pFgVect,
  *                          double *pFgVectAfterRot, double *pFgErrorsVect, 
- *                          double *pTime, int writeToRm)
+ *                          double *pTime)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > AO_CTRL_ID aoCtrlId        - Pointer to the AO control context structure
@@ -1151,7 +1123,6 @@ STATUS writeWfsToTcs
  * >                              rotation
  * > double *   pFgErrorsVect   - Vector containing the associated errors
  * > double *   pTime           - Pointer to the associated time stamp value
- * > int        writeToRm       - Flag to indicate if data are written to RM
  *
  * FUNCTION VALUE:
  * long  Status value returned to calling routine, a non-zero value indicates
@@ -1197,8 +1168,7 @@ STATUS writeWfsToSynchro
    double     *pFgVect,
    double     *pFgVectAfterRot,
    double     *pFgErrorsVect,
-   double     *pTime,
-   int        writeToRm
+   double     *pTime
    )
 {
    converted  result;
@@ -1262,7 +1232,7 @@ STATUS writeWfsToSynchro
    /* scale data and write to the synchro bus, check that pointer has been 
       initialised with null check */
 
-   if ( (ptrPwfs2 != NULL) && (writeToRm == TRUE) )
+   if(ptrPwfs2 != NULL)
    {
      ptrPwfs2->z1 = (float)(result.z2);
      ptrPwfs2->z2 = (float)(result.z3);
@@ -1428,8 +1398,8 @@ long ttfZero
       /* calculate composite correction angle */
       /* null[3] corresponds to the cass rotator angle */
 
-      compositeAngle = angleWithM2 - 
-      ((tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS); /*11dec00*/
+      compositeAngle = (-1.0) *
+      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec00*/
 
       f->theta       = compositeAngle;
       f->sinTheta    = sin(f->theta);
@@ -1452,7 +1422,7 @@ long ttfZero
 
    /* Compute focus zero point model */
 
-   if(semTake(accessFocusModel, ZP_MODEL_SEM_TIMEOUT) == OK)
+   if(semTake(accessFocusModel, WFS_TIMEOUT) == OK)
    {
      if (focusModel.applyModel == 0 )
      {
@@ -1624,8 +1594,8 @@ long aoZero
 
       /* calculate composite correction angle */
 
-      compositeAngle = angleWithM1 -
-      ((tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS);
+      compositeAngle = (-1.0) *
+      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS;
 
       f->theta       = compositeAngle;
       f->sinTheta    = sin(f->theta);
@@ -1648,7 +1618,7 @@ long aoZero
 
    /* compute astigmatism zero point model */
 
-   if(semTake(accessAstigModel, ZP_MODEL_SEM_TIMEOUT) == OK)
+   if(semTake(accessAstigModel, WFS_TIMEOUT) == OK)
    {
      if (astigModel.applyModel == 0 )
      {
@@ -1681,7 +1651,7 @@ long aoZero
 
    /* compute trefoil zero point model */
 
-   if(semTake(accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) == OK)
+   if(semTake(accessTrefoilModel, WFS_TIMEOUT) == OK)
    {
      if (trefoilModel.applyModel == 0 )
      {
@@ -1710,7 +1680,7 @@ long aoZero
 
    /* compute coma zero point model */
 
-   if(semTake(accessComaModel, ZP_MODEL_SEM_TIMEOUT) == OK)
+   if(semTake(accessComaModel, WFS_TIMEOUT) == OK)
    {
      if (comaModel.applyModel == 0 )
      {
@@ -2197,86 +2167,6 @@ long gensubFanDoubles
    *(double *)pgsub->valq = localArray[16];
    *(double *)pgsub->valr = localArray[17];
    *(double *)pgsub->vals = localArray[18];   /* Z20 or E20 */
-
-   return (OK);
-}
-
-/* ===================================================================== */
-/*
- *+
- * FUNCTION NAME:
- * showThreshDiagP2
- *
- * INVOCATION:
- * struct genSubRecord * pgsub
- * long   status;
- *
- * long showThreshDiagP2 (struct genSubRecord * pgsub)
- *
- * PARAMETERS: (">" input, "!" modified, "<" output)
- * > genSubRecord (struct genSubRecord *)   pointer to record
- *
- * FUNCTION VALUE:
- * long  Status value returned to calling routine, a non-zero value indicates
- *       an error
- *
- * PURPOSE:
- * Copy diagnostic data from aoCtrlId structure to gensub outputs for display
- *
- * DESCRIPTION:
- *
- * EXTERNAL VARIABLES:
- *
- * PRIOR REQUIREMENTS:
- * None
- *
- * DEFICIENCIES:
- * None known.
- *
- * HISTORY (optional):
- * 14-Sep-2001  Original creation
- *-
- */
-
-STATUS showThreshDiagP2
-   (
-   struct genSubRecord * pgsub
-   )
-{
-   int i = 0;
-   int j = 0;
-   double   *pThreshold;
-
-   if (aoCtrlIdP2 == NULL)
-   {
-      /* context structure not yet initialised */
-      return(OK);
-   }
-
-   /* grab data from the ao control structure */
-
-   pThreshold = aoCtrlIdP2->thresholdVect;
-
-   j = 0;
-   for ( i = 0 ; i < aoCcdIdP2->subapNb ; i ++ )
-   {
-       if ( aoCcdIdP2->subapUsedVect[i] == TRUE )
-       {
-          *(localThresholdVect + i) = *(pThreshold + j);
-          j ++ ;
-       }
-       else
-       {
-          *(localThresholdVect + i) = -99.99;
-       }
-   }
-
-   /* write to genSub outputs */
-
-   *(double *)pgsub->vala = *(localThresholdVect+0);
-   *(double *)pgsub->valb = *(localThresholdVect+1);
-   *(double *)pgsub->valc = *(localThresholdVect+2);
-   *(double *)pgsub->vald = *(localThresholdVect+3);
 
    return (OK);
 }
