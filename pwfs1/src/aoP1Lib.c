@@ -4275,7 +4275,7 @@ STATUS aoCentroidsCompute (
  *   aoModeCompute
  *
  *   INVOCATION:
- *   aoModeCompute (pImage, imageStatus, aoCcdId, aoCtrlId, imageNb, 
+ *   aoModeCompute (pImage, imageStatus, aoCcdId, aoCtrlId, imageNb, pauseNb,
  *                  pThreshVect, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -4285,6 +4285,8 @@ STATUS aoCentroidsCompute (
  *   (>) aoCcdId      (AO_CCD_ID)        Pointer to the AO CCD geometry context
  *   (!) aoCtrlId     (AO_CTRL_ID)       Pointer to the AO control structure
  *   (>) imageNb      (int)              Number of images to average
+ *   (>) pauseNb      (int)              Number of images to pause before new
+ *                                       aO command
  *   (>) pThreshVect  (int)              Vector of the image current threshold
  *                                       vector
  *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the aO control circular
@@ -4323,6 +4325,7 @@ STATUS aoModeCompute (
    AO_CCD_ID        aoCcdId,
    AO_CTRL_ID       aoCtrlId,
    int              imageNb,
+   int              pauseNb,
    double *         pThreshVect,
    AO_CB_AO_CTRL_ID aoCbAoCtrlId
    )
@@ -4399,7 +4402,14 @@ STATUS aoModeCompute (
           {
                *p = (*(p) / imageNb);
           }
-          aoCtrlId->coaddCounter = 0;
+
+/*
+         aoCtrlId->coaddCounter = 0;
+*/
+         if ( pauseNb != 0 )
+            aoCtrlId->coaddCounter ++;
+         else
+            aoCtrlId->coaddCounter = 0;
 
          /* Compute the centroids */
 
@@ -4495,6 +4505,18 @@ STATUS aoModeCompute (
             aoCbAoCtrlId->counter ++;
          }
       }
+   }
+   else if ( aoCtrlId->coaddCounter < (imageNb+pauseNb+1) )
+   {
+
+#ifdef DEBUG
+      printf ("aoModeCompute(): pause between 2 aO commands: %d\n",
+              aoCtrlId->coaddCounter);
+#endif
+      aoCtrlId->coaddCounter ++;
+
+      if  ( aoCtrlId->coaddCounter == (imageNb+pauseNb+1) )
+          aoCtrlId->coaddCounter = 0;
    }
 
    return (OK);

@@ -856,6 +856,25 @@ long gensubToTcsAo
 
       /* write whole array to valj for the TCS to pick up */
 
+
+      /* but make sure what is sent TCS for the pwfs1 case
+	 Look at the procedure tcsOpticsAverageAo in Tcs code
+       */
+
+      aoData[2]=0.0;
+      aoData[3]=0.0;
+      aoData[4]=0.0;
+      aoData[9]=0.0;
+      aoData[12]=0.0;
+      aoData[13]=0.0;
+      aoData[14]=0.0;
+      aoData[15]=0.0;
+      aoData[16]=0.0;
+      aoData[17]=0.0;
+      aoData[18]=0.0;
+      aoData[19]=0.0;
+      aoData[20]=0.0;
+
       memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
 
       /* write Zernike values to vala for display */

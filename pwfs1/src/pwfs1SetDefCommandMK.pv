@@ -6,12 +6,7 @@
 
 group {
 double $(top)$(wfs)initSigModeSeq.A = 1.0 ;
-int $(top)$(wfs)initSigModeSeq.B = 1 ;
-int $(top)$(wfs)initSigModeSeq.C = 100 ;
-double $(top)$(wfs)initSigModeSeq.D = 15.0 ;
-int $(top)$(wfs)initSigModeSeq.E = 1 ;
-int $(top)$(wfs)initSigModeSeq.F = 100 ;
-double $(top)$(wfs)initSigModeSeq.G = 10.0 ;
+double $(top)$(wfs)initSigModeSeq.B = 10.0 ;
 int $(top)$(wfs)initSigModeSeq.H = 0 ;
 double $(top)$(wfs)initSigModeSeq.I = 30.0 ;
 int $(top)$(wfs)initSigModeSeq.J = 0 ;

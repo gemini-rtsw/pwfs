@@ -520,6 +520,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         sigMode;   /* Signal processing mode.                         */
    long         nCoaddFrames;
                            /* Number of frames to coadd.                      */
+   long         nPauseFrames;
+                           /* Number of frames to pause between 2 aO commands.*/
    long         methodThreshComp;
                            /* Method for threshold computation                */
    long         nAverageDataThreshComp;
@@ -555,6 +557,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       ggTime;    /* Time with GG only over the whole CCD in the     */
                            /* closed loop sequence                            */
    double       aoTime;    /* Time to average aO data                         */
+   double       aoPause;   /* Pause between 2 aO commands                     */
    double       saveCbFgCtrlClosedLoopTime;
                            /* Save FG control circular  buffer during closed  */
                            /* loop sequence every this time                   */
