@@ -446,4 +446,6 @@ b) Correct new calculated zerniques, using thresholds to allow clamping
 	Added Threshold above which the values is not corrected 
 	(or written into Tcs array)
 
-	
+c) CR580 - Updated GN P1 Astigmatism model (b1 value)
+ - par/defAoModP1MK.dat
+
