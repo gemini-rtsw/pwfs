@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.41 2001-06-14 19:12:08 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.42 2001-06-19 17:41:41 cjm Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -127,7 +127,7 @@ cfitsio	cfitsio
 
 #D	crcs	Cassegrain Rotator
 #M	crcs	Cassegrain Rotator
-crcs	crcsc
+crcs	crcs
 
 #D	dhs	Data Handling System
 #M	dhs	Data Handling System
