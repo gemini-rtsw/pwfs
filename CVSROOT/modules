@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.40 2001-06-14 19:09:11 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.41 2001-06-14 19:12:08 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -124,10 +124,6 @@ astlib	astlib
 #M	cfitsio	FITS library
 cfitsio	cfitsio
 
-
-#D	crcs	Cassegrain Rotator
-#M	crcs	Cassegrain Rotator
-crcs	crcsc
 
 #D	crcs	Cassegrain Rotator
 #M	crcs	Cassegrain Rotator
