@@ -72,7 +72,7 @@ p 2064 2048 100 0 1 FTVB:DOUBLE
 p 2064 2016 100 0 1 FTVC:DOUBLE
 p 2064 1984 100 0 1 FTVD:DOUBLE
 p 2048 1216 100 0 1 INAM:epToVxCadInit
-p 2048 1280 100 0 1 PREC:0
+p 2048 1280 100 0 1 PREC:5
 p 2048 1152 100 0 1 PV:$(top)$(wfs)
 p 2048 1184 100 0 1 SNAM:epToVxCadExecute
 use ecad8 832 39 100 0 detSigModeThresh
@@ -199,10 +199,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2004-05-28 01:53:09 $
+p 3120 -784 200 0 -1 date:$Date: 2004-07-20 19:24:59 $
 p 1888 -432 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.11 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.12 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]
