@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.53 2001-07-24 18:59:14 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.54 2001-08-16 22:58:21 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -158,8 +158,19 @@ hrwfs	hrwfs
 jcs	jcs
 
 #D	ocssupport	OCS support library
-#M	ocssupport	OCS support library
 ocssupport	ocssupport
+#M	acqcam	Acquisition Camera
+acqcam	ocssupport/acqcam
+#M	dhshdr	DHS fits header 
+dhshdr	ocssupport/dhshdr
+#M	gmos	GMOS
+gmos	ocssupport/gmos
+#M	niri	NIRI
+niri	ocssupport/niri
+#M	seq	Sequencing library
+seq	ocssupport/seq
+#M	tcclib	TCC library
+tcc	ocssupport/tcc
 
 #D	oiwfs	On-Instrument WFS
 #M	oiwfs	On-Instrument WFS
