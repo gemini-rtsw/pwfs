@@ -80,6 +80,8 @@
  *   aoNewSeeingCompute () - Compute the seeing according to FR's method
  * 
  *INDENT-OFF*
+ *   09 Jan 2004: CB - Update aoTotalThresholdCompute routine with new FR's fit
+ *                     add pauseNb parameter into aoModeCompute
  *   07 Jan 2004: CB - Read default TTF gains from file
  *   04 Feb 2003: CB - Implement proportional law for aO
  *   25 Sep 2002: CB - Implement seeing computation according FR's method
@@ -4578,7 +4580,7 @@ STATUS aoCentroidsCompute (
  *   aoModeCompute
  *
  *   INVOCATION:
- *   aoModeCompute (pImage, imageStatus, aoCcdId, aoCtrlId, imageNb, 
+ *   aoModeCompute (pImage, imageStatus, aoCcdId, aoCtrlId, imageNb, pauseNb,
  *                  pThreshVect, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -4588,6 +4590,8 @@ STATUS aoCentroidsCompute (
  *   (>) aoCcdId      (AO_CCD_ID)        Pointer to the AO CCD geometry context
  *   (!) aoCtrlId     (AO_CTRL_ID)       Pointer to the AO control structure
  *   (>) imageNb      (int)              Number of images to average
+ *   (>) pauseNb      (int)              Number of images to pause before new
+ *                                       aO command
  *   (>) pThreshVect  (int)              Vector of the image current threshold 
  *                                       vector
  *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the aO control circular 
@@ -4626,6 +4630,7 @@ STATUS aoModeCompute (
    AO_CCD_ID        aoCcdId,
    AO_CTRL_ID       aoCtrlId,
    int              imageNb,
+   int              pauseNb,
    double *         pThreshVect,
    AO_CB_AO_CTRL_ID aoCbAoCtrlId
    )
@@ -4669,6 +4674,11 @@ STATUS aoModeCompute (
 
    if ( (imageStatus != AO_SH_OFF) && (aoCtrlId->coaddCounter < imageNb) )
    {
+#ifdef DEBUG
+      printf ( "aoModeCompute: coaddCounter = %d < %d\n", 
+               aoCtrlId->coaddCounter, imageNb);
+#endif
+
       if ( aoCtrlId->coaddCounter == 0 )
       {
          for ( p = ps ; p < pMax ; )
@@ -4701,12 +4711,22 @@ STATUS aoModeCompute (
 
       if  ( aoCtrlId->coaddCounter == imageNb )
       {
-          for ( p = ps ; p < pMax; p ++ )
-          {
-               *p = (*(p) / imageNb);
-          }
+#ifdef DEBUG
+         printf ( "aoModeCompute: coaddCounter = %d = %d\n", 
+                  aoCtrlId->coaddCounter, imageNb);
+#endif
+         for ( p = ps ; p < pMax; p ++ )
+         {
+              *p = (*(p) / imageNb);
+         }
 
-          aoCtrlId->coaddCounter = 0;
+/*
+         aoCtrlId->coaddCounter = 0;
+*/
+         if ( pauseNb != 0 )
+            aoCtrlId->coaddCounter ++;
+         else
+            aoCtrlId->coaddCounter = 0;
 
          /* Compute the centroids */
 
@@ -4808,6 +4828,17 @@ STATUS aoModeCompute (
             aoCbAoCtrlId->counter ++;
          }
       }
+   }
+   else if ( aoCtrlId->coaddCounter < (imageNb+pauseNb+1) )
+   {
+#ifdef DEBUG
+      printf ("aoModeCompute(): pause between 2 aO commands: %d\n",
+              aoCtrlId->coaddCounter);
+#endif
+      aoCtrlId->coaddCounter ++;
+
+      if  ( aoCtrlId->coaddCounter == (imageNb+pauseNb+1) )
+          aoCtrlId->coaddCounter = 0;
    }
 
    return (OK);
@@ -9156,7 +9187,8 @@ STATUS aoThresholdPerSubapCompute (
  *   (double) totalThreshold
  *
  *   PURPOSE:
- *   To compute the threshold for the total count
+ *   To compute the threshold for the total count - This routine has been
+ *   replaced by aoTotalThresholdCompute()
  *
  *   DESCRIPTION:
  *   This routine computes for the threshold for the total count according to
@@ -10098,4 +10130,104 @@ STATUS aoNewSeeingCompute (
    /* return */
 
    return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoTotalThresholdCompute_new
+ *
+ *   INVOCATION:
+ *   aoTotalThresholdCompute_new (aoCcdId, aoCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                               structure
+ *   (>) aoCtrlId   (AO_CTRL_ID) Pointer to the control context structure
+ *
+ *   FUNCTION VALUE:
+ *   (double) totalThreshold
+ *
+ *   PURPOSE:
+ *   To compute the threshold for the total count (not implemented yet)
+ *
+ *   DESCRIPTION:
+ *   This routine computes for the threshold for the total count according to
+ *   complex formula :
+ *   totalThreshold = [ c * Npix + 4.5 * sqrt(c*Npix) ] * rms
+ *   with c = 0.4 * exp ( -N^1.6)/(1+N)^0.75
+ *   with N <= 2.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+double aoTotalThresholdCompute_new (
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId
+   )
+{
+   double a;
+   double b;
+   double c;
+   double d;
+   double e;
+   double f;
+   double N;
+   double Npix;
+   double totalThreshold;
+
+   /* Some init */
+
+   a = -1.0;
+   b = 4.5;
+   d = 0.4;
+   e = 1.6;
+   f = 0.75;
+
+   N = aoCtrlId->thresholdMultCoeff;
+   Npix = aoCcdId->pixelsNb;
+
+   /* Check range of N */
+
+   if ( N > 2.0 )
+   {
+#ifdef DEBUG
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+#endif
+      N = 2;
+   };
+
+   if ( N < 0.0 )
+   {
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+      N = 0;
+   };
+
+   /* Compute the total threshold */
+
+   c = d * exp ( a * pow (N, e) ) / pow ( 1+N, f);
+
+   totalThreshold = (c * Npix + b*sqrt(c * Npix)) * aoCtrlId->rms;
+
+/*#ifdef DEBUG */
+   printf ( "c = %f\n" , c);
+   printf ( "totalThreshold = %f\n" , totalThreshold );
+/*#endif */
+
+   /* Return it */
+
+   return ( totalThreshold );
 }

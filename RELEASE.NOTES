@@ -281,3 +281,8 @@ V4-6 8 January 2004 CB:
   - set binning mode by default
   - read default gains from .dat file when pressing the default button
   - set default of the detSigModeSeq CAD from pv load file (one per site)
+
+dev 9 January 2004 CB:
+----------------------
+  - aoTotalThresholdCompute(): new fit given by FR
+  - implement pause time between 2 aO commands

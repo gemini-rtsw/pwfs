@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.31 2004-01-08 23:38:05 cboyer Exp $"};
+   "$Id: detControl.c,v 1.32 2004-03-02 00:44:36 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -5338,9 +5338,11 @@ uint32 detObserveStart
            (obsId->sigMode == AO_MODE_CLOSED_LOOP ) )
       {
          obsId->nCoaddFrames = (int)ceil(obsId->aoTime/exposure);
-         MESSAGE_LOG1 ( MSG_LOG,
-                        "For aO: nCoaddFrames=%d",
-                        (int)(obsId->nCoaddFrames));
+         obsId->nPauseFrames = (int)ceil(obsId->aoPause/exposure);
+         MESSAGE_LOG2 ( MSG_LOG,
+                        "For aO: nCoaddFrames=%d, nPauseFrames=%d",
+                        (int)(obsId->nCoaddFrames),
+                        (int)(obsId->nPauseFrames));
          obsId->aoCbAoCtrlId->averageImageNb = obsId->nCoaddFrames;
       }
 
@@ -11003,6 +11005,7 @@ void detObserveEnd
    /* Signal processing variable. */
    
    int            nCoadds=1;        /* Number of frames per coadd.            */
+   int            nPause=1;         /* Number of frames to pause              */
    int            i;
    int            j;
    int            k;
@@ -11764,6 +11767,7 @@ void detObserveEnd
                 */
 
                nCoadds = (int) obsId->nCoaddFrames;
+               nPause = (int) obsId->nPauseFrames;
 #ifdef DEBUG
                printf ("aoDarkSubtract: %p %p %d %d\n", 
                        pImage, obsId->aoCtrlId->darkVect, 
@@ -11790,7 +11794,7 @@ void detObserveEnd
 #ifdef DEBUG
                printf ("aoModeCompute (%p, %d, %p, %p, %d, %p, %p)\n",
                        pImage, imageStatus, obsId->aoCcdId, obsId->aoCtrlId, 
-                       nCoadds, pThresh, obsId->aoCbAoCtrlId);
+                       nCoadds, nPause, pThresh, obsId->aoCbAoCtrlId);
 #endif
                if ( obsId->updateAoScale == TRUE )
                {
@@ -11805,7 +11809,7 @@ void detObserveEnd
                } ;
 
                if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
-                                   obsId->aoCtrlId, nCoadds, pThresh, 
+                                   obsId->aoCtrlId, nCoadds, nPause, pThresh, 
                                    obsId->aoCbAoCtrlId) == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
@@ -11820,6 +11824,7 @@ void detObserveEnd
                 */
 
                nCoadds = (int) obsId->nCoaddFrames;
+               nPause = (int) obsId->nPauseFrames;
 
 #ifdef DEBUG
                printf (
@@ -11867,11 +11872,11 @@ void detObserveEnd
 #ifdef DEBUG
                printf ("aoModeCompute (%p, %d, %p, %p, %d, %p, %p)\n",
                        pImage, imageStatus, obsId->aoCcdId, obsId->aoCtrlId, 
-                       nCoadds, pThresh, obsId->aoCbAoCtrlId);
+                       nCoadds, nPause, pThresh, obsId->aoCbAoCtrlId);
 #endif
 
                if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
-                                   obsId->aoCtrlId, nCoadds, pThresh, 
+                                   obsId->aoCtrlId, nCoadds, nPause, pThresh, 
                                    obsId->aoCbAoCtrlId) == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
@@ -12221,6 +12226,7 @@ void detObserveEnd
                 */
 
                nCoadds = (int) obsId->nCoaddFrames;
+               nPause = (int) obsId->nPauseFrames;
 #ifdef DEBUG
                printf (
                "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
@@ -12280,11 +12286,11 @@ void detObserveEnd
 #ifdef DEBUG
                printf ("aoModeCompute (%p, %d, %p, %p, %d, %p, %p)\n",
                        pImage, imageStatus, obsId->aoCcdId, obsId->aoCtrlId, 
-                       nCoadds, pThresh, obsId->aoCbAoCtrlId);
+                       nCoadds, nPause, pThresh, obsId->aoCbAoCtrlId);
 #endif
 
                if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
-                                   obsId->aoCtrlId, nCoadds, pThresh, 
+                                   obsId->aoCtrlId, nCoadds, nPause, pThresh, 
                                    obsId->aoCbAoCtrlId) == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
@@ -12438,6 +12444,7 @@ void detObserveEnd
             case (AO_MODE_CLOSED_LOOP):
                 
                nCoadds = (int) obsId->nCoaddFrames;
+               nPause = (int) obsId->nPauseFrames;
 
                if ( obsId->updateFgScale == TRUE )
                {
@@ -12586,7 +12593,8 @@ void detObserveEnd
                   {
                      if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
                                          obsId->aoCtrlId,
-                                         nCoadds, pThresh, obsId->aoCbAoCtrlId) 
+                                         nCoadds, nPause, pThresh, 
+                                         obsId->aoCbAoCtrlId) 
                           == ERROR )
                      {
                         ERROR_LOG ("Failed to aO correction");
@@ -15770,6 +15778,7 @@ STATUS detObsShow
            (obsId->saveCbFgCtrl ? "TRUE" : "FALSE") );
    printf ("Signal processing mode           : %d\n", (int)obsId->sigMode);
    printf ("Number of frames to coadd        : %d\n", (int)obsId->nCoaddFrames);
+   printf ("Number of frames to pause        : %d\n", (int)obsId->nPauseFrames);
    printf ("Coadd counter                    : %d\n", (int)obsId->coaddCounter);
    printf ("saveAoCbCounter                  : %d\n", 
            (int)(obsId->saveAoCbCounter) );
@@ -15811,6 +15820,7 @@ STATUS detObsShow
            (obsId->writeToRm ? "TRUE" : "FALSE") );
    printf ("Time with GG only                : %f sec\n", (obsId->ggTime) );
    printf ("Time to average aO data          : %f sec\n", (obsId->aoTime) );
+   printf ("Pause between 2 aO commands      : %f sec\n", (obsId->aoPause) );
    printf ("saveCbFgCtrlClosedLoopTime       : %f sec\n",
            obsId->saveCbFgCtrlClosedLoopTime);
    printf ("saveCbAoCtrlClosedLoopTime       : %f sec\n",
@@ -17149,6 +17159,7 @@ uint32 detSigModeGgAo
    long         outOption;      /* Output option                              */
    long         flag;           /* writeToRm flag                             */
    double       aoTime;         /* Time used to average images for aO         */
+   double       aoPause;        /* Pause between 2 aO commands                */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -17160,6 +17171,7 @@ uint32 detSigModeGgAo
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&aoPause);
 
    sigMode = AO_MODE_GG_AO;
 
@@ -17200,6 +17212,7 @@ uint32 detSigModeGgAo
        "Signal processing switched to \"Global Guide and aO correction\" mode "
        "aoTime=%f s, allowedSubapOff=%d, flag=%d",
        aoTime, (int)subapOff, (int)flag);
+   MESSAGE_LOG1 (MSG_LOG, "aoPause=%f sec", aoPause);
    if (epToVxPipeWrite (NULL, "Global guide and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -17214,6 +17227,7 @@ uint32 detSigModeGgAo
 
    obsId->sigMode = sigMode;
    obsId->aoTime = aoTime;
+   obsId->aoPause = aoPause;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
    obsId->writeToRm = flag;
 
@@ -17302,6 +17316,7 @@ uint32 detSigModeAo
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
    double       aoTime;         /* Time used to average images for aO         */
+   double       aoPause;        /* Pause between 2 aO commands                */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -17312,6 +17327,7 @@ uint32 detSigModeAo
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&aoPause);
 
    sigMode = AO_MODE_AO;
 
@@ -17348,10 +17364,10 @@ uint32 detSigModeAo
       return (errorNumber);
    }
 
-   MESSAGE_LOG2 (MSG_LOG,
+   MESSAGE_LOG3 (MSG_LOG,
            "Signal processing switched to \"aO correction\" mode "
-           "aoTime=%f sec, allowedSubapOff=%d",
-           aoTime, (int)subapOff);
+           "aoTime=%f sec, allowedSubapOff=%d, aoPause=%f sec",
+           aoTime, (int)subapOff, aoPause);
    if (epToVxPipeWrite (NULL, "aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -17366,6 +17382,7 @@ uint32 detSigModeAo
 
    obsId->sigMode = sigMode;
    obsId->aoTime = aoTime;
+   obsId->aoPause = aoPause;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    /* Init the fields of the observe CAD record */
@@ -17824,6 +17841,7 @@ uint32 detSigModeFgFocusAo
    long         threshRT;       /* Flag to indicate if the thresholds are     */
                                 /* computed in real time                      */
    double       aoTime;         /* Time used to average images for aO         */
+   double       aoPause;        /* Pause between 2 aO commands                */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeff;      /* Multiplicative coefficients for rms value  */
@@ -17842,6 +17860,7 @@ uint32 detSigModeFgFocusAo
                           (char *) & rateBright);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5,
                           (char *) & multCoeff);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&aoPause);
 
    sigMode = AO_MODE_FG_FOCUS_AO;
 
@@ -17884,8 +17903,8 @@ uint32 detSigModeFgFocusAo
            "Signal processing switched to \"FG and Focus and aO\" mode "
            "aoTime=%f s, allowedSubapOff=%d, flag=%d",
            aoTime, (int)subapOff, (int)flag);
-   MESSAGE_LOG2 (MSG_LOG, "rate=%f, coeffRms=%f",
-                (float)rateBright, (float) multCoeff);
+   MESSAGE_LOG3 (MSG_LOG, "rate=%f, coeffRms=%f, aoPause=%f sec",
+                (float)rateBright, (float) multCoeff, aoPause);
 
    if (epToVxPipeWrite (NULL, "Fast Guide, Focus and aO",
                         obsId->pAoProcessModeContext) == ERROR)
@@ -17905,6 +17924,8 @@ uint32 detSigModeFgFocusAo
 
    obsId->sigMode = sigMode;
    obsId->aoTime = aoTime;
+   obsId->aoPause = aoPause;
+
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    if ( threshRT == TRUE )
@@ -18539,6 +18560,7 @@ uint32 detSigModeSeq
                                 /* computed in real time                      */
    long         seeingFlag;     /* Flag to indicate if the seeing is computed */
    double       aoTime;         /* Time used to average images for aO         */
+   double       aoPause;        /* Pause between 2 aO commands                */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
@@ -18579,8 +18601,11 @@ uint32 detSigModeSeq
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9,
                           (char *) & saveCbAoCtrlClosedLoopFlag);
+/*
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10,
                           (char *) & saveCbAoCtrlEveryTime);
+*/
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&aoPause);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11,
                           (char *) & saveCbFgCtrlClosedLoopFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12,
@@ -18595,6 +18620,8 @@ uint32 detSigModeSeq
                           (char *) & multCoeffThreshRT);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 19,
                           (char *) & seeingFlag);
+
+   saveCbAoCtrlEveryTime = 60.0;
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -18654,6 +18681,7 @@ uint32 detSigModeSeq
    MESSAGE_LOG2 (MSG_LOG, "If threshold RT : rate=%f, coeffRms=%f",
                 (float)rateBrightThreshRT, (float) multCoeffThreshRT);
    MESSAGE_LOG1 (MSG_LOG, "seeingFlag=%d", (int)seeingFlag);
+   MESSAGE_LOG1 (MSG_LOG, "aoPause=%f sec", aoPause);
 
    if (epToVxPipeWrite (NULL, "Sequence closed loop",
                         obsId->pAoProcessModeContext) == ERROR)
@@ -18703,6 +18731,8 @@ uint32 detSigModeSeq
       obsId->aoCtrlId->multCoeffTotal= multCoeffFlux;
 
    obsId->aoTime = aoTime;
+   obsId->aoPause = aoPause;
+
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    obsId->aoFlag = aoFlag;
