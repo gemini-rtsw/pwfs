@@ -80,6 +80,7 @@
  *   aoNewSeeingCompute () - Compute the seeing according to FR's method
  * 
  *INDENT-OFF*
+ *   07 Jan 2004: CB - Read default TTF gains from file
  *   04 Feb 2003: CB - Implement proportional law for aO
  *   25 Sep 2002: CB - Implement seeing computation according FR's method
  *   18 Jun 2002: CB - Implement seeing computation according BE's method
@@ -3289,7 +3290,7 @@ STATUS aoCtrlContextUpdate (
    aoCtrlId->seeingScaleFactor = seeingScaleFactor;
 
 #ifdef DEBUG
-   printf ( "aoCtrlContextInit(): seeingScaleFactor = %f\n", 
+   printf ( "aoCtrlContextUpdate(): seeingScaleFactor = %f\n", 
             aoCtrlId->seeingScaleFactor );
 #endif
 
@@ -3298,7 +3299,7 @@ STATUS aoCtrlContextUpdate (
    aoCtrlId->aoThreshold = aoThreshold;
 
 #ifdef DEBUG
-   printf ( "aoCtrlContextInit(): aoThreshold = %f\n",
+   printf ( "aoCtrlContextUpdate(): aoThreshold = %f\n",
             aoCtrlId->aoThreshold );
 #endif
 
@@ -6800,7 +6801,7 @@ STATUS aoDarkUpdate (
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName,
  *                   pFgCmFileName, pSeeingCmFileName, pSeeingCvFileName,
  *                   pRms, pThresh, pTotalThresh, pAngleM2, pAngleM1, 
- *                   pSeeingGain, pAoThreshold)
+ *                   pSeeingGain, pAoThreshold, pFgGain, pSlidingFocusGain)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName     (char *)   Pointer to the AO init file name 
@@ -6824,6 +6825,8 @@ STATUS aoDarkUpdate (
  *   (<) pAngleM1          (double *) Pointer to the angle with M1
  *   (<) pSeeingGain       (double *) Pointer to the seeing scale factor
  *   (<) pAoThreshold      (double *) Pointer to the aO threshold
+ *   (<) pFgGain           (double *) Pointer to array of gain (TTF)
+ *   (<) pSlidingFocusGain (double *) Pointer to the focus sliding gain
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK if successful, ERROR if unsuccessful
@@ -6867,12 +6870,15 @@ STATUS aoCtrlFileRead (
    double * pAngleM2,
    double * pAngleM1,
    double * pSeeingGain,
-   double * pAoThreshold
+   double * pAoThreshold,
+   double * pFgGain,
+   double * pSlidingFocusGain
    )
 {
    FILE *     pFile;
    char       comment [STRING_SIZE];
    int        i;
+   double     value;
 
    /* Open the file in read mode */
 
@@ -7219,10 +7225,12 @@ STATUS aoCtrlFileRead (
    printf ( "aoCtrlFileRead(): FG CM file name: %s\n", pFgCmFileName );
 #endif
 
-   /* Skip the next lines of comments */
+   /* Read the FG gains */
 
-   for ( i = 0 ; i < 8 ; i ++ )
+   for ( i = 0 ; i < 3 ; i ++ )
    {
+      /* Skip the next line of comment */
+
       if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
       {
          printf (
@@ -7236,7 +7244,53 @@ STATUS aoCtrlFileRead (
       printf ( "aoCtrlFileRead(): %s\n", comment );
 #endif
 
+      /* Read FG gain */
+
+      if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
+      {
+         ERROR_SET2 ( 0,
+               "Failed to read FG gain [%d] from the AO init file %s",
+               ERROR_LOG_SAVE, i, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+      *(pFgGain + i) = value;
+
+#ifdef DEBUG
+      printf ( "aoCtrlFileRead(): FG gain [%d] = %f\n", i, *(pFgGain + i) );
+#endif
    }
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): %s\n", comment );
+#endif
+
+   /* Read sliding focus gain */
+
+   if ( (fscanf (pFile, "%lf\n", pSlidingFocusGain)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read sliding focus gain from the AO init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): sliding focus gain = %f\n", *pSlidingFocusGain );
+#endif
 
    /* Skip the next line of comment */
 

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.30 2003-02-05 01:29:32 cboyer Exp $"};
+   "$Id: detControl.c,v 1.31 2004-01-08 23:38:05 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   07 Jan 2004: CB - Default FG gains from file, remove TIM_EEPROM_PROGRAM,
+ *                     add detInitSigModeSeq
  *   04 Feb 2003: CB - Add proportional gain for aO
  *   30 Jan 2003: CB - Fix a little bug in detSigInit
  *   17 Oct 2002: CB - modify detInit to initialize correctly signal processing,
@@ -167,9 +169,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 
 #define DEBUG_DHS               /* Define this macro to enable debug messages */
                                 /* for DHS only.                              */
-
-#define TIM_EEPROM_PROGRAM      /* Comment this macro if you want to write the*/
-                                /* TIMING EEPROM                              */
 
 #define DHS_WAIT_TIMEOUT   3600 /* Timeout waiting for DHS semaphore 60s      */
 
@@ -982,52 +981,44 @@ STATUS   detControl
     * Initialize aoCcdId with the default detector geometry.
     */
 
-#ifdef TIM_EEPROM_PROGRAM
    if (detReadDefaultDspCcdGeometry (sdsuId, aoCcdId) == ERROR)
    {
       ERROR_LOG ( "Error while init default detector geometry on startup");
       initFailed = TRUE;
    }
-#endif
 
    /* 
-    * Set the new default CCD geometry 40,40
+    * Set the new default CCD geometry to binning mode
     */
 
-#ifdef TIM_EEPROM_PROGRAM
    if (detSetDefaultDspCcdGeometry (sdsuId, aoCcdId) == ERROR)
    {
       ERROR_LOG ( "Error while setting default detector geometry on startup");
       initFailed = TRUE;
    }
-#endif
 
    /*
     * Create data buffer to frames of data, using the aoCcdId->xMax and 
     * aoCcdId->yMax determined above.
     */
 
-#ifdef TIM_EEPROM_PROGRAM
    if (sdsuBufferCreate (sdsuId, (aoCcdId->xMax * aoCcdId->yMax), maxFrames) 
        == ERROR)
    {
       ERROR_LOG ("Failed to create data buffer on startup");
       initFailed = TRUE;
    }
-#endif
 
    /*
     * Initialise the readout process with our frame callback.
     * There is no packet callback in this version of the code.
     */
    
-#ifdef TIM_EEPROM_PROGRAM
    if (sdsuSimpleReadoutOpen (sdsuId, NULL, detObserveEnd, 0, TRUE) == ERROR)
    {
       ERROR_LOG ("Failed to start readout task on startup");
       initFailed = TRUE;
    }
-#endif
 
    strcpy (obsId->pWfsName, "PWFS2");
 
@@ -1115,16 +1106,14 @@ STATUS   detControl
                     "Defining temperature control parameters: %#lx %#lx",
                     tempCode, tempCoeff);
 
-#ifdef TIM_EEPROM_PROGRAM
       if ( (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_CCDT_TGT", tempCode )
             == ERROR) ||
            (sdsuParamWrite (sdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
             == ERROR) )
       {
-         ERROR_LOG ("Error setting temperasture control parameters");
+         ERROR_LOG ("Error setting temperature control parameters");
          initFailed = TRUE;
       }
-#endif
       readTempReadyFlag = TRUE ;
    }
 
@@ -1143,7 +1132,6 @@ STATUS   detControl
               "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
               offsetVect[0], offsetVect[1], offsetVect[2], offsetVect[3]);
 
-#ifdef TIM_EEPROM_PROGRAM
       if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
                          (uint32) offsetVect[0] ) == ERROR )
       {
@@ -1178,7 +1166,6 @@ STATUS   detControl
          "Failed to activate TIMING DSP parameters with LDP command");
          initFailed = TRUE;
       }
-#endif
    }
 
    /*
@@ -1313,12 +1300,17 @@ STATUS   detControl
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+   else
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE);
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+   else
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE);
 #endif
 
-#ifdef TIM_EEPROM_PROGRAM
    if ( strcmp (defFileName, "NONE") != 0 )
    {
       strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
@@ -1333,9 +1325,23 @@ STATUS   detControl
 
       if ( aoCtrlId->initFlag == TRUE )
       {
+
+        if ( obsId->aoCcdId->binningFlag == FALSE )
+            expTime = 0.01 ;  /* 10ms */
+         else
+            expTime = 0.005 ; /* 5ms */
+
          angleWithM1 = aoCtrlId->angleWithM1;
          angleWithM2 = aoCtrlId->angleWithM2;
-         obsId->defFocusScale100Hz = aoCtrlId->fgScaleFactorVect[2];
+
+         if ( obsId->aoCcdId->binningFlag == FALSE )
+            obsId->defFocusScale100Hz = aoCtrlId->fgScaleFactorVect[2];
+         else
+         {
+            obsId->defFocusScale100Hz = aoCtrlId->fgScaleFactorVect[2];
+            obsId->aoCtrlId->fgScaleFactorVect[2] = obsId->defFocusScale100Hz *
+                                                    (100.0 *  expTime);
+         }
 
          if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext) 
              == ERROR)
@@ -1484,7 +1490,6 @@ STATUS   detControl
    {
       MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
    }
-#endif
 
    /*
     * Read the default settings from the BW init file
@@ -2599,7 +2604,6 @@ STATUS detDownloadDefault
          return (ERROR);
       }
 
-#ifdef TIM_EEPROM_PROGRAM
       applNum = 0; /* high speed version for application code */
       if ( sdsuPrimitive ( sdsuId, "LDA", 2 , &applNum, NULL ) == ERROR )
       {
@@ -2608,7 +2612,6 @@ STATUS detDownloadDefault
          return (ERROR);
       }
       MESSAGE_LOG (MSG_LOG, "TIMING code loaded from EEPROM OK");
-#endif
    }
 
    /*
@@ -2644,7 +2647,6 @@ STATUS detDownloadDefault
          return (ERROR);
       }
 
-#ifdef TIM_EEPROM_PROGRAM
       applNum = 1; /* only one version */
       if ( sdsuPrimitive ( sdsuId, "LDA", 3 , &applNum, NULL ) == ERROR )
       {
@@ -2653,15 +2655,12 @@ STATUS detDownloadDefault
          return (ERROR);
       }
       MESSAGE_LOG (MSG_LOG, "UTILITY code loaded from EEPROM OK");
-#endif
    }
 
-#ifdef TIM_EEPROM_PROGRAM
    if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE", 160) == ERROR)
    {
       ERROR_LOG ("Failed to increase the PWFS packet size");
    }
-#endif
 
    /*
     * After successfully downloading new OMF code, the controller must be 
@@ -2669,7 +2668,6 @@ STATUS detDownloadDefault
     * "LDP" command to the timing DSP.
     */
 
-#ifdef TIM_EEPROM_PROGRAM
    if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
    {
       ERROR_LOG ("Failed to init UTILITY DSP with INI command");
@@ -2682,7 +2680,6 @@ STATUS detDownloadDefault
       epToVxSetHealth( pRecordPrefix, "BAD" );
       return (ERROR);
    }
-#endif
 
    return (OK);
 }
@@ -3022,11 +3019,11 @@ STATUS detReadDefaultDspCcdGeometry
  *   PURPOSE:
  *   Set the default configuration for the AO CCD geometry from the DSP code.
  *   This default configuration is :
- *   T_XRAS = 40 , T_YRAS = 40
+ *   T_XRAS = 20 , T_YRAS = 20
  *   T_XSUBAP = 1 , T_YSUBAP = 1
  *   T_XSTART = 0 , T_YSTART = 0
  *   T_XSPACE = 0 , T_YSPACE = 0
- *   T_XBIN = 1 , T_YBIN = 1
+ *   T_XBIN = 2 , T_YBIN = 2
  *
  *   DESCRIPTION:
  *   This function sets all the CCD geometry parameters to the DSP code. 
@@ -3061,6 +3058,8 @@ STATUS detSetDefaultDspCcdGeometry
    uint32        ySubapNbReq;     /* SDSU parameter (T_YSUBAP).               */
    uint32        xStartReq;       /* SDSU parameter (T_XSTART).               */
    uint32        yStartReq;       /* SDSU parameter (T_YSTART).               */
+   uint32        xBinReq;         /* SDSU parameter (T_XBIN).                 */
+   uint32        yBinReq;         /* SDSU parameter (T_YBIN).                 */
    uint32        xTailReq;        /* SDSU parameter (T_XTAIL).                */
    int           xPixelsReq;      /* Number of X pixels                       */
    int           yPixelsReq;      /* Number of Y pixels                       */
@@ -3087,8 +3086,10 @@ STATUS detSetDefaultDspCcdGeometry
    yStartReq = 0; 
    xSubapNbReq = 1;
    ySubapNbReq = 1;
-   xRasterReq = 40; 
-   yRasterReq = 40; 
+   xRasterReq = 20; 
+   yRasterReq = 20; 
+   xBinReq = 2;
+   yBinReq = 2;
 
    xPixelsReq = xSubapNbReq * xRasterReq * 2;
    yPixelsReq = ySubapNbReq * yRasterReq * 2;
@@ -3107,7 +3108,7 @@ STATUS detSetDefaultDspCcdGeometry
     */
 
    xTailReq = aoCcdId->xSize - 
-   (((xRasterReq * aoCcdId->xBin) + aoCcdId->xSpace) * xSubapNbReq) + 
+   (((xRasterReq * xBinReq) + aoCcdId->xSpace) * xSubapNbReq) + 
    aoCcdId->xSpace - xStartReq - aoCcdId->uscanNb;
 
    if ( xTailReq < 0 )
@@ -3139,6 +3140,8 @@ STATUS detSetDefaultDspCcdGeometry
     * output and the subapertures fill the detector surface without any gaps.
     */
 
+   aoCcdId->xBin = xBinReq;
+   aoCcdId->yBin = yBinReq;
    aoCcdId->xStart = xStartReq;
    aoCcdId->yStart = yStartReq;
    aoCcdId->xRaster = xRasterReq;
@@ -3158,6 +3161,24 @@ STATUS detSetDefaultDspCcdGeometry
    aoCcdId->pixelsNb = pixelsNbReq;
    aoCcdId->xTail = xTailReq;
    aoCcdId->packetNb = nPackets;
+
+   if ( (xBinReq == 2) && (yBinReq == 2) )
+   {
+      aoCcdId->binningFlag = TRUE ;
+   }
+   else
+   {
+      if ( (xBinReq == 1) && (yBinReq == 1) )
+         aoCcdId->binningFlag = FALSE ;
+      else
+      {
+         ERROR_SET2 (S_detControl_BAD_ATTRIBUTE,
+         "xBinReq is %ld and yBinReq is %ld. Should be 2 and 2 or 1 and 1",
+         ERROR_LOG_NOW, xBinReq, yBinReq);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+   }
 
    aoCcdContextShow (aoCcdId);
 
@@ -3204,6 +3225,10 @@ STATUS detSetDefaultDspCcdGeometry
                           (uint32) xRasterReq) == ERROR) ||
            (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YRAS",   
                           (uint32) yRasterReq) == ERROR) ||
+           (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XBIN",
+                          (uint32) xBinReq) == ERROR) ||
+           (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_YBIN",
+                          (uint32) yBinReq) == ERROR) ||
            (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_XTAIL",  
                           (uint32) xTailReq) == ERROR) ||
            (sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_NPIXEL", 
@@ -5171,11 +5196,6 @@ uint32 detObserveStart
 
       if ( obsId->observing )
       {
-/*
-         ERROR_SET (S_detControl_BUSY, 
-                    "Observation already in progress", ERROR_LOG_NOW);
-         errorNumber = S_detControl_BUSY;
-*/
          MESSAGE_LOG (MSG_LOG, "Observation already in progress" );
          errorNumber = 0;
          return (errorNumber);
@@ -7976,7 +7996,7 @@ uint32 detInit
         (sdsuParamWrite (*pSdsuId, SDSU_IDENT_UTL, "U_TCF", (uint32)tempCoeff )
          == ERROR) )
    {
-      ERROR_LOG ("Error setting temperasture control parameters");
+      ERROR_LOG ("Error setting temperature control parameters");
    }
 
    /*
@@ -7984,12 +8004,17 @@ uint32 detInit
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+   else
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE);
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+   else
+      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE);
 #endif
 
-#ifdef TIM_EEPROM_PROGRAM
    if ( strcmp (defFileName, "NONE") != 0 )
    {
       strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
@@ -8004,9 +8029,22 @@ uint32 detInit
 
       if ( obsId->aoCtrlId->initFlag == TRUE )
       {
+         if ( obsId->aoCcdId->binningFlag == FALSE )
+            expTime = 0.01 ;  /* 10ms */
+         else
+            expTime = 0.005 ; /* 5ms */
+
          angleWithM1 = obsId->aoCtrlId->angleWithM1;
          angleWithM2 = obsId->aoCtrlId->angleWithM2;
-         obsId->defFocusScale100Hz = obsId->aoCtrlId->fgScaleFactorVect[2];
+         if ( obsId->aoCcdId->binningFlag == FALSE )
+            obsId->defFocusScale100Hz = obsId->aoCtrlId->fgScaleFactorVect[2];
+         else
+         {
+            obsId->defFocusScale100Hz = obsId->aoCtrlId->fgScaleFactorVect[2];
+            obsId->aoCtrlId->fgScaleFactorVect[2] = obsId->defFocusScale100Hz *
+                                                    (100.0 *  expTime);
+         }
+
 
          if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext)
              == ERROR)
@@ -8157,7 +8195,6 @@ uint32 detInit
    {
       MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
    }
-#endif
 
    /*
     * Read the default settings from the BW init file
@@ -10528,7 +10565,7 @@ uint32 detTemp
         == ERROR)
       )
    {
-      ERROR_LOG ("Error setting temperasture control parameters");
+      ERROR_LOG ("Error setting temperature control parameters");
       errorNumber = S_detControl_SDSU_ERROR;
       return (errorNumber);
    }
@@ -11298,9 +11335,6 @@ void detObserveEnd
       obsId->aoCbImId->cbImRecord[indexIm].imageStatus = 
       (int)(pRawFrame->header.status) ;
 
-      /*printf ( "index image CB =%d\n", indexIm) ;
-      printf ( "index control CB =%d\n", indexCtrl) ;*/
-
       /*
        * Unscramble the data. The algorithm used depends on the number of 
        * detector outputs, obtained earlier.
@@ -11595,13 +11629,6 @@ void detObserveEnd
                            "Failed to run fast guide and focus correction");
                   };
 
-                  /*if ( aoDarkSubtract (pImage, obsId->aoCtrlId->darkVect,
-                                       obsId->aoCcdId->xPixels, 
-                                       obsId->aoCcdId->yPixels) == ERROR )
-                  {
-                     ERROR_LOG ("Failed to subtract DARK from current frame");
-                  }*/
-
 #ifdef DEBUG
                   printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
                           obsId->aoCcdId, obsId->aoCtrlId, nCoadds);
@@ -11873,15 +11900,6 @@ void detObserveEnd
 
                         obsId->updateFgScale = FALSE ;
                      };
-
-                     /*if ( aoGlobalGuide (pImage, obsId->aoCcdId, 
-                                         obsId->aoCtrlId, pTotal, pGuides, 
-                                         pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                         pWfsStatus, (int) obsId->writeToRm) 
-                         == ERROR )
-                     {
-                        ERROR_LOG ("Failed to run FG correction");
-                     }*/
 
                      if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                            obsId->aoCtrlId, pPrevThresh,
@@ -12449,8 +12467,6 @@ void detObserveEnd
                if ( (obsId->ggFrame != 0) && 
                     (obsId->coaddCounter < obsId->ggFrame) )
                {
-                  /*printf ( "coaddCounter =%d fast guide only\n", 
-                           obsId->coaddCounter );*/
     
                   if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                       pTotal, pGuides, pFg, pFgAfterRot, 
@@ -12466,8 +12482,6 @@ void detObserveEnd
                          (obsId->coaddCounter < obsId->nAverageDataThreshComp +
                                                 obsId->ggFrame) )
                {
-                  /* printf ( "coaddCounter =%d compute thresh \n",
-                           obsId->coaddCounter );*/
 
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pPrevThresh, pTotal, 
@@ -12514,8 +12528,6 @@ void detObserveEnd
                          (obsId->coaddCounter < obsId->nFramesAverageFlux +
                           obsId->nAverageDataThreshComp + obsId->ggFrame) )
                {
-                  /*printf ( "coaddCounter =%d compute total \n", 
-                           obsId->coaddCounter );*/
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pPrevThresh, pTotal, 
                                         pCentroids, pErrorCentroids, pFg, 
@@ -12542,15 +12554,10 @@ void detObserveEnd
                      {
                         ERROR_LOG ( "Failed to init AO_TOTAL_SIR_NAME record");
                      }
-                     /*printf ( "coaddCounter =%d total =%f \n", 
-                     obsId->coaddCounter,obsId->averageFlux );*/
                   }
                }
                else
                {
-                  /*printf ( "coaddCounter =%d ao guide \n", 
-                        obsId->coaddCounter );*/
-
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pPrevThresh, pTotal, 
                                         pCentroids, pErrorCentroids, pFg, 
@@ -12675,7 +12682,6 @@ void detObserveEnd
       if ( (obsId->outOptions == 1) && 
            ((obsId->dhsCounter % obsId->dhsQlRate) == 0) )
       {
-         /*printf ( "display frame, obsId->dhsCounter=%d\n", obsId->dhsCounter);*/
          /*
           * Convert the time stamps from Gemini raw time into Universal Time
           * and construct these into character strings.
@@ -12709,9 +12715,6 @@ void detObserveEnd
          {
             ERROR_LOG ("Failed to set elapsed time SIR record");
          }
-
-         /*if ( obsId->stopped != TRUE )
-            semGive ( detDhsStartSem);*/
 
          MESSAGE_LOG (MSG_MINDEBUG, "Sending data to DHS...");
 
@@ -13294,17 +13297,6 @@ void detObserveTimeout
 
       pFrame->header.packetCount   = sdsuId->packetsPerFrame;
 
-      /*
-       * Simulate an SDSU frame sync interrupt. This should cause the
-       * detObserveEnd callback to be executed.
-       */
-
-/* COMMENTED OUT - ONLY ANY USE WHEN USING INTERRUPTS.
-      if ( sdsuSimulateSimpleSync(sdsuId) == ERROR)
-      {
-         ERROR_LOG ("Failed to simulate frame sync interrupt");
-      }
-*/
    }
    else if ( sdsuId->frameIntNum == 0 )
    {
@@ -13325,8 +13317,6 @@ void detObserveTimeout
    }
    else
    {
-      /* sysIntDisable(6); */                     /* DEBUG TEST */
-
       /*
        * The observation completion was supposed to have been signalled by an
        * interrupt and timed out.
@@ -14263,6 +14253,8 @@ uint32 detFrameSize
    double       totalThresh;
    double       seeingGain;
    double       aoThreshold;
+   double       fgGain[3];
+   double       slidingFocusGain;
 
    /*
     * Parameters to update the ADC offset 
@@ -14432,7 +14424,8 @@ uint32 detFrameSize
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain,
-                               &aoThreshold ) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain ) 
+              == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -14588,7 +14581,8 @@ uint32 detFrameSize
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain,
-                               &aoThreshold ) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain ) 
+              == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
          }
@@ -14877,17 +14871,11 @@ uint32 detFrameSize
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       }
 
-/*
-      obsId->aoCtrlId->threshold = thresh;
-*/
       if ( obsId->aoCcdId->binningFlag == FALSE )
       {
-/*
-         obsId->aoCtrlId->rms = obsId->aoCtrlId->rmsDarkFull;
-         obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
-*/
          obsId->aoCtrlId->rms = rms;
          obsId->aoCtrlId->threshold = thresh;
+
          if ( obsId->aoCtrlId->rmsDarkFull == 0.0 )
             obsId->aoCtrlId->rmsDarkFull = rms;
          if ( obsId->aoCtrlId->thresholdDarkFull == 0.0 )
@@ -14895,10 +14883,6 @@ uint32 detFrameSize
       }
       else
       {
-/*
-         obsId->aoCtrlId->rms = obsId->aoCtrlId->rmsDarkBin;
-         obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
-*/
          obsId->aoCtrlId->rms = rms;
          obsId->aoCtrlId->threshold = thresh;
 
@@ -15787,7 +15771,7 @@ STATUS detObsShow
    printf ("Signal processing mode           : %d\n", (int)obsId->sigMode);
    printf ("Number of frames to coadd        : %d\n", (int)obsId->nCoaddFrames);
    printf ("Coadd counter                    : %d\n", (int)obsId->coaddCounter);
-   printf ("saveAoCbCounter                    : %d\n", 
+   printf ("saveAoCbCounter                  : %d\n", 
            (int)(obsId->saveAoCbCounter) );
    printf ("saveFgCbCounter                  : %d\n", 
            (int)(obsId->saveFgCbCounter) );
@@ -15807,9 +15791,9 @@ STATUS detObsShow
            (obsId->saveCbFgCtrlClosedLoop ? "TRUE" : "FALSE") );
    printf ("saveCbFgCtrlClosedLoopFrame      : %d\n",
            (int)obsId->saveCbFgCtrlClosedLoopFrame);
-   printf ("saveCbAoCtrlClosedLoop             : %s\n",
+   printf ("saveCbAoCtrlClosedLoop           : %s\n",
            (obsId->saveCbAoCtrlClosedLoop ? "TRUE" : "FALSE") );
-   printf ("saveCbAoCtrlClosedLoopFrame        : %d\n",
+   printf ("saveCbAoCtrlClosedLoopFrame      : %d\n",
            (int)obsId->saveCbAoCtrlClosedLoopFrame);
    printf ("Number of frames with FG only    : %d\n", 
            (int)(obsId->ggFrame) );
@@ -15829,7 +15813,7 @@ STATUS detObsShow
    printf ("Time to average aO data          : %f sec\n", (obsId->aoTime) );
    printf ("saveCbFgCtrlClosedLoopTime       : %f sec\n",
            obsId->saveCbFgCtrlClosedLoopTime);
-   printf ("saveCbAoCtrlClosedLoopTime         : %f sec\n",
+   printf ("saveCbAoCtrlClosedLoopTime       : %f sec\n",
            obsId->saveCbAoCtrlClosedLoopTime);
    printf ("rateBrightPixThreshComp          : %f\n",
            obsId->rateBrightPixThreshComp);
@@ -20039,6 +20023,8 @@ STATUS detInitSigInit
    double totalThresh;
    double seeingGain;
    double aoThreshold;
+   double fgGain[3];
+   double slidingFocusGain;
 
    if ( detObsIdP2 == NULL )
    {
@@ -20070,7 +20056,8 @@ STATUS detInitSigInit
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain, 
-                               &aoThreshold) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain) 
+              == ERROR )
          {
             printf ("Failed to read ao control file parameters\n");
             return (ERROR);
@@ -20090,6 +20077,10 @@ STATUS detInitSigInit
          *(double *)pgsub->vall = seeingGain;
          strcpy ( (char *)pgsub->valm, seeingCmFileName );
          strcpy ( (char *)pgsub->valn, seeingCvFileName );
+         *(double *)pgsub->valo = fgGain[0];
+         *(double *)pgsub->valp = fgGain[1];
+         *(double *)pgsub->valq = fgGain[2];
+         *(double *)pgsub->valr = slidingFocusGain;
 
          *(long *)pgsub->valu = 0; /* no binning: 0 */
       }
@@ -20115,7 +20106,8 @@ STATUS detInitSigInit
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain,
-                               &aoThreshold) == ERROR )
+                               &aoThreshold, fgGain, &slidingFocusGain) 
+              == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
             return (ERROR);
@@ -20135,6 +20127,10 @@ STATUS detInitSigInit
          *(double *)pgsub->vall = seeingGain;
          strcpy ( (char *)pgsub->valm, seeingCmFileName );
          strcpy ( (char *)pgsub->valn, seeingCvFileName );
+         *(double *)pgsub->valo = fgGain[0];
+         *(double *)pgsub->valp = fgGain[1];
+         *(double *)pgsub->valq = fgGain[2];
+         *(double *)pgsub->valr = slidingFocusGain;
 
          *(long *)pgsub->valu = 1; /* binning: 1 */
       }
@@ -20550,10 +20546,6 @@ uint32 detSigReset
 
    for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
        obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
-
-/*
-   obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
-*/
 
    if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                         obsId->pAoThreshContext) == ERROR)
@@ -23498,6 +23490,73 @@ uint32 testTDL (
           printf ( "TDL failed %d\n", i ) ;
        }
    }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitSigModeSeq
+ *
+ *   INVOCATION:
+ *   detInitSigModeSeq (struct genSubRecord *pgsub)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) pgsub (struct genSubRecord *) Pointer to initSigModeSeq gsub record
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Init the detSigModeSeq input fields
+ *
+ *   DESCRIPTION:
+ *   For this record, I have decided to use Epics facilities and not
+ *   epToVxLib.
+ *
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   external variables: detObsIdP2
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detInitSigModeSeq
+   (
+   struct genSubRecord * pgsub   /* Pointer to "initSigModeSeq" gensub record */
+   )
+
+{
+   *(double *)pgsub->vala = *(double *)pgsub->a;
+   *(long *)pgsub->valb = *(long *)pgsub->b;
+   *(long *)pgsub->valc = *(long *)pgsub->c;
+   *(double *)pgsub->vald = *(double *)pgsub->d;
+   *(long *)pgsub->vale = *(long *)pgsub->e;
+   *(long *)pgsub->valf = *(long *)pgsub->f;
+   *(double *)pgsub->valg = *(double *)pgsub->g;
+   *(long *)pgsub->valh = *(long *)pgsub->h;
+   *(double *)pgsub->vali = *(double *)pgsub->i;
+   *(long *)pgsub->valj = *(long *)pgsub->j;
+   *(double *)pgsub->valk = *(double *)pgsub->k;
+   *(long *)pgsub->vall = *(long *)pgsub->l;
+   *(double *)pgsub->valm = *(double *)pgsub->m;
+   strcpy ( (char *)pgsub->valn, (char *)pgsub->n );
+   *(long *)pgsub->valo = *(long *)pgsub->o;
+   *(long *)pgsub->valp = *(long *)pgsub->p;
+   *(long *)pgsub->valq = *(long *)pgsub->q;
+   *(double *)pgsub->valr = *(double *)pgsub->r;
+   *(double *)pgsub->vals = *(double *)pgsub->s;
+   *(long *)pgsub->valt = *(long *)pgsub->t;
 
    return (OK);
 }

@@ -274,3 +274,10 @@ V4-5 4 February 2003 CB:
   - Fix a bug in detSigInit (angleWitM2 and angleWithM1 were already 
     defined as global)
   - Implement proportional law for aO gains
+  - FG gains: default implemented in code
+
+V4-6 8 January 2004 CB:
+-----------------------
+  - set binning mode by default
+  - read default gains from .dat file when pressing the default button
+  - set default of the detSigModeSeq CAD from pv load file (one per site)
