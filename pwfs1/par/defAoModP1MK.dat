@@ -4,7 +4,7 @@
 0.32 1.53 0.0 -36 -6.0 0.0 0.0
 # Astig 45 = b1*sin(X+pp1) + b2*sin(2*X+pp2) + b3*sin(4*X+pp3) + d (double)
 # b1 b2 b3 pp1 pp2 pp3 d
-0.0 -1.36 0.0 -32.0 -21.0 0.0 0.0
+-0.51 -1.36 0.0 -32.0 -21.0 0.0 0.0
 # Gain for astigmatism 0 and 45 rotation matrix (double)
 1.0 1.0
 # Offset for astigmatism 0 and 45 on the measurement (double)
