@@ -286,8 +286,8 @@ typedef struct
 
    int          modeNb;                /* Number of modes to correct          */
 
-   int          unused;                /* The structure size must be equal to */
-                                       /* a number multiple of a double       */
+   int          allowedSubapOff;       /* Number of subapertures allowed to   */
+                                       /* be off when computing the centroids */
 
 } AO_CTRL_ID_STRUCT, * AO_CTRL_ID;
 

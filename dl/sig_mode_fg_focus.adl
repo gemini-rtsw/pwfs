@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="23"
-	nstr="89"
-	ndynamic="8"
+	npc="10"
+	nstr="47"
+	ndynamic="9"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="707"
-		height="258"
+		height="264"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2486"
-	nwords_sta="560"
+	nwords_dspy="1822"
+	nwords_sta="556"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1928"
-	osta="1368"
-	odynamic="1928"
-	oplot="2474"
-	ord="2474"
-	oes="2474"
-	okd="2474"
-	opd="2486"
-	opo="2486"
+	odyng="1198"
+	osta="642"
+	odynamic="1198"
+	oplot="1810"
+	ord="1810"
+	oes="1810"
+	okd="1810"
+	opd="1822"
+	opo="1822"
 	opc="68"
-	ostr="370"
-	ocmap="1368"
-	ocrules="1368"
+	ostr="200"
+	ocmap="642"
+	ocrules="642"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="6"
 		y="38"
 		width="690"
-		height="206"
+		height="218"
 		groupid="0"
 	}
 }
@@ -167,33 +167,6 @@ display {
 	textix="$(sensor) - SET FAST GUIDE AND FOCUS MODE"
 	align="horiz. left"
 }
-"<<basic attribute>>" {
-	attr {
-		clr="15"
-		style="solid"
-		fill="outline"
-		width="0"
-	}
-}
-"text" {
-	object {
-		x="13"
-		y="190"
-		width="618"
-		height="20"
-		groupid="0"
-	}
-	textix="To set processing mode to FAST GUIDE AND FOCUS mode:"
-	align="horiz. left"
-}
-"<<basic attribute>>" {
-	attr {
-		clr="12"
-		style="solid"
-		fill="outline"
-		width="0"
-	}
-}
 "text" {
 	object {
 		x="335"
@@ -248,13 +221,32 @@ display {
 }
 "text" {
 	object {
-		x="11"
-		y="215"
-		width="318"
+		x="13"
+		y="192"
+		width="618"
 		height="20"
 		groupid="0"
 	}
-	textix="click on start"
+	textix="Paramaters for FAST GUIDE AND FOCUS mode:"
+	align="horiz. left"
+}
+"<<basic attribute>>" {
+	attr {
+		clr="12"
+		style="solid"
+		fill="outline"
+		width="0"
+	}
+}
+"text" {
+	object {
+		x="15"
+		y="221"
+		width="384"
+		height="16"
+		groupid="0"
+	}
+	textix="A: No. subapertures allowed to be off:"
 	align="horiz. left"
 }
 "message button" {
@@ -629,6 +621,51 @@ display {
 		convertParams=""
 	}
 	align="horiz. left"
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="396"
+		y="219"
+		width="296"
+		height="21"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeFgFocus.A"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeFgFocus.VAL"
+		rulechan[1] = "$(top)detSigModeFgFocus.VAL"
+		rulechan[2] = "$(top)detSigModeFgFocus.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeFgFocus"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
 	format="decimal"
 }
 "kill display" {

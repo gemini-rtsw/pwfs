@@ -1459,8 +1459,9 @@ STATUS aoCtrlContextInit (
    aoCtrlId->coaddCounter = 0;
    aoCtrlId->focusCounter = 0;
    aoCtrlId->previousFocus = 0;
+   aoCtrlId->allowedSubapOff = 1;
 
-   for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
+   for ( i = 0 ; i < CCD_SIZE ; i ++ )
        aoCtrlId->sumVect[i] = 0.0;
 
    fclose (pFile);
@@ -2427,7 +2428,7 @@ STATUS aoThresholdCompute (
 
    /* Determine the threshold: corresponds to ratePixel% of brightest pixels */
 
-   index = (int) ceil ((double)(aoCcdId->pixelsNb) * ratePixel);
+   index = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
    printf ( "index = %d\n" ,index);
 
    *pThreshold = *(pn + index);
@@ -2565,6 +2566,7 @@ STATUS aoCtrlContextShow (
    printf ( "One - Sliding focus gain: %f\n" , aoCtrlId->one_slidingFocusGain );
    printf ( "coaddCounter: %d\n" , aoCtrlId->coaddCounter );
    printf ( "focusCounter: %d\n" , aoCtrlId->focusCounter );
+   printf ( "Allowed subapertures to be off: %d\n", aoCtrlId->allowedSubapOff);
 
    return (OK);
 }
@@ -2840,7 +2842,7 @@ STATUS aoGuideAndFocus (
    {
       if ( *pWfsStatus == AO_SUBAP_OFF)
       {
-         if ( subapOffNb > 1 ) 
+         if ( subapOffNb > aoCtrlId->allowedSubapOff ) 
          {
             *(pZernikesVect) = 0.0;
             *(pZernikesVect + 1) = 0.0;
@@ -3277,7 +3279,7 @@ STATUS aoGuideAndFocusAndError (
    {
       if ( *pWfsStatus == AO_SUBAP_OFF)
       {
-         if ( subapOffNb > 1 ) 
+         if ( subapOffNb > aoCtrlId->allowedSubapOff ) 
          {
             *(pZernikesVect) = 0.0;
             *(pZernikesVect + 1) = 0.0;

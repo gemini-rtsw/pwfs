@@ -8,7 +8,7 @@ display {
 	ndyng="0"
 	npc="13"
 	nstr="51"
-	ndynamic="11"
+	ndynamic="12"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,23 +19,23 @@ display {
 		x="0"
 		y="0"
 		width="707"
-		height="322"
+		height="336"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2086"
-	nwords_sta="580"
+	nwords_dspy="2164"
+	nwords_sta="592"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1330"
+	odyng="1342"
 	osta="750"
-	odynamic="1330"
-	oplot="2074"
-	ord="2074"
-	oes="2074"
-	okd="2074"
-	opd="2086"
-	opo="2086"
+	odynamic="1342"
+	oplot="2152"
+	ord="2152"
+	oes="2152"
+	okd="2152"
+	opd="2164"
+	opo="2164"
 	opc="68"
 	ostr="248"
 	ocmap="750"
@@ -78,7 +78,7 @@ display {
 		x="8"
 		y="38"
 		width="690"
-		height="275"
+		height="290"
 		groupid="0"
 	}
 }
@@ -213,13 +213,13 @@ display {
 }
 "text" {
 	object {
-		x="13"
-		y="223"
+		x="15"
+		y="243"
 		width="232"
 		height="16"
 		groupid="0"
 	}
-	textix="A: No. frames to coadd:"
+	textix="B: No. frames to coadd:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -251,24 +251,35 @@ display {
 }
 "text" {
 	object {
-		x="13"
-		y="251"
+		x="15"
+		y="271"
 		width="224"
 		height="16"
 		groupid="0"
 	}
-	textix="B: Coadd file path:"
+	textix="C: Coadd file path:"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="13"
-		y="279"
+		x="15"
+		y="299"
 		width="218"
 		height="16"
 		groupid="0"
 	}
-	textix="C: Coadd file name:"
+	textix="D: Coadd file name:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="15"
+		y="217"
+		width="384"
+		height="16"
+		groupid="0"
+	}
+	textix="A: No. subapertures allowed to be off:"
 	align="horiz. left"
 }
 "message button" {
@@ -647,53 +658,8 @@ display {
 }
 "text entry" {
 	object {
-		x="249"
-		y="221"
-		width="445"
-		height="21"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigModeFgCoadd.A"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
-		x="249"
-		y="249"
+		x="251"
+		y="241"
 		width="445"
 		height="21"
 		groupid="0"
@@ -737,14 +703,104 @@ display {
 }
 "text entry" {
 	object {
-		x="249"
-		y="277"
+		x="251"
+		y="269"
+		width="445"
+		height="21"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeFgCoadd.C"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeFgCoadd"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="251"
+		y="297"
 		width="445"
 		height="22"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.C"
+		chan="$(top)detSigModeFgCoadd.D"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeFgCoadd"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="396"
+		y="215"
+		width="300"
+		height="21"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeFgCoadd.A"
 		clr="0"
 		bclr="6"
 		label="none"

@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="19"
-	nstr="76"
-	ndynamic="24"
+	npc="21"
+	nstr="63"
+	ndynamic="25"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="770"
-		height="571"
+		height="611"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="4394"
-	nwords_sta="1336"
+	nwords_dspy="4330"
+	nwords_sta="1556"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2744"
-	osta="1408"
-	odynamic="2744"
-	oplot="4382"
-	ord="4382"
-	oes="4382"
-	okd="4382"
-	opd="4394"
-	opo="4394"
+	odyng="2614"
+	osta="1058"
+	odynamic="2614"
+	oplot="4318"
+	ord="4318"
+	oes="4318"
+	okd="4318"
+	opd="4330"
+	opo="4330"
 	opc="68"
-	ostr="318"
-	ocmap="1408"
-	ocrules="1408"
+	ostr="348"
+	ocmap="1058"
+	ocrules="1058"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="4"
 		y="37"
 		width="761"
-		height="522"
+		height="566"
 		groupid="0"
 	}
 }
@@ -263,7 +263,7 @@ display {
 "text" {
 	object {
 		x="12"
-		y="464"
+		y="508"
 		width="600"
 		height="16"
 		groupid="0"
@@ -274,7 +274,7 @@ display {
 "text" {
 	object {
 		x="500"
-		y="492"
+		y="536"
 		width="40"
 		height="16"
 		groupid="0"
@@ -285,7 +285,7 @@ display {
 "text" {
 	object {
 		x="343"
-		y="492"
+		y="536"
 		width="65"
 		height="16"
 		groupid="0"
@@ -329,7 +329,7 @@ display {
 "text" {
 	object {
 		x="10"
-		y="527"
+		y="571"
 		width="158"
 		height="16"
 		groupid="0"
@@ -447,7 +447,7 @@ display {
 "line" {
 	object {
 		x="4"
-		y="449"
+		y="495"
 		width="761"
 		height="0"
 		groupid="0"
@@ -455,11 +455,11 @@ display {
 	npoints="2"
 	point[0] {
 		x="4"
-		y="449"
+		y="495"
 	}
 	point[1] {
 		x="765"
-		y="449"
+		y="495"
 	}
 	orgpoint[0] {
 		x="0"
@@ -469,6 +469,43 @@ display {
 		x="1000"
 		y="-1"
 	}
+}
+"line" {
+	object {
+		x="5"
+		y="452"
+		width="761"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="5"
+		y="452"
+	}
+	point[1] {
+		x="766"
+		y="452"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="11"
+		y="469"
+		width="389"
+		height="16"
+		groupid="0"
+	}
+	textix="K: No. subapertures allowed to be off:"
+	align="horiz. left"
 }
 "message button" {
 	object {
@@ -892,7 +929,7 @@ display {
 "text entry" {
 	object {
 		x="407"
-		y="490"
+		y="534"
 		width="87"
 		height="23"
 		groupid="0"
@@ -937,7 +974,7 @@ display {
 "message button" {
 	object {
 		x="77"
-		y="487"
+		y="531"
 		width="63"
 		height="26"
 		groupid="0"
@@ -985,7 +1022,7 @@ display {
 "message button" {
 	object {
 		x="153"
-		y="487"
+		y="531"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1033,7 +1070,7 @@ display {
 "text entry" {
 	object {
 		x="230"
-		y="487"
+		y="531"
 		width="99"
 		height="27"
 		groupid="0"
@@ -1263,8 +1300,8 @@ display {
 }
 "text entry" {
 	object {
-		x="148"
-		y="526"
+		x="144"
+		y="571"
 		width="619"
 		height="21"
 		groupid="0"
@@ -1554,6 +1591,51 @@ display {
 		rulechan[0] = "$(top)detSigModeSeq.VAL"
 		rulechan[1] = "$(top)detSigModeSeq.VAL"
 		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="399"
+		y="462"
+		width="296"
+		height="21"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.K"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeAo.VAL"
+		rulechan[1] = "$(top)detSigModeAo.VAL"
+		rulechan[2] = "$(top)detSigModeAo.VAL"
 		rulechan[3] = ""
 		rulechan[4] = ""
 		rulechan[5] = ""

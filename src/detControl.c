@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.5 2000-07-10 21:47:32 cboyer Exp $"};
+   "$Id: detControl.c,v 1.6 2000-07-24 20:51:34 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -9281,6 +9281,7 @@ uint32 detSigModeFgFocus
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
+   long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
    double       expTime;        /* Exposure time                              */
@@ -9291,6 +9292,8 @@ uint32 detSigModeFgFocus
     */
 
    errorNumber = 0;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&subapOff);
+
    sigMode = AO_MODE_FG_FOCUS;
 
    /*
@@ -9326,8 +9329,9 @@ uint32 detSigModeFgFocus
       return (errorNumber);
    }
 
-   MESSAGE_LOG (MSG_LOG,
-           "Signal processing switched to \"FG and Focus\" mode ");
+   MESSAGE_LOG1 (MSG_LOG,
+           "Signal processing switched to \"FG and Focus\" mode"
+           "allowedSubapOff = %d", (int)subapOff);
    if (epToVxPipeWrite (NULL, "Fast guide and focus", 
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -9341,6 +9345,7 @@ uint32 detSigModeFgFocus
     */
 
    obsId->sigMode = sigMode;
+   obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    /* Init the fields of the observe CAD record */
 
@@ -9915,6 +9920,7 @@ uint32 detSigModeSeq
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
+   long         subapOff;       /* Number of subapertures allowed to be off   */
    long         saveCbCtrlClosedLoopFlag; 
                                 /* Save control circular buffer during closed */
                                 /* loop flag.                                 */
@@ -9962,6 +9968,7 @@ uint32 detSigModeSeq
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, 
                           (char *) & saveCbCtrlEveryTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, pFilePath); 
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&subapOff);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -10007,6 +10014,7 @@ uint32 detSigModeSeq
                  (int)threshFlag, (int)nFramesThresh, rateBright);
    MESSAGE_LOG3 (MSG_LOG, "fluxFlag=%d, nFramesFlux=%d, multCoeffFlux=%f",
                  (int)fluxFlag, (int)nFramesFlux, multCoeffFlux);
+   MESSAGE_LOG1 (MSG_LOG, "subapOff=%d", (int)subapOff);
    if (epToVxPipeWrite (NULL, "Sequence closed loop", 
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -10020,6 +10028,7 @@ uint32 detSigModeSeq
     */
 
    obsId->sigMode = sigMode;
+   obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    obsId->fgTime = fgTime;
    obsId->saveCbCtrlClosedLoop = saveCbCtrlClosedLoopFlag;
@@ -10208,6 +10217,7 @@ uint32 detSigModeTotal
       obsId->nFramesAverageFlux = nFramesFlux;
       obsId->multCoeffAverageFlux = multCoeffFlux;
       obsId->aoCtrlId->multCoeffTotal= multCoeffFlux;
+      obsId->aoCtrlId->allowedSubapOff= 0;
       obsId->sigMode = sigMode;
       if (epToVxPipeWrite (NULL, "Average flux computation", 
                            obsId->pAoProcessModeContext) == ERROR)
@@ -14882,6 +14892,7 @@ uint32 detSigModeFgCoadd
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
+   long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
@@ -14899,10 +14910,11 @@ uint32 detSigModeFgCoadd
 
    errorNumber = 0;
    sigMode = AO_MODE_FG_FOCUS_COADD;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & subapOff);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
                           (char *) & nCoaddFrames);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFilePath);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pCoaddFileName);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -14936,9 +14948,9 @@ uint32 detSigModeFgCoadd
       return (errorNumber);
    }
 
-   MESSAGE_LOG1 (MSG_LOG,
-   "Signal processing switched to \"FG Focus + Coadd\" mode - nCoaddFrames=%ld",
-   nCoaddFrames);
+   MESSAGE_LOG2 (MSG_LOG,
+   "Signal processing switched to \"FG Focus + Coadd\" mode - nCoaddFrames=%ld"
+   "subapOff = %d", nCoaddFrames, (int)subapOff);
    if (epToVxPipeWrite (NULL, "Fast Guide, Focus and Coadd",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -14958,6 +14970,7 @@ uint32 detSigModeFgCoadd
     */
 
    obsId->sigMode = sigMode;
+   obsId->aoCtrlId->allowedSubapOff = subapOff;
    obsId->nCoaddFrames = nCoaddFrames;
    strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
             (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
