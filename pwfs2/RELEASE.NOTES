@@ -151,3 +151,14 @@ V1-9 03 April 2001 CB:
   - fix rotation bug in aoP2Lib.c, in writeZernikes.c
   - add adc0, adc1, adc2, adc3 sir records
   - add startup_nodhs.vws
+
+V2-0 08 August 2001 CB:
+-----------------------
+  - reject observe command if no binning and exposure time < 0.01s
+  - PB 9 JULY 2001: intermittent problem with timeNow(). I have to comment out 
+    all the timeNow calls. 
+    Today, I was not able to reproduce the problem, but I decided to keep a
+    version of pwfs2 without timeNow call. 
+    Instead of using the time, the data are sent with the variable interval.
+    WARNING: the SCS has to be modified to read this variable instead of the 
+    time

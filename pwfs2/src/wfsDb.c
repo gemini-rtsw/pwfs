@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.14 2001-04-04 04:05:58 gemvx Exp $"};
+ "$Id: wfsDb.c,v 1.15 2001-08-08 20:07:16 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -199,7 +199,7 @@ CAD_RECORD pWfsDbCadList [] =
   DET_CONTROL_CMD_DHS_RECONNECT,
   STOP_DIRECTIVE_UNSUPPORTED,
   SIMULATION_MODE_SUPPORTED,
-  40.0,
+  NO_TIMEOUT,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "1"}
  },
  {
