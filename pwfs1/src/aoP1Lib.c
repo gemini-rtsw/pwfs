@@ -2711,41 +2711,6 @@ STATUS aoCtrlContextInit (
             aoCtrlId->sinAngleWithM1 );
 #endif
 
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the AO init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      aoCtrlId->initFlag = FALSE;
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   printf ( "aoCtrlContextInit(): %s\n", comment );
-#endif
-
-   /* Read aO threshold above which the aO gain is increased */
-
-   if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
-   {
-      ERROR_SET1 ( 0,
-            "Failed to read aO threshold from the AO init file %s",
-            ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      aoCtrlId->initFlag = FALSE;
-      return (ERROR);
-   }
-
-   aoCtrlId->aoThreshold = value;
-
-#ifdef DEBUG
-   printf ( "aoCtrlContextInit(): aoThreshold = %f\n",
-            aoCtrlId->aoThreshold );
-#endif
-
    /* End - close and return */
 
    aoCtrlId->initFlag = TRUE;
@@ -2775,7 +2740,7 @@ STATUS aoCtrlContextInit (
  *   aoCtrlContextUpdate (pDarkFileName, pFlatFileName, pRefFileName, 
  *                        pAoIntMatFileName, pAoContMatFileName, 
  *                        pFgContMatFileName, xCenter, yCenter, 
- *                        angleWithM2, angleWithM1, aoThreshold,
+ *                        angleWithM2, angleWithM1,
  *                        aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -2792,7 +2757,6 @@ STATUS aoCtrlContextInit (
  *   (>) yCenter            (double)     New yCenter value for whole CCD
  *   (>) angleWithM2        (double)     New angle between M2 and P1
  *   (>) angleWithM1        (double)     New angle between M1 and P1
- *   (>) aoThreshold        (double)     ao Threshold
  *   (>) aoCcdId            (AO_CCD_ID)  Pointer to the CCD geometry context
  *                                       structure
  *   (<) aoCtrlId           (AO_CTRL_ID) Pointer to the control context 
@@ -2838,7 +2802,6 @@ STATUS aoCtrlContextUpdate (
    double     yCenter,
    double     angleWithM2,
    double     angleWithM1,
-   double     aoThreshold,
    AO_CCD_ID  aoCcdId,
    AO_CTRL_ID aoCtrlId
    )
@@ -3029,15 +2992,6 @@ STATUS aoCtrlContextUpdate (
             aoCtrlId->cosAngleWithM1 );
    printf ( "aoCtrlContextUpdate(): sin(angleWithM1) = %f\n",
             aoCtrlId->sinAngleWithM1 );
-#endif
-
-   /* Init the aO threshold */
-
-   aoCtrlId->aoThreshold = aoThreshold;
-
-#ifdef DEBUG
-   printf ( "aoCtrlContextUpdate(): aoThreshold = %f\n",
-            aoCtrlId->aoThreshold );
 #endif
 
    /* End */
@@ -3252,6 +3206,7 @@ STATUS aoCtrlContextShow (
    printf ( "Focus counter : %d\n", aoCtrlId->focusCounter);
    printf ( "Allowed subapertures to be off: %d\n", aoCtrlId->allowedSubapOff);
    printf ( "aoThreshold: %f\n" , aoCtrlId->aoThreshold );
+   printf ( "aoMaxThreshold: %f\n" , aoCtrlId->aoMaxThreshold );
 
    return (OK);
 }
@@ -4392,12 +4347,12 @@ STATUS aoModeCompute (
       }
       aoCtrlId->coaddCounter ++;
 
-#ifdef DEBUG
-      printf ("coaddCounter=%d\n", aoCtrlId->coaddCounter);
-#endif
-
       if  ( aoCtrlId->coaddCounter == imageNb )
       {
+#ifdef DEBUG
+         printf ( "aoModeCompute: coaddCounter = %d = %d\n",
+                  aoCtrlId->coaddCounter, imageNb);
+#endif
           for ( p = ps ; p < pMax; p ++ )
           {
                *p = (*(p) / imageNb);
@@ -4508,7 +4463,8 @@ STATUS aoModeCompute (
    }
    else if ( aoCtrlId->coaddCounter < (imageNb+pauseNb+1) )
    {
-
+      printf ("aoModeCompute(): pause between 2 aO commands: %d\n",
+              aoCtrlId->coaddCounter);
 #ifdef DEBUG
       printf ("aoModeCompute(): pause between 2 aO commands: %d\n",
               aoCtrlId->coaddCounter);
@@ -6507,7 +6463,7 @@ STATUS aoDarkUpdate (
  *   aoCtrlFileRead (pInitFileName, pPath, pDarkFileName, pFlatFileName, 
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName, 
  *                   pFgCmFileName, pRms, pThresh, pTotalThresh, pAngleM2, 
- *                   pAngleM1, pAoThreshold, pFgGain, pSlidingFocusGain)
+ *                   pAngleM1, pFgGain, pSlidingFocusGain)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName (char *)   Pointer to the AO init file name 
@@ -6525,7 +6481,6 @@ STATUS aoDarkUpdate (
  *   (<) pTotalThresh  (double *) Pointer to the total flux threshold
  *   (<) pAngleM2      (double *) Pointer to the angle with M2
  *   (<) pAngleM1      (double *) Pointer to the angle with M1
- *   (<) pAoThreshold  (double *) Pointer to the aO threshold
  *   (<) pFgGain           (double *) Pointer to array of gain (TTF)
  *   (<) pSlidingFocusGain (double *) Pointer to the focus sliding gain
  *
@@ -6568,7 +6523,6 @@ STATUS aoCtrlFileRead (
    double * pTotalThresh,
    double * pAngleM2,
    double * pAngleM1,
-   double * pAoThreshold,
    double * pFgGain,
    double * pSlidingFocusGain
    )
@@ -7130,35 +7084,6 @@ STATUS aoCtrlFileRead (
 
 #ifdef DEBUG
    printf ( "aoCtrlFileRead(): angleWithM1 = %f\n", *pAngleM1 );
-#endif
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      printf (
-      "Failed to read the next line of comments from the AO init file %s\n",
-      pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   printf ( "aoCtrlFileRead(): %s\n", comment );
-#endif
-
-   /* Read aO threshold */
-
-   if ( (fscanf (pFile, "%lf\n", pAoThreshold)) == EOF )
-   {
-      printf ( "Failed to read aO threshold from the AO init file %s\n",
-               pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   printf ( "aoCtrlFileRead(): aoThreshold = %f\n", *pAoThreshold );
 #endif
 
    /* End - close and return */
@@ -8565,10 +8490,10 @@ STATUS aoModFocFileRead (
 
 /*+
  *   FUNCTION NAME:
- *   aoThresholdPerSubapCompute
+ *   aoThresholdPerSubapCompute_old
  *
  *   INVOCATION:
- *   aoThresholdPerSubapCompute (pImage, aoCcdId, aoCtrlId, ratePixel, 
+ *   aoThresholdPerSubapCompute_old (pImage, aoCcdId, aoCtrlId, ratePixel, 
  *                               pThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -8607,7 +8532,7 @@ STATUS aoModFocFileRead (
  *-
  */
 
-STATUS aoThresholdPerSubapCompute (
+STATUS aoThresholdPerSubapCompute_old (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId,
@@ -8945,8 +8870,177 @@ double aoTotalThresholdCompute (
 }
 
 
+/* -------------------------------------------------------------------------- */
 
+/*+
+ *   FUNCTION NAME:
+ *   aoThresholdPerSubapCompute
+ *
+ *   INVOCATION:
+ *   aoThresholdPerSubapCompute (pImage, aoCcdId, aoCtrlId, ratePixel,
+ *                               pThreshold)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pImage         (float *)    Pointer to the image from which to compute
+ *                                   the centroids
+ *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                                   structure
+ *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control context
+ *                                   structure
+ *   (>) ratePixel      (double)     Rate of the brightest pixels to determine
+ *                                   the thresholds - should be between 0 and 1
+ *   (<) pThreshold     (double *)   Pointer to the threshold vector
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS) OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   To compute the threshold per subaperture
+ *
+ *   DESCRIPTION:
+ *   This routine allows to compute the optimized threshold per subaperture
+ *   from a PWFS1 spots image pImage according to the following criteria:
+ *   ratePixel % of the brightest pixels of the subaperture.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
 
+STATUS aoThresholdPerSubapCompute (
+   float *      pImage,
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId,
+   double       ratePixel,
+   double *     pThreshold
+   )
+{
+   int          index1;
+   int          index2;
+   int          gap;
+   int          pixelsNb;
+   int          subapNb;
+   int          i, j;
+   int          l, k;
+   int          m;
+   float        temp;
+   float *      pn;
+   float *      pi;
+   float *      pMin;
+   float *      pMax;
+   double       averageThresh;
+   IMAGE_VECT   newImageVect;
 
+   /* Check range of ratePixel: should be between 0 and 1 */
 
+   if ( (ratePixel < 0.0) || (ratePixel >= 1.0) )
+   {
+      ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
+                   ERROR_LOG_SAVE, ratePixel );
+      return (ERROR);
+   }
 
+   /* Store the pixels of the subaperture into newImageVect */
+
+   m=0;
+   for ( k = 0 ; k < 2 * aoCcdId->ySubapNb ; k ++ )
+   {
+       for ( l = 0 ; l < 2 * aoCcdId->xSubapNb ; l ++ )
+       {
+
+           subapNb = 2*k*aoCcdId->xSubapNb + l;
+           pn = newImageVect;
+
+           if ( aoCcdId->subapUsedVect[subapNb] == TRUE)
+           {
+              pixelsNb = aoCcdId->xRaster * aoCcdId->yRaster;
+
+#ifdef DEBUG
+              printf ( "subaperture NB = %d is used\n" , subapNb );
+#endif
+
+              for ( i = 1 ; i <= aoCcdId->yRaster ; i ++ )
+              {
+                  pMin = pImage + ((i-1)*aoCcdId->xPixels) +
+                         (l*aoCcdId->xRaster) +
+                         (k * aoCcdId->xPixels * aoCcdId->yRaster);
+                  pMax = pMin + aoCcdId->xRaster;
+
+                  for ( pi = pMin ; pi < pMax ; pi ++)
+                      *(pn ++) = *pi;
+              }
+
+#ifdef DEBUG
+              pn = newImageVect;
+              printf ( "Pixels = " );
+              for ( i = 0; i < pixelsNb ; i ++ )
+                  printf ( "%f " , *(pn + i));
+              printf ( "\n" );
+#endif
+
+              /* Now sort newImageVector */
+
+              pn = newImageVect;
+
+              for ( gap = pixelsNb/2 ; gap > 0 ; gap /= 2 )
+              {
+                  for ( i = gap ; i < pixelsNb ; i ++ )
+                  {
+                      for ( j = i - gap ; j >= 0 && (*(pn+j)>*(pn+j+gap)) ;
+                            j -= gap)
+                      {
+                          temp = *(pn+j);
+                          *(pn+j) = *(pn+j+gap);
+                          *(pn+j+gap) = temp;
+                      }
+                  }
+              }
+
+#ifdef DEBUG
+              pn = newImageVect;
+              printf ( "Pixels = " );
+              for ( i = 0; i < pixelsNb ; i ++ )
+                  printf ( "%f " , *(pn + i));
+              printf ( "\n" );
+#endif
+
+              /* Now compute the threshold for this subaperture */
+
+              index2 = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
+
+              if ( ratePixel < 0.5 )
+                 index1 = (int) ceil ((double)(pixelsNb) * ratePixel);
+              else
+                 index1 = 0;
+
+              pn = newImageVect;
+              averageThresh = 0.0;
+              for ( i = index1 ; i < index2 ; i ++ )
+                  averageThresh += (double)(*(pn + i));
+
+              if (averageThresh < 0.0)
+                 averageThresh = 0.0;
+
+              *(pThreshold + m) = (averageThresh / (double)(index2-index1)) +
+              (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
+
+#ifdef DEBUG
+              printf ( "index1 = %d, index2 = %d\n", index1, index2);
+              printf ( "threshold[%d] = %f\n" , m , *(pThreshold + m));
+#endif
+              m ++;
+           }
+       }
+   }
+
+   return (OK);
+}

@@ -38,10 +38,10 @@ double $(top)$(wfs)initSigModeSeqDark.E = 2.5 ;
 # Set up defaults for detSigInitAoThresh CAD commands
 #
 
-#group {
-#double $(top)$(wfs)initSigInitAoThresh.A = 0.5 ;
-#double $(top)$(wfs)initSigInitAoThresh.B = 3.0 ;
-#};
+group {
+double $(top)$(wfs)initSigInitAoThresh.A = 0.5 ;
+double $(top)$(wfs)initSigInitAoThresh.B = 3.0 ;
+};
 
 #
 # Init the defaults at startup
@@ -49,6 +49,6 @@ double $(top)$(wfs)initSigModeSeqDark.E = 2.5 ;
 
 int $(top)$(wfs)initSigModeSeq.PROC = 1 ;
 int $(top)$(wfs)initSigModeSeqDark.PROC = 1 ;
-#int $(top)$(wfs)initSigInitAoThresh.PROC = 1 ;
-#int $(top)$(wfs)detSigInitAoThresh.DIR = 0 ;
-#int $(top)$(wfs)detSigInitAoThresh.DIR = 3 ;
+int $(top)$(wfs)initSigInitAoThresh.PROC = 1 ;
+int $(top)$(wfs)detSigInitAoThresh.DIR = 0 ;
+int $(top)$(wfs)detSigInitAoThresh.DIR = 3 ;

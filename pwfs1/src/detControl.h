@@ -507,6 +507,9 @@ typedef   struct      /* Context structure used to describe an observation.   */
    int          updateAoScale;
                            /* Flag to indicate if the aO scale factors have   */
                            /* been updated                                    */
+   int          updateAoThresh;
+                           /* Flag to indicate if the aO thresholds have been */
+                           /* updated                                         */
    long         saveCentroids;
                            /* Flag to indicate if we want to save centroids   */
                            /* data when FG FOCUS and COADD mode               */
@@ -588,6 +591,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* of the interaction matrix                       */
    double       aoThreshold;
                            /* Threshold for aO correction                     */
+   double       aoMaxThreshold;
+                           /* Maximum Threshold for aO correction             */
    AO_VECT      aoScaleVect; 
                            /* Scale factor vector for aO modes                */
    char         pCoaddFileName[(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
@@ -873,7 +878,8 @@ enum
                                /* Init zero point model for coma off axis     */
    DET_CONTROL_CMD_SIG_INIT_FOCUS_MODEL,
                                /* Init zero point model for focus off axis    */
-
+   DET_CONTROL_CMD_SIG_INIT_AO_THRESH,
+                               /* Init aO thresholds                          */
 
    /* genSub commands. */
 

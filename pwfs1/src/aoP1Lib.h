@@ -412,6 +412,9 @@ typedef struct
    double       aoThreshold;           /* aO threshold above which the aO     */
                                        /* gains are increased                 */
 
+   double       aoMaxThreshold;        /* aO threshold above which the aO     */
+                                       /* values are clamped                  */
+
    int          allowedSubapOff;       /* Number of subapertures allowed to   */
                                        /* be off when computing the centroids */
 
@@ -839,8 +842,8 @@ STATUS aoCtrlContextUpdate (char * pDarkFileName, char * pFlatFileName,
                             char * pRefFileName, char * pAoIntMatFileName, 
                             char * pAoContMatFileName, 
                             char * pFgContMatFileName, double xCenter, 
-                            double yCenter, double angleWithM2, 
-                            double angleWithM1, double aoThreshold, 
+                            double yCenter, double angleWithM2,
+                            double angleWithM1, 
                             AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
 STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels, int yPixels);
@@ -898,8 +901,7 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        double * pRefX, double * pRefY, char * pAoImFileName,
                        char * pAoCmFileName, char * pFgCmFileName,
                        double * pRms, double * pThresh, double * pTotalThresh,
-                       double * pAngleM2, double * pAngleM1, 
-                       double * pAoThreshold,
+                       double * pAngleM2, double * pAngleM1,
                        double *pFgGain, double * pSlidingFocusGain);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
