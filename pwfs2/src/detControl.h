@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   20 Feb 2001: CB - add sir dhsCon
  *   06 Feb 2001: CB - Move all the DATREC_CONTEXT structures into the obsId
  *                     structure
  *   12 jan 2001 - cb add DET_CONTROL_PWFS2_CP_INIT_FILE
@@ -42,7 +43,7 @@
  *-
  */
 
-/* includes */
+/***************************************************************** Includes ***/
 
 #ifdef vxWorks
 #include <vxWorks.h>
@@ -58,7 +59,7 @@
 
 #include "dhs.h"   
 
-/* defines */
+/****************************************************************** Defines ***/
 
 #define   DET_CONTROL_TASK_NAME              "detControl"
                                     /* Detector Controller task name.         */
@@ -125,108 +126,112 @@
                                     /* processing mode                        */
 
 #define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
-                                    /* Name of SIR record containing    */
-                                    /* the number of ouputs             */
+                                    /* Name of SIR record containing the      */
+                                    /* number of ouputs                       */
 
 #define   DET_CONTROL_DETXSIZE_SIR_NAME       "detXsize"
-                                    /* Name of SIR record containing    */
-                                    /* the X detector size              */
+                                    /* Name of SIR record containing the X    */
+                                    /* detector size                          */
 
 #define   DET_CONTROL_DETYSIZE_SIR_NAME       "detYsize"
-                                    /* Name of SIR record containing    */
-                                    /* the Y detector size              */
+                                    /* Name of SIR record containing the Y    */
+                                    /* detector size                          */
 
 #define   DET_CONTROL_XSUBAP_SIR_NAME         "xsubap"
-                                    /* Name of SIR record containing    */
-                                    /* the X detector size              */
+                                    /* Name of SIR record containing the X    */
+                                    /* detector size                          */
 
 #define   DET_CONTROL_YSUBAP_SIR_NAME         "ysubap"
-                                    /* Name of SIR record containing    */
-                                    /* the Y detector size              */
+                                    /* Name of SIR record containing the Y    */
+                                    /* detector size                          */
 
 #define   DET_CONTROL_XSTART_SIR_NAME         "xstart"
-                                    /* Name of SIR record containing    */
-                                    /* the X left offset                */
+                                    /* Name of SIR record containing the X    */
+                                    /* left offset                            */
 
 #define   DET_CONTROL_YSTART_SIR_NAME         "ystart"
-                                    /* Name of SIR record containing    */
-                                    /* the Y bottom offset              */
+                                    /* Name of SIR record containing the Y    */
+                                    /* bottom offset                          */
 
 #define   DET_CONTROL_XRASTER_SIR_NAME        "xras"
-                                    /* Name of SIR record containing    */
-                                    /* the X subaperture size           */
+                                    /* Name of SIR record containing the X    */
+                                    /* subaperture size                       */
 
 #define   DET_CONTROL_YRASTER_SIR_NAME        "yras"
-                                    /* Name of SIR record containing    */
-                                    /* the Y subaperture size           */
+                                    /* Name of SIR record containing the Y    */
+                                    /* subaperture size                       */
 
 #define   DET_CONTROL_XSPACE_SIR_NAME         "xspace"
-                                    /* Name of SIR record containing    */
-                                    /* the X space between subapertures */
+                                    /* Name of SIR record containing the X    */
+                                    /* space between subapertures             */
 
 #define   DET_CONTROL_YSPACE_SIR_NAME         "yspace"
-                                    /* Name of SIR record containing    */
-                                    /* the Y space between subapertures */
+                                    /* Name of SIR record containing the Y    */
+                                    /* space between subapertures             */
 
 #define   DET_CONTROL_XBIN_SIR_NAME           "xbin"
-                                    /* Name of SIR record containing    */
-                                    /* the X binning factor             */
+                                    /* Name of SIR record containing the X    */
+                                    /* binning factor                         */
 
 #define   DET_CONTROL_YBIN_SIR_NAME           "ybin"
-                                    /* Name of SIR record containing    */
-                                    /* the Y binning factor             */
+                                    /* Name of SIR record containing the Y    */
+                                    /* binning factor                         */
 
 #define   DET_CONTROL_DETTYPE_SIR_NAME        "detType"
-                                    /* Name of SIR record containing    */
-                                    /* the type of detector controller  */
+                                    /* Name of SIR record containing the type */
+                                    /* of detector controller                 */
 
 #define   DET_CONTROL_DETID_SIR_NAME          "detID"
-                                    /* Name of SIR record containing    */
-                                    /* the SN of the CCD                */
+                                    /* Name of SIR record containing the SN   */
+                                    /* of the CCD                             */
 
 #define   DET_CONTROL_DATALABEL_SIR_NAME      "dataLabel"
-                                    /* Name of SIR record containing    */
-                                    /* the most recent DHS data label   */
+                                    /* Name of SIR record containing the most */
+                                    /* recent DHS data label                  */
 
 #define   DET_CONTROL_INTTIME_SIR_NAME        "intTime"
-                                    /* Name of SIR record containing    */
-                                    /* the integration time             */
+                                    /* Name of SIR record containing the      */
+                                    /* integration time                       */
 
 #define   DET_CONTROL_NEXPRQ_SIR_NAME         "nexpRQ"
-                                    /* Name of SIR record containing    */
-                                    /* requested nb of exp/dataset      */
+                                    /* Name of SIR record containing          */
+                                    /* requested nb of exp/dataset            */
 
 #define   DET_CONTROL_NEXP_SIR_NAME           "nexp"
-                                    /* Name of SIR record containing    */
-                                    /* current nb of exp/dataset        */
+                                    /* Name of SIR record containing current  */
+                                    /* nb of exp/dataset                      */
 
 #define   DET_CONTROL_NFRAMES_SIR_NAME        "nframes"
-                                    /* Name of SIR record containing    */
-                                    /* nb of frames/dataset             */
+                                    /* Name of SIR record containing nb of    */
+                                    /* frames/dataset                         */
 
 #define   DET_CONTROL_BUNIT_SIR_NAME          "bunit"
-                                    /* Name of SIR record containing    */
-                                    /* the data unit                    */
+                                    /* Name of SIR record containing the data */
+                                    /* unit                                   */
 
 #define   DET_CONTROL_UTSTART_SIR_NAME        "utstart"
-                                    /* Name of SIR record containing    */
-                                    /* the ut at start of observation   */
+                                    /* Name of SIR record containing the ut at*/
+                                    /* start of observation                   */
 
 #define   DET_CONTROL_UTEND_SIR_NAME          "utend"
-                                    /* Name of SIR record containing    */
-                                    /* the ut at end of observation     */
+                                    /* Name of SIR record containing the ut at*/
+                                    /* end of observation                     */
 
 #define   DET_CONTROL_EXPOSED_SIR_NAME        "exposed"
-                                    /* Name of SIR record containing    */
-                                    /* the total integration time       */
+                                    /* Name of SIR record containing the      */
+                                    /* total integration time                 */
 
 #define   DET_CONTROL_EXPOSEDRQ_SIR_NAME      "exposedRQ"
-                                    /* Name of SIR record containing    */
-                                    /* the requested total integration  */
+                                    /* Name of SIR record containing the      */
+                                    /* requested total integration            */
 
 #define   DET_CONTROL_ELAPSED_SIR_NAME        "elapsed"
-                                    /* Name of SIR record containing    */
-                                    /* the elapsed time                 */
+                                    /* Name of SIR record containing the      */
+                                    /* elapsed time                           */
+
+#define   DET_CONTROL_DHSCON_SIR_NAME         "dhsCon"
+                                    /* Name of SIR record containing the      */
+                                    /* status of the dhs connection           */
 
 #define   DET_CONTROL_OBSERVE_CAD_NAME        "observe"
                                     /* Name of observe CAD record       */
@@ -320,7 +325,16 @@
 
 #define   DET_BUNIT "SDSU ADC units"
 
-/* typedef */
+/********************************************************************* Enum ***/
+
+enum
+{
+   NOT_INIT = 0,           /* DHS is not initialized                          */
+   CONNECTED,              /* DHS is connected                                */
+   NOT_CONNECTED           /* DHS is not connected                            */
+};
+
+/****************************************************************** Typedef ***/
 
 typedef   struct      /* Context structure used to describe an observation.   */
 {
@@ -585,7 +599,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT pExposedContext ;   /* Actual total integration time SIR    */
                                       /* record context structure             */
    DATREC_CONTEXT pElapsedContext ;   /* Actual elapsed time SIR record       */
-
+   DATREC_CONTEXT pDhsConContext ;    /* dhs connection status SIR record     */
+                                      /* context structure                    */
 } OBS_ID_STRUCT, * OBS_ID;
 
    /*
@@ -673,7 +688,6 @@ enum
    /* Public variables */
 
 IMPORT BOOL        detDhsInitialised;
-IMPORT SEM_ID      detDhsSem;
 
    /* Public functions */
 

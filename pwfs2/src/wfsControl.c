@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsControl.c,v 1.3 2000-07-10 21:47:44 cboyer Exp $"};
+   "$Id: wfsControl.c,v 1.4 2001-02-21 00:01:24 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -26,6 +26,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 20 February 2001 - cb - exit properly the dhs when reboot
  * 8 March 2000 - cb - remove all not used CAD commands. 
  *-
  */
@@ -63,15 +64,17 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 
 #include "wfsDb.h"
 
+/***************************************************** External global data ***/
 
-/* defines */
+extern BOOL        detDhsConnected;                /* defined in detControl.c */
 
-/* global variables. These are distinguished with a "wfsControl" prefix. */
+extern DHS_CONNECT detDhsConnection;               /* defined in detControl.c */
+
+
+/**** Global variabnes. These are distinguished with a "wfsControl" prefix. ***/
 
 BOOL wfsControlStop = FALSE;                /* Stop WFS control task.         */
 
-
-#ifndef NO_EPICS   /* START OF CODE COMPILED ONLY FOR THE EPICS ENVIRONMENT */
 
 /* -------------------------------------------------------------------------- */
 
@@ -99,7 +102,7 @@ STATUS   wfsControl (void)
 
    /* Data Handling System variables. */
 
-   /*DHS_STATUS        dhsErrno;*/            /* DHS error number.                */
+   DHS_STATUS        dhsErrno;            /* DHS error number.                */
 
    /* Other general variables. */
 
@@ -307,15 +310,39 @@ STATUS   wfsControl (void)
             return (ERROR);
          }
 
+         if (epToVxPipeWrite( NULL, "BOOTING", pStateContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set BOOTING state");
+            return (ERROR);
+         }
+
          /*
           * Reboot command received. Close any connection to the DHS and reset 
           * the VME bus.
           */
 
-         if (epToVxPipeWrite( NULL, "BOOTING", pStateContext ) == ERROR)
+         if ( (detDhsInitialised) )
          {
-            ERROR_LOG ("Failed to set BOOTING state");
-            return (ERROR);
+            MESSAGE_LOG (MSG_LOG, "Closing down DHS connection");
+
+            if ( detDhsConnected == CONNECTED )
+            {
+               dhsErrno = 0;
+               dhsDisconnect (detDhsConnection, &dhsErrno);
+               if ( dhsErrno == DHS_S_SUCCESS )
+               {
+                  detDhsConnected = NOT_CONNECTED;
+                  MESSAGE_LOG (MSG_LOG, "Disconnected to DHS");
+               }
+               else
+               {
+                  MESSAGE_LOG (MSG_LOG, "dhsDisconnect returns an error");
+               }
+            }
+
+            dhsErrno = 0;
+            dhsEventLoopEnd (&dhsErrno);
+            dhsExit ( &dhsErrno );
          }
 
          /*
@@ -324,16 +351,9 @@ STATUS   wfsControl (void)
 
          taskDelay (2 * sysClkRateGet());
 
-         /*if ( (detDhsSem != NULL) && (detDhsInitialised) )
-         {
-            MESSAGE_LOG (MSG_LOG, "Closing down DHS connection.");
-            semTake (detDhsSem, WAIT_FOREVER);
-
-            dhsErrno = 0;
-            dhsExit ( &dhsErrno );
-
-            semGive (detDhsSem);
-         }*/
+         /*
+          * Now reboot
+          */
 
          reboot (BOOT_QUICK_AUTOBOOT);
       }
@@ -456,5 +476,3 @@ STATUS   wfsControl (void)
 
    return (OK);
 }
-
-#endif /* NO_EPICS - END OF CODE COMPILED ONLY FOR THE EPICS ENVIRONMENT */
