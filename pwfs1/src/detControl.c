@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.7 1999-11-10 22:58:56 cboyer Exp $"};
+   "$Id: detControl.c,v 1.8 1999-11-19 03:20:28 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -35,6 +35,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   15 Nov 1999: CB - Add a parameter to detSigInit()
+ *                     then modify ospUpdate, capfast and wfsDb.c
  *   09 Nov 1999: CB - TELESCOP and OBSERVAT are now updated from the TCS
  *   28 Oct 1999: CB - New observe command + new DHS I/F + new signal
  *                     processing commands
@@ -7374,6 +7376,7 @@ uint32 detSigInit
    double       threshold;
    uint32       modeNb;
    uint32       centroidNb;
+   double       thresholdRate;
 
    /*
     * Initialise the error number and get the attributes provided with this 
@@ -7393,6 +7396,7 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *)&threshold);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&modeNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, (char *)&centroidNb);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12, (char *)&thresholdRate);
 
    /*EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&tipGain);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&tiltGain);*/
@@ -7472,7 +7476,8 @@ uint32 detSigInit
                    threshold,
                    pFullMatFileName,
                    modeNb,
-                   centroidNb) == ERROR )
+                   centroidNb,
+                   thresholdRate) == ERROR )
    {
       ERROR_SET (0, "Failed to update OSP context", 
                  ERROR_LOG_NOW);

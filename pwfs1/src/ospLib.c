@@ -2236,7 +2236,8 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  *                 double angle , double refX , double refY ,
  *                 double guideThreshold , 
  *                 char *pRefFileName , double threshold ,
- *                 char *pMatFileName , int modeNb , int centroidNb )
+ *                 char *pMatFileName , int modeNb , int centroidNb ,
+ *                 double thresholdRate )
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
@@ -2251,6 +2252,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * (>) pMatFileName (char *) Name of file containing the control matrix
  * (>) modeNb (int) Number of modes to correct
  * (>) centroidNb (int) Number of centroids information used to correct
+ * (>) tresholdRate (double) rate comprised between 0 and 1 for threshold computation
  *
  * FUNCTION VALUE:
  * (int) return value OK or ERROR
@@ -2286,7 +2288,8 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 double threshold ,
                 char *pMatFileName ,
                 int modeNb ,
-                int centroidNb )
+                int centroidNb ,
+                double thresholdRate )
 {
 
 int status ;
@@ -2322,6 +2325,7 @@ wfsSpecific->guideThreshold = (float)guideThreshold ;
 wfsSpecific->thresh = (float)threshold ; 
 wfsSpecific->np = modeNb ; 
 wfsSpecific->mp = centroidNb ; 
+wfsSpecific->thresholdRate = (float)thresholdRate ; 
 
 /********************************************************* Init Dark buffer ***/
 
@@ -7358,6 +7362,7 @@ int ospFGCentroidWrapper ( float * buffp,
     int index ;
     float threshold ;
     float bigCorner ;
+    float min, max ;
 
     jump = (wfsSpecific->side) - 1 ;
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize ;
@@ -7377,87 +7382,170 @@ int ospFGCentroidWrapper ( float * buffp,
     /* Threshold and centroid */
     if ( wfsSpecific->thresh < 0 )
     {
-       printf ( "Threshold negative\n" ) ;
-       for (j = 1; j <= wfsSpecific->centres[0]; j=j+4) 
+       if ( wfsSpecific->thresh == -1 )
        {
-           x0=(int)(wfsSpecific->centres[j]);
-           y0=(int)(wfsSpecific->centres[j+2]);
+          /*printf ( "Threshold negative = -1\n" ) ;*/
+          for (j = 1; j <= wfsSpecific->centres[0]; j=j+4) 
+          {
+              x0=(int)(wfsSpecific->centres[j]);
+              y0=(int)(wfsSpecific->centres[j+2]);
   
-	   index00 = localbuff + wfsSpecific->xframesize * (y0-1) + (x0-1);
-           corner[0] = *index00 ;
-           corner[1] = *(index00 + (wfsSpecific->xframesize)*jump) ;
-           corner[2] = *(index00 + jump) ;
-           corner[3] = *(index00 + (wfsSpecific->xframesize)*jump + jump) ;
-           printf ( 
-           "suba=%d, corner[0]=%f, corner[1]=%f, corner[2]=%f, corner[3]=%f\n" ,
-            j , corner[0] , corner[1] , corner[2] , corner[3] ) ;
+	      index00 = localbuff + wfsSpecific->xframesize * (y0-1) + (x0-1);
+              corner[0] = *index00 ;
+              corner[1] = *(index00 + (wfsSpecific->xframesize)*jump) ;
+              corner[2] = *(index00 + jump) ;
+              corner[3] = *(index00 + (wfsSpecific->xframesize)*jump + jump) ;
+              /*printf ( 
+              "suba=%d, corner[0]=%f, corner[1]=%f, corner[2]=%f, corner[3]=%f\n" ,
+               j , corner[0] , corner[1] , corner[2] , corner[3] ) ;*/
 
-           bigCorner = 0.0 ;
-           index = 0 ;
-           for ( ii = 0 ; ii < 4 ; ii++ )
-           {
-               if ( corner[ii] > bigCorner )
-               {
-                  bigCorner = corner[ii];
-                  index = ii ;
-               } ;
-           }
+              bigCorner = corner[0];
+              index = 0 ;
+              for ( ii = 0 ; ii < 4 ; ii++ )
+              {
+                  if ( corner[ii] > bigCorner )
+                  {
+                     bigCorner = corner[ii];
+                     index = ii ;
+                  } ;
+              }
 
-           threshold = 0.0 ;
-           for ( ii = 0 ; ii < 4 ; ii++ )
-           {
-               if ( ii != index )
-                {
-                  threshold += corner[ii] ;
-                }
-           }
-           threshold /= 3.0 ;
-           printf ( "threshold=%f\n" , threshold ) ;
+              if ( index != 0 )
+                 threshold = corner[0] ;
+              else
+                 threshold = corner[1] ;
+              for ( ii = 0 ; ii < 4 ; ii++ )
+              {
+                  if ( ii != index )
+                  {
+                     if ( corner[ii] > threshold )
+                        threshold = corner[ii] ;
+                  }
+              }
+              /*printf ( "threshold=%f\n" , threshold ) ;*/
 
-	   itotal=0;
-	   ireptotal=0;
-	   mu1x=0;
-	   mu1y=0;
-	   xdiff = wfsSpecific->centres[j+1]+1.0;
-	   ydiff = wfsSpecific->centres[j+3]+1.0;
+	      itotal=0;
+	      ireptotal=0;
+	      mu1x=0;
+	      mu1y=0;
+	      xdiff = wfsSpecific->centres[j+1]+1.0;
+	      ydiff = wfsSpecific->centres[j+3]+1.0;
  
-	   for (jj = 0; jj < wfsSpecific->side; jj++)
-	   {   
-	       rowinc = index00 + jj * wfsSpecific->xframesize;
+	      for (jj = 0; jj < wfsSpecific->side; jj++)
+	      {   
+	          rowinc = index00 + jj * wfsSpecific->xframesize;
 	    
-	       for (ii = 0; ii < wfsSpecific->side;ii++)
-	       {
-		   indxy = ii + rowinc;
-		   pixval = *indxy - threshold ;
-		   if(pixval > (float)(0.0))
-		   {		
-		       itotal += pixval ;
-		       ireptotal = ireptotal + (1.0 / fabs(*indxy));
-		       mu1x += (float)(ii+1) * pixval ;
-		       mu1y += (float)(jj+1) * pixval ;
-		   }
-	       }
-	   }
-	   if(itotal > 0)
-	   {
-               printf ( "mu1x=%f, mu1y=%f, itotal=%f, xdiff=%f, ydiff=%f\n" , 
-                        mu1x, mu1y , itotal , xdiff, ydiff ) ;
-	       wfsSpecific->s[i] = (mu1x/itotal) - xdiff;
-	       wfsSpecific->s[i+1] = (mu1y/itotal) - ydiff;
-	       wfsSpecific->dssq[i] = 0.0;
-	       wfsSpecific->dssq[i+1] = 0.0;
-	   }
-	   else
-	   {
-               printf ( "no light for this subaperture\n" ) ;
-               wfsSpecific->s[i] = 0.0;    /* new line */
-               wfsSpecific->s[i+1] = 0.0;  /* new line */
-	       wfsSpecific->dssq[i] = OSP_NO_LIGHT;
-	       wfsSpecific->dssq[i+1] = OSP_NO_LIGHT;
-               wfsSpecific->osplight = 1 ;
-	   }
+	          for (ii = 0; ii < wfsSpecific->side;ii++)
+	          {
+		      indxy = ii + rowinc;
+		      pixval = *indxy - threshold ;
+		      if(pixval > (float)(0.0))
+		      {		
+		          itotal += pixval ;
+		          ireptotal = ireptotal + (1.0 / fabs(*indxy));
+		          mu1x += (float)(ii+1) * pixval ;
+		          mu1y += (float)(jj+1) * pixval ;
+		      }
+	          }
+	      }
+	      if(itotal > 0)
+	      {
+                  /*printf ( "mu1x=%f, mu1y=%f, itotal=%f, xdiff=%f, ydiff=%f\n" , 
+                           mu1x, mu1y , itotal , xdiff, ydiff ) ;*/
+	          wfsSpecific->s[i] = (mu1x/itotal) - xdiff;
+	          wfsSpecific->s[i+1] = (mu1y/itotal) - ydiff;
+	          wfsSpecific->dssq[i] = 0.0;
+	          wfsSpecific->dssq[i+1] = 0.0;
+	      }
+	      else
+	      {
+                  /*printf ( "no light for this subaperture\n" ) ;*/
+                  wfsSpecific->s[i] = 0.0;    /* new line */
+                  wfsSpecific->s[i+1] = 0.0;  /* new line */
+	          wfsSpecific->dssq[i] = OSP_NO_LIGHT;
+	          wfsSpecific->dssq[i+1] = OSP_NO_LIGHT;
+                  wfsSpecific->osplight = 1 ;
+	      }
 
-	   i+=2;
+	      i+=2;
+          }
+       }
+
+       if ( wfsSpecific->thresh == -2 )
+       {
+          /*printf ( "Threshold negative = -2\n" ) ;*/
+          for (j = 1; j <= wfsSpecific->centres[0]; j=j+4) 
+          {
+              x0=(int)(wfsSpecific->centres[j]);
+              y0=(int)(wfsSpecific->centres[j+2]);
+  
+	      index00 = localbuff + wfsSpecific->xframesize * (y0-1) + (x0-1);
+
+              max = -65536.0 ;
+              min = 65536.0 ;
+
+	      for (jj = 0; jj < wfsSpecific->side; jj++)
+	      {   
+	          /*rowinc = index00 + jj * wfsSpecific->xframesize;*/
+	          for (ii = 0; ii < wfsSpecific->side;ii++)
+                  {
+		      indxy = ii + rowinc;
+                      pixval = *indxy ;
+                      if ( pixval > max )
+                         max = pixval ;
+                      if ( pixval < min )
+                         min = pixval ;
+                  }
+              }
+              
+              threshold = min + (max-min)*wfsSpecific->thresholdRate ;
+              /*printf ( "max = %f, min = %f, threshold = %f\n" , max, min, threshold ) ;*/
+                     
+	      itotal=0;
+	      ireptotal=0;
+	      mu1x=0;
+	      mu1y=0;
+	      xdiff = wfsSpecific->centres[j+1]+1.0;
+	      ydiff = wfsSpecific->centres[j+3]+1.0;
+ 
+	      for (jj = 0; jj < wfsSpecific->side; jj++)
+	      {   
+	          rowinc = index00 + jj * wfsSpecific->xframesize;
+	    
+	          for (ii = 0; ii < wfsSpecific->side;ii++)
+	          {
+		      indxy = ii + rowinc;
+		      pixval = *indxy - threshold ;
+		      if(pixval > (float)(0.0))
+		      {		
+		          itotal += pixval ;
+		          ireptotal = ireptotal + (1.0 / fabs(*indxy));
+		          mu1x += (float)(ii+1) * pixval ;
+		          mu1y += (float)(jj+1) * pixval ;
+		      }
+	          }
+	      }
+	      if(itotal > 0)
+	      {
+                  /*printf ( "mu1x=%f, mu1y=%f, itotal=%f, xdiff=%f, ydiff=%f\n" , 
+                           mu1x, mu1y , itotal , xdiff, ydiff ) ;*/
+	          wfsSpecific->s[i] = (mu1x/itotal) - xdiff;
+	          wfsSpecific->s[i+1] = (mu1y/itotal) - ydiff;
+	          wfsSpecific->dssq[i] = 0.0;
+	          wfsSpecific->dssq[i+1] = 0.0;
+	      }
+	      else
+	      {
+                  /*printf ( "no light for this subaperture\n" ) ;*/
+                  wfsSpecific->s[i] = 0.0;    /* new line */
+                  wfsSpecific->s[i+1] = 0.0;  /* new line */
+	          wfsSpecific->dssq[i] = OSP_NO_LIGHT;
+	          wfsSpecific->dssq[i+1] = OSP_NO_LIGHT;
+                  wfsSpecific->osplight = 1 ;
+	      }
+
+	      i+=2;
+          }
        }
     }
     else

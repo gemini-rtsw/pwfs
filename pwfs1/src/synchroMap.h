@@ -19,7 +19,7 @@ enum
 /* structure of Gemini Synchro Bus pages */
 
 #define	SYNCHROBASE	(0xfaa00040)	/* base address of synchro bus card vmic5588 */
-                                        /* for PPC */
+                                        /* for POWERPC */
                                         /* TBD : use sysLocalToBusAdr() */
 
 typedef union
@@ -175,6 +175,23 @@ typedef struct
 	double	time;
 }eventBlock;
 
+typedef struct /* add 26May to be similar to SCS */
+{
+        float           follow1;
+        float           follow2;
+        float           follow3;
+        float           current1;
+        float           current2;
+        float           current3;
+        float           kaman1;
+        float           kaman2;
+        float           kaman3;
+        float           integ1;
+        float           integ2;
+        float           integ3;
+        float           pad[244];
+}m2EngData;
+
 typedef struct
 {
 	commandBlock	page0;
@@ -192,6 +209,8 @@ typedef struct
 	wfs		gaos;
 	float		pad6[242];
 	wfs		gyro;
+        float           pad7[242];     /* add 26May to be similar to SCS */
+        m2EngData       m2Eng;         /* add 26May to be similar to SCS */
 }memMap;
 
 

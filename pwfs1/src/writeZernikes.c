@@ -62,6 +62,7 @@
  * 17-Feb-1999: cb - ttfZero change computation of theta for TCS and SCS
  * 26-Apr-1999: cb - replace in writeWfsToSynchro z[] by FGZernikes[]
  * 26-Apr-1999: cb - simplified version for split backplane PWFS1
+ * 18-Nov-1999: cb - add in aoZero, contribution from the cass rotator angle
  *
  */
 /* INDENT ON */
@@ -664,27 +665,27 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 	{
 		/* first rotate the tip and tilt values to the tcs frame of reference */
 
-		/*result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2]) - f->null[5];
-		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2]) - f->null[6];
-		result.z4 = pWfs->z[3] - f->null[7];
-		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5]) - f->null[8];
-		result.z6 = (f->sinTheta*pWfs->z[4] + f->cosTheta*pWfs->z[5]) - f->null[9];
-		result.z7 = (f->cosTheta*pWfs->z[6] - f->sinTheta*pWfs->z[7]) - f->null[10];
-		result.z8 = (f->sinTheta*pWfs->z[6] + f->cosTheta*pWfs->z[7]) - f->null[11];
-		result.z9 = pWfs->z[8] - f->null[12];
-		result.z10 = (f->cosTheta*pWfs->z[9] - f->sinTheta*pWfs->z[10]) - f->null[13];
-		result.z11 = (f->sinTheta*pWfs->z[9] + f->cosTheta*pWfs->z[10]) - f->null[14];
-		result.z12 = (f->cosTheta*pWfs->z[11] - f->sinTheta*pWfs->z[12]) - f->null[15];
-		result.z13 = (f->sinTheta*pWfs->z[11] + f->cosTheta*pWfs->z[12]) - f->null[16];
-		result.z14 = (f->cosTheta*pWfs->z[13] - f->sinTheta*pWfs->z[14]) - f->null[17];
-		result.z15 = (f->sinTheta*pWfs->z[13] + f->cosTheta*pWfs->z[14]) - f->null[18];
-		result.z16 = pWfs->z[15] - f->null[19];
-		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17]) - f->null[20];
-		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17]) - f->null[21];
-		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19]) - f->null[22];
-		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19]) - f->null[23];*/
+		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM - f->null[5];
+		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2])*MICRON2MM - f->null[6];
+		result.z4 = (pWfs->z[3])*MICRON2MM - f->null[7];
+		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5])*MICRON2MM - f->null[8];
+		result.z6 = (f->sinTheta*pWfs->z[4] + f->cosTheta*pWfs->z[5])*MICRON2MM - f->null[9];
+		result.z7 = (f->cosTheta*pWfs->z[6] - f->sinTheta*pWfs->z[7])*MICRON2MM - f->null[10];
+		result.z8 = (f->sinTheta*pWfs->z[6] + f->cosTheta*pWfs->z[7])*MICRON2MM - f->null[11];
+		result.z9 = (pWfs->z[8])*MICRON2MM - f->null[12];
+		result.z10 = (f->cosTheta*pWfs->z[9] - f->sinTheta*pWfs->z[10])*MICRON2MM - f->null[13];
+		result.z11 = (f->sinTheta*pWfs->z[9] + f->cosTheta*pWfs->z[10])*MICRON2MM - f->null[14];
+		result.z12 = (f->cosTheta*pWfs->z[11] - f->sinTheta*pWfs->z[12])*MICRON2MM - f->null[15];
+		result.z13 = (f->sinTheta*pWfs->z[11] + f->cosTheta*pWfs->z[12])*MICRON2MM - f->null[16];
+		result.z14 = (f->cosTheta*pWfs->z[13] - f->sinTheta*pWfs->z[14])*MICRON2MM - f->null[17];
+		result.z15 = (f->sinTheta*pWfs->z[13] + f->cosTheta*pWfs->z[14])*MICRON2MM - f->null[18];
+		result.z16 = (pWfs->z[15])*MICRON2MM - f->null[19];
+		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17])*MICRON2MM - f->null[20];
+		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17])*MICRON2MM - f->null[21];
+		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19])*MICRON2MM - f->null[22];
+		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM - f->null[23];
 
-		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM ;
+		/*result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM ;
 		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2])*MICRON2MM ;
 		result.z4 = (pWfs->z[3])*MICRON2MM;
 		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5])*MICRON2MM ;
@@ -702,7 +703,7 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17])*MICRON2MM ;
 		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17])*MICRON2MM ;
 		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19])*MICRON2MM ;
-		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM ;
+		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM ;*/
 
 		semGive(f->access);
 	}
@@ -1105,6 +1106,7 @@ long    ttfZero (struct genSubRecord * pgsub)
  *		rotationAngle = tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  * 21-June-1999 Modified to read tableAngle and the armAngle from a&g (cb)
+ * 18-Nov-1999  Modified to add also cass rotator angle (cb)
  *
  */
 
@@ -1178,13 +1180,19 @@ long    aoZero (struct genSubRecord * pgsub)
 		    f->null[index] = *(ptr++);
 		}
 
+                if(f->null[3] < -45.0 || f->null[3] > 215.0)
+                {
+                        /*logMsg("ttfZero > %s tcs angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);*/
+                        f->null[3] = 0.0;
+                }
+
 		/* calculate composite correction angle */
 
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
 		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS);*/
-		compositeAngle = (tableAngle - armAngle)*DEGS2RADS;
-                /*printf ( "compositeAngle = %lf, tableAngle =%lf, armAngle=%lf\n" ,
-                         compositeAngle , tableAngle, armAngle ) ;*/
+		compositeAngle = (f->null[3] + tableAngle - armAngle)*DEGS2RADS;
+                /*printf ( "compositeAngle = %lf, null[3]= %lf, tableAngle =%lf, armAngle=%lf\n" ,
+                         compositeAngle , f->null[3], tableAngle, armAngle ) ;*/
               
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);

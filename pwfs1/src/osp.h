@@ -71,6 +71,7 @@ struct OSP_CONTEXT{
     int weight;
     float guideThreshold; /* add by cb to allow threshold for FG and AO */
     float thresh;
+    float thresholdRate; /* add by cb for option threshold =-2 for ospFGCentroidWrapper routine */
     float nulls[2*OSP_SUBAPSMAX];
     float centres[4*OSP_SUBAPSMAX +1];
     int   subapertureUsed[2*OSP_SUBAPSMAX] ; /* add by cb to know which subapertures are used */
@@ -266,7 +267,8 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 double threshold ,
                 char *pMatFileName ,
                 int modeNb ,
-                int centroidNb );
+                int centroidNb ,
+                double thresholdRate);
 int ospUpdateGain ( struct OSP_CONTEXT * wfsSpecific,
                     double *pGain ) ;
 int ospUpdateGeometrySH ( struct OSP_CONTEXT * wfsSpecific,
