@@ -152,10 +152,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-05-19 00:04:35 $
+p 3120 -784 200 0 -1 date:$Date: 1999-07-17 02:13:34 $
 p 2576 2320 200 0 -1 id:
 p 2704 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2608 -496 200 0 -1 revision:$Revision: 1.1.1.1 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.2 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Detector Status Records
 [comments]

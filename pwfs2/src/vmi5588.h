@@ -1,5 +1,5 @@
 /* vmi5588.h - VMIC VMIVME5578 device driver C interface */
-/* $Id: vmi5588.h,v 1.1.1.1 1999-05-19 00:04:51 cboyer Exp $
+/* $Id: vmi5588.h,v 1.2 1999-07-17 02:14:20 cboyer Exp $
 *
 *	Author:		Andrew Johnson
 *	Date:		10-10-94

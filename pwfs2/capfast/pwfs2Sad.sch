@@ -23,10 +23,10 @@ xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 0 checked:B.Goodrich
-p 1776 16 100 0 -1 date:$Date: 1999-05-19 00:04:36 $
+p 1776 16 100 0 -1 date:$Date: 1999-07-17 02:13:27 $
 p 1552 2368 100 0 -1 id:
 p 1552 32 100 0 1 modified:C. Boyer
 p 1792 176 100 0 -1 project:Gemini PWFS2
-p 1552 144 100 0 -1 revision:$Revision: 1.1.1.1 $
+p 1552 144 100 0 -1 revision:$Revision: 1.2 $
 p 1792 112 100 0 -1 title:Under Top Level Status Alarm Database
 [comments]

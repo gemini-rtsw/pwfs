@@ -1,7 +1,7 @@
 /******************************************************************************
 * N.B. These comments down to but excluding the line                         *
 *                                                                            *
-* static struct {void *v; char *c;} rcsid = {&rcsid, "$Id: moduleTemplate.c,v 1.1.1.1 1999-05-19 00:04:50 cboyer Exp $"};                *
+* static struct {void *v; char *c;} rcsid = {&rcsid, "$Id: moduleTemplate.c,v 1.2 1999-07-17 02:14:11 cboyer Exp $"};                *
 *                                                                            *
 * must be deleted after this template file is used to generate a new source  *
 * file.                                                                      *
@@ -15,7 +15,7 @@
 ******************************************************************************/
 
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: moduleTemplate.c,v 1.1.1.1 1999-05-19 00:04:50 cboyer Exp $"};
+	"$Id: moduleTemplate.c,v 1.2 1999-07-17 02:14:11 cboyer Exp $"};
 
 /*+
  *	MODULE NAME:

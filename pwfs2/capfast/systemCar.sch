@@ -129,10 +129,10 @@ xform 0 1136 1136
 p 2128 -336 200 0 -1 author:S.M.Beard
 p 2640 -368 100 0 0 border:D
 p 2128 -416 200 0 1 checked:B.Goodrich
-p 2624 -432 200 0 -1 date:$Date: 1999-05-19 00:04:34 $
-p 2112 2672 200 0 -1 id:$Id: systemCar.sch,v 1.1.1.1 1999-05-19 00:04:34 cboyer Exp $
+p 2624 -432 200 0 -1 date:$Date: 1999-07-17 02:13:30 $
+p 2112 2672 200 0 -1 id:$Id: systemCar.sch,v 1.2 1999-07-17 02:13:30 cboyer Exp $
 p 2640 -80 200 0 -1 project:Gemini PWFS2
-p 2128 -160 200 0 -1 revision:$Revision: 1.1.1.1 $
+p 2128 -160 200 0 -1 revision:$Revision: 1.2 $
 p 2640 -208 200 0 -1 title:System CAR Records
 use notes 2880 151 100 0 notes#13
 xform 0 3136 336

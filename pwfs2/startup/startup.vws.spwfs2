@@ -1,4 +1,4 @@
-# $Id: startup.vws.spwfs2,v 1.1.1.1 1999-05-19 00:04:56 cboyer Exp $
+# $Id: startup.vws.spwfs2,v 1.2 1999-07-17 02:14:36 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
