@@ -19,7 +19,7 @@ Modification toward V0-5
     -1 : threshold = 2nd biggest corner 
     -2 : % biggest for each subaperture
 
-V0-7 5 Jan 1999 CB:
+V0-7 5 Jan 2000 CB:
 -------------------
 Modification toward V0-6
   - local.vws modified to allow save into /usr/astro
@@ -30,3 +30,13 @@ Modification toward V0-6
   - capfast: modify ag:p1:tableAngle by ag:p1:RT34PosA.VALA for ttf and ao
   - add a new angle to differentiate ao and fg in detSigInit
   - rotate on the slopes and no more on the Z
+
+V0-8 13 Jan 2000 CB: 
+--------------------
+Modification toward V0-7
+  - rotate on the Z and not on the slopes but the angle is # for astig, tref
+    and others
+  - change the sign of arm in the formula of ao
+
+dev:
+
