@@ -13,7 +13,7 @@ V0-4 12 Nov 1999 CB:
 Modification toward V0-3
   - StripTool facilities added in showFG.adl
 
-V0-5 02Feb 2000 CB:
+V0-5 25Feb 2000 CB:
 -------------------
 Modification toward V0-4
   - writeZernikes.c ttfZero() add fudgeAngle to the magic formula, now:
