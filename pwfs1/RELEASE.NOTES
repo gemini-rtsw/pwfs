@@ -412,10 +412,38 @@ V4-6 13 AUG 2004 AAG:
 
 7) defAoModP1MK.dat updated (CR0478)
 
-dev 27 SEP 2004 AAG:
+V4-7 27 SEP 2004 AAG:
 --------------------
 
+a) Updated gains 
  - par/defAoScaleP1.dat
 	Default values updated
+
+b) Correct new calculated zerniques, using thresholds to allow clamping 
+   and gain increase. Added new threshold to avoid correction when avobe 
+   certain limit (value is not written into final array that is read by Tcs)
+
  - src/writeZernikes.c
 	Whole aoDataTcs array written (to be read by TCS)
+	Added aoTcsThreshold to avoid correction for values avoid threshold
+ - src/aoP1Lib.h
+ - src/detControl.h
+	aoTcsThreshold included in structure
+ - src/aoP1Lib.c
+ - src/detControl.c
+	update aoTcsThreshold
+	detSigInitAoThreshold modified to get aoTcsThreshold
+	detInitSigInitAoThresh modified to write OUTC value
+ - src/pwfs1SetDefCommandsMK/CP.pv
+	Updated with aoTcsThreshold default values
+ - src/wfsDb.c
+	Modified detSigInitAoThresh DB attributes
+ - capfast/wfsCadMore.sch
+	Added new aoTcsThreshold field into detSigInitAoThresh record
+ - capfast/wfsgensub1.sch
+	Added OUTC fro detSigInitAoThresh
+ - adl/detSigInitAoThresh
+	Added Threshold above which the values is not corrected 
+	(or written into Tcs array)
+
+	
