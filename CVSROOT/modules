@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.67 2004-01-02 20:21:47 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.68 2004-01-02 22:31:20 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -232,10 +232,10 @@ vii	vii
 #D	michelle	Gemini Michelle Software
 michelle	michelle
 #M	mchCommon	Michelle Common Software
-mchCommon	michelle/Common
+mchCommon	michelle/common
 #M	mchCCS	Michelle CCS Software
-mchCCS	michelle/CCS
+mchCCS	michelle/ccs
 #M	mchEdict	Michelle EDICT Software
-mchEdict	michelle/EDICT
+mchEdict	michelle/edict
 
 
