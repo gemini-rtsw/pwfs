@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 12 April 2001: CB - Add structure ZP_MODEL_ID_STRUCT
  * 02 Feb 2001: CB - Add aoVectAfterRot and fgVectAfterRot vectors in the 
  *                   circular buffers AO_CB_CTRL_ID and AO_CB_FG_CTRL_ID
  * 31 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
@@ -653,6 +654,33 @@ typedef struct
                                        /* for each modes                      */
 
 } AO_HEADER_CB_FG_CTRL_ID_STRUCT, * AO_HEADER_CB_FG_CTRL_ID;
+
+/****************** Structure for zero point model for astigmatism off axis ***/
+
+typedef struct
+{
+   double   a1;
+   double   a2;
+   double   a3;
+   double   p1;
+   double   p2;
+   double   p3;
+   double   c;
+   double   b1;
+   double   b2;
+   double   b3;
+   double   pp1;
+   double   pp2;
+   double   pp3;
+   double   d;
+   double   astig0;
+   double   astig45;
+   int      applyModel;
+   double   gain0;
+   double   gain45;
+   double   offsetAstig0;
+   double   offsetAstig45;
+} ZP_MODEL_ID_STRUCT, *ZP_MODEL_ID;
 
 /**************************************************************** Functions ***/
 

@@ -202,6 +202,9 @@ AO_CB_IM_ID   aoCbImIdP1;
 double sampleData[5][3];
 double coeffData[5];
 
+ZP_MODEL_ID_STRUCT astigModel;
+SEM_ID  accessAstigModel;
+
 /* declare prototypes */
 
 long rmIntSend(int interrupt, int node);
@@ -473,6 +476,42 @@ long gensubToTcsInit
              printf ("unable to create accessFgData sem\n");
       }
    }
+
+   /* create semaphore to prevent multiple access to astigModel data */
+
+   if(accessAstigModel == NULL)
+   {
+      if ((accessAstigModel = 
+          semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) 
+          == NULL)
+      {
+             printf ("unable to create accessAstigModel sem\n");
+      }
+   }
+
+   /* init structure astigModel */
+
+   astigModel.a1 = 0.0;
+   astigModel.a2 = 0.0;
+   astigModel.a3 = 0.0;
+   astigModel.p1 = 0.0;
+   astigModel.p2 = 0.0;
+   astigModel.p3 = 0.0;
+   astigModel.c = 0.0;
+   astigModel.b1 = 0.0;
+   astigModel.b2 = 0.0;
+   astigModel.b3 = 0.0;
+   astigModel.pp1 = 0.0;
+   astigModel.pp2 = 0.0;
+   astigModel.pp3 = 0.0;
+   astigModel.d = 0.0;
+   astigModel.astig0 = 0.0;
+   astigModel.astig45 = 0.0;
+   astigModel.applyModel = 0.0;
+   astigModel.gain0 = 1.0;
+   astigModel.gain45 = 1.0;
+   astigModel.offsetAstig0 = 0.0;
+   astigModel.offsetAstig45 = 0.0;
 
    /* create structure holding angle and null values for ao data */
 
@@ -800,6 +839,10 @@ STATUS writeWfsToTcs
    frame     *f;
    converted result;
    double    *pz;
+   double    astig0;
+   double    astig45;
+   double    g0;
+   double    g45;
 
    /* check that array counts are within limits */
 
@@ -830,10 +873,24 @@ STATUS writeWfsToTcs
 
       /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
 
-      result.z5 = (f->cos2Theta*(*(pz+3)) + f->sin2Theta*(*(pz+4))) 
-                  - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3]);
+      astig0 = *(pz+3) - astigModel.offsetAstig0;
+      astig45 = *(pz+4) - astigModel.offsetAstig45;
+      g0 = astigModel.gain0;
+      g45 = astigModel.gain45;
+
+      result.z5 = (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
+                  - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3])
+                  - (astigModel.astig0)*(aoCtrlId->aoScaleFactorVect[3]);
+      result.z6 = (g45*f->cos2Theta*(astig45) - g45*f->sin2Theta*(astig0)) 
+                  - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4])
+                  - (astigModel.astig45)*(aoCtrlId->aoScaleFactorVect[4]);
+
+      /*result.z5 = (f->cos2Theta*(*(pz+3)) + f->sin2Theta*(*(pz+4))) 
+                  - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3])
+                  - (astigModel.astig0)*(aoCtrlId->aoScaleFactorVect[3]);
       result.z6 = (f->cos2Theta*(*(pz+4)) - f->sin2Theta*(*(pz+3))) 
-                  - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4]);
+                  - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4])
+                  - (astigModel.astig45)*(aoCtrlId->aoScaleFactorVect[4]);*/
 
       /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and 
          (3*r^2 - 2) * r * sin(t) */
@@ -1372,6 +1429,7 @@ long aoZero
 
    f = ag2tcs;
 
+
    /* access frame */
 
    if(semTake(f->access, WFS_TIMEOUT) == OK)
@@ -1419,6 +1477,39 @@ long aoZero
       return(ERROR);
    }
 
+   /* compute zero point model */
+
+   if(semTake(accessAstigModel, WFS_TIMEOUT) == OK)
+   {
+     if (astigModel.applyModel == 0 )
+     {
+        astigModel.astig0 = 0.0;
+        astigModel.astig45 = 0.0;
+     }
+     else
+     {
+        astigModel.astig0 = 
+        astigModel.a1*cos(compositeAngle + astigModel.p1*DEGS2RADS) +
+        astigModel.a2*cos(2*compositeAngle + astigModel.p2*DEGS2RADS) +
+        astigModel.a3*cos(4*compositeAngle + astigModel.p3*DEGS2RADS) +
+        astigModel.c;
+
+        astigModel.astig45 = 
+        astigModel.b1*sin(compositeAngle + astigModel.pp1*DEGS2RADS) +
+        astigModel.b2*sin(2*compositeAngle + astigModel.pp2*DEGS2RADS) +
+        astigModel.b3*sin(4*compositeAngle + astigModel.pp3*DEGS2RADS) +
+        astigModel.d;
+     }
+
+     semGive (accessAstigModel);
+   }
+   else
+   {
+      logMsg("Modify frame - unable to get mutex for astigModel \n", 
+             0, 0, 0, 0 ,0 ,0);
+      return(ERROR);
+   }
+
    /* write sample values to genSub ouputs */
 
    *(double *) pgsub->vala = f->null[0];         /* tSent */ 
@@ -1428,9 +1519,11 @@ long aoZero
    *(double *) pgsub->vale = tableAngle;         /* tableAngle (degrees) */
    *(double *) pgsub->valf = compositeAngle/DEGS2RADS;   
                                                  /* composite angle (degrees) */
-   *(double *) pgsub->valg = f->null[5];         /* z2 */
-   *(double *) pgsub->valh = f->null[6];         /* z3 */
-   *(double *) pgsub->vali = f->null[7];         /* z4 */
+   /* *(double *) pgsub->valg = f->null[5]; */        /* z2 */
+   /* *(double *) pgsub->valh = f->null[6]; */        /* z3 */
+   /* *(double *) pgsub->vali = f->null[7]; */        /* z4 */
+   *(double *) pgsub->valg = astigModel.astig0;
+   *(double *) pgsub->valh = astigModel.astig45;
 
    return (OK);
 }

@@ -1,16 +1,35 @@
 [schematic2]
-uniq 165
+uniq 166
 [tools]
 [detail]
 s 2384 -704 500 512 wfsCadMore1.sch
 [cell use]
-use ecad2 1632 1575 100 0 detSigReset
-xform 0 1792 1888
-p 1696 1520 100 0 1 DESC:Reset signal processing
-p 1728 1888 100 0 0 FTVA:STRING
-p 1696 1488 100 0 1 INAM:epToVxCadInit
-p 1696 1424 100 0 1 PV:$(top)$(wfs)
-p 1696 1456 100 0 1 SNAM:epToVxCadExecute
+use ecad20 2720 -57 100 0 detSigInitMod
+xform 0 2880 832
+p 2784 -128 100 0 1 DESC:Init the zero point model
+p 2816 1408 100 0 1 FTVA:DOUBLE
+p 2816 1376 100 0 1 FTVB:DOUBLE
+p 2816 1344 100 0 1 FTVC:DOUBLE
+p 2816 1312 100 0 1 FTVD:DOUBLE
+p 2816 1280 100 0 1 FTVE:DOUBLE
+p 2816 1248 100 0 1 FTVF:DOUBLE
+p 2816 1216 100 0 1 FTVG:DOUBLE
+p 2816 1184 100 0 1 FTVH:DOUBLE
+p 2816 1152 100 0 1 FTVI:DOUBLE
+p 2816 1120 100 0 1 FTVJ:DOUBLE
+p 2816 1088 100 0 1 FTVK:DOUBLE
+p 2816 1056 100 0 1 FTVL:DOUBLE
+p 2816 1024 100 0 1 FTVM:DOUBLE
+p 2816 992 100 0 1 FTVN:DOUBLE
+p 2816 960 100 0 1 FTVO:LONG
+p 2816 928 100 0 1 FTVP:DOUBLE
+p 2816 896 100 0 1 FTVQ:DOUBLE
+p 2816 864 100 0 1 FTVR:DOUBLE
+p 2816 832 100 0 1 FTVS:DOUBLE
+p 2784 -160 100 0 1 INAM:epToVxCadInit
+p 2784 -96 100 0 1 PREC:4
+p 2784 -224 100 0 1 PV:$(top)$(wfs)
+p 2784 -192 100 0 1 SNAM:epToVxCadExecute
 use ecad2 544 1575 100 0 detSigInitBW
 xform 0 704 1888
 p 608 1520 100 0 1 DESC:Set butterworth cutoff frequency
@@ -18,42 +37,13 @@ p 640 1888 100 0 1 FTVA:DOUBLE
 p 608 1488 100 0 1 INAM:epToVxCadInit
 p 608 1424 100 0 1 PV:$(top)$(wfs)
 p 608 1456 100 0 1 SNAM:epToVxCadExecute
-use ecad8 1632 -57 100 0 detSigModeGgCoadd
-xform 0 1792 448
-p 1728 -128 100 0 1 DESC:Set Global Guide and Coadd mode
-p 1744 688 100 0 1 FTVA:LONG
-p 1744 640 100 0 1 FTVB:STRING
-p 1744 592 100 0 1 FTVC:STRING
-p 1744 544 100 0 0 FTVD:STRING
-p 1744 496 100 0 0 FTVE:STRING
-p 1728 -160 100 0 1 INAM:epToVxCadInit
-p 1728 -96 100 0 1 PREC:0
-p 1728 -224 100 0 1 PV:$(top)$(wfs)
-p 1728 -192 100 0 1 SNAM:epToVxCadExecute
-use ecad8 544 -57 100 0 detSigModeCoadd
-xform 0 704 448
-p 640 -128 100 0 1 DESC:Set Coadd mode
-p 656 688 100 0 1 FTVA:LONG
-p 656 640 100 0 1 FTVB:STRING
-p 656 592 100 0 1 FTVC:STRING
-p 656 544 100 0 0 FTVD:STRING
-p 656 496 100 0 0 FTVE:STRING
-p 640 -160 100 0 1 INAM:epToVxCadInit
-p 640 -96 100 0 1 PREC:0
-p 640 -224 100 0 1 PV:$(top)$(wfs)
-p 640 -192 100 0 1 SNAM:epToVxCadExecute
-use ecad8 -544 1191 100 0 detSigModeSeqDark
-xform 0 -384 1696
-p -448 1120 100 0 1 DESC:Set sequence dark mode
-p -432 1936 100 0 1 FTVA:LONG
-p -432 1888 100 0 1 FTVB:STRING
-p -432 1840 100 0 1 FTVC:STRING
-p -432 1792 100 0 1 FTVD:LONG
-p -432 1744 100 0 1 FTVE:DOUBLE
-p -448 1088 100 0 1 INAM:epToVxCadInit
-p -448 1152 100 0 1 PREC:1
-p -448 1024 100 0 1 PV:$(top)$(wfs)
-p -448 1056 100 0 1 SNAM:epToVxCadExecute
+use ecad2 1632 1575 100 0 detSigReset
+xform 0 1792 1888
+p 1696 1520 100 0 1 DESC:Reset signal processing
+p 1728 1888 100 0 0 FTVA:STRING
+p 1696 1488 100 0 1 INAM:epToVxCadInit
+p 1696 1424 100 0 1 PV:$(top)$(wfs)
+p 1696 1456 100 0 1 SNAM:epToVxCadExecute
 use ecad8 -544 -57 100 0 detSigModeFgCoadd
 xform 0 -384 448
 p -448 -128 100 0 1 DESC:Set FG and Focus and Coadd mode
@@ -66,15 +56,51 @@ p -448 -160 100 0 1 INAM:epToVxCadInit
 p -448 -96 100 0 1 PREC:0
 p -448 -224 100 0 1 PV:$(top)$(wfs)
 p -448 -192 100 0 1 SNAM:epToVxCadExecute
+use ecad8 -544 1191 100 0 detSigModeSeqDark
+xform 0 -384 1696
+p -448 1120 100 0 1 DESC:Set sequence dark mode
+p -432 1936 100 0 1 FTVA:LONG
+p -432 1888 100 0 1 FTVB:STRING
+p -432 1840 100 0 1 FTVC:STRING
+p -432 1792 100 0 1 FTVD:LONG
+p -432 1744 100 0 1 FTVE:DOUBLE
+p -448 1088 100 0 1 INAM:epToVxCadInit
+p -448 1152 100 0 1 PREC:1
+p -448 1024 100 0 1 PV:$(top)$(wfs)
+p -448 1056 100 0 1 SNAM:epToVxCadExecute
+use ecad8 544 -57 100 0 detSigModeCoadd
+xform 0 704 448
+p 640 -128 100 0 1 DESC:Set Coadd mode
+p 656 688 100 0 1 FTVA:LONG
+p 656 640 100 0 1 FTVB:STRING
+p 656 592 100 0 1 FTVC:STRING
+p 656 544 100 0 0 FTVD:STRING
+p 656 496 100 0 0 FTVE:STRING
+p 640 -160 100 0 1 INAM:epToVxCadInit
+p 640 -96 100 0 1 PREC:0
+p 640 -224 100 0 1 PV:$(top)$(wfs)
+p 640 -192 100 0 1 SNAM:epToVxCadExecute
+use ecad8 1632 -57 100 0 detSigModeGgCoadd
+xform 0 1792 448
+p 1728 -128 100 0 1 DESC:Set Global Guide and Coadd mode
+p 1744 688 100 0 1 FTVA:LONG
+p 1744 640 100 0 1 FTVB:STRING
+p 1744 592 100 0 1 FTVC:STRING
+p 1744 544 100 0 0 FTVD:STRING
+p 1744 496 100 0 0 FTVE:STRING
+p 1728 -160 100 0 1 INAM:epToVxCadInit
+p 1728 -96 100 0 1 PREC:0
+p 1728 -224 100 0 1 PV:$(top)$(wfs)
+p 1728 -192 100 0 1 SNAM:epToVxCadExecute
 use bd200tr -1024 -920 -100 0 frame
 xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2000-12-16 03:32:55 $
+p 3120 -784 200 0 -1 date:$Date: 2001-04-16 20:30:45 $
 p 1888 -432 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.3 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.4 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]

@@ -152,4 +152,8 @@ V2-0 02 April 2001 CB:
   - add adc0, adc1, adc2, adc3 sir records
   - add startup_nodhs.vws
 
-newDev equivalent to V2-0
+V2-1 16 April 2001 CB:
+----------------------
+  - add detSigInitMod: zero point model for astigmatism off axis
+  - add in par 2 new control matrixes: theoContMatP1.dat and
+    theoContMatP1Aliasing.dat

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.20 2001-04-03 01:36:09 gemvx Exp $"};
+   "$Id: detControl.c,v 1.21 2001-04-16 20:30:46 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   12 Apr 2001: CB - Add command detSigInitMod
  *   02 Apr 2001: CB - Add adc0, adc1, adc2, adc3 sir records
  *   05 Mar 2001: CB - Fix bug dhsQlRate when only 1 frame
  *   20 Feb 2001: CB - add detDhsConnected flag and dhsCon sir record
@@ -215,6 +216,12 @@ extern double sampleData[5][3];    /* Samples for butterworth filter          */
 extern double coeffData[5];        /* Coefficients for butterworth filter     */
                                    /* defined in writeZernikes.c              */
 
+extern ZP_MODEL_ID_STRUCT astigModel;
+                                   /* Astig model defined in writeZernikes.c  */
+
+extern SEM_ID accessAstigModel;    /* Semaphore Astig model defined in        */
+                                   /* writeZernikes.c                         */
+
 /******************************************************* External functions ***/
 
 extern void ImpMaster ();
@@ -397,6 +404,9 @@ LOCAL uint32   detSigModeSeqDark (const char * pRecordPrefix,
  
 LOCAL uint32   detInitObserveRecord (const char * pRecordPrefix, long * pNExp,
                                      double * pExpTime, long * pOutOption);
+
+LOCAL uint32 detSigInitMod (CAD_CMD_CONTEXT cadCmdContext, int commandNumber, 
+                            SDSU_ID sdsuId, OBS_ID obsId);
 
 /******************************************* Plus some additional functions ***/
 
@@ -1961,6 +1971,14 @@ STATUS   detControl
             errorNumber =
             detSigModeSeqDark (pRecordPrefix,
                                cadCmdContext, commandNumber, sdsuId, obsId);
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_MODEL)
+         {
+
+            /* Init zero point model for astig off axis */
+            errorNumber =
+            detSigInitMod (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
          else
@@ -19762,6 +19780,186 @@ uint32 detWriteDefSirContext
    }
 
    /* return */
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitMod
+ *
+ *   INVOCATION:
+ *   detSigInitMod (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitMod command
+ *
+ *   DESCRIPTION:
+ *   This function updates the external structure astigModel
+ * 
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitMod
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32       errorNumber;      /* Error number reported by task.           */
+
+   double       a1;
+   double       a2;
+   double       a3;
+   double       p1;
+   double       p2;
+   double       p3;
+   double       c;
+   double       b1;
+   double       b2;
+   double       b3;
+   double       pp1;
+   double       pp2;
+   double       pp3;
+   double       d;
+   long         apply;
+   double       gain0;
+   double       gain45;
+   double       offset0;
+   double       offset45;
+
+
+   /*
+    * Initialise the error number 
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Get the attributes provided with this command.
+    */
+       
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&a1);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&a2);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&a3);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&p1);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&p2);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&p3);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&c);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&b1);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&b2);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *)&b3);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&pp1);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, (char *)&pp2);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12, (char *)&pp3);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, (char *)&d);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 14, (char *)&apply);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 15, (char *)&gain0);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 16, (char *)&gain45);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 17, (char *)&offset0);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18, (char *)&offset45);
+
+   /* 
+    * Check the attributes
+    */
+
+   if ( gain0 == 0.0 )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Gain for astig 0 should be different from zero",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( gain45 == 0.0 )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Gain for astig 45 should be different from zero",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Update the astigModel structure
+    */
+
+   if (semTake (accessAstigModel, 100) != OK)
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Timeout on mutex acess to astigModel",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   else
+   {
+      astigModel.a1 = a1;
+      astigModel.a2 = a2;
+      astigModel.a3 = a3;
+      astigModel.p1 = p1;
+      astigModel.p2 = p2;
+      astigModel.p3 = p3;
+      astigModel.c = c;
+      astigModel.b1 = b1;
+      astigModel.b2 = b2;
+      astigModel.b3 = b3;
+      astigModel.pp1 = pp1;
+      astigModel.pp2 = pp2;
+      astigModel.pp3 = pp3;
+      astigModel.d = d;
+      astigModel.applyModel = apply;
+      astigModel.gain0 = gain0;
+      astigModel.gain45 = gain45;
+      astigModel.offsetAstig0 = offset0;
+      astigModel.offsetAstig45 = offset45;
+
+      semGive (accessAstigModel);
+   }
 
    return (errorNumber);
 }
