@@ -6,40 +6,40 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="2"
-	npc="20"
-	nstr="50"
-	ndynamic="18"
+	npc="23"
+	nstr="55"
+	ndynamic="20"
 	nplot="0"
 	nrd="0"
-	nes="0"
+	nes="2"
 	nkd="1"
 	npd="0"
 	npo="0"
 	object {
 		x="328"
 		y="298"
-		width="639"
-		height="486"
+		width="670"
+		height="555"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3290"
-	nwords_sta="324"
+	nwords_dspy="4090"
+	nwords_sta="556"
 	nwords_cmap="120"
 	nwords_crules="820"
-	odyng="1982"
-	osta="1658"
-	odynamic="2090"
-	oplot="3278"
-	ord="3278"
-	oes="3278"
-	okd="3278"
-	opd="3290"
-	opo="3290"
+	odyng="2334"
+	osta="1778"
+	odynamic="2442"
+	oplot="3762"
+	ord="3762"
+	oes="3762"
+	okd="4078"
+	opd="4090"
+	opo="4090"
 	opc="68"
-	ostr="334"
-	ocmap="718"
-	ocrules="838"
+	ostr="366"
+	ocmap="838"
+	ocrules="958"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -52,7 +52,7 @@ display {
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
-	mmht="289"
+	mmht="288"
 }
 "<<color map>>" {
 	ncolors="29"
@@ -1249,8 +1249,8 @@ display {
 	object {
 		x="9"
 		y="46"
-		width="620"
-		height="425"
+		width="652"
+		height="499"
 		groupid="0"
 	}
 }
@@ -1487,19 +1487,19 @@ display {
 }
 "text" {
 	object {
-		x="15"
-		y="435"
-		width="85"
+		x="13"
+		y="438"
+		width="325"
 		height="20"
 		groupid="0"
 	}
-	textix="astig0:"
+	textix="Zero point model astig0:"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="243"
-		y="435"
+		x="420"
+		y="436"
 		width="98"
 		height="20"
 		groupid="0"
@@ -1517,6 +1517,54 @@ display {
 	}
 	textix="Time:"
 	align="horiz. left"
+}
+"text" {
+	object {
+		x="24"
+		y="486"
+		width="349"
+		height="20"
+		groupid="0"
+	}
+	textix="0 Astigmatism before rotation:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="14"
+		y="519"
+		width="349"
+		height="20"
+		groupid="0"
+	}
+	textix="45 Astigmatism before rotation:"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="9"
+		y="472"
+		width="652"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="9"
+		y="472"
+	}
+	point[1] {
+		x="661"
+		y="472"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
 }
 "<<basic attribute>>" {
 	attr {
@@ -2259,7 +2307,7 @@ display {
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)ttfZero.VALF"
+		chan="$(top)aoZero.VALF"
 		clr="0"
 		bclr="7"
 		label="none"
@@ -2298,8 +2346,8 @@ display {
 }
 "text update" {
 	object {
-		x="106"
-		y="433"
+		x="283"
+		y="434"
 		width="94"
 		height="25"
 		groupid="0"
@@ -2344,8 +2392,8 @@ display {
 }
 "text update" {
 	object {
-		x="335"
-		y="433"
+		x="512"
+		y="434"
 		width="95"
 		height="24"
 		groupid="0"
@@ -2434,10 +2482,368 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
+"text update" {
+	object {
+		x="355"
+		y="485"
+		width="160"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)ao.VALC"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="356"
+		y="517"
+		width="160"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)ao.VALD"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"execute script" {
+	object {
+		x="518"
+		y="484"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z4BRConfig.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"execute script" {
+	object {
+		x="519"
+		y="519"
+		width="131"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool z5BRConfig.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
 "kill display" {
 	object {
-		x="559"
-		y="15"
+		x="592"
+		y="14"
 		width="70"
 		height="23"
 		groupid="0"

@@ -68,6 +68,10 @@
  *   aoDarkUpdate() - Update the dark buffer of the control context structure
  *   aoCtrlFileRead () - Read parameters from the AO control file
  *   aoModInit () - Init the zero point models
+ *   aoModAstFileRead () - Read astigmatism zero point model from model file
+ *   aoModTrefFileRead () - Read trefoil zero point model from model file
+ *   aoModComaFileRead () - Read coma zero point model from model file
+ *   aoModFocFileRead () - Read focus zero point model from model file
  * 
  *INDENT-OFF*
  *   08 Aug 2001: CB - Major modifications to have ao correction with P2 also
@@ -3318,11 +3322,16 @@ STATUS aoGlobalGuide (
       *(pGuidesVect) = xCenter - (x / total);
       *(pGuidesVect + 1) = yCenter - (y / total);
 
+/*
       *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
                      aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
       *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect+1)) -
                          aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
+*/
+      *(pFgVect) = (*pGuidesVect);
+
+      *(pFgVect + 1) = *(pGuidesVect+1);
 
       *(pFgVect + 2) = 0.0;
 
@@ -3533,12 +3542,16 @@ STATUS aoGlobalGuideAndError (
 
       *(pGuidesVect) = xCenter - xTemp;
       *(pGuidesVect + 1) = yCenter - yTemp;
-
+/*
       *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
                      aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
       *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
                          aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
+*/
+      *(pFgVect) = *(pGuidesVect) ;
+
+      *(pFgVect + 1) = *(pGuidesVect +1);
 
       *(pFgVect + 2) = 0.0;
 
@@ -5509,10 +5522,14 @@ STATUS aoGuideAndFocus (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
+/*
       *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*fg) +
                    aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
       *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
                        aoCtrlId->sinAngleWithM2 * (*fg) );
+*/
+      *(pFgVect) = *(fg);
+      *(pFgVect + 1) = *(fg + 1);
 
       if ( aoCcdId->binningFlag == TRUE )
          *(fg+2) *= 2.0;
@@ -6839,6 +6856,7 @@ STATUS aoModInit (
 {
    FILE *     pFile;
    char       comment [STRING_SIZE];
+   int        i;
 
    /* Open the file in read mode */
 
@@ -6866,39 +6884,27 @@ STATUS aoModInit (
    printf ( "%s\n" , comment );
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0, 
-      "Failed to read the second line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the second line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif   
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0, 
-      "Failed to read the second line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif   
 
    /* Read the values for the astigmatism 0 model */
 
-   if ( fscanf (pFile, "%lf %lf %lf %lf %lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf %lf %lf %lf %lf\n", 
                 &(astModelId->a1), &(astModelId->a2), 
                 &(astModelId->a3), &(astModelId->p1), 
                 &(astModelId->p2), &(astModelId->p3),
@@ -6921,39 +6927,27 @@ STATUS aoModInit (
    printf ( "aoModInit(): astig 0 c: %f\n", (float)astModelId->c );
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0, 
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif   
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0, 
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif   
 
    /* Read the values for the astigmatism 45 model */
 
-   if ( fscanf (pFile, "%lf %lf %lf %lf %lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf %lf %lf %lf %lf\n", 
                 &(astModelId->b1), &(astModelId->b2), 
                 &(astModelId->b3), &(astModelId->pp1), 
                 &(astModelId->pp2), &(astModelId->pp3),
@@ -6967,13 +6961,13 @@ STATUS aoModInit (
    }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): astig 0 b1: %f\n", (float)astModelId->b1 );
-   printf ( "aoModInit(): astig 0 b2: %f\n", (float)astModelId->b2 );
-   printf ( "aoModInit(): astig 0 b3: %f\n", (float)astModelId->b3 );
-   printf ( "aoModInit(): astig 0 pp1: %f\n", (float)astModelId->pp1 );
-   printf ( "aoModInit(): astig 0 pp2: %f\n", (float)astModelId->pp2 );
-   printf ( "aoModInit(): astig 0 pp3: %f\n", (float)astModelId->pp3 );
-   printf ( "aoModInit(): astig 0 d: %f\n", (float)astModelId->d );
+   printf ( "aoModInit(): astig 45 b1: %f\n", (float)astModelId->b1 );
+   printf ( "aoModInit(): astig 45 b2: %f\n", (float)astModelId->b2 );
+   printf ( "aoModInit(): astig 45 b3: %f\n", (float)astModelId->b3 );
+   printf ( "aoModInit(): astig 45 pp1: %f\n", (float)astModelId->pp1 );
+   printf ( "aoModInit(): astig 45 pp2: %f\n", (float)astModelId->pp2 );
+   printf ( "aoModInit(): astig 45 pp3: %f\n", (float)astModelId->pp3 );
+   printf ( "aoModInit(): astig 45 d: %f\n", (float)astModelId->d );
 #endif
 
    /* Skip the next line of comment */
@@ -6993,7 +6987,7 @@ STATUS aoModInit (
 
    /* Read the values for the gain for astig model */
 
-   if ( fscanf (pFile, "%lf %lf", 
+   if ( fscanf (pFile, "%lf %lf\n", 
                 &(astModelId->gain0), 
                 &(astModelId->gain45)) == EOF )
    {
@@ -7026,7 +7020,7 @@ STATUS aoModInit (
 
    /* Read the values for the offsets for astig model */
 
-   if ( fscanf (pFile, "%lf %lf", 
+   if ( fscanf (pFile, "%lf %lf\n", 
                 &(astModelId->offsetAstig0), 
                 &(astModelId->offsetAstig45)) == EOF )
    {
@@ -7074,39 +7068,27 @@ STATUS aoModInit (
    printf ( "aoModInit(): astig model apply flag=%d\n", astModelId->applyModel);
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif
 
    /* Read the values for the cos trefoil model */
 
-   if ( fscanf (pFile, "%lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
                 &(trefModelId->a), &(trefModelId->p), 
                 &(trefModelId->c)) == EOF )
    {
@@ -7123,39 +7105,27 @@ STATUS aoModInit (
    printf ( "aoModInit(): cos tref c: %f\n", (float)trefModelId->c );
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif
 
    /* Read the values for the sin trefoil model */
 
-   if ( fscanf (pFile, "%lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
                 &(trefModelId->b), &(trefModelId->pp), 
                 &(trefModelId->d)) == EOF )
    {
@@ -7203,39 +7173,27 @@ STATUS aoModInit (
             trefModelId->applyModel);
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif
 
    /* Read the values for the coma X model */
 
-   if ( fscanf (pFile, "%lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
                 &(comaModelId->a), &(comaModelId->p), 
                 &(comaModelId->c)) == EOF )
    {
@@ -7252,39 +7210,27 @@ STATUS aoModInit (
    printf ( "aoModInit(): coma c: %f\n", (float)comaModelId->c );
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif
 
    /* Read the values for the coma Y model */
 
-   if ( fscanf (pFile, "%lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
                 &(comaModelId->b), &(comaModelId->pp), 
                 &(comaModelId->d)) == EOF )
    {
@@ -7332,39 +7278,27 @@ STATUS aoModInit (
             comaModelId->applyModel);
 #endif
 
-   /* Skip the next line of comment */
+   /* Skip the next lines of comment */
 
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   for ( i = 0 ; i < 2 ; i ++ )
    {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
 
 #ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
+      printf ( "aoModInit(): %s\n", comment );
 #endif
-
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      ERROR_SET1 ( 0,
-      "Failed to read the next line of comments from the model init file %s",
-      ERROR_LOG_SAVE, pInitFileName );
-      fclose (pFile);
-      return (ERROR);
    }
-
-#ifdef DEBUG
-   printf ( "aoModInit(): %s\n", comment );
-#endif
 
    /* Read the values for the focus model */
 
-   if ( fscanf (pFile, "%lf %lf %lf %lf %lf", 
+   if ( fscanf (pFile, "%lf %lf %lf %lf %lf\n", 
                 &(focModelId->a1), &(focModelId->p1), 
                 &(focModelId->a2), &(focModelId->p2), 
                 &(focModelId->c)) == EOF )
@@ -7422,3 +7356,844 @@ STATUS aoModInit (
    return ( OK );
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoModAstFileRead
+ *
+ *   INVOCATION:
+ *   aoModAstFileRead (pInitFileName, pA1, pA2, pA3, pP1, pP2, pP3, pC, 
+ *                     pB1, pB2, pB3, pPp1, pPp2, pPp3, pD,
+ *                     pGain0, pGain45, pOffset0, pOffset45, pApply)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName (char *)   Pointer to the model file name 
+ *   (<) pA1           (double *) a1
+ *   (<) pA2           (double *) a2
+ *   (<) pA3           (double *) a3
+ *   (<) pP1           (double *) p1
+ *   (<) pP2           (double *) p2
+ *   (<) pP3           (double *) p3
+ *   (<) pC            (double *) c
+ *   (<) pB1           (double *) a1
+ *   (<) pB2           (double *) a2
+ *   (<) pB3           (double *) a3
+ *   (<) pPp1          (double *) p1
+ *   (<) pPp2          (double *) p2
+ *   (<) pPp3          (double *) p3
+ *   (<) pD            (double *) d
+ *   (<) pGain0        (double *) gain0
+ *   (<) pGain45       (double *) gain45
+ *   (<) pOffset0      (double *) offsetAstig0
+ *   (<) pOffset45     (double *) offsetAstig45
+ *   (<) pApply        (int *)    applyModel
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the astigmatism zero point model from the model file
+ *
+ *   DESCRIPTION:
+ *   Read the parameters of the astigmatism zero point model from 
+ *   the model file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoModAstFileRead (
+   char * pInitFileName,
+   double * pA1,
+   double * pA2,
+   double * pA3,
+   double * pP1,
+   double * pP2,
+   double * pP3,
+   double * pC,
+   double * pB1,
+   double * pB2,
+   double * pB3,
+   double * pPp1,
+   double * pPp2,
+   double * pPp3,
+   double * pD,
+   double * pGain0,
+   double * pGain45,
+   double * pOffset0,
+   double * pOffset45,
+   int    * pApply
+   )
+{
+   FILE *     pFile;
+   char       comment [STRING_SIZE];
+   int        i;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      ERROR_SET1 ( 0, "Failed to open the model init file %s",
+                   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read first line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next lines of comment */
+
+   for ( i = 0 ; i < 2 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the second line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModAstFileRead(): %s\n", comment );
+#endif   
+   }
+
+   /* Read the values for the astigmatism 0 model */
+
+   if ( fscanf (pFile, "%lf %lf %lf %lf %lf %lf %lf\n", 
+                pA1, pA2, pA3, pP1, pP2, pP3, pC) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the astigmatism 0 model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): astig 0 a1: %f\n", (float)*pA1 );
+   printf ( "aoModAstFileRead(): astig 0 a2: %f\n", (float)*pA2 );
+   printf ( "aoModAstFileRead(): astig 0 a3: %f\n", (float)*pA3 );
+   printf ( "aoModAstFileRead(): astig 0 p1: %f\n", (float)*pP1 );
+   printf ( "aoModAstFileRead(): astig 0 p2: %f\n", (float)*pP2 );
+   printf ( "aoModAstFileRead(): astig 0 p3: %f\n", (float)*pP3 );
+   printf ( "aoModAstFileRead(): astig 0 c: %f\n", (float)*pC );
+#endif
+
+   /* Skip the next lines of comment */
+
+   for ( i = 0 ; i < 2 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModAstFileRead(): %s\n", comment );
+#endif   
+   }
+
+   /* Read the values for the astigmatism 45 model */
+
+   if ( fscanf (pFile, "%lf %lf %lf %lf %lf %lf %lf\n", 
+                pB1, pB2, pB3, pPp1, pPp2, pPp3, pD) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the astig 45 model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): astig 45 b1: %f\n", (float)*pB1 );
+   printf ( "aoModAstFileRead(): astig 45 b2: %f\n", (float)*pB2 );
+   printf ( "aoModAstFileRead(): astig 45 b3: %f\n", (float)*pB3 );
+   printf ( "aoModAstFileRead(): astig 45 pp1: %f\n", (float)*pP1 );
+   printf ( "aoModAstFileRead(): astig 45 pp2: %f\n", (float)*pP2 );
+   printf ( "aoModAstFileRead(): astig 45 pp3: %f\n", (float)*pP3 );
+   printf ( "aoModAstFileRead(): astig 45 d: %f\n", (float)*pD );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModastFileRead(): %s\n", comment );
+#endif   
+
+   /* Read the values for the gains for astig model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                pGain0, pGain45 ) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read gains for astig model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): astig 0 gain0: %f\n", (float)*pGain0 );
+   printf ( "aoModAstFileRead(): astig 0 gain45: %f\n", (float)*pGain45 );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): %s\n", comment );
+#endif   
+
+   /* Read the values for the offsets for astig model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                pOffset0, pOffset45) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read offsets for astig model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): astig 0 offset0: %f\n", 
+            (float)*pOffset0 );
+   printf ( "aoModastFileRead(): astig 0 offset45: %f\n", 
+            (float)*pOffset45 );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): %s\n", comment );
+#endif   
+
+   /* Read the apply astig model flag */
+
+   if ( (fscanf (pFile, "%d\n", pApply)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the apply astig model flag from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModAstFileRead(): astig model apply flag=%d\n", *pApply);
+#endif
+
+   /* End - close and return */
+
+   fclose (pFile);
+
+   return ( OK );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoModTrefFileRead
+ *
+ *   INVOCATION:
+ *   aoModTrefFileRead (pInitFileName, pA, pP, pC, pB, pPp, pD, pApply)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName (char *)          Pointer to the model file name 
+ *   (<) pA            (double *) a
+ *   (<) pP            (double *) p
+ *   (<) pC            (double *) c
+ *   (<) pB            (double *) b
+ *   (<) pPp           (double *) pp
+ *   (<) pD            (double *) d
+ *   (<) pApply        (int *) applyModel
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the trefoil zero point model from the model file
+ *
+ *   DESCRIPTION:
+ *   Read the parameters of the trefoil zero point model from
+ *   the model file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoModTrefFileRead (
+   char * pInitFileName,
+   double * pA,
+   double * pP,
+   double * pC,
+   double * pB,
+   double * pPp,
+   double * pD,
+   int * pApply
+   )
+{
+   FILE *     pFile;
+   char       comment [STRING_SIZE];
+   int        i;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      ERROR_SET1 ( 0, "Failed to open the model init file %s",
+                   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read first line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next lines of comment */
+
+   for ( i = 0 ; i < 14 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the second line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModTrefFileRead(): %s\n", comment );
+#endif   
+   }
+
+   /* Read the values for the cos trefoil model */
+
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
+                pA, pP, pC) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the cos trefoil model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModTrefFileRead(): cos tref a: %f\n", (float)*pA );
+   printf ( "aoModTrefFileRead(): cos tref p: %f\n", (float)*pP );
+   printf ( "aoModTrefFileRead(): cos tref c: %f\n", (float)*pC );
+#endif
+
+   /* Skip the next lines of comment */
+
+   for ( i = 0 ; i < 2 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModTrefFileRead(): %s\n", comment );
+#endif
+   }
+
+   /* Read the values for the sin trefoil model */
+
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
+                pB, pPp, pD) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the sin trefoil model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModTrefFileRead(): sin tref b: %f\n", (float)*pB );
+   printf ( "aoModTrefFileRead(): sin tref pp: %f\n", (float)*pPp );
+   printf ( "aoModTrefFileRead(): sin tref d: %f\n", (float)*pD );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModTrefFileRead(): %s\n", comment );
+#endif
+
+   /* Read the apply trefoil model flag */
+
+   if ( (fscanf (pFile, "%d\n", pApply)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the apply trefoil model flag from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModTrefFileRead(): trefoil model apply flag=%d\n", 
+            *pApply);
+#endif
+
+   /* End - close and return */
+
+   fclose (pFile);
+
+   return ( OK );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoModComaFileRead
+ *
+ *   INVOCATION:
+ *   aoModComaFileRead (pInitFileName, pA, pP, pC, pB, pPp, pD, pApply)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName (char *)          Pointer to the model file name 
+ *   (<) pA            (double *) a
+ *   (<) pP            (double *) p
+ *   (<) pC            (double *) c
+ *   (<) pB            (double *) b
+ *   (<) pPp           (double *) pp
+ *   (<) pD            (double *) d
+ *   (<) pApply        (int *) applyModel
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the coma zero point model from the model file
+ *
+ *   DESCRIPTION:
+ *   Read the parameters of the coma zero point model from
+ *   the model file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoModComaFileRead (
+   char * pInitFileName,
+   double * pA,
+   double * pP,
+   double * pC,
+   double * pB,
+   double * pPp,
+   double * pD,
+   int * pApply
+   )
+{
+   FILE *     pFile;
+   char       comment [STRING_SIZE];
+   int        i;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      ERROR_SET1 ( 0, "Failed to open the model init file %s",
+                   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read first line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next lines of comment */
+
+   for ( i = 0 ; i < 22 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the second line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModComaFileRead(): %s\n", comment );
+#endif   
+   }
+
+   /* Read the values for the coma X model */
+
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
+                pA, pP, pC) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the coma X model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModComaFileRead(): coma a: %f\n", (float)*pA );
+   printf ( "aoModComaFileRead(): coma p: %f\n", (float)*pP );
+   printf ( "aoModComaFileRead(): coma c: %f\n", (float)*pC );
+#endif
+
+   /* Skip the next line of comment */
+
+   for ( i = 0 ; i < 2 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0,
+         "Failed to read the next line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModComaFileRead(): %s\n", comment );
+#endif
+   }
+
+   /* Read the values for the coma Y model */
+
+   if ( fscanf (pFile, "%lf %lf %lf\n", 
+                pB, pPp, pD) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the coma Y model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModComaFileRead(): coma Y b: %f\n", (float)*pB );
+   printf ( "aoModComaFileRead(): coma Y pp: %f\n", (float)*pPp );
+   printf ( "aoModComaFileRead(): coma Y d: %f\n", (float)*pD );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModComaFileRead(): %s\n", comment );
+#endif
+
+   /* Read the apply coma model flag */
+
+   if ( (fscanf (pFile, "%d\n", pApply)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the apply coma model flag from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModComaFileRead(): coma model apply flag=%d\n", *pApply);
+#endif
+
+   /* End - close and return */
+
+   fclose (pFile);
+
+   return ( OK );
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoModFocFileRead
+ *
+ *   INVOCATION:
+ *   aoModFocFileRead (pInitFileName, pA1, pP1, pA2, pP2, pC, pApply)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName (char *)   Pointer to the model file name 
+ *   (<) pA1            (double *) a1
+ *   (<) pP1            (double *) p1
+ *   (<) pA2            (double *) a2
+ *   (<) pP2            (double *) p2
+ *   (<) pC             (double *) c
+ *   (<) pApply         (int *) applyModel
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Read the focus zero point model from the model file
+ *
+ *   DESCRIPTION:
+ *   Read the parameters of the focus zero point model from
+ *   the model file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoModFocFileRead (
+   char * pInitFileName,
+   double * pA1,
+   double * pP1,
+   double * pA2,
+   double * pP2,
+   double * pC,
+   int * pApply
+   )
+{
+   FILE *     pFile;
+   char       comment [STRING_SIZE];
+   int        i;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      ERROR_SET1 ( 0, "Failed to open the model init file %s",
+                   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read first line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next lines of comment */
+
+   for ( i = 0 ; i < 30 ; i ++ )
+   {
+      if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+      {
+         ERROR_SET1 ( 0, 
+         "Failed to read the second line of comments from the model init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+         fclose (pFile);
+         return (ERROR);
+      }
+
+#ifdef DEBUG
+      printf ( "aoModFocFileRead(): %s\n", comment );
+#endif   
+   }
+
+   /* Read the values for the focus model */
+
+   if ( fscanf (pFile, "%lf %lf %lf %lf %lf\n", 
+                pA1, pP1, pA2, pP2, pC) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the focus model values in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModFocFileRead(): focus a1: %f\n", (float)*pA1 );
+   printf ( "aoModFocFileRead(): focus p1: %f\n", (float)*pP1 );
+   printf ( "aoModFocFileRead(): focus a2: %f\n", (float)*pA2 );
+   printf ( "aoModFocFileRead(): focus p2: %f\n", (float)*pP2 );
+   printf ( "aoModFocFileRead(): focus c: %f\n", (float)*pC );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModFocFileRead(): %s\n", comment );
+#endif
+
+   /* Read the apply focus model flag */
+
+   if ( (fscanf (pFile, "%d\n", pApply)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the apply focus model flag from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModFocFileRead(): focus model apply flag=%d\n", 
+            *pApply);
+#endif
+
+   /* End - close and return */
+
+   fclose (pFile);
+
+   return ( OK );
+}
