@@ -8,5 +8,3 @@ DIRS += startup
 DIRS += docs
 DIRS += docs
 DIRS += docs
-DIRS += docs
-DIRS += docs
