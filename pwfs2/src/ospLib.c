@@ -8680,7 +8680,7 @@ int ospNewTrackingAndFocus ( float * buffp ,
        xdiff = (double)(10.5) ;
        ydiff = (double)(10.5) ;
     }
-    /*printf ( "first subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
+   /* printf ( "first subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
 
     for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
     {
