@@ -4689,8 +4689,8 @@ int ospAoCor ( float *buffp ,
 
        if ( wfsSpecific->osplight == 0 )
        {
-          printf ( "ospAoCor() : osplight=%d, apply control matrix...\n" , 
-                   wfsSpecific->osplight ) ;
+          /*printf ( "ospAoCor() : osplight=%d, apply control matrix...\n" , 
+                   wfsSpecific->osplight ) ;*/
        	  ospApplyControlMatrix ( wfsSpecific->c,wfsSpecific->z,wfsSpecific->s,
                                   wfsSpecific->np,wfsSpecific->mp);
 
@@ -4729,6 +4729,137 @@ int ospAoCor ( float *buffp ,
 #endif /*vxWorks*/
 
     }
+
+    /**************************************************************************/
+
+    return ( OK ) ;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospAoAnalyze
+ *
+ * INVOCATION:
+ * ospAoAnalyze ( wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status to be returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute AO corrections after a coadd function and a save into a coadd file
+ * 21 June 1999 - cb
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
+
+int ospAoAnalyze ( struct OSP_CONTEXT *wfsSpecific )
+{
+    int   i, j ;
+    int   nbSubapertures ;
+
+    /****************************************************** Initializations ***/
+
+    nbSubapertures = 2 * (wfsSpecific->ospxsubap) * (wfsSpecific->ospysubap) * 
+                     (wfsSpecific->sectors) ;  
+           
+    /************************************************ Compute the centroids ***/
+
+    if ( ospFGCentroidWrapper ( wfsSpecific->sumbuff , wfsSpecific ) == ERROR )
+    {
+       fprintf ( stderr,
+                 "Error: ospAoAnalyze centroid computation fails...\n" ) ;
+       return ( ERROR ) ;
+    } ;
+
+    /****************************************************** Set guard field ***/
+
+    wfsSpecific->ospdiag[GUARD1] = 1.0;    
+   
+    /*********************************************************** Write data ***/
+
+    j = 1 ;
+    for ( i = 1 ; i < DIAG_ARRAY_SIZE - 3 ; i ++ )
+    {
+        if ( wfsSpecific->subapertureUsed[(i-1)] == TRUE )
+        {
+           wfsSpecific->ospdiag[i] = wfsSpecific->s[j] ;
+           j ++ ;
+        }
+        else
+        {
+           wfsSpecific->ospdiag[i] = -999.99 ;
+        }
+    }
+
+    /*********************************** Unset guard field - write complete ***/
+
+    wfsSpecific->ospdiag[GUARD1] = 0.0;    
+
+    /******************************************** Rotation of the centroids ***/
+
+    ospRotateCentroids ( wfsSpecific ) ;
+
+    /******************************************* Multiply by control matrix ***/
+
+    if ( wfsSpecific->osplight == 0 )
+    {
+       /*printf ( "ospAoAnalyze() : osplight=%d, apply control matrix...\n" , 
+                wfsSpecific->osplight ) ;*/
+       ospApplyControlMatrix ( wfsSpecific->c,wfsSpecific->z,wfsSpecific->s,
+                               wfsSpecific->np,wfsSpecific->mp);
+
+       /*************************************** Multiply by scale factor ***/
+
+       for ( i = 1 ; i <= wfsSpecific->np ; i ++ )
+       {
+           wfsSpecific->z[i] *= wfsSpecific->aoscalevect[i] ;
+           wfsSpecific->err[i] = 0.0 ;
+       }
+    }
+    else
+    {
+       printf ( "ospAoAnalyze(): osplight=%d, do not apply control matrix...\n" ,
+                wfsSpecific->osplight ) ;
+       for ( i = 1 ; i <= wfsSpecific->np ; i ++ )
+       {
+           wfsSpecific->z[i] = 0.0 ;
+           wfsSpecific->err[i] = 0.0 ;
+       }
+    }
+
+    /* 
+     * Get a timestamp to record at which time zernikes data are sent to 
+     * the TCS 
+     */
+
+#ifdef vxWorks
+    if ( timeNow (&(wfsSpecific->time)) != OK )
+    {
+       fprintf (stderr,
+                "Error: ospAoAnalyze failed to take bancom time\n" ) ;
+    } ;
+
+    writeWfsToTcs(wfsSpecific);
+#endif /*vxWorks*/
+
 
     /**************************************************************************/
 
@@ -7100,7 +7231,7 @@ int ospFGCentroidWrapper ( float * buffp,
     /* Threshold and centroid */
     if ( wfsSpecific->thresh < 0 )
     {
-       printf ( "Threshold negative\n" ) ;
+       /*printf ( "Threshold negative\n" ) ;*/
        for (j = 1; j <= wfsSpecific->centres[0]; j=j+4) 
        {
            x0=(int)(wfsSpecific->centres[j]);
@@ -7111,9 +7242,9 @@ int ospFGCentroidWrapper ( float * buffp,
            corner[1] = *(index00 + (wfsSpecific->xframesize)*jump) ;
            corner[2] = *(index00 + jump) ;
            corner[3] = *(index00 + (wfsSpecific->xframesize)*jump + jump) ;
-           printf ( 
+           /*printf ( 
            "suba=%d, corner[0]=%f, corner[1]=%f, corner[2]=%f, corner[3]=%f\n" ,
-            j , corner[0] , corner[1] , corner[2] , corner[3] ) ;
+            j , corner[0] , corner[1] , corner[2] , corner[3] ) ;*/
 
            bigCorner = 0.0 ;
            index = 0 ;
@@ -7135,7 +7266,7 @@ int ospFGCentroidWrapper ( float * buffp,
                 }
            }
            threshold /= 3.0 ;
-           printf ( "threshold=%f\n" , threshold ) ;
+           /*printf ( "threshold=%f\n" , threshold ) ;*/
 
 	   itotal=0;
 	   ireptotal=0;
@@ -7214,6 +7345,8 @@ int ospFGCentroidWrapper ( float * buffp,
 	   }
 	   if(itotal > 0)
 	   {
+               /*printf ( "mu1x=%f, mu1y=%f, itotal=%f, xdiff=%f, ydiff=%f\n" ,
+                        mu1x, mu1y, itotal, xdiff, ydiff ) ;*/
 	       wfsSpecific->s[i] = (mu1x/itotal) - xdiff;
 	       wfsSpecific->s[i+1] = (mu1y/itotal) - ydiff;
 	       wfsSpecific->dssq[i] = 0.0;

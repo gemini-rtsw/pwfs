@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.3 1999-06-10 03:56:25 cboyer Exp $"};
+   "$Id: detControl.c,v 1.4 1999-06-23 08:03:33 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -3548,36 +3548,44 @@ void detObserveEnd
                    * saved once per observation.
                    */
 
-                     obsId->coaddCounter++;
-                     if ( obsId->coaddCounter == nCoadds )
-                     {
+                  obsId->coaddCounter++;
+                  if ( obsId->coaddCounter == nCoadds )
+                  {
                      /*
                       * Make up a file name by adding the string ".coadd" to 
                       * the given file name. Use a default file name if one 
                       * has not been given.
                       */
 
-                        if ( strcmp(obsId->pOutFileName, "") == 0 )
-                        {
-                           strcpy ( pFileNameString, "Coadd.fits" );
-                        }
-                        else
-                        {
-                           sprintf( pFileNameString, "%s.coadd", 
-                                    obsId->pOutFileName );
-                        }
-
-                        MESSAGE_LOG1 (MSG_MINDEBUG, 
-                        "Saving coadded data to %s", pFileNameString);
-
-                        if ( detWriteFits (pFileNameString, obsId, 
-                                           obsId->xPixels, obsId->yPixels,
-                                           obsId->ospAOContext->sumbuff) 
-                             == ERROR )
-                        {
-                           ERROR_LOG ("Failed to save coadded data to disk");
-                        }
+                     if ( strcmp(obsId->pOutFileName, "") == 0 )
+                     {
+                        strcpy ( pFileNameString, "Coadd.fits" );
                      }
+                     else
+                     {
+                        sprintf( pFileNameString, "%s.coadd", 
+                                 obsId->pOutFileName );
+                     }
+
+                     MESSAGE_LOG1 (MSG_MINDEBUG, 
+                     "Saving coadded data to %s", pFileNameString);
+
+                     if ( detWriteFits (pFileNameString, obsId, 
+                                        obsId->xPixels, obsId->yPixels,
+                                        obsId->ospAOContext->sumbuff) 
+                          == ERROR )
+                     {
+                        ERROR_LOG ("Failed to save coadded data to disk");
+                     }
+#ifdef DEBUG
+                     printf ("ospAoAnalyze: %p \n", obsId->ospAOContext);
+#endif
+                     if ( ospAoAnalyze (obsId->ospAOContext) == ERROR )
+                     {
+                        ERROR_LOG ("Failed to analyze zernikes distribution after coadd");
+                     }
+                  }
+                     
                   break;
 
                case (OSP_MODE_CALIB_REF):
@@ -4142,12 +4150,11 @@ void detObserveTimeout
        * detObserveEnd callback to be executed.
        */
 
-/* COMMENTED OUT - ONLY ANY USE WHEN USING INTERRUPTS.
+/* COMMENTED OUT - ONLY ANY USE WHEN USING INTERRUPTS.*/
       if ( sdsuSimulateSimpleSync(sdsuId) == ERROR)
       {
          ERROR_LOG ("Failed to simulate frame sync interrupt");
       }
-*/
    }
    else if ( sdsuId->frameIntNum == 0 )
    {

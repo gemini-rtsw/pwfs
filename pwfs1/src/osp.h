@@ -339,6 +339,7 @@ int ospCoAddFocus ( float *buffp , int N ,
                   struct OSP_CONTEXT *wfsSpecific );
 int ospAoCor ( float *buffp , int N ,
                struct OSP_CONTEXT *wfsSpecific );
+int ospAoAnalyze ( struct OSP_CONTEXT *wfsSpecific );
 
 
 /********* Numerical recipes functions ************************************/

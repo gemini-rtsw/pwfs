@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: sdsuLib.c,v 1.3 1999-06-10 03:56:39 cboyer Exp $"};
+   "$Id: sdsuLib.c,v 1.4 1999-06-23 08:03:37 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -798,6 +798,7 @@ SDSU_ID sdsuContextCreate ( const uint32 vmeAddress,
       if (vxMemProbe((char *) context->pVmeAddress, VX_WRITE, sizeof(uint32), 
                      (char *) &i) == ERROR)
       {
+         printf ( "Address of SDSU board: %p\n" , context->pVmeAddress ) ;
          ERROR_SET (S_sdsuLib_INV_CARD_ADDRESS, "SDSU interface not present", 
                     ERROR_LOG_SAVE);
          cfree ((char *) context);
@@ -1100,7 +1101,7 @@ uint32 sdsuVersionGet ( SDSU_ID         context,
     */
 
    if (destId == SDSU_IDENT_HST)
-      return (sdsu_getVersion ("$Revision: 1.3 $"));
+      return (sdsu_getVersion ("$Revision: 1.4 $"));
    
    /*
     * The SDSU context must be valid if the code gets this far, as the version 

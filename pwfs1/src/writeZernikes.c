@@ -1083,6 +1083,7 @@ long    ttfZero (struct genSubRecord * pgsub)
  *		of the Zeiss angle, port C provides an additional rotation angle
  *		rotationAngle = tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
+ * 21-June-1999 Modified to read tableAngle and the armAngle from a&g (cb)
  *
  */
 
@@ -1096,7 +1097,10 @@ long    aoZero (struct genSubRecord * pgsub)
 	int	wfsSource = 0;
 	frame	*f;
 	double	*ptr;
-	double	probeAngle = 0.0, polarityFudge = 1.0, rotationFudge = 0.0, compositeAngle = 0.0;
+	double	tableAngle = 0.0; 
+        double  polarityFudge = 1.0;
+        double  armAngle = 0.0;
+        double  compositeAngle = 0.0;
 
 	ptr = (double *) pgsub->j;
 
@@ -1116,9 +1120,9 @@ long    aoZero (struct genSubRecord * pgsub)
 	{
 		/* read conversion factors from input ports */
 
-		if(sscanf(pgsub->a, "%lf", &probeAngle) != 1)
+		if(sscanf(pgsub->a, "%lf", &tableAngle) != 1)
 		{
-			probeAngle = 0.0;
+			tableAngle = 0.0;
 		}
 
 		if(sscanf(pgsub->b, "%lf", &polarityFudge) != 1)
@@ -1126,17 +1130,17 @@ long    aoZero (struct genSubRecord * pgsub)
 			polarityFudge = 1.0;
 		}
 
-		if(sscanf(pgsub->c, "%lf", &rotationFudge) != 1)
+		if(sscanf(pgsub->c, "%lf", &armAngle) != 1)
 		{
-			rotationFudge = 0.0;
+			armAngle = 0.0;
 		}
 
 		/* sanity check conversion factors */
 
-		if(probeAngle < LOW_PROBE_ANGLE || probeAngle > HIGH_PROBE_ANGLE)
+		if(tableAngle < LOW_PROBE_ANGLE || tableAngle > HIGH_PROBE_ANGLE)
 		{
-			logMsg("aoZero > %s probe angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);
-			probeAngle = 0.0;
+			logMsg("aoZero > %s table angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);
+			tableAngle = 0.0;
 		}
 	}
 
@@ -1156,7 +1160,11 @@ long    aoZero (struct genSubRecord * pgsub)
 		/* calculate composite correction angle */
 
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
-		compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS);
+		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS);*/
+		compositeAngle = (tableAngle - armAngle)*DEGS2RADS;
+                /*printf ( "compositeAngle = %lf, tableAngle =%lf, armAngle=%lf\n" ,
+                         compositeAngle , tableAngle, armAngle ) ;*/
+              
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);
@@ -1175,7 +1183,7 @@ long    aoZero (struct genSubRecord * pgsub)
 	*(double *) pgsub->valb = f->null[1];			/* tAppl */
 	*(double *) pgsub->valc = f->null[2];			/* trackId */
 	*(double *) pgsub->vald = f->null[3];			/* tcsAngle (degrees) */
-	*(double *) pgsub->vale = probeAngle;			/* probeAngle (degrees) */
+	*(double *) pgsub->vale = tableAngle;			/* tableAngle (degrees) */
 	*(double *) pgsub->valf = compositeAngle/DEGS2RADS;	/* composite angle (degrees) */
 	*(double *) pgsub->valg = f->null[5];			/* z2 */
 	*(double *) pgsub->valh = f->null[6];			/* z3 */
