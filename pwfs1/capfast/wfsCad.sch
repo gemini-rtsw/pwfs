@@ -1,10 +1,20 @@
 [schematic2]
-uniq 107
+uniq 111
 [tools]
 [detail]
+w 3460 -69 100 2 n#110 hwout.hwout#109.outp 3456 -64 3456 -64 eaos.detSigInitAo.OUT
 s 336 2240 500 0 PWFS1 - WFS CAD Records
 s 2464 -704 500 512 wfsCad.sch
 [cell use]
+use hwout 3456 -105 100 0 hwout#109
+xform 0 3552 -64
+p 3552 -73 100 0 -1 val(outp):pwfs1:dc:detSigInit.M
+use eaos 3200 -121 100 0 detSigInitAo
+xform 0 3328 -32
+p 2944 -274 100 0 0 DRVH:1.0
+p 2944 -306 100 0 0 DRVL:0.0
+p 2944 -178 100 0 0 PREC:1
+p 2964 -614 100 0 1 PV:$(top)$(wfs)
 use ecad20 2912 423 100 0 detGeometry
 xform 0 3072 1312
 p 2976 384 100 0 1 DESC:Define detector geometry parameters
@@ -34,18 +44,22 @@ p 2976 320 100 0 1 SNAM:epToVxCadExecute
 use ecad20 3568 391 100 0 detSigInit
 xform 0 3728 1280
 p 3680 304 100 0 1 DESC:Initialize signal processing
-p 3664 1760 100 0 0 FTVD:DOUBLE
-p 3664 1728 100 0 0 FTVE:DOUBLE
-p 3664 1696 100 0 0 FTVF:DOUBLE
-p 3664 1664 100 0 0 FTVG:DOUBLE
-p 3664 1632 100 0 0 FTVH:STRING
-p 3664 1600 100 0 0 FTVI:STRING
-p 3664 1568 100 0 0 FTVJ:DOUBLE
-p 3664 1536 100 0 0 FTVK:LONG
-p 3664 1504 100 0 0 FTVL:LONG
-p 3664 1472 100 0 0 FTVM:STRING
+p 3664 2016 100 0 1 FTVA:STRING
+p 3664 1984 100 0 1 FTVB:STRING
+p 3664 1952 100 0 1 FTVC:STRING
+p 3664 1920 100 0 1 FTVD:DOUBLE
+p 3664 1888 100 0 1 FTVE:DOUBLE
+p 3664 1856 100 0 1 FTVF:DOUBLE
+p 3664 1824 100 0 1 FTVG:DOUBLE
+p 3664 1792 100 0 1 FTVH:STRING
+p 3664 1600 100 0 1 FTVI:STRING
+p 3664 1568 100 0 1 FTVJ:DOUBLE
+p 3664 1536 100 0 1 FTVK:LONG
+p 3664 1504 100 0 1 FTVL:LONG
+p 3664 1472 100 0 1 FTVM:DOUBLE
 p 3664 1440 100 0 0 FTVN:STRING
 p 3680 336 100 0 1 INAM:epToVxCadInit
+p 3664 1120 100 0 0 PREC:1
 p 3696 240 100 0 1 PV:$(top)$(wfs)
 p 3680 272 100 0 1 SNAM:epToVxCadExecute
 use ecad4 1792 1479 100 0 detTest
@@ -256,11 +270,11 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-11-10 22:55:43 $
-p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.6 1999-11-10 22:55:43 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 1999-11-19 03:19:18 $
+p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.7 1999-11-19 03:19:18 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.6 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.7 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 use notes 2560 -345 100 0 notes#13
 xform 0 2816 -160
