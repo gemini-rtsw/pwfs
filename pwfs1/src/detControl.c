@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.36 2004-08-20 21:43:52 gemvx Exp $"};
+   "$Id: detControl.c,v 1.37 2004-11-25 20:20:19 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -11646,6 +11646,7 @@ void detObserveEnd
                {
                   obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+		  obsId->aoCtrlId->aoTcsThreshold = obsId->aoTcsThreshold;
                   obsId->updateAoThresh = FALSE ;
                }
 
@@ -11702,6 +11703,7 @@ void detObserveEnd
                {
                   obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+		  obsId->aoCtrlId->aoTcsThreshold = obsId->aoTcsThreshold;
                   obsId->updateAoThresh = FALSE ;
                };
 
@@ -12119,6 +12121,7 @@ void detObserveEnd
                {
                   obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+		  obsId->aoCtrlId->aoTcsThreshold = obsId->aoTcsThreshold;
                   obsId->updateAoThresh = FALSE ;
                };
 
@@ -12335,6 +12338,7 @@ void detObserveEnd
                {
                   obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+		  obsId->aoCtrlId->aoTcsThreshold = obsId->aoTcsThreshold;
                   obsId->updateAoThresh = FALSE ;
                };
 
@@ -23148,6 +23152,7 @@ uint32 detSigInitAoThresh
 
    double       aoThreshold;
    double       aoMaxThreshold;
+   double       aoTcsThreshold;
 
    /*
     * Initialise the error number 
@@ -23199,6 +23204,9 @@ uint32 detSigInitAoThresh
                             (char *)&aoThreshold);
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
                             (char *)&aoMaxThreshold);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
+                            (char *)&aoTcsThreshold);
+
 
       if ( obsId->aoThreshold > obsId->aoMaxThreshold)
       {
@@ -23211,7 +23219,7 @@ uint32 detSigInitAoThresh
 
       obsId->aoThreshold= aoThreshold;
       obsId->aoMaxThreshold = aoMaxThreshold;
-
+      obsId->aoTcsThreshold = aoTcsThreshold;
       obsId->updateAoThresh = TRUE ;
    }
    else /* observation not in progress */
@@ -23230,6 +23238,8 @@ uint32 detSigInitAoThresh
                              (char *)&aoThreshold);
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
                              (char *)&aoMaxThreshold);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
+                             (char *)&aoTcsThreshold);
 
       if ( obsId->aoThreshold > obsId->aoMaxThreshold)
       {
@@ -23244,7 +23254,8 @@ uint32 detSigInitAoThresh
       obsId->aoThreshold = aoThreshold;
       obsId->aoCtrlId->aoMaxThreshold = aoMaxThreshold;
       obsId->aoMaxThreshold = aoMaxThreshold;
-
+      obsId->aoCtrlId->aoTcsThreshold = aoTcsThreshold;
+      obsId->aoTcsThreshold = aoTcsThreshold;
    }
 
    return (errorNumber);
@@ -23297,6 +23308,7 @@ STATUS detInitSigInitAoThresh
 {
    *(double *)pgsub->vala = *(double *)pgsub->a;
    *(double *)pgsub->valb = *(double *)pgsub->b;
+   *(double *)pgsub->valc = *(double *)pgsub->c;
 
    return (OK);
 }

@@ -42,6 +42,7 @@ double $(top)$(wfs)initSigModeSeqDark.E = 2.5 ;
 group {
 double $(top)$(wfs)initSigInitAoThresh.A = 0.5 ;
 double $(top)$(wfs)initSigInitAoThresh.B = 3.0 ;
+double $(top)$(wfs)initSigInitAoThresh.C = 0.3 ;
 };
 
 #

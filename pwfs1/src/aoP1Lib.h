@@ -415,6 +415,9 @@ typedef struct
    double       aoMaxThreshold;        /* aO threshold above which the aO     */
                                        /* values are clamped                  */
 
+   double       aoTcsThreshold;        /* aO threshold above which the aO     */
+                                       /* values are corrected (sent to Tcs)  */
+
    int          allowedSubapOff;       /* Number of subapertures allowed to   */
                                        /* be off when computing the centroids */
 

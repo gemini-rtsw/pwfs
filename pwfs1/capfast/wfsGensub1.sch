@@ -10,7 +10,7 @@ xform 0 1856 1520
 p 1776 1056 100 0 1 DESC:Init the detSigInitAoThresh
 p 1792 1888 100 0 1 FTA:DOUBLE
 p 1792 1856 100 0 1 FTB:DOUBLE
-p 1792 1824 100 0 0 FTC:DOUBLE
+p 1792 1824 100 0 1 FTC:DOUBLE
 p 1792 1792 100 0 0 FTD:DOUBLE
 p 1792 1760 100 0 0 FTE:DOUBLE
 p 1792 1728 100 0 0 FTF:DOUBLE
@@ -31,7 +31,7 @@ p 1792 1280 100 0 0 FTT:DOUBLE
 p 1489 613 100 0 0 FTU:DOUBLE
 p 2064 1888 100 0 1 FTVA:DOUBLE
 p 2064 1856 100 0 1 FTVB:DOUBLE
-p 2064 1824 100 0 0 FTVC:DOUBLE
+p 2064 1824 100 0 1 FTVC:DOUBLE
 p 2064 1792 100 0 0 FTVD:DOUBLE
 p 2064 1760 100 0 0 FTVE:DOUBLE
 p 2064 1728 100 0 0 FTVF:DOUBLE
@@ -58,7 +58,7 @@ p 1776 992 100 0 1 SNAM:detInitSigInitAoThresh
 p 1424 1566 100 0 0 def(INPF):0.0000000000000000e+00
 p 2224 1888 100 0 1 def(OUTA):$(top)$(wfs)detSigInitAoThresh.A
 p 2224 1856 100 0 1 def(OUTB):$(top)$(wfs)detSigInitAoThresh.B
-p 2224 1824 100 0 0 def(OUTC):0
+p 2224 1824 100 0 1 def(OUTC):$(top)$(wfs)detSigInitAoThresh.C
 p 2224 1792 100 0 0 def(OUTD):0
 p 2224 1760 100 0 0 def(OUTE):0
 p 2224 1728 100 0 0 def(OUTF):0
@@ -221,9 +221,9 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 1 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2004-08-20 21:43:02 $
-p 2592 2304 200 0 -1 id:$Id: wfsGensub1.sch,v 1.3 2004-08-20 21:43:02 gemvx Exp $
+p 3120 -784 200 0 -1 date:$Date: 2004-11-25 20:21:17 $
+p 2592 2304 200 0 -1 id:$Id: wfsGensub1.sch,v 1.4 2004-11-25 20:21:17 gemvx Exp $
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.3 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.4 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor more genSub Records
 [comments]

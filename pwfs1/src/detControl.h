@@ -592,6 +592,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       aoThreshold;
                            /* Threshold for aO correction                     */
    double       aoMaxThreshold;
+                           /* Maximum Threshold for aO clamp                  */
+   double       aoTcsThreshold;
                            /* Maximum Threshold for aO correction             */
    AO_VECT      aoScaleVect; 
                            /* Scale factor vector for aO modes                */

@@ -3207,6 +3207,7 @@ STATUS aoCtrlContextShow (
    printf ( "Allowed subapertures to be off: %d\n", aoCtrlId->allowedSubapOff);
    printf ( "aoThreshold: %f\n" , aoCtrlId->aoThreshold );
    printf ( "aoMaxThreshold: %f\n" , aoCtrlId->aoMaxThreshold );
+   printf ( "aoTcsThreshold: %f\n" , aoCtrlId->aoTcsThreshold );
 
    return (OK);
 }

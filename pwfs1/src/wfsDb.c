@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.32 2004-08-30 15:30:40 gemvx Exp $"};
+ "$Id: wfsDb.c,v 1.33 2004-11-25 20:20:20 gemvx Exp $"};
 
 /*+
  * MODULE NAME:
@@ -802,7 +802,8 @@ CAD_RECORD pWfsDbCadList [] =
   SIMULATION_MODE_SUPPORTED,
   180.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.5", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "5.0", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "5.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.3", {NO_ATTRIBUTE_LIMITS}
  }
 };
 
