@@ -1,4 +1,4 @@
-# $Id: startup.vws,v 1.1 1999-07-17 01:05:00 cboyer Exp $
+# $Id: startup.vws,v 1.2 1999-11-10 23:00:12 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -39,7 +39,7 @@ ld < $(version)/bin/$(arch)/drvVmi5588
 ld < $(epics)/extensions/bin/$(arch)/libsla.a
 ld < $(epics)/extensions/bin/$(arch)/libtime.a
 ld < /gemini/astlib/bin/$(arch)/astlib
-ld < /gemini/cfitsio/bin/$(arch)/cFitsIo
+ld < /gemini/cfitsio/cfitsio/bin/$(arch)/cFitsIo
 
 ld < $(epics)/extensions/bin/$(arch)/timeSeq
 
@@ -59,6 +59,7 @@ ld < $(version)/bin/$(arch)/detControl
 ld < $(version)/bin/$(arch)/wfsControl
 ld < $(version)/bin/$(arch)/wfsResourceMonitor
 ld < $(version)/bin/$(arch)/simpleLog
+ld < $(version)/bin/$(arch)/fpscr
 
 # Load test harness library if required
 ld < $(version)/bin/$(arch)/testHarness
@@ -66,6 +67,9 @@ ld < $(version)/bin/$(arch)/testKit
 
 # Load sequences here
 # ld < $(version)/bin/$(arch)/testseq.o
+
+#Turn off floating point underflow for each tasks
+taskCreateHookAdd( usrFppCreateHook )
 
 # Initialise the Gemini time system (1=master, 1=simulate, intPerSecond, intperTick, timeOffset)
 timeClockInit (0, 0, 60, 1, 0)
