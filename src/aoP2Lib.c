@@ -7523,20 +7523,6 @@ STATUS aoCtrlFileRead (
    printf ( "aoCtrlFileRead(): seeing scale factor = %f\n", *pSeeingGain );
 #endif
 
-   /* Skip the next line of comment */
-
-   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
-   {
-      printf (
-      "Failed to read the next line of comments from the AO init file %s\n",
-      pInitFileName );
-      fclose (pFile);
-      return (ERROR);
-   }
-
-#ifdef DEBUG
-   printf ( "aoCtrlFileRead(): %s\n", comment );
-#endif
 
    /* End - close and return */
 
