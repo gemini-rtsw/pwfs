@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.51 2001-07-18 03:19:14 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.52 2001-07-24 18:57:06 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -80,8 +80,6 @@ niri-dc	mbec/niri-dc
 gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
 #M	gnaacSrc-ppc-gem6t	Niri temporary backup for ppc target
 gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
-#M	seqexec	seqexec sequencer (temporary)
-seqexec	seqexec
 #M	vaioc	IOC vaio
 vaioc	mbec/vaioc
 #M	comcon	Components Controller
@@ -93,6 +91,10 @@ niri	niri
 gn-4	niri/gn-4
 #M	niricnfg	NIRI configurator tool
 niricnfg	niri/niricnfg
+
+#D	seqexec	sequence executor
+#M	seqexec	sequence executor
+seqexec	seqexec
 
 #D	gmos	Gemini GMOS Software (HIA/UKATC)
 #M	gmos	Gemini GMOS Software (HIA/UKATC)
