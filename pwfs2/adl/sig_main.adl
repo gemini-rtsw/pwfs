@@ -7,10 +7,10 @@ display {
 	mnrv="4"
 	ndyng="1"
 	npc="20"
-	nstr="145"
+	nstr="148"
 	ndynamic="16"
 	nplot="0"
-	nrd="11"
+	nrd="12"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -19,27 +19,27 @@ display {
 		x="328"
 		y="298"
 		width="754"
-		height="691"
+		height="723"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5770"
-	nwords_sta="236"
+	nwords_dspy="5994"
+	nwords_sta="248"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2876"
-	osta="2640"
-	odynamic="2936"
-	oplot="3998"
-	ord="3998"
-	oes="5758"
-	okd="5758"
-	opd="5770"
-	opo="5770"
+	odyng="2940"
+	osta="2692"
+	odynamic="3000"
+	oplot="4062"
+	ord="4062"
+	oes="5982"
+	okd="5982"
+	opd="5994"
+	opo="5994"
 	opc="68"
 	ostr="314"
-	ocmap="2640"
-	ocrules="2640"
+	ocmap="2692"
+	ocrules="2692"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -65,7 +65,7 @@ display {
 "rectangle" {
 	object {
 		x="9"
-		y="491"
+		y="523"
 		width="737"
 		height="189"
 		groupid="0"
@@ -98,14 +98,14 @@ display {
 		x="9"
 		y="53"
 		width="737"
-		height="433"
+		height="465"
 		groupid="0"
 	}
 }
 "text" {
 	object {
 		x="17"
-		y="143"
+		y="138"
 		width="365"
 		height="19"
 		groupid="0"
@@ -116,7 +116,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="83"
+		y="84"
 		width="218"
 		height="21"
 		groupid="0"
@@ -127,7 +127,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="113"
+		y="111"
 		width="229"
 		height="20"
 		groupid="0"
@@ -138,7 +138,7 @@ display {
 "text" {
 	object {
 		x="16"
-		y="499"
+		y="531"
 		width="335"
 		height="22"
 		groupid="0"
@@ -149,7 +149,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="169"
+		y="166"
 		width="370"
 		height="19"
 		groupid="0"
@@ -160,7 +160,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="196"
+		y="193"
 		width="382"
 		height="19"
 		groupid="0"
@@ -171,7 +171,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="355"
+		y="358"
 		width="365"
 		height="19"
 		groupid="0"
@@ -182,7 +182,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="222"
+		y="221"
 		width="372"
 		height="19"
 		groupid="0"
@@ -193,7 +193,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="382"
+		y="385"
 		width="365"
 		height="19"
 		groupid="0"
@@ -204,7 +204,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="408"
+		y="440"
 		width="364"
 		height="19"
 		groupid="0"
@@ -215,7 +215,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="435"
+		y="467"
 		width="387"
 		height="19"
 		groupid="0"
@@ -226,7 +226,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="249"
+		y="248"
 		width="371"
 		height="19"
 		groupid="0"
@@ -248,7 +248,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="302"
+		y="303"
 		width="364"
 		height="19"
 		groupid="0"
@@ -259,7 +259,7 @@ display {
 "text" {
 	object {
 		x="17"
-		y="462"
+		y="495"
 		width="385"
 		height="19"
 		groupid="0"
@@ -270,12 +270,23 @@ display {
 "text" {
 	object {
 		x="17"
-		y="329"
+		y="330"
 		width="363"
 		height="19"
 		groupid="0"
 	}
 	textix="RMS ... ... ... ... ... ... ... :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="17"
+		y="412"
+		width="365"
+		height="19"
+		groupid="0"
+	}
+	textix="GAINS and BUTTERWORTH FILTERS ..:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -469,7 +480,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="164"
+		y="165"
 		width="355"
 		height="21"
 		groupid="0"
@@ -515,7 +526,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="190"
+		y="192"
 		width="355"
 		height="21"
 		groupid="0"
@@ -560,8 +571,8 @@ display {
 }
 "text update" {
 	object {
-		x="382"
-		y="350"
+		x="381"
+		y="354"
 		width="149"
 		height="21"
 		groupid="0"
@@ -607,7 +618,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="217"
+		y="219"
 		width="355"
 		height="21"
 		groupid="0"
@@ -652,8 +663,8 @@ display {
 }
 "text update" {
 	object {
-		x="382"
-		y="376"
+		x="381"
+		y="381"
 		width="355"
 		height="21"
 		groupid="0"
@@ -698,8 +709,8 @@ display {
 }
 "text update" {
 	object {
-		x="382"
-		y="428"
+		x="381"
+		y="461"
 		width="355"
 		height="22"
 		groupid="0"
@@ -744,8 +755,8 @@ display {
 }
 "text update" {
 	object {
-		x="382"
-		y="403"
+		x="381"
+		y="435"
 		width="355"
 		height="21"
 		groupid="0"
@@ -839,7 +850,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="243"
+		y="246"
 		width="355"
 		height="21"
 		groupid="0"
@@ -885,7 +896,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="269"
+		y="273"
 		width="355"
 		height="21"
 		groupid="0"
@@ -931,7 +942,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="296"
+		y="300"
 		width="355"
 		height="21"
 		groupid="0"
@@ -976,8 +987,8 @@ display {
 }
 "text update" {
 	object {
-		x="382"
-		y="456"
+		x="381"
+		y="489"
 		width="355"
 		height="21"
 		groupid="0"
@@ -1023,7 +1034,7 @@ display {
 "text update" {
 	object {
 		x="381"
-		y="323"
+		y="327"
 		width="355"
 		height="21"
 		groupid="0"
@@ -1069,7 +1080,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="555"
+		y="587"
 		width="329"
 		height="24"
 		groupid="0"
@@ -1203,7 +1214,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="527"
+		y="559"
 		width="329"
 		height="21"
 		groupid="0"
@@ -1337,7 +1348,7 @@ display {
 "related display" {
 	object {
 		x="367"
-		y="616"
+		y="648"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1471,7 +1482,7 @@ display {
 "related display" {
 	object {
 		x="367"
-		y="647"
+		y="679"
 		width="330"
 		height="23"
 		groupid="0"
@@ -1605,7 +1616,7 @@ display {
 "related display" {
 	object {
 		x="367"
-		y="525"
+		y="557"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1739,7 +1750,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="616"
+		y="648"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1873,7 +1884,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="587"
+		y="619"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2007,7 +2018,7 @@ display {
 "related display" {
 	object {
 		x="367"
-		y="557"
+		y="589"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2141,7 +2152,7 @@ display {
 "related display" {
 	object {
 		x="367"
-		y="587"
+		y="619"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2275,7 +2286,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="648"
+		y="680"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2409,7 +2420,7 @@ display {
 "related display" {
 	object {
 		x="536"
-		y="349"
+		y="353"
 		width="201"
 		height="22"
 		groupid="0"
@@ -2418,6 +2429,140 @@ display {
 	display[0] {
 		label="PER SUBAPERTURE"
 		name="showThreshDiagP2.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="MORE"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="381"
+		y="407"
+		width="354"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="GAINS AND BUTTERWOTH FILTERS"
+		name="showGain.dl"
 		args="top=$(top),sensor=$(sensor)"
 	}
 	display[1] {

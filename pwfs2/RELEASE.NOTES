@@ -234,3 +234,9 @@ V4-0 27 March 2002 CB:
   - aoP2Lib.c: aoTotalThresholdCompute(): comment out ERROR_SET if N>2
 
 dev equivalent to V4-0
+  - add fgTipGain, fgTiltGain, fgFocusGain, cfTipTiltBw, cfFocusBw SIR records
+  - split butterwoth filter in two one for probe arme guiding (TT only) and the
+    second one for focus M2 guiding
+  - adjust focus scale factor according to the exposure time
+  - update default parameters
+  - add bancom card status in main screen

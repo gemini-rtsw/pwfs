@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="10"
-	nstr="46"
-	ndynamic="9"
+	npc="11"
+	nstr="54"
+	ndynamic="10"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="704"
-		height="239"
+		height="268"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="1764"
-	nwords_sta="560"
+	nwords_dspy="2086"
+	nwords_sta="572"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1140"
-	osta="580"
-	odynamic="1140"
-	oplot="1752"
-	ord="1752"
-	oes="1752"
-	okd="1752"
-	opd="1764"
-	opo="1764"
+	odyng="1396"
+	osta="824"
+	odynamic="1396"
+	oplot="2074"
+	ord="2074"
+	oes="2074"
+	okd="2074"
+	opd="2086"
+	opo="2086"
 	opc="68"
-	ostr="192"
-	ocmap="580"
-	ocrules="580"
+	ostr="206"
+	ocmap="824"
+	ocrules="824"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="6"
 		y="38"
 		width="690"
-		height="191"
+		height="216"
 		groupid="0"
 	}
 }
@@ -213,35 +213,46 @@ display {
 }
 "text" {
 	object {
-		x="18"
-		y="198"
-		width="278"
+		x="13"
+		y="197"
+		width="565"
 		height="14"
 		groupid="0"
 	}
-	textix="Butterworth cutoff frequency :"
+	textix="Tip Tilt Butterworth cutoff frequency for probe arm guiding:"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="408"
-		y="192"
-		width="21"
-		height="27"
+		x="664"
+		y="197"
+		width="30"
+		height="14"
 		groupid="0"
 	}
-	textix="%"
+	textix="Hz"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="431"
-		y="198"
-		width="232"
+		x="13"
+		y="226"
+		width="565"
 		height="14"
 		groupid="0"
 	}
-	textix="of the sampling frequency"
+	textix="Focus Butterworth cutoff frequency for focus M2 guiding ...:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="664"
+		y="226"
+		width="30"
+		height="14"
+		groupid="0"
+	}
+	textix="Hz"
 	align="horiz. left"
 }
 "message button" {
@@ -620,14 +631,59 @@ display {
 }
 "text entry" {
 	object {
-		x="299"
-		y="195"
+		x="556"
+		y="194"
 		width="98"
 		height="20"
 		groupid="0"
 	}
 	control {
 		chan="$(top)detSigInitBw.A"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitBw.VAL"
+		rulechan[1] = "$(top)detSigInitBw.VAL"
+		rulechan[2] = "$(top)detSigInitBw.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitBw"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="556"
+		y="223"
+		width="98"
+		height="20"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitBw.B"
 		clr="0"
 		bclr="6"
 		label="none"

@@ -216,7 +216,7 @@ double angleWithM1=0.0;
 double angleWithM2=0.0;
 
 double sampleData[5][3];
-double coeffData[5];
+double coeffData[5][3];
 
 AST_ZP_MODEL_ID_STRUCT astigModel;
 SEM_ID  accessAstigModel=NULL;
@@ -387,7 +387,7 @@ double newDfilter
    /* multiply samples by coefficients and accumulate */
 
    for(i=0; i < 5; i++)
-      sum += sampleData[i][Id]*coeffData[i];
+      sum += sampleData[i][Id]*coeffData[i][Id];
 
    /* ripple samples ready for next call */
 
