@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.13 2001-04-04 04:05:57 gemvx Exp $"};
+   "$Id: detControl.c,v 1.14 2001-08-08 20:07:16 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   15 Jun 2001: CB - reject observe command if exposure time < 0.01 and no
+ *                     binning
  *   02 Apr 2001: CB - Add adc0, adc1, adc2, adc3 sir records
  *   05 Mar 2001: CB - Fix bug dhsQlRate when only 1 frame
  *   20 Feb 2001: CB - add detDhsConnected flag and dhsCon sir record
@@ -4421,6 +4423,15 @@ uint32 detObserveStart
          return (errorNumber);
       }
 
+      if ( (exposure < 0.01 ) && (aoCcdId->binningFlag == FALSE ) )
+      {
+         ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
+                     "Invalid exposure time %f seconds if no binning",
+                     ERROR_LOG_NOW, exposure);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+
       obsId->exposureTime = exposure;
       aoCbImId->exposureTime = exposure;
       aoCbCtrlId->exposureTime = exposure;
@@ -4989,11 +5000,14 @@ uint32 detObserveStart
 
       /* Get a timestamp to record the time at which the observation started. */
 
+/*
       if ( timeNow (&(obsId->rawtStart)) != OK )
       {
          ERROR_SET (0, "Failed to get time stamp at observation start", 
                     ERROR_LOG_NOW);
       }
+*/
+
 
 #ifdef DEBUG
       printf ("detObserveStart: Time at observation start: %f seconds.\n", 
@@ -11340,11 +11354,13 @@ void detObserveEnd
     * Failing to cancel this is not a serious error.
     */
 
+/*
    if ( timeNow (&(obsId->rawtEnd)) != OK )
    {
       ERROR_SET (0, "Failed to get time stamp at observation end", 
                  ERROR_LOG_NOW);
    }
+*/
 
 #ifdef DEBUG
    printf ("detObserveEnd: Time at observation end: %f seconds.\n", 

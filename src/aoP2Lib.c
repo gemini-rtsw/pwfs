@@ -1944,11 +1944,14 @@ STATUS aoGlobalGuideAndError (
       *(pErrorsVect + 2) = 0.0;
    }
 
+/*
    if ( timeNow (pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
       return (ERROR);
    };
+*/
+
  
    if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
                           pErrorsVect, pTime) != OK )
@@ -2145,11 +2148,15 @@ STATUS aoGlobalGuide (
       *(pErrorsVect + 2) = 0.0;
    }
 
+
+/*
    if ( timeNow (pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
       return (ERROR);
    };
+*/
+
  
    if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
                           pErrorsVect, pTime) != OK )
@@ -3014,11 +3021,14 @@ STATUS aoGuideAndFocus (
       *pWfsStatus = AO_SH_OFF;
    }
 
+
+/*
    if ( timeNow (pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
       return (ERROR);
    };
+*/
  
    if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
                           pErrorsVect, pTime) != OK )
@@ -3494,11 +3504,15 @@ STATUS aoGuideAndFocusAndError (
       *pWfsStatus = AO_SH_OFF;
    }
 
+
+/*
    if ( timeNow (pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
       return (ERROR);
    };
+*/
+
  
    if ( writeWfsToSynchro(aoCtrlId, pZernikesVect, pZernikesVectAfterRot, 
                           pErrorsVect, pTime) != OK )
