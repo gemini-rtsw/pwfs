@@ -73,6 +73,7 @@
  *   aoModFocFileRead () - Read focus zero point model from model file
  * 
  *INDENT-OFF*
+ *   21 Jan 2002: CB - Add wfsStatus to writeWfsToTcs()
  *   21 Dec 2001: CB - Add automatic initialization of zero point from par file
  *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
  *   28 Aug 2001: CB - Found some non initialized variables and fixed it
@@ -4372,7 +4373,7 @@ STATUS aoModeCompute (
          };
 
          if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect, 
-                            pTime) != OK )
+                            pTime, pWfsStatus) != OK )
          {
             ERROR_SET ( 0, "Failed to write data to the TCS", ERROR_LOG_SAVE);
             return (ERROR);
@@ -5840,7 +5841,7 @@ STATUS aoModeAnalyze (
    };
 
    if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect, 
-                      pTime) != OK )
+                      pTime, pWfsStatus) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the TCS", ERROR_LOG_SAVE);
       return (ERROR);

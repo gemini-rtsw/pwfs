@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.27 2002-01-18 01:27:27 cboyer Exp $"};
+   "$Id: detControl.c,v 1.28 2002-02-08 03:12:12 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,7 +31,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- *   09 Jan 2001: CB - Add detPowerOn
+ *   07 Feb 2002: CB - Reset signal processing when detInit and detReset and 
+ *                     reject observe command if signal processing not 
+ *                     initialized
+ *   09 Jan 2002: CB - Add detPowerOn
  *   21 Dec 2001: CB - reject observe command if outOptions=dhs and dhs is not
  *                     connected
  *                   - detDhsInit is now started from detControl
@@ -5064,6 +5067,22 @@ uint32 detObserveStart
       }
 
       /* 
+       * Reject the command, if signal processing is not initialized and 
+       * sigMode is not set to one of the following mode: AO_MODE_NONE 
+       */
+
+      if ( ( obsId->aoCtrlId->initFlag == FALSE ) &&
+           (obsId->sigMode != AO_MODE_NONE) )
+      {
+         ERROR_SET (S_detControl_BAD_ATTRIBUTE,
+         "Signal processing not init, use the init command for the signal processing first",
+         ERROR_LOG_NOW);
+         errorNumber = S_detControl_BAD_ATTRIBUTE;
+         return (errorNumber);
+      }
+      
+
+      /* 
        * Init some parameters in the case of the sequence closed loop
        */
 
@@ -6828,6 +6847,53 @@ uint32 detInit
    {
       simulate = FALSE;
    }
+   
+   /*
+    * Reset signal processing 
+    */
+
+   obsId->aoCtrlId->initFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoCtrlInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->darkInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->flatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->intMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->contMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pAoContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->fgContMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pAoFgContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+   }
 
    /*
     * If an SDSU context structure already exists, delete it.
@@ -7494,6 +7560,53 @@ uint32 detReset
    /* Set to FLASE the temperature Flag */
 
    readTempReadyFlag = FALSE ;
+
+   /*
+    * Reset the signal processing
+    */
+
+   obsId->aoCtrlId->initFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoCtrlInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->darkInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->flatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->intMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
+       == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->contMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pAoContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+   }
+   obsId->aoCtrlId->fgContMatInitFlag = FALSE;
+   if (epToVxPipeWrite (NULL, "Not initialized",
+                        obsId->pAoFgContMatInitContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+   }
 
    /*
     * Reset the SDSU hardware.

@@ -194,40 +194,21 @@ typedef struct /* add 26May to be similar to SCS */
 
 typedef struct
 {
-	commandBlock	page0;
-	statusBlock	page1;
-	diagBlock	testResults;
-	float		pad1[1024];
-	eventBlock	eventData;
+	commandBlock	page0;         /* page 0 */
+	statusBlock	page1;         /* page 1 */
+	diagBlock	testResults;   /* page 2 */
+	float		pad1[1024];    /* page 3, 4, 5, 6*/
+	eventBlock	eventData;     /* eventData + pad2 = page 7 */
 	float		pad2[246];
-	wfs		pwfs1;
+	wfs		pwfs1;         /* pwfs1 + pad3 = page 8 */
 	float		pad3[242];
-	wfs		pwfs2;
+	wfs		pwfs2;         /* pwfs2 + pad4 = page 9 */
 	float		pad4[242];
-	wfs		oiwfs;
+	wfs		oiwfs;         /* oiwfs + pad5 = page 10 */
 	float		pad5[242];
-	wfs		gaos;
+	wfs		gaos;          /* gaos + pad6 = page 11 */
 	float		pad6[242];
-	wfs		gyro;
-        float           pad7[242];     /* add 26May to be similar to SCS */
-        m2EngData       m2Eng;         /* add 26May to be similar to SCS */
+	wfs		gyro;          /* gyro + pad7 = page 12 */
+        float           pad7[242];     
+        m2EngData       m2Eng;         /* page 13 */
 }memMap;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
