@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.4 1999-06-23 08:03:33 cboyer Exp $"};
+   "$Id: detControl.c,v 1.5 1999-06-29 22:55:10 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -35,6 +35,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   21 June 1999: CB - Modify detSigInit to add a new parameter, 
+ *                      number of used subaperture * 2
  *   21 Apr 1999: CB - Simplified version for PWFS1 only
  *INDENT-ON*
  *-
@@ -207,6 +209,9 @@ LOCAL uint32   detSigInitGain (const char * pWfsName,
                                const char * pRecordPrefix, 
                                CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                                SDSU_ID sdsuId, OBS_ID obsId);
+LOCAL uint32   detSigInitSH (const char * pWfsName, const char * pRecordPrefix, 
+                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                             SDSU_ID sdsuId, OBS_ID obsId);
 LOCAL uint32   detSigUpdate (const char * pWfsName, 
                              const char * pRecordPrefix, 
                              CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
@@ -1120,6 +1125,15 @@ STATUS   detControl
             errorNumber = 
             detSigInitGain (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
                             sdsuId, obsId);
+         }
+         else if (commandNumber == DET_CONTROL_CMD_SIGINITSH)
+         {
+
+            /* Initialise WFS geometry for signal processing */
+
+            errorNumber = 
+            detSigInitSH (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
+                          sdsuId, obsId);
          }
          else if (commandNumber == DET_CONTROL_CMD_SIGMODE)
          {
@@ -5827,8 +5841,10 @@ uint32 detGeometry
 
    if ( (!sdsuId->simulate) && (packetSize > 0) )
    {
+      /*nPackets = 
+      (int) ceil ( (double) (nPixels * outputs) / (double) packetSize );*/
       nPackets = 
-      (int) ceil ( (double) (nPixels * outputs) / (double) packetSize );
+      (int) ceil ( (double) (nPixels) / (double) packetSize );
    }
    else
    {
@@ -6946,6 +6962,7 @@ uint32 detSigInit
    double       tiltGain;
    double       threshold;
    uint32       modeNb;
+   uint32       centroidNb;
 
    /*
     * Initialise the error number and get the attributes provided with this 
@@ -6966,6 +6983,7 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&threshold);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11, pMatFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12, (char *)&modeNb);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, (char *)&centroidNb);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -7042,7 +7060,8 @@ uint32 detSigInit
                    pFullRefFileName ,
                    threshold,
                    pFullMatFileName,
-                   modeNb) == ERROR )
+                   modeNb,
+                   centroidNb) == ERROR )
    {
       ERROR_SET (0, "Failed to update OSP context", 
                  ERROR_LOG_NOW);
@@ -7053,6 +7072,143 @@ uint32 detSigInit
    return (errorNumber);
 }
 
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitSH
+ *
+ *   INVOCATION:
+ *   detSigInitSH (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, 
+ *                 sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pWfsName      (const char *)    Name of wavefront sensor p1
+ *   (>) pRecordPrefix (const char *)    Record name prefix
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitSH command
+ *
+ *   DESCRIPTION:
+ *   This function initialises the signal processing.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None. (The function needs to be reentrant)
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitSH
+   (
+   const char *    pWfsName,      /* Name of wavefront sensor.                */
+   const char *    pRecordPrefix, /* Record name prefix.                      */
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32         errorNumber;    /* Error number reported by task.           */
+
+   uint32       xstart;
+   uint32       ystart;
+   uint32       xraster;
+   uint32       yraster;
+   uint32       xspace;
+   uint32       yspace;
+   uint32       xsubap;
+   uint32       ysubap;
+
+   /*
+    * Initialise the error number and get the attributes provided with this 
+    * command.
+    */
+
+   errorNumber = 0;
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&xstart);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&ystart);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&xraster);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&yraster);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&xspace);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&yspace);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&xsubap);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&ysubap);
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * The command can only be used when an observation is not in progress.
+    */
+
+   if ( obsId->observing )
+   {
+      ERROR_SET (S_detControl_BUSY, 
+         "Observation in progress - abort observation and try again",
+         ERROR_LOG_NOW);
+      errorNumber = S_detControl_BUSY;
+      return (errorNumber);
+   }
+
+   /*
+    * Update the signal processing context structure.
+    */
+
+   if ( obsId->ospAOContext == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Signal processing context not initialised", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( ospUpdateGeometrySH (obsId->ospAOContext,
+                             xstart, ystart,
+                             xraster , yraster , 
+                             xspace , yspace ,
+                             xsubap, ysubap) == ERROR )
+   {
+      ERROR_SET (0, "Failed to update OSP context", 
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   return (errorNumber);
+}
 /* -------------------------------------------------------------------------- */
 
 /*+

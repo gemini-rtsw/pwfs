@@ -290,6 +290,7 @@ enum
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
    DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
    DET_CONTROL_CMD_SIGINITGAIN,/* Initialise signal processing gains.         */
+   DET_CONTROL_CMD_SIGINITSH,  /* Initialise WFS geometry for signal process. */
    DET_CONTROL_CMD_SIGMODE,    /* Configure signal processing.                */
    DET_CONTROL_CMD_SIGUPDATE,  /* Update signal processing gains in closed    */
                                /* loop                                        */

@@ -2231,7 +2231,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  *                 double angle , double refX , double refY ,
  *                 double guideThreshold , double tipGain , double tiltGain ,
  *                 char *pRefFileName , double threshold ,
- *                 char *pMatFileName , int modeNb )
+ *                 char *pMatFileName , int modeNb , int centroidNb )
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
@@ -2246,6 +2246,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * (>) treshold (double) threshold for centroid computation
  * (>) pMatFileName (char *) Name of file containing the control matrix
  * (>) modeNb (int) Number of modes to correct
+ * (>) centroidNb (int) Number of centroids information used to correct
  *
  * FUNCTION VALUE:
  * (int) return value OK or ERROR
@@ -2255,6 +2256,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  *
  * DESCRIPTION:
  * Added by cb - 23April 1999
+ * Modified by cb - 22 June 1999 - add centroidNb
  *
  * EXTERNAL VARIABLES:
  * None
@@ -2280,7 +2282,8 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 char *pRefFileName  , 
                 double threshold ,
                 char *pMatFileName ,
-                int modeNb )
+                int modeNb ,
+                int centroidNb )
 {
 
 int status ;
@@ -2317,6 +2320,7 @@ wfsSpecific->tipscale = (float)tipGain ;
 wfsSpecific->tiltscale = (float)tiltGain ; 
 wfsSpecific->thresh = (float)threshold ; 
 wfsSpecific->np = modeNb ; 
+wfsSpecific->mp = centroidNb ; 
 
 /********************************************************* Init Dark buffer ***/
 
@@ -2516,6 +2520,136 @@ for ( i = 1 ; i < OSP_ZMAX ; i++ )
 for ( i = 1 ; i < OSP_ZMAX ; i++ )
     printf ( "gain[%d]=%f\n" , i , wfsSpecific->aoscalevect[i]) ;
 
+
+/******************************************************************************/
+
+return ( status ) ;
+
+}
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospUpdateGeometrySH
+ *
+ * INVOCATION:
+ * int ospUpdateGeometrySH( struct OSP_CONTEXT * wfsSpecific,
+ *                          int xstart , int ystart ,
+ *                          int xraster , int yraster ,
+ *                          int xspace , int yspace ,
+ *                          int xsubap , int ysubap )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
+ * (>) xstart (int) ....
+ * (>) ...
+ *
+ * FUNCTION VALUE:
+ * (int) return value OK or ERROR
+ *
+ * PURPOSE:
+ * To update SH parameters
+ *
+ * DESCRIPTION:
+ * Added by cb - 22 June 1999
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
+
+ int ospUpdateGeometrySH( struct OSP_CONTEXT * wfsSpecific,
+                          int xstart , int ystart ,
+                          int xraster , int yraster ,
+                          int xspace , int yspace ,
+                          int xsubap , int ysubap )
+{
+
+int status ;
+
+/*********************************************************** Initialization ***/
+
+status = OK ;
+
+/***************************************** Check wfsSpecific is initialized ***/
+
+if ( wfsSpecific == NULL )
+{
+   fprintf ( stderr, "OSP context structure not initialized\n" ) ;
+   fprintf ( stderr, "...fatal error in ospUpdateGeometrySH\n" ) ;
+   status = ERROR ;
+   return ( status ) ;
+}
+	
+/******************************************************* Update wfsSpecific ***/
+
+wfsSpecific->defxstart = xstart;
+wfsSpecific->ospxstart = xstart;
+
+wfsSpecific->defystart = ystart;
+wfsSpecific->ospystart = ystart;
+
+printf ( "xstart=%d, ystart=%d\n" , wfsSpecific->ospxstart, wfsSpecific->ospystart );
+
+wfsSpecific->defxraster = xraster;
+wfsSpecific->ospxraster = xraster;
+
+if ( xraster != yraster )
+{
+    fprintf ( stderr, "yraster assumed equal to xraster\n" ) ;
+    wfsSpecific->defyraster = xraster;
+    wfsSpecific->ospyraster = xraster;
+    status = ERROR;
+}
+else
+{
+   wfsSpecific->defyraster = yraster;
+   wfsSpecific->ospyraster = yraster;
+}
+
+printf ( "xraster=%d, yraster=%d\n" , wfsSpecific->ospxraster, wfsSpecific->ospyraster );
+
+wfsSpecific->side = xraster*wfsSpecific->ospxbin;
+printf ( "side=%d\n" , wfsSpecific->side );
+
+wfsSpecific->defxspace = xspace;
+wfsSpecific->ospxspace = xspace;
+
+wfsSpecific->defyspace = yspace;
+wfsSpecific->ospyspace = yspace;
+
+printf ( "xspace=%d, yspace=%d\n" , wfsSpecific->ospxspace, wfsSpecific->ospyspace );
+
+wfsSpecific->defxsubap = xsubap;
+wfsSpecific->ospxsubap = xsubap;
+
+wfsSpecific->defysubap = ysubap;
+wfsSpecific->ospysubap = ysubap;
+
+printf ( "xsubap=%d, ysubap=%d\n" , wfsSpecific->ospxsubap, wfsSpecific->ospysubap );
+if ( wfsSpecific->framesizeflag == 1 )
+{
+   wfsSpecific->xframesize = wfsSpecific->xarraysize;
+   wfsSpecific->yframesize = wfsSpecific->yarraysize;
+}
+else
+{
+   wfsSpecific->xframesize = (wfsSpecific->ospxsubap * 2 *
+                              wfsSpecific->ospxraster * wfsSpecific->ospxbin);
+
+   wfsSpecific->yframesize= (wfsSpecific->ospysubap * wfsSpecific->sectors/2
+                             *wfsSpecific->ospyraster *
+                              wfsSpecific->ospybin);
+}
 
 /******************************************************************************/
 
@@ -4689,8 +4823,8 @@ int ospAoCor ( float *buffp ,
 
        if ( wfsSpecific->osplight == 0 )
        {
-          /*printf ( "ospAoCor() : osplight=%d, apply control matrix...\n" , 
-                   wfsSpecific->osplight ) ;*/
+          printf ( "ospAoCor() : osplight=%d, apply control matrix...\n" , 
+                   wfsSpecific->osplight ) ;
        	  ospApplyControlMatrix ( wfsSpecific->c,wfsSpecific->z,wfsSpecific->s,
                                   wfsSpecific->np,wfsSpecific->mp);
 
@@ -4821,8 +4955,8 @@ int ospAoAnalyze ( struct OSP_CONTEXT *wfsSpecific )
 
     if ( wfsSpecific->osplight == 0 )
     {
-       /*printf ( "ospAoAnalyze() : osplight=%d, apply control matrix...\n" , 
-                wfsSpecific->osplight ) ;*/
+       printf ( "ospAoAnalyze() : osplight=%d, apply control matrix...\n" , 
+                wfsSpecific->osplight ) ;
        ospApplyControlMatrix ( wfsSpecific->c,wfsSpecific->z,wfsSpecific->s,
                                wfsSpecific->np,wfsSpecific->mp);
 
@@ -7231,7 +7365,7 @@ int ospFGCentroidWrapper ( float * buffp,
     /* Threshold and centroid */
     if ( wfsSpecific->thresh < 0 )
     {
-       /*printf ( "Threshold negative\n" ) ;*/
+       printf ( "Threshold negative\n" ) ;
        for (j = 1; j <= wfsSpecific->centres[0]; j=j+4) 
        {
            x0=(int)(wfsSpecific->centres[j]);
@@ -7242,9 +7376,9 @@ int ospFGCentroidWrapper ( float * buffp,
            corner[1] = *(index00 + (wfsSpecific->xframesize)*jump) ;
            corner[2] = *(index00 + jump) ;
            corner[3] = *(index00 + (wfsSpecific->xframesize)*jump + jump) ;
-           /*printf ( 
+           printf ( 
            "suba=%d, corner[0]=%f, corner[1]=%f, corner[2]=%f, corner[3]=%f\n" ,
-            j , corner[0] , corner[1] , corner[2] , corner[3] ) ;*/
+            j , corner[0] , corner[1] , corner[2] , corner[3] ) ;
 
            bigCorner = 0.0 ;
            index = 0 ;
@@ -7266,7 +7400,7 @@ int ospFGCentroidWrapper ( float * buffp,
                 }
            }
            threshold /= 3.0 ;
-           /*printf ( "threshold=%f\n" , threshold ) ;*/
+           printf ( "threshold=%f\n" , threshold ) ;
 
 	   itotal=0;
 	   ireptotal=0;
@@ -7294,6 +7428,8 @@ int ospFGCentroidWrapper ( float * buffp,
 	   }
 	   if(itotal > 0)
 	   {
+               printf ( "mu1x=%f, mu1y=%f, itotal=%f, xdiff=%f, ydiff=%f\n" , 
+                        mu1x, mu1y , itotal , xdiff, ydiff ) ;
 	       wfsSpecific->s[i] = (mu1x/itotal) - xdiff;
 	       wfsSpecific->s[i+1] = (mu1y/itotal) - ydiff;
 	       wfsSpecific->dssq[i] = 0.0;
@@ -7301,6 +7437,7 @@ int ospFGCentroidWrapper ( float * buffp,
 	   }
 	   else
 	   {
+               printf ( "no light for this subaperture\n" ) ;
                wfsSpecific->s[i] = 0.0;    /* new line */
                wfsSpecific->s[i+1] = 0.0;  /* new line */
 	       wfsSpecific->dssq[i] = OSP_NO_LIGHT;

@@ -267,9 +267,15 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 char *pRefFileName ,
                 double threshold ,
                 char *pMatFileName ,
-                int modeNb );
+                int modeNb ,
+                int centroidNb );
 int ospUpdateGain ( struct OSP_CONTEXT * wfsSpecific,
                     double *pGain ) ;
+int ospUpdateGeometrySH ( struct OSP_CONTEXT * wfsSpecific,
+                          int xstart , int ystart ,
+                          int xraster , int yraster ,
+                          int xspace , int yspace ,
+                          int xsubap , int ysubap ) ;
 struct OSP_HRCONTEXT * ospInitHr(char * hrwfsName);
 int /*STATUS*/ ospMeasure(float * buffp, struct OSP_CONTEXT * wfsSpecific);
 int /*STATUS*/ ospCalibrate(char * calibpath,struct OSP_CONTEXT * wfsSpecific);
