@@ -289,3 +289,5 @@ dev 9 January 2004 CB:
   - add coma rows in the Control Matrix for MK
   - Monitor coma
   - Clamp aO commands above a max threshold
+  - Threshold in real time: check average of the background is not < 0, if yes
+    force it to 0
