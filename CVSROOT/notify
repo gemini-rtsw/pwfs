@@ -10,4 +10,4 @@
 #
 # For example:
 #ALL mail %s -s "CVS notification"
-ajf mail %s -s "CVS notification"
+ALL mail ajf@gemini.edu -s "CVS notification"
