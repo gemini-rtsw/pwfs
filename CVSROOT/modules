@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.52 2001-07-24 18:57:06 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.53 2001-07-24 18:59:14 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -92,8 +92,8 @@ gn-4	niri/gn-4
 #M	niricnfg	NIRI configurator tool
 niricnfg	niri/niricnfg
 
-#D	seqexec	sequence executor
-#M	seqexec	sequence executor
+#D	seqexec	Sequence Executor
+#M	seqexec	Sequence Executor
 seqexec	seqexec
 
 #D	gmos	Gemini GMOS Software (HIA/UKATC)
