@@ -1,0 +1,26 @@
+#pvload parameter definition file for PWFS1
+
+#
+# Set up name of PWFS1 subsystem
+#
+string $(sadtop)name = "PWFS1 DC";
+
+#
+# Set up version of the software 
+#
+string $(sadtop)version = "dev";
+
+#
+#set default value for inPosition SIR record
+#
+
+int $(sadtop)inPosition = "1";
+
+#
+# Set default values for some SIR records
+#
+string $(sadtop)$(wfs)dataLabel = "NONE";
+
+int $(sadtop)$(wfs)nreads = "1";
+
+int $(sadtop)$(wfs)nresets = "0";

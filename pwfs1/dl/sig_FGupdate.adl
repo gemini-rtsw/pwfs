@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="16"
-	nstr="51"
+	nstr="49"
 	ndynamic="12"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2134"
+	nwords_dspy="2114"
 	nwords_sta="584"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1312"
-	osta="728"
-	odynamic="1312"
-	oplot="2122"
-	ord="2122"
-	oes="2122"
-	okd="2122"
-	opd="2134"
-	opo="2134"
+	odyng="1292"
+	osta="708"
+	odynamic="1292"
+	oplot="2102"
+	ord="2102"
+	oes="2102"
+	okd="2102"
+	opd="2114"
+	opo="2114"
 	opc="68"
 	ostr="296"
-	ocmap="728"
-	ocrules="728"
+	ocmap="708"
+	ocrules="708"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -214,7 +214,7 @@ display {
 "text" {
 	object {
 		x="13"
-		y="196"
+		y="195"
 		width="137"
 		height="16"
 		groupid="0"
@@ -225,7 +225,7 @@ display {
 "text" {
 	object {
 		x="13"
-		y="225"
+		y="223"
 		width="142"
 		height="16"
 		groupid="0"
@@ -235,8 +235,8 @@ display {
 }
 "text" {
 	object {
-		x="370"
-		y="198"
+		x="367"
+		y="196"
 		width="137"
 		height="14"
 		groupid="0"
@@ -246,19 +246,19 @@ display {
 }
 "text" {
 	object {
-		x="371"
-		y="214"
+		x="367"
+		y="217"
 		width="121"
 		height="14"
 		groupid="0"
 	}
-	textix="Focus boxcare"
+	textix="Focus sliding"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="370"
-		y="227"
+		x="367"
+		y="231"
 		width="133"
 		height="14"
 		groupid="0"
@@ -643,7 +643,7 @@ display {
 "text entry" {
 	object {
 		x="143"
-		y="193"
+		y="194"
 		width="110"
 		height="19"
 		groupid="0"
@@ -732,8 +732,8 @@ display {
 }
 "text entry" {
 	object {
-		x="517"
-		y="193"
+		x="514"
+		y="194"
 		width="98"
 		height="19"
 		groupid="0"
@@ -777,7 +777,7 @@ display {
 }
 "text entry" {
 	object {
-		x="517"
+		x="514"
 		y="221"
 		width="98"
 		height="20"

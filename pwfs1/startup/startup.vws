@@ -1,4 +1,4 @@
-# $Id: startup.vws,v 1.3 2000-01-05 20:57:23 cboyer Exp $
+# $Id: startup.vws,v 1.4 2000-06-21 01:28:43 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -11,7 +11,8 @@ shellPromptSet "pwfs1 > "
 tyBackspaceSet 0177
 
 # cd to application install directory (beware automounter problems)
-cd "$(iocpath)"
+#cd "$(iocpath)"
+cd "$(install)"
 pwd
 
 # The local file contains site-specific information
@@ -27,6 +28,7 @@ ld < $(epics)/base/bin/$(arch)/iocCore
 ld < $(epics)/base/bin/$(arch)/drvSup
 ld < $(epics)/base/bin/$(arch)/recSup
 ld < $(epics)/base/bin/$(arch)/devSup
+ld < $(epics)/extensions/bin/$(arch)/pvload
 
 # If using state programs, load the sequencer
 ld < $(epics)/base/bin/$(arch)/seq
@@ -44,7 +46,6 @@ ld < /gemini/cfitsio/cfitsio/bin/$(arch)/cFitsIo
 ld < /gemini/timelib/bin/$(arch)/timeSeq
 
 # Load the Gemini data handling libraries
-ld < $(version)/bin/$(arch)/strcasecmp
 ld < /gemini/dhs/external/lib/$(arch)/libers.o
 ld < /gemini/dhs/external/lib/$(arch)/libimp.o
 ld < /gemini/dhs/external/lib/$(arch)/libsds.o
@@ -62,7 +63,6 @@ ld < $(version)/bin/$(arch)/simpleLog
 ld < $(version)/bin/$(arch)/fpscr
 
 # Load test harness library if required
-ld < $(version)/bin/$(arch)/testHarness
 ld < $(version)/bin/$(arch)/testKit
 
 # Load sequences here
@@ -101,7 +101,7 @@ logErrorsToPipe = 1
 
 # start the impmaster
 # (Comment this out if the DHS is not being used)
-sp ImpMaster
+taskSpawn ( "ImpMaster", 100, 0x8, 20000, ImpMaster)
 
 # Initialise WFS system (processorNumber, redirectLog)
 wfsSysInit (0, logErrorsToPipe)
@@ -115,11 +115,11 @@ iocInit ("$(version)/data/resource.def")
 
 # Set all the "initialising" state to 2=BUSY directly (as it may take a while before
 # the PWFS1 is ready to update EPICS record - a deficiency in epToVxLib).
-dbpf "pwfs1:initialising.VAL","2"
+#dbpf "pwfs1:initialising.VAL","2"
+pvload "$(version)/data/pwfs1.pv","top=pwfs1:, sadtop=pwfs1:, wfs=dc:"
 
 # Initialise the database records not initialised by iocInit.
 epToVxCaInitRecords ()
-wfsWriteVersion ()
 
 # Enable console output from error library if required. This is sometimes
 # useful if error messages are being diverted to a log file and you wish to
@@ -155,6 +155,9 @@ taskSpawn ("wfsControlD",    98, 0x8, 5000, epToVxCarDaemon, "pwfs1:controlC")
 
 # Spawn CPU-resource monitoring task
 taskSpawn ("wfsResMonitor", 255, 0x8, 4000, wfsResourceMonitor, 10000000, 200000)
+
+# Do not allow to use D64 cycles on the bus
+*0xfd050128 &= 0xffffbfff
 
 # Start sequences
 seq &timeSeq, "sys=pwfs1:"

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: cicsLib.c,v 1.3 1999-06-10 03:56:23 cboyer Exp $"};
+   "$Id: cicsLib.c,v 1.4 2000-06-21 01:28:26 cboyer Exp $"};
 /*
 *   FILENAME
 *   -------- 
@@ -61,20 +61,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 *   06-Jul-1998: Database access functions extracted and modified
 *                for use with AGWPS.                                 (smb)
 */
-/* *INDENT-OFF* */
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.3  1998/10/14 09:30:56  cics
- * Andy Foster's comments included
- *
- * Revision 1.2  1998/10/01 14:30:43  cics
- * rcsid initialisation changed to prevent compiler warning
- *
- * Revision 1.1  1998/07/09 15:30:22  smb
- * Added to repository
- *
- */
-/* *INDENT-ON* */
 
 
 /* Global Constants */
@@ -141,51 +127,52 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * 
  * DEFICIENCIES:
  * I am informed (by Bret Goodrich) that the routine "recGblGetLinkValue" is
- * preferred to "dbGetField" by the EPICS community (because it can choose whether
- * to use Channel Access or Database Access according to circumstances),
+ * preferred to "dbGetField" by the EPICS community (because it can choose
+ * whether to use Channel Access or Database Access according to circumstances),
  * but "recGblGetLinkValue" is much more complicated, and I don't understand
  * its description in the "EPICS IOC Application Developers Guide".
  *
- * I am now informed (by Andy Foster several months later) that "recGblGetLinkValue"
- * is only usuable as part of EPICS record support, and that the Channel Access
- * function "ca_array_get" is the advertised public interface to EPICS.
+ * I am now informed (by Andy Foster several months later) that
+ * "recGblGetLinkValue" is only usuable as part of EPICS record support, and
+ * that the Channel Access function "ca_array_get" is the advertised public
+ * interface to EPICS.
  *
  * HISTORY (optional):
- * 13-Mar-1997  Original version as getDbInfo.		Janet Tvedt
- * 17-Jun-1997  Imported into cicsLib.				Steven Beard
- * 06-Jul-1998: CICS logging functions removed.		Steven Beard
+ * 13-Mar-1997  Original version as getDbInfo.       Janet Tvedt
+ * 17-Jun-1997  Imported into cicsLib.               Steven Beard
+ * 06-Jul-1998: CICS logging functions removed.      Steven Beard
  *-
  */
 
 long cicsDbGet(char *fieldName, char *errMess, unsigned short type, void *outVal)
 {
-	struct dbAddr addr;
-	long ret, options=0L, nRq = 1L;
-	STATUS status;
+   struct dbAddr addr;
+   long ret, options=0L, nRq = 1L;
+   STATUS status;
     
-	status = OK;
+   status = OK;
 
-	/* Get the address of the data structure  and handle any errors */
+   /* Get the address of the data structure  and handle any errors */
 
-	if( (ret = dbNameToAddr (fieldName,&addr)) != 0L)
-	{
-		status = ERROR;
-		sprintf(errMess, "dbNameToAddr error = %ld", ret);
-	}
+   if( (ret = dbNameToAddr (fieldName,&addr)) != 0L)
+   {
+      status = ERROR;
+      sprintf(errMess, "dbNameToAddr error = %ld", ret);
+   }
 
-	/* If address found, get the data.  Handle any errors. */
+   /* If address found, get the data.  Handle any errors. */
 
-	if( status == OK )
-	{
-		if( (ret = dbGetField(&addr, type, outVal, &options, &nRq, NULL)) != 0L)
-		{
-			status = ERROR;
-			sprintf(errMess, "dbGet error = %ld", ret);
-		}
-	}
+   if( status == OK )
+   {
+      if( (ret = dbGetField(&addr, type, outVal, &options, &nRq, NULL)) != 0L)
+      {
+         status = ERROR;
+         sprintf(errMess, "dbGet error = %ld", ret);
+      }
+   }
 
-	/* Return error status */
-	return status;
+   /* Return error status */
+   return status;
 }
 
 
@@ -239,46 +226,47 @@ long cicsDbGet(char *fieldName, char *errMess, unsigned short type, void *outVal
  * but "recGblGetLinkValue" is much more complicated, and I don't understand
  * its description in the "EPICS IOC Application Developers Guide".
  *
- * I am now informed (by Andy Foster several months later) that "recGblPutLinkValue"
- * is only usuable as part of EPICS record support, and that the Channel Access
- * function "ca_array_put" is the advertised public interface to EPICS.
+ * I am now informed (by Andy Foster several months later) that
+ * "recGblPutLinkValue" is only usuable as part of EPICS record support, and
+ * that the Channel Access function "ca_array_put" is the advertised public
+ * interface to EPICS.
  *
  * HISTORY (optional):
- * 19-Mar-1997  Original version as putDbInfo.			Janet Tvedt
- * 17-Jun-1997  Imported into cicsLib					Steven Beard
- * 06-Jul-1998: CICS logging functions removed.			Steven Beard
+ * 19-Mar-1997  Original version as putDbInfo.      Janet Tvedt
+ * 17-Jun-1997  Imported into cicsLib               Steven Beard
+ * 06-Jul-1998: CICS logging functions removed.     Steven Beard
  *-
  */
 
 
 long cicsDbPut(char *fieldName, char *errMess, unsigned short type, void *outVal)
 {
-	struct dbAddr addr;
-	long ret, nRq = 1L;
-	STATUS status;
+   struct dbAddr addr;
+   long ret, nRq = 1L;
+   STATUS status;
        
-	status = OK;
+   status = OK;
 
-	/* Get the address of the data structure  and handle any errors */
+   /* Get the address of the data structure  and handle any errors */
 
-	if( (ret = dbNameToAddr (fieldName,&addr)) != 0L)
-	{
-		status = ERROR;
-		sprintf(errMess, "dbNameToAddr error = %ld", ret);
+   if( (ret = dbNameToAddr (fieldName,&addr)) != 0L)
+   {
+      status = ERROR;
+      sprintf(errMess, "dbNameToAddr error = %ld", ret);
 
-	}
+   }
 
-	/* If address found, write the data.  Handle any errors. */
+   /* If address found, write the data.  Handle any errors. */
 
-	if( status == OK )
-	{
-		if( (ret = dbPutField(&addr, type, outVal, nRq)) != 0L)
-		{
-			status = ERROR;
-			sprintf(errMess, "dbPutField error = %ld", ret);
-		}
-	}
+   if( status == OK )
+   {
+      if( (ret = dbPutField(&addr, type, outVal, nRq)) != 0L)
+      {
+         status = ERROR;
+         sprintf(errMess, "dbPutField error = %ld", ret);
+      }
+   }
 
-	/* Return error status */
-	return status;
+   /* Return error status */
+   return status;
 }

@@ -14,6 +14,9 @@
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1999/06/10 03:56:49  cboyer
+ * Simplified version for PWFS1 only
+ *
  * Revision 1.8  1998/12/07 11:17:52  cics
  * Removed obsolete and unmanageable COPYRIGHT statement.
  *
@@ -59,7 +62,7 @@
 /* defines */
 
 #ifndef	TOP
-#define	TOP	"pwfs1:"						/* Top level prefix for all EPICS record names.	*/
+#define	TOP "pwfs1:"      /* Top level prefix for all EPICS record names.*/
 #endif	/* TOP */
 
 	/*

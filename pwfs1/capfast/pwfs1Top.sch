@@ -2,8 +2,8 @@
 uniq 15
 [tools]
 [detail]
-s -368 2160 500 0 Gemini A&G PWFS1
 s 1488 80 500 512 pwfs1Top.sch
+s -368 2160 500 0 Gemini A&G PWFS1
 [cell use]
 use pwfs1 64 1063 100 0 pwfs1#14
 xform 0 512 1360
@@ -20,10 +20,10 @@ xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 0 checked:B.Goodrich
-p 1776 16 100 0 -1 date:$Date: 1999-06-10 03:55:31 $
+p 1776 16 100 0 -1 date:$Date: 2000-06-21 01:27:40 $
 p 1552 2368 100 0 -1 id:
 p 1552 32 100 0 1 modified:C. Boyer
 p 1792 176 100 0 -1 project:Gemini PWFS1
-p 1552 128 100 0 -1 revision:$Revision: 1.3 $
+p 1552 128 100 0 -1 revision:$Revision: 1.4 $
 p 1792 112 100 0 -1 title:Top Level Schematic for Main Database
 [comments]

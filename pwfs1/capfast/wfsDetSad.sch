@@ -1,5 +1,5 @@
 [schematic2]
-uniq 107
+uniq 108
 [tools]
 [detail]
 s 2464 -704 500 512 wfsDetSad.sch
@@ -101,10 +101,13 @@ p 608 608 100 0 1 VAL:0
 use esirs 544 263 100 0 headTemp
 xform 0 752 416
 p 608 224 100 0 1 DESC:Detector head temperature
-p 608 128 100 0 1 EGU:Kelvin
+p 608 128 100 0 1 EGU:Celsius
 p 480 0 100 0 0 FDSC:Detector head temperature
 p 608 192 100 0 1 FTVL:DOUBLE
+p 608 32 100 0 1 PREC:4
 p 608 160 100 0 1 PV:$(sadtop)$(wfs)
+p 608 96 100 0 1 SCAN:5 second
+p 608 64 100 0 1 SNAM:detHeadTempGet
 use esirs 1152 1703 100 0 detXsize
 xform 0 1360 1856
 p 1216 1664 100 0 1 DESC:Total X size of detector
@@ -138,6 +141,12 @@ p 1216 704 100 0 1 DESC:Number of X subapertures
 p 1088 480 100 0 0 FDSC:SDSU parameter XSUBAP
 p 1216 672 100 0 1 FTVL:LONG
 p 1216 640 100 0 1 PV:$(sadtop)$(wfs)
+use esirs -64 -249 100 0 outputs
+xform 0 144 -96
+p 0 -288 100 0 1 DESC:Number of outputs
+p -128 -512 100 0 0 FDSC:Number of outputs
+p 0 -320 100 0 1 FTVL:LONG
+p 0 -352 100 0 1 PV:$(sadtop)$(wfs)
 use notes 3568 -313 100 0 notes#13
 xform 0 3824 -128
 p 4096 -162 100 0 0 AUTHOR:S.M.Beard and N.Dillon
@@ -152,10 +161,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-06-10 03:55:39 $
+p 3120 -784 200 0 -1 date:$Date: 2000-06-21 01:27:44 $
 p 2576 2320 200 0 -1 id:
 p 2704 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2608 -496 200 0 -1 revision:$Revision: 1.3 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.4 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Detector Status Records
 [comments]

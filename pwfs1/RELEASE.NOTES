@@ -43,3 +43,11 @@ V0-9 18 Apr 2000 CB:
   - ospLib.c include last cfitsio version V0-3: FITSIO_READONLY
   - writeWfsToSynchro () remove limits checks for TTF
   - default temperature is now -20 (see wfsDb.c)
+
+V1-0 13 June 2000 CB:
+  - new version of P1: major modifications. New lib for signal processing 
+    aoP1Lib instead of original ospLib. Include GG, FG, circular buffer, 
+    threshold computation...
+    DHS connection improved.
+    SAD database done.
+

@@ -6,11 +6,11 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="10"
-	nstr="58"
-	ndynamic="6"
+	npc="14"
+	nstr="113"
+	ndynamic="11"
 	nplot="0"
-	nrd="6"
+	nrd="9"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -19,27 +19,27 @@ display {
 		x="328"
 		y="298"
 		width="701"
-		height="367"
+		height="583"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2300"
-	nwords_sta="116"
+	nwords_dspy="4348"
+	nwords_sta="188"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="932"
-	osta="816"
-	odynamic="932"
-	oplot="1328"
-	ord="1328"
-	oes="2288"
-	okd="2288"
-	opd="2300"
-	opo="2300"
+	odyng="2170"
+	osta="1982"
+	odynamic="2170"
+	oplot="2896"
+	ord="2896"
+	oes="4336"
+	okd="4336"
+	opd="4348"
+	opo="4348"
 	opc="68"
-	ostr="180"
-	ocmap="816"
-	ocrules="816"
+	ostr="234"
+	ocmap="1982"
+	ocrules="1982"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -65,9 +65,9 @@ display {
 "rectangle" {
 	object {
 		x="9"
-		y="229"
+		y="394"
 		width="680"
-		height="121"
+		height="180"
 		groupid="0"
 	}
 }
@@ -98,31 +98,9 @@ display {
 		x="9"
 		y="53"
 		width="680"
-		height="170"
+		height="336"
 		groupid="0"
 	}
-}
-"text" {
-	object {
-		x="19"
-		y="141"
-		width="210"
-		height="20"
-		groupid="0"
-	}
-	textix="HEALTH:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="18"
-		y="170"
-		width="135"
-		height="20"
-		groupid="0"
-	}
-	textix="SDSU STATUS:"
-	align="horiz. left"
 }
 "text" {
 	object {
@@ -148,19 +126,8 @@ display {
 }
 "text" {
 	object {
-		x="410"
-		y="141"
-		width="110"
-		height="20"
-		groupid="0"
-	}
-	textix="HEARTBEAT:"
-	align="horiz. left"
-}
-"text" {
-	object {
 		x="16"
-		y="237"
+		y="401"
 		width="350"
 		height="22"
 		groupid="0"
@@ -168,51 +135,104 @@ display {
 	textix="COMMANDS:"
 	align="horiz. left"
 }
-"text update" {
+"text" {
 	object {
-		x="236"
-		y="141"
-		width="160"
-		height="21"
+		x="18"
+		y="143"
+		width="365"
+		height="19"
 		groupid="0"
 	}
-	monitor {
-		chan="$(top)health"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)health.VAL"
-		rulechan[1] = "$(top)health.VAL"
-		rulechan[2] = "$(top)health.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="health"
-		clrargs="C=$(top)health"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
+	textix="SIGNAL PROCESSING INITIALIZED:"
 	align="horiz. left"
-	format="decimal"
+}
+"text" {
+	object {
+		x="18"
+		y="170"
+		width="332"
+		height="19"
+		groupid="0"
+	}
+	textix="DARK INITIALIZED ... ... ... :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="198"
+		width="339"
+		height="19"
+		groupid="0"
+	}
+	textix="FLAT INITIALIZED ... ... ... :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="337"
+		width="335"
+		height="19"
+		groupid="0"
+	}
+	textix="THRESHOLD ... ... ... ... ...:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="226"
+		width="333"
+		height="19"
+		groupid="0"
+	}
+	textix="PROCESSING MODE ... ... ... .:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="365"
+		width="331"
+		height="19"
+		groupid="0"
+	}
+	textix="FLUX THRESHOLD ... ... ... ..:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="254"
+		width="350"
+		height="19"
+		groupid="0"
+	}
+	textix="INTERACTION MATIX INITIALIZED:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="281"
+		width="356"
+		height="19"
+		groupid="0"
+	}
+	textix="CONTROL MATRIX INITIALIZED ..:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="18"
+		y="309"
+		width="335"
+		height="19"
+		groupid="0"
+	}
+	textix="FG CONTROL MATRIX INITIALIZED:"
+	align="horiz. left"
 }
 "text update" {
 	object {
@@ -308,14 +328,14 @@ display {
 }
 "text update" {
 	object {
-		x="523"
-		y="141"
-		width="160"
+		x="352"
+		y="140"
+		width="328"
 		height="21"
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)heartBeat"
+		chan="$(top)aoCtrlInit"
 		clr="0"
 		bclr="7"
 		label="none"
@@ -336,7 +356,7 @@ display {
 		rulechan[13] = ""
 		rulechan[14] = ""
 		rulechan[15] = ""
-		clrrule="alarm"
+		clrrule=""
 		clrargs=""
 		rulecolorbg="1"
 		rulecolorfg="1"
@@ -354,14 +374,14 @@ display {
 }
 "text update" {
 	object {
-		x="153"
-		y="170"
-		width="529"
+		x="352"
+		y="167"
+		width="328"
 		height="21"
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)detInitStatus"
+		chan="$(top)aoDarkInit"
 		clr="0"
 		bclr="7"
 		label="none"
@@ -382,7 +402,7 @@ display {
 		rulechan[13] = ""
 		rulechan[14] = ""
 		rulechan[15] = ""
-		clrrule="alarm"
+		clrrule=""
 		clrargs=""
 		rulecolorbg="1"
 		rulecolorfg="1"
@@ -400,14 +420,14 @@ display {
 }
 "text update" {
 	object {
-		x="153"
-		y="196"
-		width="529"
+		x="352"
+		y="195"
+		width="328"
 		height="21"
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)testResults"
+		chan="$(top)aoFlatInit"
 		clr="0"
 		bclr="7"
 		label="none"
@@ -428,7 +448,283 @@ display {
 		rulechan[13] = ""
 		rulechan[14] = ""
 		rulechan[15] = ""
-		clrrule="alarm"
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="334"
+		width="329"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoThresh"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="2"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="223"
+		width="328"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoProcessMode"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="362"
+		width="328"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoTotal"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="2"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="251"
+		width="328"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoIntMatInit"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="278"
+		width="329"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoContMatInit"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="352"
+		y="306"
+		width="329"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoFgContMatInit"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
 		clrargs=""
 		rulecolorbg="1"
 		rulecolorfg="1"
@@ -447,7 +743,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="261"
+		y="425"
 		width="329"
 		height="22"
 		groupid="0"
@@ -581,81 +877,81 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="290"
+		y="454"
 		width="329"
 		height="22"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="SET PROCESSING MODE"
-		name="sig_mode.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigMode,car=det"
+		label="NO PROCESSING"
+		name="sig_mode_none.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeNone,car=det"
 	}
 	display[1] {
-		label=""
-		name=""
-		args=""
+		label="DARK SUBTRACTION"
+		name="sig_mode_dark.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeDark,car=det"
 	}
 	display[2] {
-		label=""
-		name=""
-		args=""
+		label="AVERAGE IMAGES"
+		name="sig_mode_coadd.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeCoadd,car=det"
 	}
 	display[3] {
-		label=""
-		name=""
-		args=""
+		label="THRESHOLD COMPUTATION"
+		name="sig_mode_thresh.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeThresh,car=det"
 	}
 	display[4] {
-		label=""
-		name=""
-		args=""
+		label="AVERAGE FLUX COMPUTATION"
+		name="sig_mode_total.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeTotal,car=det"
 	}
 	display[5] {
-		label=""
-		name=""
-		args=""
+		label="GLOBAL GUIDE ON WHOLE CCD"
+		name="sig_mode_gg.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeGg,car=det"
 	}
 	display[6] {
-		label=""
-		name=""
-		args=""
+		label="GLOBAL GUIDE ON WHOLE CCD AND AVERAGE IMAGES"
+		name="sig_mode_gg_coadd.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeGgCoadd,car=det"
 	}
 	display[7] {
-		label=""
-		name=""
-		args=""
+		label="FAST GUIDE AND FOCUS"
+		name="sig_mode_fg_focus.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeFgFocus,car=det"
 	}
 	display[8] {
-		label=""
-		name=""
-		args=""
+		label="FAST GUIDE AND FOCUS AND AVERAGE IMAGES"
+		name="sig_mode_fg_focus_coadd.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeFgCoadd,car=det"
 	}
 	display[9] {
-		label=""
-		name=""
-		args=""
+		label="ACTIVE OPTICS"
+		name="sig_mode_ao.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeAo,car=det"
 	}
 	display[10] {
-		label=""
-		name=""
-		args=""
+		label="GLOBAL GUIDE AND ACTIVE OPTICS"
+		name="sig_mode_gg_ao.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeGgAo,car=det"
 	}
 	display[11] {
-		label=""
-		name=""
-		args=""
+		label="FAST GUIDE AND FOCUS AND ACTIVE OPTICS"
+		name="sig_mode_fg_focus_ao.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeFgFocusAo,car=det"
 	}
 	display[12] {
-		label=""
-		name=""
-		args=""
+		label="SEQUENCE DARK"
+		name="sig_mode_seq_dark.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeSeqDark,car=det"
 	}
 	display[13] {
-		label=""
-		name=""
-		args=""
+		label="SEQUENCE CLOSED LOOP"
+		name="sig_mode_seq.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeSeq,car=det"
 	}
 	display[14] {
 		label=""
@@ -715,7 +1011,7 @@ display {
 "related display" {
 	object {
 		x="17"
-		y="320"
+		y="484"
 		width="328"
 		height="22"
 		groupid="0"
@@ -849,21 +1145,21 @@ display {
 "related display" {
 	object {
 		x="355"
-		y="290"
+		y="454"
 		width="328"
 		height="22"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="SHOW CENTROIDS"
-		name="showDiag.dl"
+		label="SHOW FG CENTROIDS"
+		name="showFgDiag.dl"
 		args="top=$(top),sensor=$(sensor)"
 	}
 	display[1] {
-		label=""
-		name=""
-		args=""
+		label="SHOW AO CENTROIDS"
+		name="showAoDiag.dl"
+		args="top=$(top),sensor=$(sensor)"
 	}
 	display[2] {
 		label=""
@@ -983,7 +1279,7 @@ display {
 "related display" {
 	object {
 		x="355"
-		y="320"
+		y="484"
 		width="328"
 		height="22"
 		groupid="0"
@@ -1116,8 +1412,8 @@ display {
 }
 "related display" {
 	object {
-		x="355"
-		y="261"
+		x="17"
+		y="514"
 		width="328"
 		height="22"
 		groupid="0"
@@ -1246,6 +1542,408 @@ display {
 	clr="0"
 	bclr="6"
 	menu_title="INIT FG GAINS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="17"
+		y="543"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SAVE CIRCULAR BUFFERS"
+		name="sig_initCB.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitCB,car=det"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="SAVE CIRCULAR BUFFERS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="355"
+		y="514"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SHOW CIRCULAR BUFFERS"
+		name="showCb.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="SHOW CIRCULAR BUFFERS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="355"
+		y="425"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="MEASUREMENT OF THE INTERACTION MATRIX"
+		name="sig_meas_int_mat.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigMeasIm,car=det"
+	}
+	display[1] {
+		label="COMPUTE AND SAVE MATRIXES"
+		name="sig_comp_mat.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigCompMat,car=det"
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="MATRIX"
 	decorate="none"
 }
 "kill display" {

@@ -41,14 +41,7 @@ DOCS	=
 
 # DATA are installed in INSTALL_DATA
 DATA	= \
-	$(wildcard ../*.pv*) \
 	$(wildcard ../*.par*) \
-	$(wildcard ../*.ini*) \
-	$(wildcard ../*.control*) \
-	$(wildcard ../*.fvars*) \
-	$(wildcard ../*.aoscale*) \
-	$(wildcard ../*.mult*) \
-	$(wildcard ../*.sub*) \
 	$(wildcard ../*.wcs*) \
 	$(wildcard ../*.dat*) \
 	$(wildcard ../*.ST*) \

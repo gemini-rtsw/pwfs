@@ -36,16 +36,8 @@
 *   17-Jun-1997: cicsInitLogging added.                      (smb)
 *   26-Jun-1997: DB and CA functions added.                  (smb)
 *   12-Aug-1997: Check functions added.                      (smb)
-*	06-Jul-1998: Database access functions extracted.        (smb)
+*   06-Jul-1998: Database access functions extracted.        (smb)
 */
-/* *INDENT-OFF* */
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1  1998/07/09 15:30:22  smb
- * Added to repository
- *
- */
-/* *INDENT-ON* */
 
 #ifndef CICSLIB
 #define CICSLIB

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: cicsCarHealth.c,v 1.3 1999-06-10 03:56:22 cboyer Exp $"};
+	"$Id: cicsCarHealth.c,v 1.4 2000-06-21 01:28:26 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -26,17 +26,18 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   None
  *
  *   PRIOR REQUIREMENTS:
- *   Each of these functions assumes that it has been specified in the "SNAM" field
- *   of an EPICS genSub record, and the function is executed when the genSub record
- *   is processed. It is assumed that the caller handles all the genSub record
- *   processing and manages the data structure pointed to by "pgensub".
+ *   Each of these functions assumes that it has been specified in the "SNAM" 
+ *   field of an EPICS genSub record, and the function is executed when the 
+ *   genSub record is processed. It is assumed that the caller handles all the 
+ *   genSub record processing and manages the data structure pointed to by 
+ *   "pgensub".
  *
  *   INCLUDE FILES:
- *   dbDefs.h           - EPICS database definition constants
- *   recSup.h           - EPICS record support constants
- *   dbCommon.h         - Data structure and definitions common to all EPICS records
- *   genSubRecord.h     - EPICS genSub record data structure and definitions
- *   car.h              - EPICS CAR record data structure and definitions
+ *   dbDefs.h       - EPICS database definition constants
+ *   recSup.h       - EPICS record support constants
+ *   dbCommon.h     - Data structure and definitions common to all EPICS records
+ *   genSubRecord.h - EPICS genSub record data structure and definitions
+ *   car.h          - EPICS CAR record data structure and definitions
  *
  *   AUTHOR:
  *   Steven Beard  (smb@roe.ac.uk)
@@ -55,26 +56,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *                corruption.                                      (smb)
  *-
  */
-/* *INDENT-OFF* */
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.5  1998/04/29 13:12:46  smb
- * Restructures to act as a Gemini coding standards example
- *
- * Revision 1.4  1998/03/24 16:14:48  smb
- * strcpy replaced by strncpy
- *
- * Revision 1.3  1998/01/30 15:30:19  smb
- * Fixed some problems uncovered by prolint
- *
- * Revision 1.2  1998/01/27 16:43:21  smb
- * DEBUG statements added
- *
- * Revision 1.1  1998/01/19 15:42:30  smb
- * Added to repository
- *
- */
-/* *INDENT-ON* */
 
 #include  <vxWorks.h>
 #include  <stdioLib.h>
@@ -86,7 +67,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include  <dbCommon.h>
 #include  <recSup.h>
 
-/* #define DEBUG */		/* Define this to switch on debugging messages */
+/* #define DEBUG */            /* Define this to switch on debugging messages */
 
 
 /* ---------------------------------------------------------------------------*/
@@ -437,11 +418,11 @@ STATUS cicsCarValCombine( struct genSubRecord *pgensub )
 
 STATUS cicsHealthCombine( struct genSubRecord *pgensub ) 
 {
-    STATUS  status;                    	      /* return status */
-    char    outHealth[MAX_STRING_SIZE + 1];   /* Output health value */
-    char    inMess[MAX_STRING_SIZE + 1];      /* Input message */
-    char    outMess[MAX_STRING_SIZE + 1];     /* Output message */
-    long    outIndex;                         /* Index of winning health input */
+    STATUS  status;                    	     /* return status */
+    char    outHealth[MAX_STRING_SIZE + 1];  /* Output health value */
+    char    inMess[MAX_STRING_SIZE + 1];     /* Input message */
+    char    outMess[MAX_STRING_SIZE + 1];    /* Output message */
+    long    outIndex;                        /* Index of winning health input */
 
 #ifdef DEBUG
     printf( "cicsHealthCombine: %s %s %s %s %s : ",
@@ -801,12 +782,14 @@ STATUS cicsStringFilter( struct genSubRecord *pgensub )
          (strspn((char *)pgensub->a," ") != strlen((char *)pgensub->a)) )
     {
 
-        if ( strncmp((char *)pgensub->a, (char *)pgensub->b, MAX_STRING_SIZE) != 0 )
+        if ( strncmp((char *)pgensub->a, (char *)pgensub->b, 
+                     MAX_STRING_SIZE) != 0 )
         {
 
 /* Match with tag not found. Copy the input to the output. */
 
-            strncpy( (char *)pgensub->vala, (char *)pgensub->a, MAX_STRING_SIZE );
+            strncpy( (char *)pgensub->vala, (char *)pgensub->a, 
+                     MAX_STRING_SIZE );
         }
     }
 
