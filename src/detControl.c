@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.18 2001-12-03 19:47:58 cboyer Exp $"};
+   "$Id: detControl.c,v 1.17 2001-09-17 20:15:09 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,8 +31,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- *   30 Nov 2001: CB - Add flag writeToRm to aoGlobalGuide() and 
- *                     aoGuideAndFocus()
  *   21 Aug 2001: CB - Major modifications to have aO correction with P2 also
  *                     In fact detControl.c is now a copy of pwfs1
  *   15 Jun 2001: CB - reject observe command if exposure time < 0.01 and no
@@ -742,7 +740,6 @@ STATUS   detControl
    obsId->saveCbFgCtrl = FALSE;
    obsId->sigMode = AO_MODE_NONE;
    obsId->dhsQlRate = 100;
-   obsId->writeToRm = 1;
 
    /*
     * Get the context structures for the SIR records. 
@@ -10155,10 +10152,9 @@ void detObserveEnd
                 */
 #ifdef DEBUG
                printf (
-                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                  pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                 (int)obsId->writeToRm);
+                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10175,8 +10171,7 @@ void detObserveEnd
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId, 
                                    pTotal, pGuides, pFg, pFgAfterRot, pErrorsFg,
-                                   pTime, pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                   pTime, pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                };
@@ -10192,10 +10187,9 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                 "aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                  pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus, 
-                 (int)obsId->writeToRm);
+                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10212,8 +10206,7 @@ void detObserveEnd
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                    pTotal, pGuides, pFg, pFgAfterRot, 
-                                   pErrorsFg, pTime, pWfsStatus, 
-                                   (int)obsId->writeToRm) == ERROR )
+                                   pErrorsFg, pTime, pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                }
@@ -10346,10 +10339,10 @@ void detObserveEnd
                   nCoadds = (int) obsId->nAverageDataThreshComp;
 #ifdef DEBUG
                   printf (
-                  "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                  "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                   pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
                   pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, 
-                  pTime, pWfsStatus, (int)obsId->writeToRm);
+                  pTime, pWfsStatus);
 #endif
                   if ( obsId->updateFgScale == TRUE )
                   {
@@ -10367,8 +10360,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                         pTotal, pCentroids, pErrorCentroids,
                                         pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                        pWfsStatus, (int)obsId->writeToRm) 
-                       == ERROR )
+                                        pWfsStatus) == ERROR )
                   {
                      ERROR_LOG (
                            "Failed to run fast guide and focus correction");
@@ -10555,10 +10547,9 @@ void detObserveEnd
 
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
-               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               printf ("aoGlobalGuide (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
-                       pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                       (int)obsId->writeToRm);
+                       pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus);
                printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
                        obsId->aoCbAoCtrlId);
@@ -10590,8 +10581,7 @@ void detObserveEnd
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                    pTotal, pGuides, pFg, pFgAfterRot, 
-                                   pErrorsFg, pTime, pWfsStatus,
-                                   (int)obsId->writeToRm) == ERROR )
+                                   pErrorsFg, pTime, pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide correction");
                }
@@ -10629,8 +10619,7 @@ void detObserveEnd
                      /*if ( aoGlobalGuide (pImage, obsId->aoCcdId, 
                                          obsId->aoCtrlId, pTotal, pGuides, 
                                          pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                         pWfsStatus, (int) obsId->writeToRm) 
-                         == ERROR )
+                                         pWfsStatus) == ERROR )
                      {
                         ERROR_LOG ("Failed to run FG correction");
                      }*/
@@ -10639,8 +10628,7 @@ void detObserveEnd
                                            obsId->aoCtrlId,
                                            pTotal, pCentroids, pErrorCentroids,
                                            pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                           pWfsStatus, (int)obsId->writeToRm) 
-                          == ERROR )
+                                           pWfsStatus) == ERROR )
                      {
                         ERROR_LOG (
                               "Failed to run fast guide and focus correction");
@@ -10676,10 +10664,10 @@ void detObserveEnd
                 */
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10697,8 +10685,7 @@ void detObserveEnd
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId, 
                                      pTotal, pCentroids, pErrorCentroids, 
                                      pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                };
@@ -10714,10 +10701,10 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime,
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
 
 #endif
                if ( obsId->updateFgScale == TRUE )
@@ -10736,8 +10723,7 @@ void detObserveEnd
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pTotal, pCentroids, pErrorCentroids,
                                      pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
@@ -10807,10 +10793,10 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime,
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
 #endif
                if ( obsId->updateFgScale == TRUE )
                {
@@ -10828,8 +10814,7 @@ void detObserveEnd
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pTotal, pCentroids, pErrorCentroids,
                                      pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pWfsStatus) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
@@ -10933,10 +10918,10 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
                pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
-               pWfsStatus, (int)obsId->writeToRm);
+               pWfsStatus);
                printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
                        obsId->aoCbAoCtrlId);
@@ -10968,8 +10953,7 @@ void detObserveEnd
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pTotal, pCentroids, pErrorCentroids, pFg, 
-                                     pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
-                                     (int)obsId->writeToRm) 
+                                     pFgAfterRot, pErrorsFg, pTime, pWfsStatus) 
                     == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
@@ -11145,8 +11129,7 @@ void detObserveEnd
     
                   if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                       pTotal, pGuides, pFg, pFgAfterRot, 
-                                      pErrorsFg, pTime, pWfsStatus, 
-                                      (int)obsId->writeToRm) == ERROR )
+                                      pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run fast guide correction");
                   }
@@ -11162,8 +11145,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pTotal, pCentroids, 
                                         pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int) obsId->writeToRm) == ERROR )
+                                        pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -11206,8 +11188,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pTotal, pCentroids,
                                         pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int)obsId->writeToRm) == ERROR )
+                                        pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -11240,8 +11221,7 @@ void detObserveEnd
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
                                         obsId->aoCtrlId, pTotal, pCentroids, 
                                         pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int)obsId->writeToRm) == ERROR )
+                                        pErrorsFg, pTime, pWfsStatus) == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -14350,8 +14330,6 @@ STATUS detObsShow
            (obsId->threshFlag ? "TRUE" : "FALSE") );
    printf ("nFramesAverageFlux               : %d\n", 
            (int)(obsId->nFramesAverageFlux) );
-   printf ("writeToRm flag                   : %s\n",
-           (obsId->writeToRm ? "TRUE" : "FALSE") );
    printf ("Time with FG only                : %f sec\n", (obsId->fgTime) );
    printf ("saveCbFgCtrlClosedLoopTime       : %f sec\n",
            obsId->saveCbFgCtrlClosedLoopTime);
@@ -15387,7 +15365,6 @@ uint32 detSigModeGg
    long         sigMode;        /* Signal processing mode.                    */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15396,7 +15373,6 @@ uint32 detSigModeGg
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&flag);
    sigMode = AO_MODE_GG;
 
    /*
@@ -15432,9 +15408,8 @@ uint32 detSigModeGg
       return (errorNumber);
    }
 
-   MESSAGE_LOG1 (MSG_LOG,
-                 "Signal processing switched to \"Global Guide\" mode, flag=%d",
-                 (int)flag);
+   MESSAGE_LOG (MSG_LOG,
+                "Signal processing switched to \"Global Guide\" mode");
    if (epToVxPipeWrite (NULL, "Global Guide",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15448,8 +15423,6 @@ uint32 detSigModeGg
     */
 
    obsId->sigMode = sigMode;
-
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -15535,7 +15508,6 @@ uint32 detSigModeGgAo
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15546,7 +15518,6 @@ uint32 detSigModeGgAo
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
 
    sigMode = AO_MODE_GG_AO;
 
@@ -15583,10 +15554,10 @@ uint32 detSigModeGgAo
       return (errorNumber);
    }
 
-   MESSAGE_LOG3 (MSG_LOG,
+   MESSAGE_LOG2 (MSG_LOG,
        "Signal processing switched to \"Global Guide and aO correction\" mode "
-       "imageNb=%d, allowedSubapOff=%d, flag=%d",
-       (int)imageNb, (int)subapOff, (int)flag);
+       "imageNb=%d, allowedSubapOff=%d",
+       (int)imageNb, (int)subapOff);
    if (epToVxPipeWrite (NULL, "Global guide and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15602,7 +15573,6 @@ uint32 detSigModeGgAo
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = imageNb;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -15836,7 +15806,6 @@ uint32 detSigModeFgFocus
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15846,7 +15815,6 @@ uint32 detSigModeFgFocus
 
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&flag);
 
    sigMode = AO_MODE_FG_FOCUS;
 
@@ -15883,9 +15851,9 @@ uint32 detSigModeFgFocus
       return (errorNumber);
    }
 
-   MESSAGE_LOG2 (MSG_LOG,
+   MESSAGE_LOG1 (MSG_LOG,
            "Signal processing switched to \"FG and Focus\" mode "
-           "allowedSubapOff=%d, flag=%d", (int)subapOff, (int)flag);
+           "allowedSubapOff=%d", (int)subapOff);
    if (epToVxPipeWrite (NULL, "Fast Guide and Focus",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -15900,7 +15868,6 @@ uint32 detSigModeFgFocus
 
    obsId->sigMode = sigMode;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -16152,7 +16119,6 @@ uint32 detSigModeFgFocusAo
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -16163,7 +16129,6 @@ uint32 detSigModeFgFocusAo
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
 
    sigMode = AO_MODE_FG_FOCUS_AO;
 
@@ -16200,10 +16165,10 @@ uint32 detSigModeFgFocusAo
       return (errorNumber);
    }
 
-   MESSAGE_LOG3 (MSG_LOG,
+   MESSAGE_LOG2 (MSG_LOG,
            "Signal processing switched to \"FG and Focus and aO\" mode "
-           "imageNb=%d, allowedSubapOff=%d, flag=%d",
-           (int)imageNb, (int)subapOff, (int)flag);
+           "imageNb=%d, allowedSubapOff=%d",
+           (int)imageNb, (int)subapOff);
    if (epToVxPipeWrite (NULL, "Fast Guide, Focus and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -16215,8 +16180,6 @@ uint32 detSigModeFgFocusAo
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = imageNb;
@@ -16468,7 +16431,6 @@ uint32 detSigModeThresh
    long         nAverageData;   /* Number of data to average.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeff;      /* Multiplicative coefficients for rms value  */
@@ -16490,8 +16452,6 @@ uint32 detSigModeThresh
                           (char *) & multCoeff);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4,
                           (char *) & threshold);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&flag);
-
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16532,15 +16492,11 @@ uint32 detSigModeThresh
             "Signal processing switched to \"Threshold Computation\" mode - "
             "method=%d, nAverageData=%d, rateBright=%f, multCoeff=%f",
             (int)method, (int)nAverageData, rateBright, multCoeff);
-   MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
-
 
    /*
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->methodThreshComp = method;
    obsId->aoCtrlId->thresholdMethod = method;
@@ -16658,7 +16614,6 @@ uint32 detSigModeGgCoadd
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
@@ -16677,7 +16632,6 @@ uint32 detSigModeGgCoadd
                           (char *) & nCoaddFrames);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCoaddFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&flag);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16711,9 +16665,9 @@ uint32 detSigModeGgCoadd
       return (errorNumber);
    }
 
-   MESSAGE_LOG2 (MSG_LOG,
-   "Signal processing switched to \"GG + Coadd\" mode - nCoaddFrames=%ld, flag=%d",
-   nCoaddFrames, (int)flag);
+   MESSAGE_LOG1 (MSG_LOG,
+         "Signal processing switched to \"GG + Coadd\" mode - nCoaddFrames=%ld",
+         nCoaddFrames);
    if (epToVxPipeWrite (NULL, "Global Guide and Coadd",
                         obsId->pAoProcessModeContext) == ERROR)
    {
@@ -16731,8 +16685,6 @@ uint32 detSigModeGgCoadd
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = nCoaddFrames;
@@ -16835,7 +16787,6 @@ uint32 detSigModeSeq
    long         aoFlag;         /* aO flag (yes or no)                        */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
@@ -16880,7 +16831,7 @@ uint32 detSigModeSeq
                           (char *) & saveCbFgCtrlEveryTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 14, (char *) & aoFlag);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 15, (char *)&flag);
+
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16932,7 +16883,6 @@ uint32 detSigModeSeq
    MESSAGE_LOG2 (MSG_LOG, "saveCbAoCtrlFlag=%d, saveCbAoCtrlEveryTime=%f",
       (int)saveCbAoCtrlClosedLoopFlag, saveCbAoCtrlEveryTime);
    MESSAGE_LOG1 (MSG_LOG, "pFilePath=%s", pFilePath);
-   MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
 
    if (epToVxPipeWrite (NULL, "Sequence closed loop",
                         obsId->pAoProcessModeContext) == ERROR)
@@ -16947,8 +16897,6 @@ uint32 detSigModeSeq
     */
 
    obsId->sigMode = sigMode;
-
-   obsId->writeToRm = flag;
 
    obsId->fgTime = fgTime;
    obsId->saveCbFgCtrlClosedLoop = saveCbFgCtrlClosedLoopFlag;
@@ -17063,7 +17011,6 @@ uint32 detSigModeTotal
                                 /* the average flux                           */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
-   long         flag;           /* writeToRm flag                             */
    double       expTime;        /* Exposure time                              */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
    double       thresholdFlux;  /* threshold for flux value                   */
@@ -17083,7 +17030,6 @@ uint32 detSigModeTotal
                           (char *) & nFramesFlux);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3,
                           (char *) & multCoeffFlux);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&flag);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -17124,14 +17070,11 @@ uint32 detSigModeTotal
             "Signal processing switched to \"Average Flux computation\" mode - "
             "method=%d, thresholdFlux=%f, nFramesFlux=%d, multCoeffFlux=%f",
              (int)method, thresholdFlux, (int)nFramesFlux, multCoeffFlux);
-   MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
 
    /*
     * Define the signal processing mode and associated parameters.
     * These parameters will be used in detObserveEnd.
     */
-
-   obsId->writeToRm = flag;
 
    obsId->methodFluxComp = method;
    obsId->aoCtrlId->totalMethod = method;
@@ -17544,7 +17487,6 @@ uint32 detSigMeasAoIm
    sigMode = AO_MODE_MEAS_IM;
    subapOff = 0;
 
-   obsId->writeToRm = TRUE;
    obsId->sigMode = sigMode;
    obsId->nMode = nMode - 1;
    obsId->amplitude = amplitude;
@@ -18698,11 +18640,9 @@ uint32 detSigReset
 
    sigMode = AO_MODE_GG;
    obsId->sigMode = sigMode;
-   obsId->writeToRm = TRUE;
 
-   MESSAGE_LOG1 (MSG_LOG,
-                "Signal processing switched to \"Global Guide\" mode, flag=%d",
-                (int)obsId->writeToRm);
+   MESSAGE_LOG (MSG_LOG,
+                "Signal processing switched to \"Global Guide\" mode");
    if (epToVxPipeWrite (NULL, "Global Guide",
                         obsId->pAoProcessModeContext) == ERROR)
    {

@@ -75,7 +75,6 @@
  *   aoThresholdPerSubapCompute() - Compute a threshold per subaperture
  * 
  *INDENT-OFF*
- *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
  *   31 Oct 2001: CB - aoGlobalGuide and aoGuideAndFocus x2 the TT values when
  *                     binning
  *   13 Sep 2001: CB - Add aoThresholdPerSubapCompute()
@@ -3199,8 +3198,7 @@ STATUS aoDarkSubtract (
  *
  *   INVOCATION:
  *   aoGlobalGuide (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, pGuidesVect,
- *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
- *                  writeToRm)
+ *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3219,7 +3217,6 @@ STATUS aoDarkSubtract (
  *                                     vectors
  *   (<) pWfsStatus       (int *)      Pointer to the status flag when 
  *                                     computing the centroids 
- *   (>) writeToRm        (int)        Flag to write or not to RM (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3257,8 +3254,7 @@ STATUS aoGlobalGuide (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -3383,7 +3379,7 @@ STATUS aoGlobalGuide (
    };
 
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
-                          pTime, writeToRm) != OK )
+                          pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -3401,7 +3397,7 @@ STATUS aoGlobalGuide (
  *   INVOCATION:
  *   aoGlobalGuideAndError (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                          pGuidesVect, pFgVect, pFgVectAfterRot, 
- *                          pFgErrorsVect, pTime, pWfsStatus, writeToRm)
+ *                          pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3420,7 +3416,6 @@ STATUS aoGlobalGuide (
  *                                     the vectors
  *   (<) pWfsStatus       (int *)      Pointer to the status flag when 
  *                                     computing the centroids 
- *   (>) writeToRm        (int)        Write to RM flag (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3459,8 +3454,7 @@ STATUS aoGlobalGuideAndError (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -3614,7 +3608,7 @@ STATUS aoGlobalGuideAndError (
 
  
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
-                          pFgErrorsVect, pTime, writeToRm) != OK )
+                          pFgErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -5222,14 +5216,14 @@ STATUS aoCbFgCtrlSave
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "./D%04d%02d%02dT%02d%02d%02dP2.cbcfg",
+                   "./D%04d%02d%02dT%02d%02d%02dP2.cbfgc",
                    timeArray[0], timeArray[1], timeArray[2], timeArray[3],
                    timeArray[4], timeArray[5]);
       }
       else
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "%s/D%04d%02d%02dT%02d%02d%02dP2.cbcfg",
+                   "%s/D%04d%02d%02dT%02d%02d%02dP2.cbfgc",
                    pCbFgCtrlFilePath, timeArray[0], timeArray[1], timeArray[2],
                    timeArray[3], timeArray[4], timeArray[5]);
       }
@@ -5239,11 +5233,11 @@ STATUS aoCbFgCtrlSave
       if ( ( strcmp (pCbFgCtrlFilePath, "") == 0 ) ||
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
-         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP2.cbcfg" );
+         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP2.cbfgc" );
       }
       else
       {
-         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP2.cbcfg",
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP2.cbfgc",
                    pCbFgCtrlFilePath );
       }
    }
@@ -5436,8 +5430,7 @@ STATUS aoCbFgCtrlSave
  *   INVOCATION:
  *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                    pCentroidsVect, pErrorCentroidsVect, pFgVect, 
- *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
- *                    writeToRm)
+ *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the image from which to 
@@ -5459,7 +5452,6 @@ STATUS aoCbFgCtrlSave
  *                                        the vectors
  *   (<) pWfsStatus          (int *)      Pointer to the status flag when 
  *                                        computing the centroids 
- *   (>) writeToRm           (int)        Write to RM flag (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -5502,8 +5494,7 @@ STATUS aoGuideAndFocus (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -5591,7 +5582,7 @@ STATUS aoGuideAndFocus (
    };
  
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
-                          pFgErrorsVect, pTime, writeToRm) != OK )
+                          pFgErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);

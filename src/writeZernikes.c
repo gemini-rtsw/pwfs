@@ -76,7 +76,6 @@
  *                   each others)
  * 22-Aug-2001: cb - Major modifications to have ao Correction with P2 also
  * 14-Sep-2001: cb - Add showThreshDiagP2()
- * 30-Nov-2001: cb - add writeToRm to writeWfsToSynchro
  *
  */
 /* INDENT ON */
@@ -1142,7 +1141,7 @@ STATUS writeWfsToTcs
  *
  * STATUS writeWfsToSynchro(AO_CTRL_ID aoCtrlId, double *pFgVect,
  *                          double *pFgVectAfterRot, double *pFgErrorsVect, 
- *                          double *pTime, int writeToRm)
+ *                          double *pTime)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > AO_CTRL_ID aoCtrlId        - Pointer to the AO control context structure
@@ -1151,7 +1150,6 @@ STATUS writeWfsToTcs
  * >                              rotation
  * > double *   pFgErrorsVect   - Vector containing the associated errors
  * > double *   pTime           - Pointer to the associated time stamp value
- * > int        writeToRm       - Flag to indicate if data are written to RM
  *
  * FUNCTION VALUE:
  * long  Status value returned to calling routine, a non-zero value indicates
@@ -1197,8 +1195,7 @@ STATUS writeWfsToSynchro
    double     *pFgVect,
    double     *pFgVectAfterRot,
    double     *pFgErrorsVect,
-   double     *pTime,
-   int        writeToRm
+   double     *pTime
    )
 {
    converted  result;
@@ -1262,7 +1259,7 @@ STATUS writeWfsToSynchro
    /* scale data and write to the synchro bus, check that pointer has been 
       initialised with null check */
 
-   if ( (ptrPwfs2 != NULL) && (writeToRm == TRUE) )
+   if(ptrPwfs2 != NULL)
    {
      ptrPwfs2->z1 = (float)(result.z2);
      ptrPwfs2->z2 = (float)(result.z3);
