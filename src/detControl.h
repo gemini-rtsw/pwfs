@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   22 May 2002 - cb Add fgFocusGain100 
  *   24 Apr 2002 - cb Add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
  *                    cfTipTiltBw sir records
  *   20 Mar 2002 - cb Major modification to download the code from EEPROMS
@@ -164,6 +165,10 @@
 #define   DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME   "fgFocusGain"
                                     /* Name of SIR record containing the      */
                                     /* FG Focus gain                          */
+
+#define   DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME   "fgFocusGain100"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Focus gain at 100Hz                 */
 
 #define   DET_CONTROL_CF_FOCUS_BW_SIR_NAME    "cfFocusBw"
                                     /* Name of SIR record containing the      */
@@ -721,6 +726,9 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* record.                              */
    DATREC_CONTEXT pFgFocusGainContext;/* Context structure for fgFocusGain SIR*/
                                       /* record.                              */
+   DATREC_CONTEXT pFgFocusGain100Context;
+                                      /* Context structure for fgFocusGain100 */
+                                      /* SIR record.                          */
    DATREC_CONTEXT pCfFocusBwContext;  /* Context structure for cfFocusBw SIR  */
                                       /* record.                              */
    DATREC_CONTEXT pCfTipTiltBwContext;/* Context structure for cfTipTiltBw SIR*/
