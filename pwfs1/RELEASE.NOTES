@@ -411,3 +411,8 @@ V4-6 13 AUG 2004 AAG:
    mode (spherical and Z11 and higher) - CB
 
 7) defAoModP1MK.dat updated (CR0478)
+
+dev 27 SEP 2004 AAG:
+--------------------
+
+ - defAoScaleP1.dat - Default values updated
