@@ -6,3 +6,4 @@ DIRS += dspsrc
 DIRS += par
 DIRS += startup
 DIRS += docs
+DIRS += docs
