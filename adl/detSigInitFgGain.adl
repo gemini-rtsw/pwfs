@@ -6,8 +6,8 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="12"
-	nstr="47"
+	npc="13"
+	nstr="45"
 	ndynamic="11"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="1936"
+	nwords_dspy="1930"
 	nwords_sta="560"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1180"
-	osta="620"
-	odynamic="1180"
-	oplot="1924"
-	ord="1924"
-	oes="1924"
-	okd="1924"
-	opd="1936"
-	opo="1936"
+	odyng="1174"
+	osta="614"
+	odynamic="1174"
+	oplot="1918"
+	ord="1918"
+	oes="1918"
+	okd="1918"
+	opd="1930"
+	opo="1930"
 	opc="68"
-	ostr="232"
-	ocmap="620"
-	ocrules="620"
+	ostr="246"
+	ocmap="614"
+	ocrules="614"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -52,7 +52,7 @@ display {
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
-	mmht="289"
+	mmht="288"
 }
 "<<basic attribute>>" {
 	attr {
@@ -395,7 +395,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInitFgGain.DIR"
+		chan="$(top)initSigInit.J"
 		clr="1"
 		bclr="6"
 		label="none"
@@ -430,9 +430,9 @@ display {
 		convertParams=""
 	}
 	inactive_label="DEFAULT"
-	pressed_label="(CLEAR)"
-	press_msg="MARK"
-	release_msg="CLEAR"
+	pressed_label=""
+	press_msg="1"
+	release_msg=""
 }
 "text update" {
 	object {
@@ -622,7 +622,7 @@ display {
 	object {
 		x="136"
 		y="198"
-		width="98"
+		width="163"
 		height="19"
 		groupid="0"
 	}
@@ -667,7 +667,7 @@ display {
 	object {
 		x="136"
 		y="224"
-		width="98"
+		width="163"
 		height="19"
 		groupid="0"
 	}
@@ -712,7 +712,7 @@ display {
 	object {
 		x="524"
 		y="197"
-		width="98"
+		width="152"
 		height="19"
 		groupid="0"
 	}

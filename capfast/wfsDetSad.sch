@@ -27,7 +27,12 @@ p 3456 416 100 0 1 FTVK:STRING
 p 3456 384 100 0 1 FTVL:DOUBLE
 p 3456 352 100 0 1 FTVM:STRING
 p 3456 320 100 0 1 FTVN:STRING
+p 3456 288 100 0 1 FTVO:DOUBLE
+p 3456 256 100 0 1 FTVP:DOUBLE
+p 3456 224 100 0 1 FTVQ:DOUBLE
+p 3456 192 100 0 1 FTVR:DOUBLE
 p 3456 96 100 0 1 FTVU:LONG
+p 3152 -240 100 0 1 PREC:9
 p 3152 -208 100 0 1 PV:$(sadtop)$(wfs)
 p 3152 -144 100 0 1 SCAN:Passive
 p 3152 -176 100 0 1 SNAM:detInitSigInit
@@ -45,6 +50,10 @@ p 3616 416 100 0 1 def(OUTK):$(top)$(wfs)detSigInit.K
 p 3616 384 100 0 1 def(OUTL):$(top)$(wfs)detSigInit.L
 p 3616 352 100 0 1 def(OUTM):$(top)$(wfs)detSigInit.M
 p 3616 320 100 0 1 def(OUTN):$(top)$(wfs)detSigInit.N
+p 3616 288 100 0 1 def(OUTO):$(top)$(wfs)detSigInitFgGain.A
+p 3616 256 100 0 1 def(OUTP):$(top)$(wfs)detSigInitFgGain.B
+p 3616 224 100 0 1 def(OUTQ):$(top)$(wfs)detSigInitFgGain.C
+p 3616 192 100 0 1 def(OUTR):$(top)$(wfs)detSigInitFgGain.D
 use esirs 2368 -217 100 0 adc3
 xform 0 2576 -64
 p 2432 -256 100 0 1 DESC:ADC 3
@@ -218,10 +227,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2002-11-05 00:38:06 $
+p 3120 -784 200 0 -1 date:$Date: 2004-01-08 23:38:04 $
 p 2576 2320 200 0 -1 id:
 p 2704 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2608 -496 200 0 -1 revision:$Revision: 1.9 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.10 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Detector Status Records
 [comments]

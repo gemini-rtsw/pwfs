@@ -979,7 +979,8 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        char * pSeeingCmFileName, char * pSeeingCvFileName,
                        double * pRms, double * pThresh, double * pTotalThresh,
                        double * pAngleM2, double * pAngleM1, 
-                       double * pSeeingGain, double * pAoThreshold);
+                       double * pSeeingGain, double * pAoThreshold,
+                       double *pFgGain, double * pSlidingFocusGain);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
                   FOCUS_ZP_MODEL_ID focModelId);

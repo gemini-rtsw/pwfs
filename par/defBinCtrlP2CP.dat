@@ -22,9 +22,9 @@ data/defAoContMatP2CP.dat
 # Name of FG control matrix file
 data/defFgContMatP2CP.dat
 # Scale factor for tip mode (double)
-0.05
+0.1
 # Scale factor for tilt mode (double)
-0.05
+0.1
 # Scale factor for focus mode (double)
 0.0002
 # Gain for focus sliding average (double)
