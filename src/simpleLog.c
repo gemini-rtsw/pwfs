@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: simpleLog.c,v 1.3 2000-07-10 21:47:41 cboyer Exp $"};
+   "$Id: simpleLog.c,v 1.4 2002-01-03 03:39:26 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -36,6 +36,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2000/07/10 21:47:41  cboyer
+ * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
+ *
  * Revision 1.2  1999/07/17 02:14:14  cboyer
  * Minor modifications
  *
@@ -61,7 +64,6 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <ioLib.h>
 #include <selectLib.h>
 #include <string.h>
-#include <ppc.h>
 #include "gemTypes.h"
 
 #define SYSEXT_MAX_N_PROC   15
@@ -150,10 +152,7 @@ STATUS   simpleLog (
 
    /* Variables associated with the log file. */
 
-   char           pLogFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-                                   /* Name of log file.                       */
-
-   FILE *         logFileFp;       /* File descriptor for log file.           */
+   FILE *         logFileFp=NULL;  /* File descriptor for log file.           */
    BOOL           logFileEnabled = FALSE;
                                    /* Flag set TRUE when log file open.       */
 

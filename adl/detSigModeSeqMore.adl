@@ -1,14 +1,14 @@
 file {
-	name="detSigModeFgCoadd.dl"
+	name="detSigModeSeqMore.dl"
 }
 display {
 	magic="305419896"
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="14"
-	nstr="54"
-	ndynamic="15"
+	npc="27"
+	nstr="69"
+	ndynamic="18"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -18,28 +18,28 @@ display {
 	object {
 		x="0"
 		y="0"
-		width="707"
-		height="395"
+		width="771"
+		height="410"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2426"
-	nwords_sta="604"
+	nwords_dspy="3372"
+	nwords_sta="836"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1394"
-	osta="790"
-	odynamic="1394"
-	oplot="2414"
-	ord="2414"
-	oes="2414"
-	okd="2414"
-	opd="2426"
-	opo="2426"
+	odyng="2130"
+	osta="1294"
+	odynamic="2130"
+	oplot="3360"
+	ord="3360"
+	oes="3360"
+	okd="3360"
+	opd="3372"
+	opo="3372"
 	opc="68"
-	ostr="264"
-	ocmap="790"
-	ocrules="790"
+	ostr="432"
+	ocmap="1294"
+	ocrules="1294"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -75,23 +75,12 @@ display {
 }
 "rectangle" {
 	object {
-		x="8"
-		y="38"
-		width="690"
-		height="346"
+		x="4"
+		y="37"
+		width="761"
+		height="366"
 		groupid="0"
 	}
-}
-"text" {
-	object {
-		x="12"
-		y="158"
-		width="184"
-		height="24"
-		groupid="0"
-	}
-	textix="PARAMETERS:"
-	align="horiz. left"
 }
 "text" {
 	object {
@@ -108,7 +97,7 @@ display {
 	object {
 		x="5"
 		y="153"
-		width="692"
+		width="762"
 		height="0"
 		groupid="0"
 	}
@@ -118,7 +107,7 @@ display {
 		y="153"
 	}
 	point[1] {
-		x="697"
+		x="767"
 		y="153"
 	}
 	orgpoint[0] {
@@ -132,20 +121,20 @@ display {
 }
 "line" {
 	object {
-		x="329"
-		y="38"
+		x="376"
+		y="39"
 		width="0"
 		height="115"
 		groupid="0"
 	}
 	npoints="2"
 	point[0] {
-		x="329"
-		y="38"
+		x="376"
+		y="39"
 	}
 	point[1] {
-		x="329"
-		y="152"
+		x="376"
+		y="153"
 	}
 	orgpoint[0] {
 		x="1000"
@@ -158,19 +147,19 @@ display {
 }
 "text" {
 	object {
-		x="5"
-		y="7"
-		width="614"
-		height="23"
+		x="4"
+		y="8"
+		width="692"
+		height="25"
 		groupid="0"
 	}
-	textix="$(sensor) - SET FG AND FOCUS AND AVERAGE IMAGES"
+	textix="$(sensor) - SET SEQUENCE CLOSED LOOP MODE"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="335"
-		y="66"
+		x="382"
+		y="67"
 		width="139"
 		height="21"
 		groupid="0"
@@ -180,8 +169,8 @@ display {
 }
 "text" {
 	object {
-		x="335"
-		y="107"
+		x="382"
+		y="108"
 		width="100"
 		height="21"
 		groupid="0"
@@ -191,8 +180,8 @@ display {
 }
 "text" {
 	object {
-		x="335"
-		y="85"
+		x="382"
+		y="86"
 		width="157"
 		height="21"
 		groupid="0"
@@ -202,24 +191,13 @@ display {
 }
 "text" {
 	object {
-		x="335"
-		y="45"
+		x="382"
+		y="46"
 		width="157"
 		height="24"
 		groupid="0"
 	}
 	textix="CAR STATE:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="15"
-		y="243"
-		width="232"
-		height="16"
-		groupid="0"
-	}
-	textix="B: No. frames to coadd:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -232,13 +210,13 @@ display {
 }
 "text" {
 	object {
-		x="14"
-		y="190"
-		width="687"
-		height="20"
+		x="11"
+		y="163"
+		width="597"
+		height="21"
 		groupid="0"
 	}
-	textix="Parameters for fast guide and focus and average images mode:"
+	textix="More parameters for sequence closed loop mode:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -251,46 +229,116 @@ display {
 }
 "text" {
 	object {
-		x="15"
-		y="271"
-		width="224"
+		x="8"
+		y="310"
+		width="494"
 		height="16"
 		groupid="0"
 	}
-	textix="C: Coadd file path:"
+	textix="E: Determine the average flux after Global Guide:"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="15"
-		y="299"
-		width="218"
+		x="8"
+		y="340"
+		width="577"
 		height="16"
 		groupid="0"
 	}
-	textix="D: Coadd file name:"
+	textix="F: Number of frames used to compute the average flux:"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="15"
-		y="217"
-		width="384"
+		x="8"
+		y="371"
+		width="571"
 		height="16"
 		groupid="0"
 	}
-	textix="A: No. subapertures allowed to be off:"
+	textix="G: Rate of this average flux used for the flux threshold:"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="5"
+		y="294"
+		width="761"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="5"
+		y="294"
+	}
+	point[1] {
+		x="766"
+		y="294"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="737"
+		y="365"
+		width="18"
+		height="24"
+		groupid="0"
+	}
+	textix="%"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="13"
-		y="326"
-		width="634"
+		x="495"
+		y="256"
+		width="18"
+		height="24"
+		groupid="0"
+	}
+	textix="%"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="8"
+		y="193"
+		width="474"
 		height="16"
 		groupid="0"
 	}
-	textix="E: During Fast Guide and Focus write Z to SCS:"
+	textix="B: Determine the threshold after Global Guide:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="8"
+		y="226"
+		width="504"
+		height="16"
+		groupid="0"
+	}
+	textix="C: Number of frames used to compute the threshold:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="8"
+		y="262"
+		width="332"
+		height="16"
+		groupid="0"
+	}
+	textix="D: Rate of the brightest pixels:"
 	align="horiz. left"
 }
 "message button" {
@@ -302,7 +350,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.DIR"
+		chan="$(top)detSigModeSeq.DIR"
 		clr="1"
 		bclr="6"
 		label="none"
@@ -345,12 +393,12 @@ display {
 	object {
 		x="12"
 		y="127"
-		width="315"
+		width="361"
 		height="22"
 		groupid="0"
 	}
 	monitor {
-		chan="$(top)detSigModeFgCoadd.MESS"
+		chan="$(top)detSigModeSeq.MESS"
 		clr="0"
 		bclr="7"
 		label="none"
@@ -396,7 +444,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.DIR"
+		chan="$(top)detSigModeSeq.DIR"
 		clr="1"
 		bclr="6"
 		label="none"
@@ -444,7 +492,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.DIR"
+		chan="$(top)detSigModeSeq.DIR"
 		clr="1"
 		bclr="6"
 		label="none"
@@ -485,9 +533,9 @@ display {
 }
 "text update" {
 	object {
-		x="490"
-		y="45"
-		width="200"
+		x="537"
+		y="46"
+		width="227"
 		height="20"
 		groupid="0"
 	}
@@ -531,10 +579,10 @@ display {
 }
 "text update" {
 	object {
-		x="490"
-		y="65"
-		width="200"
-		height="20"
+		x="537"
+		y="66"
+		width="227"
+		height="21"
 		groupid="0"
 	}
 	monitor {
@@ -577,9 +625,9 @@ display {
 }
 "text update" {
 	object {
-		x="335"
-		y="127"
-		width="355"
+		x="382"
+		y="128"
+		width="383"
 		height="22"
 		groupid="0"
 	}
@@ -623,10 +671,10 @@ display {
 }
 "text update" {
 	object {
-		x="490"
-		y="85"
-		width="200"
-		height="20"
+		x="537"
+		y="87"
+		width="227"
+		height="21"
 		groupid="0"
 	}
 	monitor {
@@ -667,203 +715,23 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
-"text entry" {
-	object {
-		x="251"
-		y="241"
-		width="445"
-		height="21"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigModeFgCoadd.B"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
-		x="251"
-		y="269"
-		width="445"
-		height="21"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigModeFgCoadd.C"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
-		x="251"
-		y="297"
-		width="445"
-		height="22"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigModeFgCoadd.D"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
-		x="396"
-		y="215"
-		width="300"
-		height="21"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigModeFgCoadd.A"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
 "message button" {
 	object {
-		x="43"
-		y="348"
+		x="507"
+		y="304"
 		width="63"
 		height="26"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.E"
+		chan="$(top)detSigModeSeq.E"
 		clr="1"
 		bclr="6"
 		label="none"
 		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
 		rulechan[3] = ""
 		rulechan[4] = ""
 		rulechan[5] = ""
@@ -878,7 +746,7 @@ display {
 		rulechan[14] = ""
 		rulechan[15] = ""
 		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
+		clrargs="C=$(top)detSigModeSeq"
 		rulecolorbg="1"
 		rulecolorfg="1"
 		hdl="0"
@@ -897,21 +765,21 @@ display {
 }
 "message button" {
 	object {
-		x="119"
-		y="348"
+		x="583"
+		y="304"
 		width="63"
 		height="26"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.E"
+		chan="$(top)detSigModeSeq.E"
 		clr="1"
 		bclr="6"
 		label="none"
 		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
 		rulechan[3] = ""
 		rulechan[4] = ""
 		rulechan[5] = ""
@@ -926,7 +794,7 @@ display {
 		rulechan[14] = ""
 		rulechan[15] = ""
 		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd.E"
+		clrargs="C=$(top)detSigModeSeq"
 		rulecolorbg="1"
 		rulecolorfg="1"
 		hdl="0"
@@ -945,21 +813,21 @@ display {
 }
 "text entry" {
 	object {
-		x="196"
-		y="348"
+		x="542"
+		y="334"
 		width="99"
-		height="27"
+		height="24"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigModeFgCoadd.E"
+		chan="$(top)detSigModeSeq.F"
 		clr="0"
 		bclr="6"
 		label="none"
 		clrmod="rule"
-		rulechan[0] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[1] = "$(top)detSigModeFgCoadd.VAL"
-		rulechan[2] = "$(top)detSigModeFgCoadd.VAL"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
 		rulechan[3] = ""
 		rulechan[4] = ""
 		rulechan[5] = ""
@@ -974,7 +842,328 @@ display {
 		rulechan[14] = ""
 		rulechan[15] = ""
 		clrrule="acceptReject"
-		clrargs="C=$(top)detSigModeFgCoadd"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="582"
+		y="367"
+		width="150"
+		height="22"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.G"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"message button" {
+	object {
+		x="476"
+		y="187"
+		width="63"
+		height="26"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.B"
+		clr="1"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	inactive_label="0: NO"
+	pressed_label=""
+	press_msg="0"
+	release_msg=""
+}
+"message button" {
+	object {
+		x="552"
+		y="187"
+		width="63"
+		height="26"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.B"
+		clr="1"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	inactive_label="1: YES"
+	pressed_label=""
+	press_msg="1"
+	release_msg=""
+}
+"text entry" {
+	object {
+		x="626"
+		y="185"
+		width="99"
+		height="27"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.B"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="518"
+		y="222"
+		width="99"
+		height="24"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.C"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="340"
+		y="258"
+		width="150"
+		height="22"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.D"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="657"
+		y="303"
+		width="99"
+		height="27"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.E"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
 		rulecolorbg="1"
 		rulecolorfg="1"
 		hdl="0"
@@ -990,7 +1179,7 @@ display {
 }
 "kill display" {
 	object {
-		x="623"
+		x="694"
 		y="8"
 		width="72"
 		height="23"

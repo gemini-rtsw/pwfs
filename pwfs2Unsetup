@@ -29,6 +29,7 @@ echo Removing EPICS links...
 /usr/bin/rm -rf `find . -name ".epics" -print`
 /usr/bin/rm -rf `find . -name ".version" -print`
 /usr/bin/rm -rf `find . -name ".applTop" -print`
-
-echo Removing Distfile
 /usr/bin/rm Distfile
+/usr/bin/rm pwfs2Build.log
+/usr/bin/rm startup/UAE.dist
+

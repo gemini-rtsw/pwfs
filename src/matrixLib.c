@@ -1,4 +1,5 @@
-static char rcsid[]="$Id: matrixLib.c,v 1.1 2001-09-04 19:53:16 cboyer Exp $";
+static struct {void *v; char *c;} rcsid= {&rcsid,
+   "$Id: matrixLib.c,v 1.2 2002-01-03 03:39:26 cboyer Exp $"};
 /*
  * MODULE NAME:
  * matrixLib

@@ -152,7 +152,9 @@ p -640 544 100 0 1 FTVB:LONG
 p -640 512 100 0 1 FTVC:STRING
 p -640 480 100 0 1 FTVD:STRING
 p -640 448 100 0 1 FTVE:LONG
-p -640 416 100 0 0 FTVF:STRING
+p -640 416 100 0 1 FTVF:LONG
+p -640 384 100 0 1 FTVG:DOUBLE
+p -640 352 100 0 1 FTVH:DOUBLE
 p -672 -240 100 0 1 INAM:epToVxCadInit
 p -672 -160 100 0 1 PREC:0
 p -672 -336 100 0 1 PV:$(top)$(wfs)
@@ -176,10 +178,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2001-12-03 19:47:57 $
-p 2592 2304 200 0 -1 id:$Id: wfsCadMore1.sch,v 1.2 2001-12-03 19:47:57 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2002-01-03 03:39:12 $
+p 2592 2304 200 0 -1 id:$Id: wfsCadMore1.sch,v 1.3 2002-01-03 03:39:12 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.2 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]

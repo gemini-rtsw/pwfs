@@ -23,7 +23,9 @@
  * dfilter           - low pass filter
  * ttfZero           - Receive ttfZero array from TCS
  * aoZero            - Receive aoZero array from TCS
- * showFgDiagP2      - Write diagnostic data from PWFS2 FG structure to gensub
+ * showFgDiag1P2     - Write diagnostic data from PWFS2 FG structure to gensub
+ *                     outputs for display
+ * showFgDiag2P2     - Write diagnostic data from PWFS2 FG structure to gensub
  *                     outputs for display
  * showAoDiagP2      - Write diagnostic data from PWFS2 aO structure to gensub
  *                     outputs for display
@@ -77,6 +79,7 @@
  * 22-Aug-2001: cb - Major modifications to have ao Correction with P2 also
  * 14-Sep-2001: cb - Add showThreshDiagP2()
  * 30-Nov-2001: cb - add writeToRm to writeWfsToSynchro
+ * 14-Dec-2001: cb - add threshold in real time
  *
  */
 /* INDENT ON */
@@ -195,6 +198,8 @@ WFS_VECT localTotalCountsVect;
 WFS_VECT localFgCentroidsVect;
 WFS_VECT localFgTotalCountsVect;
 WFS_VECT localThresholdVect;
+WFS_VECT localRealTimeFgThresholdVect;
+WFS_VECT localRealTimeAoThresholdVect;
 SEM_ID   accessAoData=NULL;
 SEM_ID   accessFgData=NULL;
 
@@ -1811,6 +1816,7 @@ STATUS showAoDiagP2
    int wfsStatus;
    double   *pCentroids;
    double   *pTotal;
+   double   *pThresh;
    double   time;
 
    if (aoCbAoCtrlIdP2 == NULL)
@@ -1844,6 +1850,7 @@ STATUS showAoDiagP2
       else
          indexCb = CB_AO_CTRL_RECORD_NB - 1;
 
+      pThresh = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].thresholdVect;
       pCentroids = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].centroidsVect;
       pTotal = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].totalCountsVect;
       wfsStatus = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].wfsStatus;
@@ -1857,6 +1864,7 @@ STATUS showAoDiagP2
              *(localCentroidsVect + 2*i) = *(pCentroids + 2*j);
              *(localCentroidsVect + 2*i+1) = *(pCentroids + 2*j+1);
              *(localTotalCountsVect + i) = *(pTotal + j);
+             *(localRealTimeAoThresholdVect + i) = *(pThresh + j);
              j ++ ;
           }
           else
@@ -1864,6 +1872,7 @@ STATUS showAoDiagP2
              *(localCentroidsVect + 2*i) = -99.99;
              *(localCentroidsVect + 2*i+1) = -99.99;
              *(localTotalCountsVect + i) = -99.99;
+             *(localRealTimeAoThresholdVect + i) = -99.99;
           }
       }
 
@@ -1887,6 +1896,10 @@ STATUS showAoDiagP2
       *(double *)pgsub->valn = *(localTotalCountsVect + 3); /* total subap 4 */
       *(double *)pgsub->valo = *(localTotalCountsVect + 4); /* whole total */
       *(double *)pgsub->valp = time;
+      *(double *)pgsub->valq = *(localRealTimeAoThresholdVect + 0); /* subap 1*/
+      *(double *)pgsub->valr = *(localRealTimeAoThresholdVect + 1); /* subap 2*/
+      *(double *)pgsub->vals = *(localRealTimeAoThresholdVect + 2); /* subap 3*/
+      *(double *)pgsub->valt = *(localRealTimeAoThresholdVect + 3); /* subap 4*/
 
       semGive (accessAoData);
    }
@@ -1898,13 +1911,13 @@ STATUS showAoDiagP2
 /*
  *+
  * FUNCTION NAME:
- * showFgDiagP2
+ * showFgDiag1P2
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long    showFgDiagP2(struct genSubRecord * pgsub)
+ * long    showFgDiag1P2(struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -1934,7 +1947,7 @@ STATUS showAoDiagP2
  *-
  */
 
-STATUS showFgDiagP2(struct genSubRecord * pgsub)
+STATUS showFgDiag1P2(struct genSubRecord * pgsub)
 {
    int i=0;
    int j=0;
@@ -1943,6 +1956,7 @@ STATUS showFgDiagP2(struct genSubRecord * pgsub)
    double *pGuide;
    double *pTotal;
    double *pCentroids;
+   double *pThresh;
    double time;
 
    if (aoCbFgCtrlIdP2 == NULL )
@@ -1982,6 +1996,7 @@ STATUS showFgDiagP2(struct genSubRecord * pgsub)
       pGuide = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].guidesVect;
       pTotal = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].totalCountsVect;
       pCentroids = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].centroidsVect;
+      pThresh = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].thresholdVect;
 
       j = 0;
       for ( i = 0 ; i < aoCcdIdP2->subapNb ; i ++ )
@@ -1991,6 +2006,7 @@ STATUS showFgDiagP2(struct genSubRecord * pgsub)
              *(localFgCentroidsVect + 2*i) = *(pCentroids + 2*j);
              *(localFgCentroidsVect + 2*i+1) = *(pCentroids + 2*j+1);
              *(localFgTotalCountsVect + i) = *(pTotal + j);
+             *(localRealTimeFgThresholdVect + i) = *(pThresh + j);
              j ++ ;
           }
           else
@@ -1998,6 +2014,7 @@ STATUS showFgDiagP2(struct genSubRecord * pgsub)
              *(localFgCentroidsVect + 2*i) = -99.99;
              *(localFgCentroidsVect + 2*i+1) = -99.99;
              *(localFgTotalCountsVect + i) = -99.99;
+             *(localRealTimeFgThresholdVect + i) = -99.99;
           }
       }
 
@@ -2024,6 +2041,67 @@ STATUS showFgDiagP2(struct genSubRecord * pgsub)
       *(double *)pgsub->valq = *(localFgTotalCountsVect+4); /* whole total */
       *(double *)pgsub->valr = time;
 
+
+      semGive (accessFgData);
+   }
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showFgDiag2P2
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long    showFgDiag2P2(struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from fg circular buffer of pwfs2 to gensub outputs for 
+ * display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 14-Dec-2001  Add threshold in real time
+ *-
+ */
+
+STATUS showFgDiag2P2(struct genSubRecord * pgsub)
+{
+
+   if(semTake(accessFgData, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access accessFgData\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      /* data intact, write to genSub outputs */
+
+      *(double *)pgsub->vala = *(localRealTimeFgThresholdVect + 0);
+      *(double *)pgsub->valb = *(localRealTimeFgThresholdVect + 1);
+      *(double *)pgsub->valc = *(localRealTimeFgThresholdVect + 2);
+      *(double *)pgsub->vald = *(localRealTimeFgThresholdVect + 3);
 
       semGive (accessFgData);
    }

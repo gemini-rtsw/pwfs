@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsControl.c,v 1.4 2001-02-21 00:01:24 cboyer Exp $"};
+   "$Id: wfsControl.c,v 1.5 2002-01-03 03:39:26 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -47,8 +47,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <memLib.h>
 #include <math.h>
 #include <tickLib.h>
-#include <ppc.h>
-#include "car.h"
+#include "menuCarstates.h"
 #include "gemTypes.h"
 #include "timeoutLib.h"
 #include "errorLib.h"
@@ -269,7 +268,7 @@ STATUS   wfsControl (void)
           * Park command received. Set the park state to BUSY
           */
 
-         parkState = CAR_BUSY;
+         parkState = menuCarstatesBUSY;
          if (epToVxPipeWrite ( NULL, (char *) &parkState, pParkContext ) ==
              ERROR )
          {
@@ -289,7 +288,7 @@ STATUS   wfsControl (void)
           * Set the park state to IDLE.
           */
 
-         parkState = CAR_IDLE;
+         parkState = menuCarstatesIDLE;
          if (epToVxPipeWrite ( NULL, (char *) &parkState, pParkContext ) ==
              ERROR )
          {
@@ -302,7 +301,7 @@ STATUS   wfsControl (void)
       {
          /* Set the reboot state to BUSY */
 
-         rebootState = CAR_BUSY;
+         rebootState = menuCarstatesBUSY;
          if (epToVxPipeWrite ( NULL, (char *) &rebootState, pRebootContext ) ==
              ERROR )
          {

@@ -10,6 +10,9 @@
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2000/07/10 21:47:34  cboyer
+ * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
+ *
  * Revision 1.2  1999/07/17 02:14:05  cboyer
  * Minor modifications
  *
@@ -236,7 +239,7 @@
                                              /* Timeout initialising record.  */
 #define S_epToVxLib_TIMEOUT_WAITING_FOR_PIPE (M_epToVxLib | 7)   
                                              /* Timeout waiting for pipe.     */
-#define S_epToVxLib_CAD_STOP_UNSUPPORTED     (M_epToVxLib | 8)   
+#define S_epToVxLib_menuDirectiveSTOP_UNSUPPORTED     (M_epToVxLib | 8)   
                                              /* STOP directive not supported  */
 #define S_epToVxLib_CAD_CMD_UNSUPPORTED      (M_epToVxLib | 9)   
                                              /* Command not supported.        */

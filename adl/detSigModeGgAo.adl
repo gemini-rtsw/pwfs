@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="12"
-	nstr="52"
+	nstr="54"
 	ndynamic="13"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2188"
-	nwords_sta="580"
+	nwords_dspy="2226"
+	nwords_sta="592"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1288"
-	osta="708"
-	odynamic="1288"
-	oplot="2176"
-	ord="2176"
-	oes="2176"
-	okd="2176"
-	opd="2188"
-	opo="2188"
+	odyng="1326"
+	osta="734"
+	odynamic="1326"
+	oplot="2214"
+	ord="2214"
+	oes="2214"
+	okd="2214"
+	opd="2226"
+	opo="2226"
 	opc="68"
 	ostr="226"
-	ocmap="708"
-	ocrules="708"
+	ocmap="734"
+	ocrules="734"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -241,7 +241,7 @@ display {
 "text" {
 	object {
 		x="13"
-		y="251"
+		y="253"
 		width="384"
 		height="16"
 		groupid="0"
@@ -252,23 +252,34 @@ display {
 "text" {
 	object {
 		x="13"
-		y="217"
-		width="384"
+		y="288"
+		width="389"
 		height="16"
 		groupid="0"
 	}
-	textix="A: No. frames to average:"
+	textix="C: During Global Guide write Z to SCS:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="13"
-		y="288"
-		width="634"
+		y="218"
+		width="265"
 		height="16"
 		groupid="0"
 	}
-	textix="C: During Global Guide write Z to SCS:"
+	textix="A: Average frames during: "
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="572"
+		y="216"
+		width="83"
+		height="16"
+		groupid="0"
+	}
+	textix="seconds"
 	align="horiz. left"
 }
 "message button" {
@@ -649,7 +660,7 @@ display {
 	object {
 		x="394"
 		y="249"
-		width="296"
+		width="256"
 		height="21"
 		groupid="0"
 	}
@@ -692,7 +703,7 @@ display {
 }
 "text entry" {
 	object {
-		x="394"
+		x="264"
 		y="215"
 		width="296"
 		height="21"
