@@ -1,0 +1,39 @@
+#!/bin/sh -f
+#
+# Install script for Gemini PWFS2 system
+#
+
+applSetup -T svgm5 -s Makefile.subdirs -I docs -I dspsrc -I par -X sys -X ar \
+          -depends /gemini/astlib -depends /gemini/slalib \
+          -depends /gemini/timelib -depends /home/cboyer/wfs_lib/cfitsio-ppc \
+          -depends /gemini/dhs $1 > pwfs2Build.log 2>&1
+
+applSetup  >> pwfs2Build.log 2>&1
+
+editUAE()
+{
+ed UAE.dist << eof >/dev/null
+/^FILES4
+a
+FILES5 = ( \${APPLIC_INSTALL}/bin/asm56000 )
+.
+w
+$
+a
+
+(\${FILES5}) -> (\${HOSTS})
+        install -R \${DIST_PATH}/bin/asm56000;
+.
+w
+q
+eof
+}
+
+cd startup
+editUAE
+cd ..
+
+gmake >> pwfs2Build.log 2>&1
+
+exit 0
+
