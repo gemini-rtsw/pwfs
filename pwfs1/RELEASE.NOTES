@@ -249,7 +249,7 @@ V4-4 10 July 2003 CB:
   - Implement proportional law for aO gains
   - startupCP.vws fix address of reggie
 
-V4-5.dev 17 May 2004 AAG:
+V4-5 17 May 2004 AAG:
 ------------------------
 
   * read default gains from .dat file when pressing the default button
@@ -267,6 +267,7 @@ V4-5.dev 17 May 2004 AAG:
   - IMP_Startup.pwfs1:
        DHS server moved to acamar
   - par/defAoModP1MK.dat updated
+  - par/defAoModP1CP.dat updated
   - capfats/wfsGensub1.s* added
   - capfast/pwfs1.sch modified to include wfsGensub1
   - capfast/wfsDetSad.sch
