@@ -1,0 +1,298 @@
+file {
+	name="showSeeing.dl"
+}
+display {
+	magic="305419896"
+	majv="2"
+	mnrv="4"
+	ndyng="0"
+	npc="2"
+	nstr="33"
+	ndynamic="1"
+	nplot="0"
+	nrd="0"
+	nes="1"
+	nkd="1"
+	npd="0"
+	npo="0"
+	object {
+		x="328"
+		y="298"
+		width="667"
+		height="108"
+	}
+	clr="1"
+	bclr="13"
+	nwords_dspy="628"
+	nwords_sta="48"
+	nwords_cmap="0"
+	nwords_crules="0"
+	odyng="392"
+	osta="344"
+	odynamic="392"
+	oplot="458"
+	ord="458"
+	oes="458"
+	okd="616"
+	opd="628"
+	opo="628"
+	opc="68"
+	ostr="82"
+	ocmap="344"
+	ocrules="344"
+	style="solid"
+	fill="outline"
+	width="0"
+	clrmod="static"
+	vismod="static"
+	precision="-1"
+	clrrule="alarm"
+	pv=""
+	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
+}
+"<<basic attribute>>" {
+	attr {
+		clr="12"
+		style="solid"
+		fill="outline"
+		width="0"
+	}
+}
+"text" {
+	object {
+		x="10"
+		y="9"
+		width="472"
+		height="28"
+		groupid="0"
+	}
+	textix="$(sensor) - SEEING"
+	align="horiz. left"
+}
+"rectangle" {
+	object {
+		x="11"
+		y="41"
+		width="649"
+		height="51"
+		groupid="0"
+	}
+}
+"text" {
+	object {
+		x="20"
+		y="59"
+		width="274"
+		height="20"
+		groupid="0"
+	}
+	textix="Seeing at 0.5 microns:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="426"
+		y="59"
+		width="88"
+		height="20"
+		groupid="0"
+	}
+	textix="arcsecs"
+	align="horiz. left"
+}
+"text update" {
+	object {
+		x="263"
+		y="59"
+		width="160"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)seeing"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="6"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"execute script" {
+	object {
+		x="513"
+		y="59"
+		width="144"
+		height="20"
+		groupid="0"
+	}
+	script[0] {
+		label="StripTool"
+		path="StripTool seeingConfig.ST"
+		args=""
+	}
+	script[1] {
+		label=""
+		path=""
+		args=""
+	}
+	script[2] {
+		label=""
+		path=""
+		args=""
+	}
+	script[3] {
+		label=""
+		path=""
+		args=""
+	}
+	script[4] {
+		label=""
+		path=""
+		args=""
+	}
+	script[5] {
+		label=""
+		path=""
+		args=""
+	}
+	script[6] {
+		label=""
+		path=""
+		args=""
+	}
+	script[7] {
+		label=""
+		path=""
+		args=""
+	}
+	script[8] {
+		label=""
+		path=""
+		args=""
+	}
+	script[9] {
+		label=""
+		path=""
+		args=""
+	}
+	script[10] {
+		label=""
+		path=""
+		args=""
+	}
+	script[11] {
+		label=""
+		path=""
+		args=""
+	}
+	script[12] {
+		label=""
+		path=""
+		args=""
+	}
+	script[13] {
+		label=""
+		path=""
+		args=""
+	}
+	script[14] {
+		label=""
+		path=""
+		args=""
+	}
+	script[15] {
+		label=""
+		path=""
+		args=""
+	}
+	script[16] {
+		label=""
+		path=""
+		args=""
+	}
+	script[17] {
+		label=""
+		path=""
+		args=""
+	}
+	script[18] {
+		label=""
+		path=""
+		args=""
+	}
+	script[19] {
+		label=""
+		path=""
+		args=""
+	}
+	script[20] {
+		label=""
+		path=""
+		args=""
+	}
+	script[21] {
+		label=""
+		path=""
+		args=""
+	}
+	script[22] {
+		label=""
+		path=""
+		args=""
+	}
+	script[23] {
+		label=""
+		path=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"kill display" {
+	object {
+		x="590"
+		y="10"
+		width="70"
+		height="23"
+		groupid="0"
+	}
+	label="EXIT"
+	clr="1"
+	bclr="9"
+	decorate="none"
+}

@@ -248,4 +248,6 @@ V4-2 18 June 2002 CB:
   - Allow ao + chopping: aoModeCompute() modified to check the status of the
     raw image
 
-dev equivalent to V4-2
+V4-3 3 July 2002 CB:
+--------------------
+  - Implement seeing computation following BE method

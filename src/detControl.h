@@ -180,6 +180,18 @@
                                     /* cutoff frequency of the tip tilt       */
                                     /* butterworth filter                     */
 
+#define   DET_CONTROL_SEEING_SIR_NAME         "seeing"
+                                    /* Name of SIR record containing the      */
+                                    /* current seeing                         */
+
+#define   DET_CONTROL_SEEING_GAIN_SIR_NAME    "seeingGain"
+                                    /* Name of SIR record containing the      */
+                                    /* seeing scale factor                    */
+
+#define   DET_CONTROL_SEEING_COEFF_MAT_INIT_SIR_NAME    "seeingCoeffMatInit"
+                                    /* Name of SIR record containing the      */
+                                    /* init state of the seeing coeff matrix  */
+
 #define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
                                     /* Name of SIR record containing the      */
                                     /* number of ouputs                       */
@@ -543,6 +555,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         threshRealTimeFlag;
                            /* Compute the threshold in real time during fast  */
                            /* guide (TRUE/FALSE)                              */
+   long         seeingFlag;/* seeing Flag in sequence closed loop             */
    double       ggTime;    /* Time with GG only over the whole CCD in the     */
                            /* closed loop sequence                            */
    double       aoTime;    /* Time to average aO data                         */
@@ -733,6 +746,13 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* record.                              */
    DATREC_CONTEXT pCfTipTiltBwContext;/* Context structure for cfTipTiltBw SIR*/
                                       /* record.                              */
+   DATREC_CONTEXT pSeeingContext;     /* Context structure for seeing SIR     */
+                                      /* record.                              */
+   DATREC_CONTEXT pSeeingGainContext; /* Context structure for seeingGain SIR */
+                                      /* record.                              */
+   DATREC_CONTEXT pSeeingCoeffMatInitContext; 
+                                      /* Context structure for                */
+                                      /* seeingCoeffMatInit SIR record.       */
    DATREC_CONTEXT pDetTypeContext;    /* Context structure for detector       */
                                       /* controller type.                     */
    DATREC_CONTEXT pDetIdContext;      /* Context structure for detector Id or */
