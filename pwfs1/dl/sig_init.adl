@@ -6,44 +6,53 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="14"
-	nstr="56"
-	ndynamic="15"
+	npc="22"
+	nstr="70"
+	ndynamic="21"
 	nplot="0"
 	nrd="1"
 	nes="0"
 	nkd="1"
+	npd="0"
+	npo="0"
 	object {
 		x="0"
 		y="0"
-		width="711"
-		height="314"
+		width="704"
+		height="663"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2428"
-	nwords_sta="560"
+	nwords_dspy="3820"
+	nwords_sta="1120"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1322"
-	osta="762"
-	odynamic="1322"
-	oplot="2354"
-	ord="2354"
-	oes="2416"
-	okd="2416"
-	opc="58"
-	ostr="232"
-	ocmap="762"
-	ocrules="762"
+	odyng="2244"
+	osta="1124"
+	odynamic="2244"
+	oplot="3648"
+	ord="3648"
+	oes="3808"
+	okd="3808"
+	opd="3820"
+	opo="3820"
+	opc="68"
+	ostr="354"
+	ocmap="1124"
+	ocrules="1124"
 	style="solid"
 	fill="outline"
 	width="0"
 	clrmod="static"
 	vismod="static"
+	precision="-1"
 	clrrule="alarm"
 	pv=""
 	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -57,20 +66,19 @@ display {
 	object {
 		x="12"
 		y="107"
-		width="93"
+		width="120"
 		height="21"
 		groupid="0"
 	}
 	textix="MESSAGE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "rectangle" {
 	object {
 		x="6"
 		y="38"
 		width="690"
-		height="256"
+		height="609"
 		groupid="0"
 	}
 }
@@ -78,25 +86,23 @@ display {
 	object {
 		x="11"
 		y="158"
-		width="125"
-		height="24"
+		width="279"
+		height="22"
 		groupid="0"
 	}
-	textix="PARAMETERS:"
+	textix="MAIN PARAMETERS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="12"
 		y="50"
-		width="112"
-		height="24"
+		width="136"
+		height="21"
 		groupid="0"
 	}
 	textix="DIRECTIVE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "line" {
 	object {
@@ -160,91 +166,267 @@ display {
 	}
 	textix="$(sensor) - INITIALIZE PROCESSING"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
-		x="11"
+		x="10"
 		y="186"
-		width="310"
+		width="215"
 		height="16"
 		groupid="0"
 	}
-	textix="A: Data file path .. ... ... ... :"
+	textix="Data file path ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
-		x="11"
-		y="211"
-		width="310"
+		x="10"
+		y="210"
+		width="210"
 		height="16"
 		groupid="0"
 	}
-	textix="B: Initialization file name  ... :"
+	textix="Dark file name ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="335"
 		y="66"
-		width="119"
+		width="145"
 		height="21"
 		groupid="0"
 	}
 	textix="CLIENT ID:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="335"
 		y="107"
-		width="91"
+		width="136"
 		height="21"
 		groupid="0"
 	}
 	textix="MESSAGE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="335"
 		y="85"
-		width="147"
+		width="168"
 		height="21"
 		groupid="0"
 	}
 	textix="ERROR NUMBER:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="335"
 		y="45"
-		width="115"
+		width="159"
 		height="24"
 		groupid="0"
 	}
 	textix="CAR STATE:"
 	align="horiz. left"
-	RISC_pad="0"
+}
+"text" {
+	object {
+		x="10"
+		y="235"
+		width="204"
+		height="16"
+		groupid="0"
+	}
+	textix="Flat file name ... :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="10"
+		y="260"
+		width="201"
+		height="16"
+		groupid="0"
+	}
+	textix="Angle in radians ..:"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="8"
+		y="296"
+		width="688"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="8"
+		y="296"
+	}
+	point[1] {
+		x="696"
+		y="296"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="9"
+		y="303"
+		width="279"
+		height="22"
+		groupid="0"
+	}
+	textix="GUIDING PARAMETERS:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="422"
+		y="352"
+		width="113"
+		height="16"
+		groupid="0"
+	}
+	textix="Tip gain .:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="422"
+		y="379"
+		width="121"
+		height="16"
+		groupid="0"
+	}
+	textix="Tilt gain :"
+	align="horiz. left"
 }
 "text" {
 	object {
 		x="12"
-		y="260"
-		width="310"
+		y="352"
+		width="159"
 		height="16"
 		groupid="0"
 	}
-	textix="C: Dummy file name  (TBD)... ... :"
+	textix="Reference 1x1 :"
 	align="horiz. left"
-	RISC_pad="0"
+}
+"text" {
+	object {
+		x="11"
+		y="403"
+		width="194"
+		height="16"
+		groupid="0"
+	}
+	textix="Guiding threshold :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="12"
+		y="448"
+		width="279"
+		height="22"
+		groupid="0"
+	}
+	textix="AO PARAMETERS:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="9"
+		y="539"
+		width="307"
+		height="16"
+		groupid="0"
+	}
+	textix="AO threshold ... ... ... ... :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="9"
+		y="483"
+		width="300"
+		height="16"
+		groupid="0"
+	}
+	textix="Reference 6x6 file name ... .:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="154"
+		y="614"
+		width="166"
+		height="16"
+		groupid="0"
+	}
+	textix="Zernikes gains :"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="6"
+		y="440"
+		width="692"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="6"
+		y="440"
+	}
+	point[1] {
+		x="698"
+		y="440"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="9"
+		y="511"
+		width="302"
+		height="16"
+		groupid="0"
+	}
+	textix="Control matrix file name ... :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="9"
+		y="567"
+		width="308"
+		height="16"
+		groupid="0"
+	}
+	textix="Number of Zernikes to correct:"
+	align="horiz. left"
 }
 "message button" {
 	object {
@@ -438,9 +620,9 @@ display {
 }
 "text entry" {
 	object {
-		x="325"
-		y="185"
-		width="365"
+		x="214"
+		y="187"
+		width="467"
 		height="19"
 		groupid="0"
 	}
@@ -480,7 +662,6 @@ display {
 		convertParams=""
 	}
 	format="decimal"
-	RISC_pad="0"
 }
 "text update" {
 	object {
@@ -668,9 +849,9 @@ display {
 }
 "text entry" {
 	object {
-		x="325"
+		x="214"
 		y="210"
-		width="365"
+		width="467"
 		height="19"
 		groupid="0"
 	}
@@ -710,13 +891,12 @@ display {
 		convertParams=""
 	}
 	format="decimal"
-	RISC_pad="0"
 }
 "text entry" {
 	object {
-		x="326"
-		y="259"
-		width="365"
+		x="214"
+		y="234"
+		width="467"
 		height="19"
 		groupid="0"
 	}
@@ -756,18 +936,17 @@ display {
 		convertParams=""
 	}
 	format="decimal"
-	RISC_pad="0"
 }
-"message button" {
+"text entry" {
 	object {
-		x="325"
-		y="233"
-		width="88"
+		x="214"
+		y="258"
+		width="110"
 		height="19"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.B"
+		chan="$(top)detSigInit.D"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -801,21 +980,18 @@ display {
 		convertFunc=""
 		convertParams=""
 	}
-	inactive_label="pwfs1fg.ini"
-	pressed_label="pwfs1fg.ini"
-	press_msg="pwfs1fg.ini"
-	release_msg=""
+	format="decimal"
 }
-"message button" {
+"text entry" {
 	object {
-		x="417"
-		y="233"
-		width="88"
+		x="545"
+		y="350"
+		width="110"
 		height="19"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.B"
+		chan="$(top)detSigInit.H"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -849,21 +1025,18 @@ display {
 		convertFunc=""
 		convertParams=""
 	}
-	inactive_label="pwfs2fg.ini"
-	pressed_label="pwfs2fg.ini"
-	press_msg="pwfs2fg.ini"
-	release_msg=""
+	format="decimal"
 }
-"message button" {
+"text entry" {
 	object {
-		x="510"
-		y="233"
-		width="87"
+		x="545"
+		y="377"
+		width="110"
 		height="19"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.B"
+		chan="$(top)detSigInit.I"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -897,21 +1070,18 @@ display {
 		convertFunc=""
 		convertParams=""
 	}
-	inactive_label="pwfs1ao.ini"
-	pressed_label="pwfs1ao.ini"
-	press_msg="pwfs1ao.ini"
-	release_msg=""
+	format="decimal"
 }
-"message button" {
+"text entry" {
 	object {
-		x="602"
-		y="233"
-		width="88"
+		x="173"
+		y="342"
+		width="110"
 		height="19"
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.B"
+		chan="$(top)detSigInit.E"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -945,24 +1115,291 @@ display {
 		convertFunc=""
 		convertParams=""
 	}
-	inactive_label="pwfs2ao.ini"
-	pressed_label="pwfs2ao.ini"
-	press_msg="pwfs2ao.ini"
-	release_msg=""
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="173"
+		y="367"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.F"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="208"
+		y="402"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.G"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="313"
+		y="536"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.K"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="313"
+		y="480"
+		width="371"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.J"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="313"
+		y="508"
+		width="370"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.L"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="313"
+		y="564"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInit.M"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInit.VAL"
+		rulechan[1] = "$(top)detSigInit.VAL"
+		rulechan[2] = "$(top)detSigInit.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInit"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
 }
 "related display" {
 	object {
-		x="550"
-		y="8"
-		width="67"
-		height="23"
+		x="317"
+		y="612"
+		width="148"
+		height="22"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="HELP"
-		name="help1.dl"
-		args=""
+		label="INITIALIZE"
+		name="sig_initGain.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitGain,car=det"
 	}
 	display[1] {
 		label=""
@@ -999,9 +1436,89 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
-	menu_title=""
+	menu_title="INITIALIZE"
 	decorate="none"
 }
 "kill display" {
@@ -1012,7 +1529,6 @@ display {
 		height="23"
 		groupid="0"
 	}
-	RISCpad="0"
 	label="EXIT"
 	clr="1"
 	bclr="9"

@@ -95,10 +95,10 @@ xform 0 1616 800
 p 2608 -672 200 0 1 author:S.M.Beard
 p 3120 -704 100 0 0 border:D
 p 2608 -752 200 0 0 checked:B.Goodrich
-p 3184 -688 200 0 -1 date:$Date: 1999-05-18 22:39:45 $
+p 3184 -688 200 0 -1 date:$Date: 1999-06-10 03:55:34 $
 p 2592 2336 200 0 -1 id:
 p 2704 -752 100 0 1 modified:C. Boyer
 p 3120 -416 200 0 -1 project:Gemini PWFS1
-p 2592 -480 200 0 -1 revision:$Revision: 1.2 $
+p 2592 -480 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -544 200 0 -1 title:System Status Records
 [comments]

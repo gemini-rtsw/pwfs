@@ -60,6 +60,8 @@
  * 24-Jan-1999: ttfZero and aoZero - read ports B and C for fudge factors in polarity and rotation
  * 10-Feb-1999: cb - add check max/min TT and focus to writeWfsToSynchro()
  * 17-Feb-1999: cb - ttfZero change computation of theta for TCS and SCS
+ * 26-Apr-1999: cb - replace in writeWfsToSynchro z[] by FGZernikes[]
+ * 26-Apr-1999: cb - simplified version for split backplane PWFS1
  *
  */
 /* INDENT ON */
@@ -115,8 +117,8 @@
 
 typedef struct
 {
-	double probeAngle;	/* angle of guide probe supplied by Zeiss */
-	double tcsAngle;	/* rotation angle supplied by TCS */
+	double  probeAngle;	/* angle of guide probe supplied by Zeiss */
+	double  tcsAngle;	/* rotation angle supplied by TCS */
 	double	theta;
 	double	sinTheta;
 	double	cosTheta;
@@ -149,21 +151,22 @@ typedef struct
 
 /* declare global variables */
 
-frame	*ag2m2[MAX_WFS_SOURCES];
-frame	*ag2tcs[MAX_WFS_SOURCES];
-wfs	*ptr[MAX_WFS_SOURCES];
-double	ttfData[MAX_WFS_SOURCES][AO_ARRAY_SIZE+2];
-double	aoData[MAX_WFS_SOURCES][AO_ARRAY_SIZE+2];
-float	data[MAX_WFS_SOURCES][AO_ARRAY_SIZE+2];
-float	errors[MAX_WFS_SOURCES][AO_ARRAY_SIZE+2];
-SEM_ID	wfsLock[MAX_WFS_SOURCES];
-SDSU_ID sdsuId[MAX_WFS_SOURCES];
+frame	*ag2m2;
+frame	*ag2tcs;
+wfs	*ptr;
+double	ttfData[AO_ARRAY_SIZE+2];
+double	aoData[AO_ARRAY_SIZE+2];
+float	data[AO_ARRAY_SIZE+2];
+float	errors[AO_ARRAY_SIZE+2];
+SEM_ID	wfsLock;
+SDSU_ID sdsuId;
+
+/* add by cb to display 6x6 centroids data */
+double  localDiag[DIAG_ARRAY_SIZE];
 
 /* declare externals */
 
-extern struct OSP_CONTEXT *wfsAoAddr[MAX_WFS_SOURCES];
-extern struct OSP_CONTEXT *wfsFgAddr[MAX_WFS_SOURCES];
-
+extern struct OSP_CONTEXT *wfsAddr;
 
 /* declare prototypes */
 
@@ -284,9 +287,9 @@ double	dfilter(double newSample, int Id)
  * Assign pointers to synchro bus pages for each wfs source
  *
  * EXTERNAL VARIABLES:
- * wfsLock[]	- Global array of mutex semaphores
- * ag2m2[]	- array of pointers to coord conversion structures
- * ag2tcs[]	- array of pointers to coord conversion structures
+ * wfsLock	- Global mutex semaphore
+ * ag2m2	- pointer to coord conversion structures
+ * ag2tcs	- pointer to coord conversion structures
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -299,12 +302,12 @@ double	dfilter(double newSample, int Id)
  * 05-Jan-1999: Put all initialisation and semaphore creation in this section rather
  *		than creating as necessary during operation
  * 22-Jan-1999: Initialise time values on synchro bus to 0.0
+ * 26-Apr-1999: Simplified version for split backplane PWFS1 (cb)
  *-
  */
 
 long    gensubToTcsInit(struct genSubRecord * pgsub)
 {
-	int source;
 	memMap	*basePtr = (memMap *)SYNCHROBASE;
 	static	int processedFlag = FALSE;
 	char	junk;
@@ -317,68 +320,62 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
 		processedFlag = TRUE;
 
 
-	for (source = HRWFS; source < MAX_WFS_SOURCES; source++)
-    	{
-		/* create semaphore to prevent multiple access to wfs data */
+        /* create semaphore to prevent multiple access to wfs data */
 
-		if(wfsLock[source] == NULL)
+	if(wfsLock == NULL)
+	{
+		if ((wfsLock = semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) == NULL)
 		{
-			if ((wfsLock[source] = semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) == NULL)
-			{
-		    		printf ("unable to create wfsLock[%d] sem\n", source);
-			}
+	    		printf ("unable to create wfsLock sem\n");
 		}
 	}
 
-	for (source = HRWFS; source < MAX_WFS_SOURCES; source++)
+        /* create structure holding angle and null values for ao data */
+
+	if((ag2tcs = (frame *)calloc(1, sizeof(frame))) == NULL)
 	{
-		/* create structure holding angle and null values for ttf data */
+		logMsg("Unable to calloc conversion frame for source \n", 0, 0, 0, 0, 0, 0);
+	}
+	else
+	{
+	    if ((ag2tcs->access = semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) == NULL)
+	    {
+		logMsg("Unable to create mutex for conversion frame\n", 0, 0, 0, 0, 0 ,0);
+	    }
+	    else
+	    {
+		/* initialise trig values */
 
-		if((ag2tcs[source] = (frame *)calloc(1, sizeof(frame))) == NULL)
-		{
-			logMsg("Unable to calloc conversion frame for source %d\n", (int)source, 0, 0, 0, 0, 0);
-		}
-		else
-		{
-		    if ((ag2tcs[source]->access = semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) == NULL)
-		    {
-			logMsg("Unable to create mutex for conversion frame\n", 0, 0, 0, 0, 0 ,0);
-		    }
-		    else
-		    {
-			/* initialise trig values */
+		ag2tcs->probeAngle = 0.0;
+		ag2tcs->tcsAngle = 0.0;
+		ag2tcs->theta	= 0.0;
+		ag2tcs->sinTheta = sin(0.0);
+		ag2tcs->cosTheta = cos(0.0);
+	    }
+	}
 
-			ag2tcs[source]->probeAngle = 0.0;
-			ag2tcs[source]->tcsAngle = 0.0;
-			ag2tcs[source]->theta	= 0.0;
-			ag2tcs[source]->sinTheta = sin(0.0);
-			ag2tcs[source]->cosTheta = cos(0.0);
-		    }
-		}
+	/* create structure holding angle and null values for ttf data */
 
-		/* create structure holding angle and null values for ao data */
+	if( (ag2m2 = (frame *)calloc(1, sizeof(frame))) == NULL)
+	{
+		logMsg("Unable to calloc conversion frame for source \n", 0, 0, 0, 0, 0, 0);
+	}
+	else
+	{
+	    if ((ag2m2->access = semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) == NULL)
+	    {
+		logMsg("Unable to create mutex for conversion frame\n", 0, 0, 0, 0, 0 ,0);
+	    }
+	    else
+	    {
+		/* initialise trig values */
 
-		if( (ag2m2[source] = (frame *)calloc(1, sizeof(frame))) == NULL)
-		{
-			logMsg("Unable to calloc conversion frame for source %d\n", (int)source, 0, 0, 0, 0, 0);
-		}
-		else
-		{
-		    if ((ag2m2[source]->access = semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) == NULL)
-		    {
-			logMsg("Unable to create mutex for conversion frame\n", 0, 0, 0, 0, 0 ,0);
-		    }
-		    else
-		    {
-			/* initialise trig values */
-
-			ag2m2[source]->probeAngle = 0.0;
-			ag2m2[source]->tcsAngle = 0.0;
-			ag2m2[source]->theta	= 0.0;
-			ag2m2[source]->sinTheta = sin(0.0);
-			ag2m2[source]->cosTheta = cos(0.0);
-		    }
-		}
+		ag2m2->probeAngle = 0.0;
+		ag2m2->tcsAngle = 0.0;
+		ag2m2->theta	= 0.0;
+		ag2m2->sinTheta = sin(0.0);
+		ag2m2->cosTheta = cos(0.0);
+	    }
 	}
 
 	/* verify presence of 5588 synchro card */
@@ -392,39 +389,13 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
 
 	/* if synchro card present, initialise structure pointers */
 
-	for (source = PWFS1; source < MAX_WFS_SOURCES; source++)
-	{
-		/* assign pointers and write ID strings for synchro bus */
+	/* assign pointers and write ID strings for synchro bus */
 
-		if(ptr[source] == NULL)
-		{
-			switch(source)
-			{
-			case PWFS1:
-				ptr[PWFS1] = (wfs*)&basePtr->pwfs1;
-				strncpy(ptr[PWFS1]->name, "pwfs1", 15);
-				ptr[PWFS1]->time = 0.0;
-				break;
-			case PWFS2:
-				ptr[PWFS2] = (wfs*)&basePtr->pwfs2;
-				strncpy(ptr[PWFS2]->name, "pwfs2", 15);
-				ptr[PWFS2]->time = 0.0;
-				break;
-			case OIWFS:
-				ptr[OIWFS] = (wfs*)&basePtr->oiwfs;
-				strncpy(ptr[OIWFS]->name, "oiwfs", 15);
-				ptr[OIWFS]->time = 0.0;
-				break;
-			case AOWFS:
-				ptr[AOWFS] = (wfs*)&basePtr->gaos;
-				strncpy(ptr[AOWFS]->name, "gaos", 15);
-				ptr[AOWFS]->time = 0.0;
-				break;
-			default:
-				logMsg("wfs index > %d not recognised\n", (int)source, 0, 0, 0, 0, 0);
-				return(ERROR);
-			}
-		}
+	if(ptr == NULL)
+	{
+	   ptr = (wfs*)&basePtr->pwfs1;
+	   strncpy(ptr->name, "pwfs1", 15);
+	   ptr->time = 0.0;
 	}
 
 	return (OK);
@@ -461,8 +432,8 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
  * mutex access.
  *
  * EXTERNAL VARIABLES:
- * wfsLock[]       - Global array of mutex semaphores
- * ttfData[]       - Array of ttf data
+ * wfsLock       - mutex semaphore
+ * ttfData       - Array of ttf data
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -473,6 +444,7 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
  * HISTORY (optional):
  * 28-Oct-1998  Original version                                Sean Prior
  * 13-Jan-1999: Write zernikes and errors to outputs for screen display (srp)
+ * 26-Apr-1999: Simplified version for split backplane PWFS1 (cb)
  *-
  */
 
@@ -480,18 +452,10 @@ long    gensubToTcsTtf (struct genSubRecord * pgsub)
 {
 	int wfsSource = 0;
 
-	/* identify calling source for this routine */
+	/* identify calling source for this routine. Can be removed, unused now*/
 
-	if(strstr(pgsub->name, "dc:ttf"))
+	if(strstr(pgsub->name, "pwfs1:dc:ttf"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2:ttf"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi:ttf"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr:ttf"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao:ttf"))
-		wfsSource = AOWFS;
 	else
 	{
 		logMsg("ttf name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
@@ -500,25 +464,25 @@ long    gensubToTcsTtf (struct genSubRecord * pgsub)
 
 	/* write array to TCS system */
 
-	if(semTake(wfsLock[wfsSource], WFS_TIMEOUT) != OK)
+	if(semTake(wfsLock, WFS_TIMEOUT) != OK)
 	{
-		logMsg("timeout on mutex access wfsLock[%d]\n", (int)wfsSource, 0, 0, 0, 0, 0);
+		logMsg("timeout on mutex access wfsLock\n", 0, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 	else
 	{
-		memcpy (pgsub->valj, ttfData[wfsSource], TTF_ARRAY_SIZE * sizeof (double));
+		memcpy (pgsub->valj, ttfData, TTF_ARRAY_SIZE * sizeof (double));
 
 		/* also write values to gensub outputs for screen display */
 
-		*(double *)pgsub->vala = ttfData[wfsSource][8];	/* z2 */
-		*(double *)pgsub->valb = ttfData[wfsSource][9];	/* z3 */
-		*(double *)pgsub->valc = ttfData[wfsSource][10];/* z4 */
-		*(double *)pgsub->vald = ttfData[wfsSource][5];	/* e2 */
-		*(double *)pgsub->vale = ttfData[wfsSource][6];	/* e3 */
-		*(double *)pgsub->valf = ttfData[wfsSource][7];	/* e4 */
+		*(double *)pgsub->vala = ttfData[8];	/* z2 */
+		*(double *)pgsub->valb = ttfData[9];	/* z3 */
+		*(double *)pgsub->valc = ttfData[10];/* z4 */
+		*(double *)pgsub->vald = ttfData[5];	/* e2 */
+		*(double *)pgsub->vale = ttfData[6];	/* e3 */
+		*(double *)pgsub->valf = ttfData[7];	/* e4 */
 
-		semGive(wfsLock[wfsSource]);
+		semGive(wfsLock);
 	}
 
 	return (OK);
@@ -555,8 +519,8 @@ long    gensubToTcsTtf (struct genSubRecord * pgsub)
  * mutex access.
  *
  * EXTERNAL VARIABLES:
- * wfsLock[]       - Global array of mutex semaphores
- * ttfData[]       - Array of ttf data
+ * wfsLock       - Global array of mutex semaphores
+ * aoData        - Array of ao data
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -568,6 +532,7 @@ long    gensubToTcsTtf (struct genSubRecord * pgsub)
  * 28-Oct-1998  Original version                                Sean Prior
  * 23-Jan-1999	Write arrays of zernikes and errors to vala and valb
  *		to be picked up and displayed by other gensubs (srp)
+ * 26-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  *-
  */
 
@@ -579,16 +544,8 @@ long    gensubToTcsAo (struct genSubRecord * pgsub)
 
 	/* identify calling source for this routine */
 
-	if(strstr(pgsub->name, "dc:ao"))
+	if(strstr(pgsub->name, "pwfs1:dc:ao"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2:ao"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi:ao"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr:ao"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao:ao"))
-		wfsSource = AOWFS;
 	else
 	{
 		logMsg("ao name %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
@@ -597,22 +554,22 @@ long    gensubToTcsAo (struct genSubRecord * pgsub)
 
 	/* write array to TCS system */
 
-	if(semTake(wfsLock[wfsSource], WFS_TIMEOUT) != OK)
+	if(semTake(wfsLock, WFS_TIMEOUT) != OK)
 	{
-		logMsg("timeout on mutex access wfsLock[%d]\n", (int)wfsSource, 0, 0, 0, 0, 0);
+		logMsg("timeout on mutex access wfsLock\n", 0, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 	else
 	{
 		for(index = 0; index < 19; index++)
 		{
-			zernikes[index] = aoData[wfsSource][index+2];
-			errors[index] = aoData[wfsSource][index+21];
+			zernikes[index] = aoData[index+2];
+			errors[index] = aoData[index+21];
 		}
 
 		/* write whole array to valj for the TCS to pick up */
 
-		memcpy (pgsub->valj, aoData[wfsSource], AO_ARRAY_SIZE * sizeof (double));
+		memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
 
 		/* write Zernike values to vala for display */
 
@@ -622,7 +579,7 @@ long    gensubToTcsAo (struct genSubRecord * pgsub)
 
 		memcpy (pgsub->valb, errors, 19 * sizeof (double));
 
-		semGive(wfsLock[wfsSource]);
+		semGive(wfsLock);
 	}
 
 	return (OK);
@@ -658,7 +615,7 @@ long    gensubToTcsAo (struct genSubRecord * pgsub)
  * rotated where necessary to the TCS frame of reference.
  *
  * EXTERNAL VARIABLES:
- * wfsLock[]       - Global array of mutex semaphores
+ * wfsLock       - Global array of mutex semaphores
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -673,6 +630,7 @@ long    gensubToTcsAo (struct genSubRecord * pgsub)
  * 28-Oct-1998  Original version					(srp)
  *-11-Nov-1998	Add frame of reference conversion
  * 05-Jan-1999	Add null zernike calculation
+ * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  */
 
 STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
@@ -697,7 +655,7 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 	    return(ERROR);
 	}
 
-	f = ag2tcs[pWfs->wfsSource];
+	f = ag2tcs;
 
 	/* access frame */
 
@@ -735,47 +693,47 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 
 	/* take mutex semaphore to gain access to wfs arrays */
 
-	if(semTake(wfsLock[pWfs->wfsSource], WFS_TIMEOUT) != OK)
+	if(semTake(wfsLock, WFS_TIMEOUT) != OK)
 	{
-		logMsg("timeout on mutex access wfsLock[%d]\n", (int)pWfs->wfsSource, 0, 0, 0, 0, 0);
+		logMsg("timeout on mutex access wfsLock\n", 0, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 	else
 	{
 		/* fill ao data array */
 
-		aoData[pWfs->wfsSource][0] = (double)(pWfs->time);/* time */
-		aoData[pWfs->wfsSource][1] = (double)(pWfs->np);	/* number of coefficients */
+		aoData[0] = (double)(pWfs->time);/* time */
+		aoData[1] = (double)(pWfs->np);	/* number of coefficients */
 
-		aoData[pWfs->wfsSource][2] = result.z2;
-		aoData[pWfs->wfsSource][3] = result.z3;
-		aoData[pWfs->wfsSource][4] = result.z4;
-		aoData[pWfs->wfsSource][5] = result.z5;
-		aoData[pWfs->wfsSource][6] = result.z6;
-		aoData[pWfs->wfsSource][7] = result.z7;
-		aoData[pWfs->wfsSource][8] = result.z8;
-		aoData[pWfs->wfsSource][9] = result.z9;
-		aoData[pWfs->wfsSource][10] = result.z10;
-		aoData[pWfs->wfsSource][11] = result.z11;
-		aoData[pWfs->wfsSource][12] = result.z12;
-		aoData[pWfs->wfsSource][13] = result.z13;
-		aoData[pWfs->wfsSource][14] = result.z14;
-		aoData[pWfs->wfsSource][15] = result.z15;
-		aoData[pWfs->wfsSource][16] = result.z16;
-		aoData[pWfs->wfsSource][17] = result.z17;
-		aoData[pWfs->wfsSource][18] = result.z18;
-		aoData[pWfs->wfsSource][19] = result.z19;
-		aoData[pWfs->wfsSource][20] = result.z20;
+		aoData[2] = result.z2;
+		aoData[3] = result.z3;
+		aoData[4] = result.z4;
+		aoData[5] = result.z5;
+		aoData[6] = result.z6;
+		aoData[7] = result.z7;
+		aoData[8] = result.z8;
+		aoData[9] = result.z9;
+		aoData[10] = result.z10;
+		aoData[11] = result.z11;
+		aoData[12] = result.z12;
+		aoData[13] = result.z13;
+		aoData[14] = result.z14;
+		aoData[15] = result.z15;
+		aoData[16] = result.z16;
+		aoData[17] = result.z17;
+		aoData[18] = result.z18;
+		aoData[19] = result.z19;
+		aoData[20] = result.z20;
 
 		/* copy across error terms */
 		for(i=0; i < pWfs->np; i++)
 		{
-			aoData[pWfs->wfsSource][21+i] = (double)pWfs->err[i+1];
+			aoData[21+i] = (double)pWfs->err[i+1];
 		}
 
 		/* release mutex */
 
-		semGive(wfsLock[pWfs->wfsSource]);
+		semGive(wfsLock);
 	}
 
 	return(OK);
@@ -814,8 +772,8 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
  * to an array ready for transmission to the TCS when required.
  *
  * EXTERNAL VARIABLES:
- * wfsLock[]       - Global array of mutex semaphores
- * ttfData[]       - Array of ttf data
+ * wfsLock       - Global array of mutex semaphores
+ * ttfData       - Array of ttf data
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -830,6 +788,7 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
  * 28-Oct-1998  Original version					(srp)
  * 09-Nov-1998	Write fast tip/tilt to synchro bus			(srp)
  * 05-Jan-1999	Add null zernike calculation
+ * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  *-
  */
 
@@ -846,7 +805,7 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 	    return(ERROR);
 	}
 
-	f = ag2m2[pWfs->wfsSource];
+	f = ag2m2;
 
 	/* access frame */
 
@@ -854,9 +813,9 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 	{
 		/* first rotate the tip and tilt values to the m2 frame of reference */
 
-		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2]) - f->null[5];
-		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2]) - f->null[6];
-		result.z4 = pWfs->z[3] - f->null[7];
+		result.z2 = (f->cosTheta*pWfs->FGZernikes[0] - f->sinTheta*pWfs->FGZernikes[1]) - f->null[5];
+		result.z3 = (f->sinTheta*pWfs->FGZernikes[0] + f->cosTheta*pWfs->FGZernikes[1]) - f->null[6];
+		result.z4 = pWfs->FGZernikes[2] - f->null[7];
 
 		semGive(f->access);
 	}
@@ -868,37 +827,37 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 
 	/* scale data and write to the synchro bus, check that pointer has been initialised with null check */
 
-	if(ptr[pWfs->wfsSource] != NULL)
+	if(ptr != NULL)
 	{
           if ( (result.z2 > MIN_TT_M2) && (result.z2 < MAX_TT_M2) )
-	     ptr[pWfs->wfsSource]->z1 = (float)(result.z2);
+	     ptr->z1 = (float)(result.z2);
           else if ( result.z2 <= MIN_TT_M2 )
-             ptr[pWfs->wfsSource]->z1 = MIN_TT_M2 ;
+             ptr->z1 = MIN_TT_M2 ;
           else
-             ptr[pWfs->wfsSource]->z1 = MAX_TT_M2 ;
+             ptr->z1 = MAX_TT_M2 ;
 
           if ( (result.z3 > MIN_TT_M2) && (result.z3 < MAX_TT_M2) )
-	     ptr[pWfs->wfsSource]->z2	= (float)(result.z3);
+	     ptr->z2 = (float)(result.z3);
           else if ( result.z3 <= MIN_TT_M2 )
-             ptr[pWfs->wfsSource]->z2 = MIN_TT_M2 ;
+             ptr->z2 = MIN_TT_M2 ;
           else
-             ptr[pWfs->wfsSource]->z2 = MAX_TT_M2 ;
+             ptr->z2 = MAX_TT_M2 ;
 
           if ( (result.z4 > MIN_FOCUS_M2) && (result.z4 < MAX_FOCUS_M2) )
-	     ptr[pWfs->wfsSource]->z3	= (float)(result.z4);
+	     ptr->z3 = (float)(result.z4);
           else if ( result.z4 <= MIN_FOCUS_M2 )
-             ptr[pWfs->wfsSource]->z3 = MIN_FOCUS_M2 ;
+             ptr->z3 = MIN_FOCUS_M2 ;
           else
-             ptr[pWfs->wfsSource]->z3 = MAX_FOCUS_M2 ;
+             ptr->z3 = MAX_FOCUS_M2 ;
 
-	  ptr[pWfs->wfsSource]->err1	= (float)(pWfs->err[1]);
-	  ptr[pWfs->wfsSource]->err2	= (float)(pWfs->err[2]);
-	  ptr[pWfs->wfsSource]->err3	= (float)(pWfs->err[3]);
-	  ptr[pWfs->wfsSource]->interval  = (float)(0.0);
+	  ptr->err1	= (float)(pWfs->FGZernikesError[0]);
+	  ptr->err2	= (float)(pWfs->FGZernikesError[1]);
+	  ptr->err3	= (float)(pWfs->FGZernikesError[2]);
+	  ptr->interval  = (float)(0.0);
 
 	  /* temporarily just increment the time parameter until bancomm access sorted */
 
-	  ptr[pWfs->wfsSource]->time = (double)(pWfs->time);
+	  ptr->time = (double)(pWfs->time);
 
 	  /* raise interrupt on SCS */
 
@@ -907,31 +866,31 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 
 	/* filter the tilt values and make available to the TCS gensubs */
 
-	if(semTake(wfsLock[pWfs->wfsSource], WFS_TIMEOUT) != OK)
+	if(semTake(wfsLock, WFS_TIMEOUT) != OK)
 	{
-		logMsg("timeout on mutex access wfsLock[%d]\n", (int)pWfs->wfsSource, 0, 0, 0, 0, 0);
+		logMsg("timeout on mutex access wfsLock\n", 0, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 	else
 	{
-		ttfData[pWfs->wfsSource][0] = (double)pWfs->time;
-		ttfData[pWfs->wfsSource][1] = (double)pWfs->np;
-		ttfData[pWfs->wfsSource][2] = dfilter(result.z2, (3*pWfs->wfsSource + 0));
-		ttfData[pWfs->wfsSource][3] = dfilter(result.z3, (3*pWfs->wfsSource + 1));
-		ttfData[pWfs->wfsSource][4] = dfilter(result.z4, (3*pWfs->wfsSource + 2));
-		ttfData[pWfs->wfsSource][5] = (double)pWfs->err[1];
-		ttfData[pWfs->wfsSource][6] = (double)pWfs->err[2];
-		ttfData[pWfs->wfsSource][7] = (double)pWfs->err[3];
+		ttfData[0] = (double)pWfs->time;
+		ttfData[1] = (double)pWfs->np;
+		ttfData[2] = dfilter(result.z2, (3*pWfs->wfsSource + 0));
+		ttfData[3] = dfilter(result.z3, (3*pWfs->wfsSource + 1));
+		ttfData[4] = dfilter(result.z4, (3*pWfs->wfsSource + 2));
+		ttfData[5] = (double)pWfs->FGZernikesError[0];
+		ttfData[6] = (double)pWfs->FGZernikesError[1];
+		ttfData[7] = (double)pWfs->FGZernikesError[2];
 
 		/* pop raw zernike values in for later display if desired */
 
-		ttfData[pWfs->wfsSource][8] = (double)result.z2;
-		ttfData[pWfs->wfsSource][9] = (double)result.z3;
-		ttfData[pWfs->wfsSource][10] = (double)result.z4;
+		ttfData[8] = (double)result.z2;
+		ttfData[9] = (double)result.z3;
+		ttfData[10] = (double)result.z4;
 
 		/* release mutex */
 
-		semGive(wfsLock[pWfs->wfsSource]);
+		semGive(wfsLock);
 	}
 
 	return(OK);
@@ -979,6 +938,7 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
  * 24-Jan-1999: read ports B and C for fudge factors - port B selects add or subtract
  *		of the Zeiss angle, port C provides an additional rotation angle
  *		rotationAngle = tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
+ * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  *
  */
 
@@ -998,16 +958,8 @@ long    ttfZero (struct genSubRecord * pgsub)
 
 	/* identify calling source for this routine */
 
-	if(strstr(pgsub->name, "dc"))
+	if(strstr(pgsub->name, "pwfs1:dc:ttfZero"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao"))
-		wfsSource = AOWFS;
 	else
 	{
 		logMsg("ttfZero name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
@@ -1016,7 +968,7 @@ long    ttfZero (struct genSubRecord * pgsub)
 
 	/* read angle of guide probe */
 
-	if(wfsSource == PWFS1 || wfsSource == PWFS2)
+	if(wfsSource == PWFS1)
 	{
 		/* read conversion factors from input ports */
 
@@ -1044,7 +996,7 @@ long    ttfZero (struct genSubRecord * pgsub)
 		}
 	}
 
-	f = ag2m2[wfsSource];
+	f = ag2m2;
 
 	/* access frame */
 
@@ -1130,6 +1082,7 @@ long    ttfZero (struct genSubRecord * pgsub)
  * 24-Jan-1999: read ports B and C for fudge factors - port B selects add or subtract
  *		of the Zeiss angle, port C provides an additional rotation angle
  *		rotationAngle = tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
+ * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  *
  */
 
@@ -1149,16 +1102,8 @@ long    aoZero (struct genSubRecord * pgsub)
 
 	/* identify calling source for this routine */
 
-	if(strstr(pgsub->name, "dc"))
+	if(strstr(pgsub->name, "pwfs1:dc:aoZero"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao"))
-		wfsSource = AOWFS;
 	else
 	{
 		logMsg("aoZero name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
@@ -1167,7 +1112,7 @@ long    aoZero (struct genSubRecord * pgsub)
 
 	/* read angle of guide probe */
 
-	if(wfsSource == PWFS1 || wfsSource == PWFS2)
+	if(wfsSource == PWFS1)
 	{
 		/* read conversion factors from input ports */
 
@@ -1195,7 +1140,7 @@ long    aoZero (struct genSubRecord * pgsub)
 		}
 	}
 
-	f = ag2tcs[wfsSource];
+	f = ag2tcs;
 
 	/* access frame */
 
@@ -1243,13 +1188,13 @@ long    aoZero (struct genSubRecord * pgsub)
 /*
  *+
  * FUNCTION NAME:
- * showAoDiags
+ * showAoDiag1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long	status;
  *
- * long    showAoDiags(struct genSubRecord * pgsub)
+ * long    showAoDiag1(struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)	pointer to record
@@ -1273,35 +1218,27 @@ long    aoZero (struct genSubRecord * pgsub)
  *
  * HISTORY (optional):
  * 12-Jan-1999  Original version	Sean Prior
+ * 26-Apr-1999  Modified to display 6x6 centroids data
  *-
  */
 
-STATUS showAoDiags(struct genSubRecord * pgsub)
+STATUS showAoDiag1(struct genSubRecord * pgsub)
 {
 	int i = 0;
 	int wfsSource = 0;
-	double localDiag[DIAG_ARRAY_SIZE];
-	static int discardCount[MAX_WFS_SOURCES];
+	static int discardCount;
 
 	/* identify calling source for this routine */
 
-	if(strstr(pgsub->name, "dc:"))
+	if(strstr(pgsub->name, "pwfs1:dc:aoDiag1"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2:"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi:"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr:"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao:"))
-		wfsSource = AOWFS;
 	else
 	{
-		logMsg("showDiags name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
+		logMsg("showDiag1 name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 
-	if(wfsAoAddr[wfsSource] == NULL)
+	if(wfsAddr == NULL)
 	{
 	    /* context structure not yet initialised */
 	    return(OK);
@@ -1309,9 +1246,9 @@ STATUS showAoDiags(struct genSubRecord * pgsub)
 
 	/* grab data from osp structure */
 
-	for(i = 0; i < DIAG_ARRAY_SIZE; i++)
+	for ( i = 0 ; i < DIAG_ARRAY_SIZE ; i ++ )
 	{
-		localDiag[i] = (double)wfsAoAddr[wfsSource]->ospdiag[i];
+		localDiag[i] = (double)wfsAddr->ospdiag[i];
 	}
 
 	/* check whether data has been updated during read */
@@ -1322,10 +1259,10 @@ STATUS showAoDiags(struct genSubRecord * pgsub)
 
 		/* array has been written by another process during read - discard */
 
-		if(++discardCount[wfsSource] > DISCARD_THRESHOLD)
+		if(++discardCount > DISCARD_THRESHOLD)
 		{
-			logMsg("showAoDiags - source %d exceeded discard count\n", (int)wfsSource, 0, 0, 0, 0, 0);
-			discardCount[wfsSource] = 0;
+			logMsg("showAoDiag1 - source PWFS1 exceeded discard count\n", 0, 0, 0, 0, 0, 0);
+			discardCount = 0;
 		}
 	}
 	else
@@ -1342,7 +1279,241 @@ STATUS showAoDiags(struct genSubRecord * pgsub)
 		*(double *)pgsub->valh = localDiag[8];
 		*(double *)pgsub->vali = localDiag[9];
 		*(double *)pgsub->valj = localDiag[10];
+		*(double *)pgsub->valk = localDiag[11];
+		*(double *)pgsub->vall = localDiag[12];
+		*(double *)pgsub->valm = localDiag[13];
+		*(double *)pgsub->valn = localDiag[14];
+		*(double *)pgsub->valo = localDiag[15];
+		*(double *)pgsub->valp = localDiag[16];
+		*(double *)pgsub->valq = localDiag[17];
+		*(double *)pgsub->valr = localDiag[18];
+		*(double *)pgsub->vals = localDiag[19];
+		*(double *)pgsub->valt = localDiag[20];
+		*(double *)pgsub->valu = localDiag[21];
 	}	
+
+	return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showAoDiag2
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long	status;
+ *
+ * long    showAoDiag2(struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)	pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from ao osp structure to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  Original version	cb 
+ * 26-Apr-1999  Modified to display 6x6 centroids data
+ *-
+ */
+
+STATUS showAoDiag2(struct genSubRecord * pgsub)
+{
+	int wfsSource = 0;
+
+	/* identify calling source for this routine */
+
+	if(strstr(pgsub->name, "pwfs1:dc:aoDiag2"))
+		wfsSource = PWFS1;
+	else
+	{
+		logMsg("showDiag2 name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
+		return(ERROR);
+	}
+
+
+        /* data intact, write to genSub outputs */
+
+	*(double *)pgsub->vala = localDiag[22];
+	*(double *)pgsub->valb = localDiag[23];
+	*(double *)pgsub->valc = localDiag[24];
+	*(double *)pgsub->vald = localDiag[25];
+	*(double *)pgsub->vale = localDiag[26];
+	*(double *)pgsub->valf = localDiag[27];
+	*(double *)pgsub->valg = localDiag[28];
+	*(double *)pgsub->valh = localDiag[29];
+	*(double *)pgsub->vali = localDiag[30];
+	*(double *)pgsub->valj = localDiag[31];
+	*(double *)pgsub->valk = localDiag[32];
+	*(double *)pgsub->vall = localDiag[33];
+	*(double *)pgsub->valm = localDiag[34];
+	*(double *)pgsub->valn = localDiag[35];
+	*(double *)pgsub->valo = localDiag[36];
+	*(double *)pgsub->valp = localDiag[37];
+	*(double *)pgsub->valq = localDiag[38];
+	*(double *)pgsub->valr = localDiag[39];
+	*(double *)pgsub->vals = localDiag[40];
+	*(double *)pgsub->valt = localDiag[41];
+	*(double *)pgsub->valu = localDiag[42];
+
+	return (OK);
+}
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showAoDiag3
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long	status;
+ *
+ * long    showAoDiag1(struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)	pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from ao osp structure to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  Original version cb to display 6x6 centroids data
+ *-
+ */
+
+STATUS showAoDiag3(struct genSubRecord * pgsub)
+{
+	int wfsSource = 0;
+
+	/* identify calling source for this routine */
+
+	if(strstr(pgsub->name, "pwfs1:dc:aoDiag3"))
+		wfsSource = PWFS1;
+	else
+	{
+		logMsg("showDiag1 name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
+		return(ERROR);
+	}
+
+	/* data intact, write to genSub outputs */
+
+	*(double *)pgsub->vala = localDiag[43];
+	*(double *)pgsub->valb = localDiag[44];
+	*(double *)pgsub->valc = localDiag[45];
+	*(double *)pgsub->vald = localDiag[46];
+	*(double *)pgsub->vale = localDiag[47];
+	*(double *)pgsub->valf = localDiag[48];
+	*(double *)pgsub->valg = localDiag[49];
+	*(double *)pgsub->valh = localDiag[50];
+	*(double *)pgsub->vali = localDiag[51];
+	*(double *)pgsub->valj = localDiag[52];
+	*(double *)pgsub->valk = localDiag[53];
+	*(double *)pgsub->vall = localDiag[54];
+	*(double *)pgsub->valm = localDiag[55];
+	*(double *)pgsub->valn = localDiag[56];
+	*(double *)pgsub->valo = localDiag[57];
+	*(double *)pgsub->valp = localDiag[58];
+	*(double *)pgsub->valq = localDiag[59];
+	*(double *)pgsub->valr = localDiag[60];
+	*(double *)pgsub->vals = localDiag[61];
+	*(double *)pgsub->valt = localDiag[62];
+	*(double *)pgsub->valu = localDiag[63];
+
+	return (OK);
+}
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showAoDiag4
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long	status;
+ *
+ * long    showAoDiag4(struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)	pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from ao osp structure to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  added by cb to display 6x6 centroids data
+ *-
+ */
+
+STATUS showAoDiag4(struct genSubRecord * pgsub)
+{
+	int wfsSource = 0;
+
+	/* identify calling source for this routine */
+
+	if(strstr(pgsub->name, "pwfs1:dc:aoDiag4"))
+		wfsSource = PWFS1;
+	else
+	{
+		logMsg("showDiag1 name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
+		return(ERROR);
+	}
+
+
+	/* data intact, write to genSub outputs */
+
+	*(double *)pgsub->vala = localDiag[64];
+	*(double *)pgsub->valb = localDiag[65];
+	*(double *)pgsub->valc = localDiag[66];
+	*(double *)pgsub->vald = localDiag[67];
+	*(double *)pgsub->vale = localDiag[68];
+	*(double *)pgsub->valf = localDiag[69];
+	*(double *)pgsub->valg = localDiag[70];
+	*(double *)pgsub->valh = localDiag[71];
+	*(double *)pgsub->vali = localDiag[72];
 
 	return (OK);
 }
@@ -1381,78 +1552,29 @@ STATUS showAoDiags(struct genSubRecord * pgsub)
  *
  * HISTORY (optional):
  * 12-Jan-1999  Original version	Sean Prior
+ * 26-Apr-1999  Modified for split backplane version...
  *-
  */
 
 STATUS showFgDiags(struct genSubRecord * pgsub)
 {
-	int i = 0;
 	int wfsSource = 0;
-	double localDiag[DIAG_ARRAY_SIZE];
-	static int discardCount[MAX_WFS_SOURCES];
 
 	/* identify calling source for this routine */
 
-	if(strstr(pgsub->name, "dc:"))
+	if(strstr(pgsub->name, "pwfs1:dc:fgDiag"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2:"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi:"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr:"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao:"))
-		wfsSource = AOWFS;
 	else
 	{
 		logMsg("showDiags name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 
-	if(wfsFgAddr[wfsSource] == NULL)
-	{
-	    /* context structure not yet initialised */
-	    return(OK);
-	}
+	/* data intact, write to genSub outputs */
+        /*printf ( "write data to genSub record %s\n",  pgsub->name) ;*/
 
-	/* grab data from osp structure */
-
-	/*printf("diag source %d, wfsFgAddr = %p\n", wfsSource, wfsFgAddr[wfsSource]);*/
-
-	for(i = 0; i < DIAG_ARRAY_SIZE; i++)
-	{
-		localDiag[i] = (double)wfsFgAddr[wfsSource]->ospdiag[i];
-	/*	printf("localDiag[%d] = %f, original[%d] = %f\n", i, localDiag[i], i, wfsFgAddr[wfsSource]->ospdiag[i]);*/ 
-	}
-
-	/* check whether data has been updated during read */
-
-	if(localDiag[GUARD1] != localDiag[GUARD2])
-	{
-		/* array has been written by another process during read - discard */
-
-		if(++discardCount[wfsSource] > DISCARD_THRESHOLD)
-		{
-			logMsg("showFgDiags - source %d exceeded discard count\n", (int)wfsSource, 0, 0, 0, 0, 0);
-			discardCount[wfsSource] = 0;
-		}
-	}
-	else
-	{
-		/* data intact, write to genSub outputs */
-                /*printf ( "write data to genSub record %s\n",  pgsub->name) ;*/
-
-		*(double *)pgsub->vala = localDiag[1];
-		*(double *)pgsub->valb = localDiag[2];
-		*(double *)pgsub->valc = localDiag[3];
-		*(double *)pgsub->vald = localDiag[4];
-		*(double *)pgsub->vale = localDiag[5];
-		*(double *)pgsub->valf = localDiag[6];
-		*(double *)pgsub->valg = localDiag[7];
-		*(double *)pgsub->valh = localDiag[8];
-		*(double *)pgsub->vali = localDiag[9];
-		*(double *)pgsub->valj = localDiag[10];
-	}	
+	*(double *)pgsub->vala = localDiag[73];
+	*(double *)pgsub->valb = localDiag[74];
 
 	return (OK);
 }
@@ -1586,23 +1708,15 @@ STATUS showSdsuTemperature(struct genSubRecord * pgsub)
 
 	/* identify calling source for this routine */
 
-	if(strstr(pgsub->name, "dc:"))
+	if(strstr(pgsub->name, "pwfs1:dc:"))
 		wfsSource = PWFS1;
-	else if(strstr(pgsub->name, "p2:"))
-		wfsSource = PWFS2;
-	else if(strstr(pgsub->name, "oi:"))
-		wfsSource = OIWFS;
-	else if(strstr(pgsub->name, "hr:"))
-		wfsSource = HRWFS;
-	else if(strstr(pgsub->name, "ao:"))
-		wfsSource = AOWFS;
 	else
 	{
 		logMsg("showSdsuTemperature name > %s not recognised\n", (int)pgsub->name, 0, 0, 0, 0, 0);
 		return(ERROR);
 	}
 
-	id = sdsuId[wfsSource];
+	id = sdsuId;
 
 	if(id == 0)
 		return(ERROR);
@@ -1699,25 +1813,3 @@ STATUS showSdsuTemperature(struct genSubRecord * pgsub)
 
 	return (OK);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

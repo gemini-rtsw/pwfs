@@ -70,9 +70,9 @@ xform 0 656 1184
 p 1552 48 100 0 -1 author:$Author: cboyer $
 p 1776 32 100 0 -1 border:C
 p 1552 16 100 0 1 checked:B.Goodrich
-p 1776 0 100 0 -1 date:$Date: 1999-05-18 22:39:48 $
-p 1552 2352 100 0 -1 id:$Id: testHarness.sch,v 1.2 1999-05-18 22:39:48 cboyer Exp $
+p 1776 0 100 0 -1 date:$Date: 1999-06-10 03:55:35 $
+p 1552 2352 100 0 -1 id:$Id: testHarness.sch,v 1.3 1999-06-10 03:55:35 cboyer Exp $
 p 1792 160 100 0 -1 project:Gemini Wavefront Sensing System
-p 1552 128 100 0 -1 revision:$Revision: 1.2 $
+p 1552 128 100 0 -1 revision:$Revision: 1.3 $
 p 1792 96 100 0 -1 title:Test Harness Database (for testing only)
 [comments]

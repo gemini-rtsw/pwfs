@@ -8,7 +8,7 @@
 
 #define BIT_ZERO_ON	0x1
 #define BIT_ZERO_OFF	0xfe
-#define XYCOM_BASE_ADDRESS (0xffffd080)
+#define XYCOM_BASE_ADDRESS (0xfbffd080)
 
 /* XYCOM base address is actually 0xffffd000 but the registers dont start
  * until 0xffffd080

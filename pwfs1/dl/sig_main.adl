@@ -7,12 +7,14 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="10"
-	nstr="58"
+	nstr="56"
 	ndynamic="6"
 	nplot="0"
-	nrd="4"
+	nrd="6"
 	nes="0"
 	nkd="1"
+	npd="0"
+	npo="0"
 	object {
 		x="328"
 		y="298"
@@ -21,29 +23,36 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="1504"
+	nwords_dspy="2268"
 	nwords_sta="116"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="848"
-	osta="732"
-	odynamic="848"
-	oplot="1244"
-	ord="1244"
-	oes="1492"
-	okd="1492"
-	opc="58"
-	ostr="170"
-	ocmap="732"
-	ocrules="732"
+	odyng="900"
+	osta="784"
+	odynamic="900"
+	oplot="1296"
+	ord="1296"
+	oes="2256"
+	okd="2256"
+	opd="2268"
+	opo="2268"
+	opc="68"
+	ostr="180"
+	ocmap="784"
+	ocrules="784"
 	style="solid"
 	fill="outline"
 	width="0"
 	clrmod="static"
 	vismod="static"
+	precision="-1"
 	clrrule="alarm"
 	pv=""
 	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -72,7 +81,6 @@ display {
 	}
 	textix="$(sensor) - SIGNAL PROCESSING"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -84,7 +92,6 @@ display {
 	}
 	textix="STATUS INFORMATION:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "rectangle" {
 	object {
@@ -105,7 +112,6 @@ display {
 	}
 	textix="HEALTH:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -117,7 +123,6 @@ display {
 	}
 	textix="SDSU STATUS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -129,7 +134,6 @@ display {
 	}
 	textix="CONTROLLER STATUS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -141,7 +145,6 @@ display {
 	}
 	textix="OBSERVATION STATUS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -153,19 +156,17 @@ display {
 	}
 	textix="HEARTBEAT:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="16"
 		y="237"
-		width="240"
+		width="350"
 		height="22"
 		groupid="0"
 	}
-	textix="COMMANDS BY CATEGORY:"
+	textix="COMMANDS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text update" {
 	object {
@@ -445,117 +446,9 @@ display {
 }
 "related display" {
 	object {
-		x="518"
-		y="17"
-		width="71"
-		height="23"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="HELP"
-		name="help1.dl"
-		args=""
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title=""
-	decorate="none"
-}
-"related display" {
-	object {
 		x="17"
 		y="261"
-		width="360"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="CALIBRATE CENTRES"
-		name="TBD"
-		args=""
-	}
-	display[1] {
-		label="CALIBRATE MATRIX"
-		name="TBD"
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="CALIBRATION"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="17"
-		y="291"
-		width="359"
+		width="329"
 		height="22"
 		groupid="0"
 	}
@@ -566,9 +459,9 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detSigInit,car=det"
 	}
 	display[1] {
-		label="SET PROCESSING MODE"
-		name="sig_mode.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigMode,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[2] {
 		label=""
@@ -600,38 +493,118 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
-	menu_title="SETUP"
+	menu_title="INITIALIZE"
 	decorate="none"
 }
 "related display" {
 	object {
-		x="18"
-		y="320"
-		width="360"
+		x="17"
+		y="290"
+		width="329"
 		height="22"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="OSP Diagnostics"
-		name="showDiag.dl"
-		args="top=$(top),sensor=$(sensor)"
+		label="SET PROCESSING MODE"
+		name="sig_mode.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigMode,car=det"
 	}
 	display[1] {
-		label="Guide Information"
-		name="showFg.dl"
-		args="top=$(top),sensor=$(sensor)"
+		label=""
+		name=""
+		args=""
 	}
 	display[2] {
-		label="OTHER ZERNIKES"
-		name="TBD"
+		label=""
+		name=""
 		args=""
 	}
 	display[3] {
-		label="SHOW MATRIX"
-		name="TBD"
+		label=""
+		name=""
 		args=""
 	}
 	display[4] {
@@ -654,9 +627,625 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
-	menu_title="DIAGNOSTICS"
+	menu_title="SET PROCESSING MODE"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="17"
+		y="320"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="UPDATE AO GAINS"
+		name="sig_update.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigUpdate,car=det"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="UPDATE AO GAINS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="355"
+		y="290"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SHOW CENTROIDS"
+		name="showDiag.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="SHOW CENTROIDS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="355"
+		y="320"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SHOW ZERNIKES"
+		name="showFg.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="SHOW ZERNIKES"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="355"
+		y="261"
+		width="328"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="UPDATE FG GAINS"
+		name="sig_FGupdate.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigFGUpdate,car=det"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="UPDATE FG GAINS"
 	decorate="none"
 }
 "kill display" {
@@ -667,7 +1256,6 @@ display {
 		height="23"
 		groupid="0"
 	}
-	RISCpad="0"
 	label="EXIT"
 	clr="1"
 	bclr="9"

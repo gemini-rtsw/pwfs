@@ -7,12 +7,14 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="13"
-	nstr="55"
+	nstr="51"
 	ndynamic="20"
 	nplot="0"
-	nrd="1"
+	nrd="0"
 	nes="0"
 	nkd="1"
+	npd="0"
+	npo="0"
 	object {
 		x="0"
 		y="0"
@@ -21,29 +23,36 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2750"
+	nwords_dspy="2664"
 	nwords_sta="572"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1290"
-	osta="718"
-	odynamic="1290"
-	oplot="2676"
-	ord="2676"
-	oes="2738"
-	okd="2738"
-	opc="58"
-	ostr="210"
-	ocmap="718"
-	ocrules="718"
+	odyng="1266"
+	osta="694"
+	odynamic="1266"
+	oplot="2652"
+	ord="2652"
+	oes="2652"
+	okd="2652"
+	opd="2664"
+	opo="2664"
+	opc="68"
+	ostr="220"
+	ocmap="694"
+	ocrules="694"
 	style="solid"
 	fill="outline"
 	width="0"
 	clrmod="static"
 	vismod="static"
+	precision="-1"
 	clrrule="alarm"
 	pv=""
 	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -66,13 +75,12 @@ display {
 	object {
 		x="10"
 		y="156"
-		width="125"
+		width="254"
 		height="24"
 		groupid="0"
 	}
 	textix="PARAMETERS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "line" {
 	object {
@@ -136,127 +144,116 @@ display {
 	}
 	textix="$(sensor): SET ADC OFFSETS"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="10"
 		y="183"
-		width="375"
-		height="16"
+		width="416"
+		height="15"
 		groupid="0"
 	}
 	textix="A: ADC offset for output 0  ... ... ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="13"
 		y="105"
-		width="93"
+		width="148"
 		height="21"
 		groupid="0"
 	}
 	textix="MESSAGE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="13"
 		y="48"
-		width="112"
-		height="24"
+		width="125"
+		height="21"
 		groupid="0"
 	}
 	textix="DIRECTIVE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="68"
-		width="119"
+		width="132"
 		height="21"
 		groupid="0"
 	}
 	textix="CLIENT ID:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="106"
-		width="91"
+		width="112"
 		height="21"
 		groupid="0"
 	}
 	textix="MESSAGE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="87"
-		width="147"
+		width="185"
 		height="21"
 		groupid="0"
 	}
 	textix="ERROR NUMBER:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="47"
-		width="115"
+		width="157"
 		height="24"
 		groupid="0"
 	}
 	textix="CAR STATE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="11"
 		y="234"
-		width="375"
-		height="16"
+		width="373"
+		height="14"
 		groupid="0"
 	}
 	textix="B: ADC offset for output 1  ... ... ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="10"
 		y="287"
-		width="374"
-		height="16"
+		width="370"
+		height="15"
 		groupid="0"
 	}
 	textix="C: ADC offset for output 2  ... ... ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="12"
 		y="341"
-		width="374"
-		height="16"
+		width="370"
+		height="13"
 		groupid="0"
 	}
 	textix="D: ADC offset for output 3  ... ... ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "message button" {
 	object {
@@ -676,7 +673,6 @@ display {
 		convertParams=""
 	}
 	format="decimal"
-	RISC_pad="0"
 }
 "text entry" {
 	object {
@@ -722,7 +718,6 @@ display {
 		convertParams=""
 	}
 	format="decimal"
-	RISC_pad="0"
 }
 "text entry" {
 	object {
@@ -768,7 +763,6 @@ display {
 		convertParams=""
 	}
 	format="hexadecimal"
-	RISC_pad="0"
 }
 "text entry" {
 	object {
@@ -814,7 +808,6 @@ display {
 		convertParams=""
 	}
 	format="hexadecimal"
-	RISC_pad="0"
 }
 "message button" {
 	object {
@@ -1200,60 +1193,6 @@ display {
 	press_msg="2560"
 	release_msg=""
 }
-"related display" {
-	object {
-		x="499"
-		y="6"
-		width="67"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="HELP"
-		name="help1.dl"
-		args=""
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title=""
-	decorate="none"
-}
 "kill display" {
 	object {
 		x="572"
@@ -1262,7 +1201,6 @@ display {
 		height="23"
 		groupid="0"
 	}
-	RISCpad="0"
 	label="EXIT"
 	clr="1"
 	bclr="9"

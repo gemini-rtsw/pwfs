@@ -18,8 +18,8 @@ enum
 
 /* structure of Gemini Synchro Bus pages */
 
-#define	SYNCHROBASE	(0xfaa00040)	/* base address of synchro bus card vmic5588 */
-                                        /* for POWERPC */
+#define	SYNCHROBASE	(0xf0a00040)	/* base address of synchro bus card vmic5588 */
+                                        /* for MVME167 */
                                         /* TBD : use sysLocalToBusAdr() */
 
 typedef union

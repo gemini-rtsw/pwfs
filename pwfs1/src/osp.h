@@ -7,11 +7,11 @@
 #define FREE_ARG char*
 #define OSP_BUFFMAX 6400
 #define OSP_HRBUFFMAX (1024*1024)
-#define OSP_SUBAPSMAX 36
+#define OSP_SUBAPSMAX 36  
 #define OSP_MAXSTR 80               /* size of text string in a matrix header */
 #define OSP_TESTMAG 5
 #define OSP_ZMAX 20
-#define DIAG_ARRAY_SIZE 20
+#define DIAG_ARRAY_SIZE 76          /* 6x6X2 + 2 + 2*/
 #define GUARD1 0
 #define GUARD2 (DIAG_ARRAY_SIZE - 1)
 #define MAX_WFS_SOURCES 5
@@ -69,9 +69,12 @@ struct OSP_CONTEXT{
     float nsigma;
     float readsq;
     int weight;
+    float guideThreshold; /* add by cb to allow threshold for FG and AO */
     float thresh;
     float nulls[2*OSP_SUBAPSMAX];
     float centres[4*OSP_SUBAPSMAX +1];
+    int   subapertureUsed[2*OSP_SUBAPSMAX] ; /* add by cb to know which subapertures are used */
+                                             /* TRUE or FALSE                                 */
     double time;
     float * ffsubbuff;
     float * redsubbuff;
@@ -81,12 +84,23 @@ struct OSP_CONTEXT{
     float **c;
     float *s;
     float *dssq;
+    float guide[2];      /* Vector of guide values computed over */
+                         /* the whole CCD                        */
+    float guideError[2]; /* Associated errors - cb 9 Feb 1999    */
+    float FGZernikes[3]; /* Vector of fast T/T/F Zernikes modes  */
+                         /* computed from guide vector           */
+                         /* cb 9 Feb 1999                        */
+    float FGZernikesError[3]; /* Associated errors               */
+                         /* cb 9 Feb 1999                        */
     float *fvars;
     float *mvars;
     float *z;
     float * sumbuff;
     float * aoscalevect;
     int coaddcounter;
+    float previousFocus;
+    float gainFocus ;
+    float one_gainFocus ;
     clock_t coaddstart;
     int wfsSource;
     int wfsMode;
@@ -97,6 +111,8 @@ struct OSP_CONTEXT{
     float tipCor;
     float tiltCor;
     double angle ;
+    float cosAngle ;
+    float sinAngle ;
     float xcenter;
     float ycenter;
     int osplight ; /* YES or NO */
@@ -159,14 +175,14 @@ enum
 enum
 {
         OSP_MODE_NONE = 0,    /* No signal processing.               */
-		OSP_MODE_DARK,        /* Subtract DARK frame.                */
+	OSP_MODE_DARK,        /* Subtract DARK frame.                */
         OSP_MODE_FG,          /* Fast Guide mode.                    */
-        OSP_MODE_AO,          /* Active Optics mode.                 */
-        OSP_MODE_FG_AO,       /* Fast Guide and Active Optics mode.  */
         OSP_MODE_FG_COADD,    /* Fast Guide and Coadd mode.          */
         OSP_MODE_COADD,       /* Coadd Only mode.                    */
-        OSP_MODE_CALIB_TT,    /* Calibrate Tip Tilt mode.            */
-        OSP_MODE_CORRECT_TT,  /* Correct Tip Tilt mode.              */
+        OSP_MODE_CALIB_REF,   /* Calibrate reference WFS mode        */
+        OSP_MODE_FG_FOCUS,    /* FG and focus correction mode        */
+        OSP_MODE_AO,          /* Active Optics mode.                 */
+        OSP_MODE_FG_AO,       /* Fast Guide and Active Optics mode.  */
         OSP_MODE_MAX          /* Maximum OSP mode marker.            */
 };
 
@@ -240,6 +256,20 @@ int /*STATUS*/ ospSaveNullPositions(char * nullname,int oflag,char * outfile,
 				    struct OSP_CONTEXT * wfsSpecific);
 void ospError(char error_text[]);
 struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom);
+int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
+                char *pDarkFileName ,
+                char *pFlatFileName ,
+                double angle ,
+                double refX , double refY ,
+                double guideThreshold ,
+                double tipGain ,
+                double tiltGain ,
+                char *pRefFileName ,
+                double threshold ,
+                char *pMatFileName ,
+                int modeNb );
+int ospUpdateGain ( struct OSP_CONTEXT * wfsSpecific,
+                    double *pGain ) ;
 struct OSP_HRCONTEXT * ospInitHr(char * hrwfsName);
 int /*STATUS*/ ospMeasure(float * buffp, struct OSP_CONTEXT * wfsSpecific);
 int /*STATUS*/ ospCalibrate(char * calibpath,struct OSP_CONTEXT * wfsSpecific);
@@ -299,6 +329,8 @@ int ospTracking ( float *buffp ,
                   struct OSP_CONTEXT *wfsSpecific );
 
 int ospTrackingAndFocus ( float *buffp , int N ,
+                  struct OSP_CONTEXT *wfsSpecific );
+int ospNewTrackingAndFocus ( float *buffp , 
                   struct OSP_CONTEXT *wfsSpecific );
 
 int ospCalibrateRefVector ( float *buffp , int N ,

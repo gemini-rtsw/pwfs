@@ -10,10 +10,10 @@ xform 0 976 1152
 p 1872 16 100 0 -1 author:S.M.Beard
 p 2096 0 100 0 -1 border:C
 p 1872 -16 100 0 1 checked:A.Foster
-p 2096 -32 100 0 -1 date:$Date: 1999-05-18 22:39:43 $
-p 1872 2320 100 0 -1 id:$Id: systemCad.sch,v 1.2 1999-05-18 22:39:43 cboyer Exp $
+p 2096 -32 100 0 -1 date:$Date: 1999-06-10 03:55:32 $
+p 1872 2320 100 0 -1 id:$Id: systemCad.sch,v 1.3 1999-06-10 03:55:32 cboyer Exp $
 p 2112 128 100 0 -1 project:Gemini PWFS1
-p 1872 96 100 0 -1 revision:$Revision: 1.2 $
+p 1872 96 100 0 -1 revision:$Revision: 1.3 $
 p 2112 64 100 0 -1 title:System CAD Records
 use sequenceCad 160 1159 100 0 sequenceCad#79
 xform 0 272 1280

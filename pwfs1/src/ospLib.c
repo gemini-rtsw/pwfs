@@ -16,8 +16,7 @@
 #include "fitsio.h"
 #include "osp.h"
 
-struct OSP_CONTEXT *wfsAoAddr[MAX_WFS_SOURCES];
-struct OSP_CONTEXT *wfsFgAddr[MAX_WFS_SOURCES];
+struct OSP_CONTEXT *wfsAddr;
 
 #ifdef vxWorks
 int do_it();
@@ -1021,6 +1020,7 @@ int /*STATUS*/ ospShow(struct OSP_CONTEXT * wfsSpecific)
     printf("Read noise per subaperture,squared : %6.3f\n", wfsSpecific->readsq);
     printf("Weighting applied? (0:no, 1:yes)   : %6d\n", wfsSpecific->weight);
     printf("Threshold parameter                : %6.3f\n", wfsSpecific->thresh);
+    printf("FG Threshold parameter             : %6.3f\n", wfsSpecific->guideThreshold);
     printf("Coaddcounter (frames coadded)      : %6d\n", 
 	   wfsSpecific->coaddcounter);
     printf("Tipscale parameter                 : %6.3f\n",
@@ -1029,6 +1029,8 @@ int /*STATUS*/ ospShow(struct OSP_CONTEXT * wfsSpecific)
 	   wfsSpecific->tiltscale);
     printf("Focusscale parameter               : %6.3f\n", 
 	   wfsSpecific->focusscale);
+    printf("Gain focus parameter               : %6.3f\n", 
+	   wfsSpecific->gainFocus);
     printf("Angle                              : %6.3f\n", (wfsSpecific->angle));
     printf("WfsSource (wfs id)                 : %6d\n",wfsSpecific->wfsSource);
     printf("WfsSource (wfs id)                 : %6d\n",wfsSpecific->wfsSource);
@@ -1420,9 +1422,8 @@ int /* STATUS*/ ospFrameScramble
 
 	return (OK);
 }
-/*------------------------------------------------------------------------*/
 
-
+/*----------------------------------------------------------------------------*/
 
 /*
  *+
@@ -1484,7 +1485,7 @@ int /*STATUS*/ ospFrameTypeConvert(unsigned short int * usbuffp, float * fbuffp,
     return(OK);  
 }
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 /*
  *+
@@ -1506,7 +1507,6 @@ int /*STATUS*/ ospFrameTypeConvert(unsigned short int * usbuffp, float * fbuffp,
  * DESCRIPTION:
  * The memory allocated when hrwfsSpecific was created using ospInithr is 
  * freed, including the memory allocated to contain the structure itself.
- * Author: Steven Heddle, UKATC, Edinburgh 18/1/1999
  *
  * EXTERNAL VARIABLES:
  * None
@@ -1525,7 +1525,7 @@ int ospTidyUpHr ( struct OSP_HRCONTEXT * hrwfsSpecific )
 {
     int ospstatus =OK;
 
-    if(hrwfsSpecific == NULL)
+    if (hrwfsSpecific == NULL)
     {
 	fprintf(stderr,"ospTidyUpHr failed: argument null pointer\n");
 	return(ERROR);
@@ -1534,7 +1534,8 @@ int ospTidyUpHr ( struct OSP_HRCONTEXT * hrwfsSpecific )
     {
 	if(hrwfsSpecific->ffsubbuff == NULL)
 	{
-	    fprintf(stderr,"Error in ospTidyUpHr: pointer to ffsubbuff is null\n");
+	    fprintf(stderr,
+                    "Error in ospTidyUpHr: pointer to ffsubbuff is null\n");
 	    ospstatus =ERROR;
 	}
 	else
@@ -1545,9 +1546,7 @@ int ospTidyUpHr ( struct OSP_HRCONTEXT * hrwfsSpecific )
     return(ospstatus);
 }
 
-
-/*------------------------------------------------------------------------*/
-
+/*----------------------------------------------------------------------------*/
 
 /*
  *+
@@ -1596,31 +1595,15 @@ int /*STATUS*/ ospTidyUp( struct OSP_CONTEXT * wfsSpecific)
     {
 
 #ifdef vxWorks
-	if(wfsSpecific->wfsMode == AO)
-	{
-	    if(wfsAoAddr[wfsSpecific->wfsSource] == NULL)
-	    {
-		fprintf(stderr,"Error in ospTidyUp: pointer to wfsAoAddr is null\n");
-		ospstatus =ERROR;
-	    }
-	    else
-	    {
-		wfsAoAddr[wfsSpecific->wfsSource] = NULL;
-	    }
-	}
-	else
-	{
-	    if(wfsFgAddr[wfsSpecific->wfsSource] == NULL)
-	    {
-		fprintf(stderr,"Error in ospTidyUp: pointer to wfsFgAddr is null\n");
-		ospstatus =ERROR;
-	    }
-	    else
-	    {
-		wfsFgAddr[wfsSpecific->wfsSource] = NULL;
-                printf ( "tidy up wfsFgAddr[%d]=%x\n" , wfsSpecific->wfsSource,wfsFgAddr[wfsSpecific->wfsSource]) ;
-	    }
-	}
+        if ( wfsAddr == NULL )
+        {
+           fprintf(stderr,"Error in ospTidyUp: pointer to wfsAddr is null\n");
+           ospstatus =ERROR;
+        }
+        else
+        {
+           wfsAddr = NULL;
+        }
 #endif /*vxWorks*/
 
 	if(wfsSpecific->c == NULL)
@@ -2064,7 +2047,7 @@ int /*STATUS*/ ospMeasure(float * buffp, struct OSP_CONTEXT * wfsSpecific)
 }
 
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 /*
  *+
@@ -2089,7 +2072,7 @@ int /*STATUS*/ ospMeasure(float * buffp, struct OSP_CONTEXT * wfsSpecific)
  * in either directly initialise elements of the context structure, or are 
  * names of files which in turn are read to initialise elements. The
  * context structure is/will be documented in the osp.h header file.
- * Author: Steven Heddle, UKATC, Edinburgh 18/1/1999
+ * Added by cb - 15Jan1999
  *
  * EXTERNAL VARIABLES:
  * None
@@ -2117,110 +2100,429 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
     int status=OK;
     struct OSP_HRCONTEXT * hrwfsSpecific;
 
-    if((hrwfsSpecific=(struct OSP_HRCONTEXT *) malloc (sizeof (struct OSP_HRCONTEXT)))==NULL)
+    /********************************* Malloc the dedicated hrwfs structure ***/
+
+    if ( (hrwfsSpecific=
+         (struct OSP_HRCONTEXT *) malloc (sizeof (struct OSP_HRCONTEXT)))
+         == NULL )
     {
-	fprintf(stderr,"Failed to allocate memory for HR context structure\n");
-	fprintf(stderr,"-didn't get as far as opening %s for reading\n",name);
-	fprintf(stderr,"...fatal error in ospInitHr:\n");
-	return(NULL);
+	fprintf ( stderr, 
+                  "Failed to allocate memory for HR context structure\n");
+	fprintf ( stderr, "-didn't get as far as opening %s for reading\n",
+                  name);
+	fprintf ( stderr, "...fatal error in ospInitHr:\n");
+	return (NULL);
     }
 	
-    strncpy(name,hrwfsName, OSP_MAXSTR-1);
+    /*************************************************** Open the .ini file ***/
 
-    if((fp = fopen(name,"r"))==NULL)
-	{
-	    printf("Error in opening HRWFS ini file %s for reading\n",name);
-	    printf("during function ospInitHr\n");
-	    return(NULL);
-	}
+    strncpy ( name, hrwfsName, OSP_MAXSTR-1 ) ;
 
-    if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
+    if ((fp = fopen(name,"r")) == NULL)
     {
-	status=ERROR; 
-	fprintf(stderr,"Error reading comments\n");
+       printf ( "Error in opening HRWFS ini file %s for reading\n", name );
+       printf ( "during function ospInitHr\n" );
+       return ( NULL );
     }
 
-    if((fgets(subfile,OSP_MAXSTR,fp))==NULL)
-    {
-	status=ERROR; 
-	fprintf(stderr,"Error reading subfile name\n");
-    }
-    i=0;
-    while(subfile[i] != ' ' && subfile[i] != '\n' && subfile[i] != '\0'
-          && i < OSP_MAXSTR)
-    {
-	i++;
-    }
-    subfile[i] ='\0';
-    strncpy(hrwfsSpecific->subfile,subfile,OSP_MAXSTR);
+    /******************************************* Read the name of dark file ***/
 
-
-    if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
+    if ((fgets(dummy,OSP_MAXSTR,fp)) == NULL)
     {
-	status=ERROR; 
-	fprintf(stderr,"Error reading comments\n");
+	status = ERROR; 
+	fprintf ( stderr, "Error reading comments\n" );
     }
 
-    if((fscanf(fp,"%d\n",&ixarraysize))==EOF)
+    if ((fgets(subfile,OSP_MAXSTR,fp)) == NULL)
     {
-	status=ERROR; 
-	fprintf(stderr,"Error reading xarraysize\n");
+	status = ERROR; 
+	fprintf (stderr,"Error reading subfile name\n");
+    }
+    i = 0 ;
+    while ( subfile[i] != ' ' && subfile[i] != '\n' && subfile[i] != '\0'
+            && i < OSP_MAXSTR )
+    {
+	i ++;
+    }
+    subfile[i] = '\0';
+    strncpy ( hrwfsSpecific->subfile, subfile,OSP_MAXSTR ) ;
+
+    /************************************************ Read the x array size ***/
+
+    if ((fgets(dummy,OSP_MAXSTR,fp)) == NULL)
+    {
+	status = ERROR; 
+	fprintf ( stderr, "Error reading comments\n" );
+    }
+
+    if ((fscanf(fp, "%d\n", &ixarraysize)) == EOF)
+    {
+	status = ERROR; 
+	fprintf ( stderr, "Error reading xarraysize\n" );
     }
     hrwfsSpecific->xarraysize = ixarraysize; 
 
-    if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
+    /************************************************ Read the y array size ***/
+
+    if ((fgets(dummy,OSP_MAXSTR,fp)) == NULL)
     {
-	status=ERROR; 
-	fprintf(stderr,"Error reading comments\n");
+	status = ERROR; 
+	fprintf ( stderr, "Error reading comments\n" );
     }
-    if((fscanf(fp,"%d\n",&iyarraysize))==EOF)
+    if ((fscanf(fp, "%d\n", &iyarraysize)) == EOF)
     {
-	status=ERROR; 
-	fprintf(stderr,"Error reading yarraysize\n");
+	status = ERROR; 
+	fprintf ( stderr, "Error reading yarraysize\n" );
     }
     hrwfsSpecific->yarraysize = iyarraysize; 
 
-    hrwfsSpecific->buffsize = hrwfsSpecific->xarraysize * hrwfsSpecific->yarraysize;
+    hrwfsSpecific->buffsize = 
+    hrwfsSpecific->xarraysize * hrwfsSpecific->yarraysize;
+
     if(hrwfsSpecific->buffsize > OSP_HRBUFFMAX)
     {
 	status = ERROR;
-	fprintf(stderr,"buffsize set greater than OSP_HRBUFFMAX\n");
+	fprintf ( stderr, "buffsize set greater than OSP_HRBUFFMAX\n" );
     }
 
-/******Allocate memory and initialise vector**********/
+    /****************************************** Malloc and read dark buffer ***/
 
-
-    if((hrwfsSpecific->ffsubbuff=(float *) malloc(
-	hrwfsSpecific->buffsize*sizeof (float)))==NULL)
+    if ((hrwfsSpecific->ffsubbuff = 
+        (float *) malloc(hrwfsSpecific->buffsize*sizeof (float))) == NULL)
     {
-	fprintf(stderr,"Failed to allocate memory for ffsubbuff\n");
-	fprintf(stderr,"...fatal error in ospInitHr:\n");
-	return(NULL);
+	fprintf (stderr, "Failed to allocate memory for ffsubbuff\n" );
+	fprintf (stderr, "...fatal error in ospInitHr:\n" );
+	return (NULL);
     }
-    if(ospReadFloatImage(hrwfsSpecific->ffsubbuff,hrwfsSpecific->subfile,
-			 hrwfsSpecific->buffsize) ==ERROR)
+
+    if (ospReadFloatImage ( hrwfsSpecific->ffsubbuff, hrwfsSpecific->subfile,
+			    hrwfsSpecific->buffsize) == ERROR)
     {
-	fprintf(stderr,
-		"Failed to read %s, the FITS file of subtractive offsets\n",
-		hrwfsSpecific->subfile);
-	fprintf(stderr,
-		"- initialising with frame of zeroes, and writing to file\n");
-	for(i=0;i<hrwfsSpecific->buffsize; i++)
-	    hrwfsSpecific->ffsubbuff[i]=0.0;
-	/*ospWriteFloatImage(hrwfsSpecific->ffsubbuff,hrwfsSpecific->subfile,
-			   hrwfsSpecific->xarraysize,hrwfsSpecific->yarraysize);*/
-	status=ERROR;
+	fprintf ( stderr,
+		  "Failed to read %s, the FITS file of subtractive offsets\n",
+		  hrwfsSpecific->subfile);
+	fprintf ( stderr,
+		  "- initialising with frame of zeroes, and writing to file\n");
+
+	for ( i = 0 ; i < hrwfsSpecific->buffsize ; i ++ )
+	    hrwfsSpecific->ffsubbuff[i] = 0.0;
+
+	status = ERROR;
     }
     else
     {
-	fprintf(stdout,"Reading %s, the FITS file of subtractive offsets\n",
-		hrwfsSpecific->subfile);
+	fprintf ( stdout, "Reading %s, the FITS file of subtractive offsets\n",
+		  hrwfsSpecific->subfile);
     }
 
-    return(hrwfsSpecific);
+    return ( hrwfsSpecific ) ;
 }
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospUpdate
+ *
+ * INVOCATION:
+ * int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
+ *                 char *pDarkFileName , char *pFlatFileName ,
+ *                 double angle , double refX , double refY ,
+ *                 double guideThreshold , double tipGain , double tiltGain ,
+ *                 char *pRefFileName , double threshold ,
+ *                 char *pMatFileName , int modeNb )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
+ * (>) pDarkFileName (char *) Name of file containing dark image
+ * (>) pFlatFileName (char *) Name of file containing flat fielding
+ * (>) angle (double) between CCD and telescope
+ * (>) refX, refY (double) ideal coord for whole CCD
+ * (>) guideThreshold (double) Threshold for FG computation
+ * (>) tipGain, tiltGain (double) Gain for tip and tilt mode computation
+ * (>) pRefFileName (char *) Name of file containing ref centers for
+ *                           centroids computation
+ * (>) treshold (double) threshold for centroid computation
+ * (>) pMatFileName (char *) Name of file containing the control matrix
+ * (>) modeNb (int) Number of modes to correct
+ *
+ * FUNCTION VALUE:
+ * (int) return value OK or ERROR
+ *
+ * PURPOSE:
+ * To update some of the wfs structure parameters
+ *
+ * DESCRIPTION:
+ * Added by cb - 23April 1999
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
+
+int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
+                char *pDarkFileName , 
+                char *pFlatFileName ,
+                double angle , 
+                double refX , double refY ,
+                double guideThreshold , 
+                double tipGain , 
+                double tiltGain ,
+                char *pRefFileName  , 
+                double threshold ,
+                char *pMatFileName ,
+                int modeNb )
+{
+
+int status ;
+int i ;
+
+/*********************************************************** Initialization ***/
+
+status = OK ;
+
+/***************************************** Check wfsSpecific is initialized ***/
+
+if ( wfsSpecific == NULL )
+{
+   fprintf ( stderr, "OSP context structure not initialized\n" ) ;
+   fprintf ( stderr, "...fatal error in ospUpdate\n" ) ;
+   status = ERROR ;
+   return ( status ) ;
+}
+	
+/******************************************************* Update wfsSpecific ***/
+
+strncpy ( wfsSpecific->subfile, pDarkFileName, OSP_MAXSTR ) ;
+strncpy ( wfsSpecific->multfile, pFlatFileName, OSP_MAXSTR ) ;
+strncpy ( wfsSpecific->nullfile, pRefFileName, OSP_MAXSTR ) ;
+strncpy ( wfsSpecific->controlfile, pMatFileName, OSP_MAXSTR ) ;
+
+wfsSpecific->angle = angle ; 
+wfsSpecific->cosAngle = (float)cos(angle) ; 
+wfsSpecific->sinAngle = (float)sin(angle) ; 
+wfsSpecific->xcenter = (double)(refX) ; 
+wfsSpecific->ycenter = (double)(refY) ; 
+wfsSpecific->guideThreshold = (float)guideThreshold ; 
+wfsSpecific->tipscale = (float)tipGain ; 
+wfsSpecific->tiltscale = (float)tiltGain ; 
+wfsSpecific->thresh = (float)threshold ; 
+wfsSpecific->np = modeNb ; 
+
+/********************************************************* Init Dark buffer ***/
+
+if ( ospReadFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
+			 wfsSpecific->buffsize) == ERROR )
+{
+   fprintf ( stderr,
+             "Failed to read %s, the FITS file of subtractive offsets\n",
+             wfsSpecific->subfile ) ;
+   fprintf ( stderr,
+             "- initialising with frame of zeroes, and writing to file\n" ) ;
+
+   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+       wfsSpecific->ffsubbuff[i] = 0.0 ;
+
+   ospWriteFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
+                        wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
+   status = ERROR ;
+}
+else
+{
+   fprintf ( stdout, "Reading %s, the FITS file of subtractive offsets\n",
+             wfsSpecific->subfile ) ;
+}
+
+if ( wfsSpecific->framesizeflag == 1 )
+{
+   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+       wfsSpecific->redsubbuff[i] = wfsSpecific->ffsubbuff[i] ;
+}
+else
+{
+   if ( ospReduceFrame (wfsSpecific->ffsubbuff, wfsSpecific->redsubbuff,
+                        wfsSpecific,
+                        wfsSpecific->xframesize*wfsSpecific->yframesize)
+        == ERROR )
+   {
+      fprintf ( stderr, "ospReduceFrame failed for subtractive offsets\n" ) ;
+      status = ERROR ;
+   };
+}
+
+/********************************************************* Init Flat buffer ***/
+
+if ( ospReadFloatImage ( wfsSpecific->ffmultbuff, wfsSpecific->multfile,
+			 wfsSpecific->buffsize) == ERROR )
+{
+   fprintf ( stderr,
+             "Failed to read %s, the FITS file of multiplicative offsets\n",
+             wfsSpecific->multfile ) ;
+   fprintf ( stderr,
+             "- initialising with frame of ones, and writing to file\n" ) ;
+
+   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+       wfsSpecific->ffmultbuff[i] = 1.0 ;
+
+   ospWriteFloatImage ( wfsSpecific->ffmultbuff, wfsSpecific->multfile,
+                        wfsSpecific->xarraysize, wfsSpecific->yarraysize ) ;
+   status = ERROR ;
+}
+else
+{
+   fprintf ( stdout, "Reading %s, the FITS file of multiplicative offsets\n",
+             wfsSpecific->multfile ) ;
+}
+
+if ( wfsSpecific->framesizeflag == 1 )
+{
+   for ( i = 0 ; i < wfsSpecific->buffsize ; i ++ )
+       wfsSpecific->redmultbuff[i] = wfsSpecific->ffmultbuff[i];
+}
+else
+{
+   if ( ospReduceFrame ( wfsSpecific->ffmultbuff, wfsSpecific->redmultbuff,
+                         wfsSpecific,
+                         wfsSpecific->xframesize*wfsSpecific->yframesize)
+        == ERROR )
+   {
+      fprintf ( stderr,
+                "ospReduceFrame failed for multiplicative offsets\n" ) ;
+      status = ERROR;
+   }
+}
+
+/*************************************************************** Init Nulls ***/
+
+if ( (ospReadNulls (wfsSpecific->nullfile,wfsSpecific)) == ERROR )
+{
+    fprintf ( stderr, "Error in call to ospReadNulls during ospUpdate:\n" ) ;
+    fprintf ( stderr, "...filename used was %s\n", wfsSpecific->nullfile ) ;
+    status = ERROR ;
+}
+
+if ( (ospCalculateSubaps(wfsSpecific)) == ERROR )
+{
+   fprintf ( stderr, "Error in ospCalculateSubaps\n" ) ;
+   status = ERROR ;
+}
+
+if ( wfsSpecific->centres[0] == 0 ) 
+{
+   fprintf ( stderr, "Apparently no centres data to be read \n" ) ; 
+   status = ERROR ;
+}
+
+if ( ((int)(wfsSpecific->centres[0]) % 4) != 0 )
+{
+   fprintf ( stderr, "Incomplete centres data read \n" ) ; 
+   status = ERROR ;
+}
+
+/******************************************** Read control matrix from file ***/
+
+if ( (ospReadMatrixFromFile(wfsSpecific->controlfile, wfsSpecific->c))==ERROR)
+{
+   fprintf ( stderr, "Call to ospReadMatrixFromFile failed:\n" ) ;
+   fprintf ( stderr, "...filename used was %s\n", wfsSpecific->controlfile ) ;
+   status = ERROR ;
+}
+else
+{
+   fprintf ( stdout, "Reading %s, the control matrix file \n",
+             wfsSpecific->controlfile ) ;
+}
+
+/******************************************************************************/
+
+return ( status ) ;
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospUpdateGain
+ *
+ * INVOCATION:
+ * int ospUpdateGain( struct OSP_CONTEXT * wfsSpecific,
+ *                    double *pGain )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) wfsSpecific (struct *OSP_CONTEXT) pointer to the wfs structure
+ * (>) pGain (double *) Array containing new Z gains
+ *
+ * FUNCTION VALUE:
+ * (int) return value OK or ERROR
+ *
+ * PURPOSE:
+ * To update Zernikes modes gains 
+ *
+ * DESCRIPTION:
+ * Added by cb - 23April 1999
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
+
+int ospUpdateGain ( struct OSP_CONTEXT * wfsSpecific,
+                    double *pGain ) 
+{
+
+int status ;
+int i ;
+
+/*********************************************************** Initialization ***/
+
+status = OK ;
+
+/***************************************** Check wfsSpecific is initialized ***/
+
+if ( wfsSpecific == NULL )
+{
+   fprintf ( stderr, "OSP context structure not initialized\n" ) ;
+   fprintf ( stderr, "...fatal error in ospUpdateGain\n" ) ;
+   status = ERROR ;
+   return ( status ) ;
+}
+	
+/******************************************************* Update wfsSpecific ***/
+
+for ( i = 1 ; i < OSP_ZMAX ; i++ )
+{
+    wfsSpecific->aoscalevect[i] = (float)(pGain[i-1]) ;
+}
+
+for ( i = 1 ; i < OSP_ZMAX ; i++ )
+    printf ( "gain[%d]=%f\n" , i , wfsSpecific->aoscalevect[i]) ;
+
+
+/******************************************************************************/
+
+return ( status ) ;
+
+}
+/*----------------------------------------------------------------------------*/
 
 /*
  *+
@@ -2327,6 +2629,7 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     float iangle;
     float ixcenter;
     float iycenter;
+    float igainfocus;
     int status=OK;
     struct OSP_CONTEXT * wfsSpecific;
 
@@ -2489,7 +2792,6 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     }
     aoscalefile[i] ='\0';
     strncpy(wfsSpecific->aoscalefile,aoscalefile,OSP_MAXSTR);
-    printf ( "ao scale vector file : %s\n" , wfsSpecific->aoscalefile ) ;
 
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
@@ -2790,6 +3092,18 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     if((fscanf(fp,"%f\n",&ithresh))==EOF)
     {
 	status=ERROR; 
+	fprintf(stderr,"Error reading FG thresh\n");
+    }
+    wfsSpecific->guideThreshold = ithresh; 
+
+    if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
+    {
+	status=ERROR; 
+	fprintf(stderr,"Error reading comments\n");
+    }
+    if((fscanf(fp,"%f\n",&ithresh))==EOF)
+    {
+	status=ERROR; 
 	fprintf(stderr,"Error reading thresh\n");
     }
     wfsSpecific->thresh = ithresh; 
@@ -2806,7 +3120,6 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     }
     wfsSpecific->tipscale = itipscale; 
     wfsSpecific->tipCor = 1.0; 
-    printf ( "tipCor = %f\n" , wfsSpecific->tipCor ) ;
 
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
@@ -2820,7 +3133,6 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     }
     wfsSpecific->tiltscale = itiltscale; 
     wfsSpecific->tiltCor = 1.0; 
-    printf ( "tiltCor = %f\n" , wfsSpecific->tiltCor ) ;
 
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
@@ -2846,6 +3158,8 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
         iangle = 0.0 ;
     }
     wfsSpecific->angle = (double)(iangle); 
+    wfsSpecific->cosAngle = (float)cos(iangle); 
+    wfsSpecific->sinAngle = (float)sin(iangle); 
 
     if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
     {
@@ -2873,6 +3187,19 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     }
     wfsSpecific->ycenter = (double)(iycenter); 
 
+    if((fgets(dummy,OSP_MAXSTR,fp))==NULL)
+    {
+	status=ERROR; 
+	fprintf(stderr,"Error reading comments\n");
+    }
+    if((fscanf(fp,"%f\n",&igainfocus))==EOF)
+    {
+	status=ERROR; 
+	fprintf(stderr,"Error reading gain for focus averaging\n");
+        igainfocus = 0.1 ;
+    }
+    wfsSpecific->gainFocus = igainfocus; 
+    wfsSpecific->one_gainFocus = 1.0 - igainfocus; 
     fclose(fp);
     
 
@@ -3032,7 +3359,6 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     for (ii=1;ii<=2*OSP_SUBAPSMAX;ii++)
 	wfsSpecific->s[ii]=0.0;
     wfsSpecific->osplight = 0 ;
-    printf ( "ospInit() : osplight=%d\n" , wfsSpecific->osplight ) ;
 
     if((wfsSpecific->dssq=vector(1,2*OSP_SUBAPSMAX))==NULL)
     {
@@ -3119,8 +3445,8 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
 	fprintf(stderr,"...filename used was %s\n",wfsSpecific->aoscalefile);
 	status=ERROR;
     }
-    for (ii=1;ii<=wfsSpecific->np;ii++)
-	printf ( "ao scale [%d]=%f\n" , ii , wfsSpecific->aoscalevect[ii]);
+    /*for (ii=1;ii<=wfsSpecific->np;ii++)
+	printf ( "ao scale [%d]=%f\n" , ii , wfsSpecific->aoscalevect[ii]);*/
 
     if(status==ERROR)
 	{
@@ -3145,7 +3471,10 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
 
 #ifdef vxWorks
 
-    wfsSpecific->ospdiag[1]=0.0;
+    for ( i = 1 ; i < DIAG_ARRAY_SIZE - 1 ; i ++ )
+        wfsSpecific->ospdiag[i]=0.0;
+
+    /*wfsSpecific->ospdiag[1]=0.0;
     wfsSpecific->ospdiag[2]=0.0;
     wfsSpecific->ospdiag[3]=0.0;
     wfsSpecific->ospdiag[4]=0.0;
@@ -3154,7 +3483,7 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     wfsSpecific->ospdiag[7]=0.0;
     wfsSpecific->ospdiag[8]=0.0;
     wfsSpecific->ospdiag[9]=0.0;
-    wfsSpecific->ospdiag[10]=0.0;
+    wfsSpecific->ospdiag[10]=0.0;*/
 
     /* write structure address to global array for access by EPICS */
 
@@ -3163,17 +3492,8 @@ struct OSP_CONTEXT * ospInit(char * wfsName, struct OSP_GEOMETRY * ospGeom)
     if(wfsSpecific->wfsSource >= HRWFS && wfsSpecific->wfsSource <= AOWFS)
     {
 
-	/* check whether new structure is for fast guide or ao data */
-
-	if(wfsSpecific->wfsMode == AO)
-	{
-	    wfsAoAddr[wfsSpecific->wfsSource] = wfsSpecific;
-	}
-	else
-	{
-	    wfsFgAddr[wfsSpecific->wfsSource] = wfsSpecific;
-            printf ( "Init wfsFgAddr[%d]= %x\n" , wfsSpecific->wfsSource , wfsSpecific);
-	}
+	wfsAddr = wfsSpecific;
+        /*printf ( "Init wfsAddr= %x\n" , wfsSpecific);*/
     }
 
     /* initialise guard fields of the ospdiag array */
@@ -3489,7 +3809,7 @@ int /*STATUS*/ ospSubtractFrameFromFrame(float *buffp1, float *buffp2,
     return(OK);
 }
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
 /*
  *+
@@ -3513,7 +3833,6 @@ int /*STATUS*/ ospSubtractFrameFromFrame(float *buffp1, float *buffp2,
  * DESCRIPTION:
  * Subtracts a frame pointed to by buffp2 from an existing frame buffer
  * pointed to by buffp1. The frames are both assumed to be buffSize. 
- * Author: Steven Heddle, UKATC, Edinburgh 18/1/1999
  *
  * EXTERNAL VARIABLES:
  * None
@@ -3543,6 +3862,7 @@ int ospNewSubtractFrameFromFrame ( float *buffp1,
     {
 	*p1 = *(p1++) - *(p2++);
     }
+
     return(OK);
 }
 
@@ -3730,22 +4050,56 @@ int /*STATUS*/ ospMultiplyFrameByConstant(float *buffp1, float constname,
     return(OK);
 }
 
-/*------------------------------------------------------------------------*/
 
-/* Add by CB, allow to add N frames into a buffer for further calibrations */
-/* 23 Janv 1999                             */
-/* Comments to be added */
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospCoAddOnly
+ *
+ * INVOCATION:
+ * ospCoAddOnly ( buffp, N, wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) Number of frames to average
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status value OK or ERROR
+ *
+ * PURPOSE:
+ * To allow to add N frames into a buffer for further calibrations
+ * 23 Janv 1999 - cb
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospCoAddOnly ( float *buffp , 
                    int N ,
                    struct OSP_CONTEXT *wfsSpecific )
 {
 
-    int   buffSize;        /* size of frame buffer */
+    int   buffSize;        
     float *p;
     float *bp;
     float *sumbuffp;
     float *maxp;
+
+    /************************************** Check number of frames to coadd ***/
 
 #ifdef DEBUG
     if ( (N <= 0) ) 
@@ -3756,10 +4110,14 @@ int ospCoAddOnly ( float *buffp ,
     }
 #endif
     
+    /************************************************* Some initializations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     sumbuffp = wfsSpecific->sumbuff;
     maxp = (float *)((int)sumbuffp + buffSize * sizeof(float)) ;
     bp = buffp ;
+
+    /**************************************************************** Coadd ***/
 
     if ( wfsSpecific->coaddcounter == 0 )
     {
@@ -3792,44 +4150,116 @@ int ospCoAddOnly ( float *buffp ,
         }
     }
 
-return(OK);
+    /**************************************************************************/
+
+    return (OK) ;
 }
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-/* Add by CB, allow to rotate the centroids - 07 feb 1999                 */
-/* Comments to be added */
+/*
+ *+
+ * FUNCTION NAME:
+ * ospRotateCentroids
+ *
+ * INVOCATION:
+ * ospRotateCentroids ( wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ *
+ * PURPOSE:
+ * To rotate centroids
+ * Add by cb - 07 feb 1999 
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospRotateCentroids ( struct OSP_CONTEXT *wfsSpecific )
 {
-int i ;
-float x ;
-float y ;
-float cosAngle ;
-float sinAngle ;
+   int i ;
+   float x ;
+   float y ;
+   float cosAngle ;
+   float sinAngle ;
 
-cosAngle = (float) cos(wfsSpecific->angle) ;
-sinAngle = (float) sin(wfsSpecific->angle) ;
+   /************************************************** Some initializations ***/
+
+   cosAngle = (float) cos(wfsSpecific->angle) ;
+   sinAngle = (float) sin(wfsSpecific->angle) ;
+
+   /************************************************************** Rotation ***/
 
    for ( i = 1 ; i <= wfsSpecific->mp ;  i += 2 )
    {
-       if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
+       if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && 
+            (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
        {
-          x = (cosAngle * (wfsSpecific->s[i])) - (sinAngle * (wfsSpecific->s[i+1])) ; 
-          y = (sinAngle * (wfsSpecific->s[i])) + (cosAngle * (wfsSpecific->s[i+1])) ; 
+          x = (cosAngle * (wfsSpecific->s[i])) - 
+              (sinAngle * (wfsSpecific->s[i+1])) ; 
+          y = (sinAngle * (wfsSpecific->s[i])) + 
+              (cosAngle * (wfsSpecific->s[i+1])) ; 
           wfsSpecific->s[i] = x ;
           wfsSpecific->s[i+1] = y ;
        } ;
    }
 
-return (OK) ;
+   /***************************************************************************/
+
+   return (OK) ;
 }
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-/* Add by CB, allow to calibrate only tip when a least one                */
-/* subaperture has enough light. 23 Janv 1999                             */
-/* Comments to be added */
+/*
+ *+
+ * FUNCTION NAME:
+ * ospCalibrateTip
+ *
+ * INVOCATION:
+ * ospCalibrateTip ( buffp, N, amplitude, wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) Number of frames to average
+ * (>) amplitude (float) Amplitude for tip calibration
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status to be returned OK or ERROR
+ *
+ * PURPOSE:
+ * To calibrate only tip when at least 1 subaperture has enough light
+ * 23 Janv 1999 - cb
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospCalibrateTip ( float *buffp , 
                       int N ,
@@ -3837,7 +4267,7 @@ int ospCalibrateTip ( float *buffp ,
                       struct OSP_CONTEXT *wfsSpecific )
 {
 
-    int   buffSize;        /* size of frame buffer */
+    int   buffSize;
     int   nbSubApertureUsed ;
     int   i ;
     float *p;
@@ -3846,19 +4276,25 @@ int ospCalibrateTip ( float *buffp ,
     float *maxp;
     float meanX, errorY ;
 
+    /******************************** Check the number of frames to average ***/
+
 #ifdef DEBUG
     if ( (N <= 0) ) 
     {
        fprintf ( stderr,
-                 "Error: ospCalibrateTip called with wrong number of frames\n" ) ;
+       "Error: ospCalibrateTip called with wrong number of frames\n" ) ;
        return ( ERROR ) ;
     }
 #endif
     
+    /****************************************************** Initializations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     sumbuffp = wfsSpecific->sumbuff;
     maxp = (float *)((int)sumbuffp + buffSize * sizeof(float)) ;
     bp = buffp ;
+
+    /**************************************************************** Coadd ***/
 
     if ( wfsSpecific->coaddcounter == 0 )
     {
@@ -3890,6 +4326,8 @@ int ospCalibrateTip ( float *buffp ,
        }
        wfsSpecific->coaddcounter=0;
            
+       /************************************************* Compute Centroids ***/
+
        if ( ospFGCentroidWrapper ( sumbuffp , wfsSpecific ) == ERROR )
        {
           fprintf ( stderr,
@@ -3897,14 +4335,19 @@ int ospCalibrateTip ( float *buffp ,
           return ( ERROR ) ;
        } ;
 
+       /************************************************** Rotate Centroids ***/
+
        ospRotateCentroids ( wfsSpecific ) ;
+
+       /************************************************** Compute mean tip ***/
 
        meanX = 0.0 ;
        errorY = 0.0 ;
        nbSubApertureUsed = 0 ;
        for ( i = 1 ; i <= wfsSpecific->mp ;  i += 2 )
        {
-           if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
+           if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && 
+                (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
            {
               meanX += wfsSpecific->s[i] ;
               errorY += wfsSpecific->s[i+1] ;
@@ -3931,14 +4374,48 @@ int ospCalibrateTip ( float *buffp ,
        }
     }
 
+    /**************************************************************************/
+
     return(OK);
 }
 
-/*------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 
-/* Add by CB, allow to calibrate only tilt when a least one           */
-/* subaperture has enough light. 23 Janv 1999                             */
-/* Comments to be added */
+/*
+ *+
+ * FUNCTION NAME:
+ * ospCalibrateTilt
+ *
+ * INVOCATION:
+ * ospCalibrateTilt ( buffp, N, amplitude, wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) Number of frames to average
+ * (>) amplitude (float) Amplitude for tip calibration
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status to be returned OK or ERROR
+ *
+ * PURPOSE:
+ * To calibrate only tilt when at least 1 subaperture has enough light
+ * 23 Janv 1999 - cb
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospCalibrateTilt ( float *buffp , 
                        int N ,
@@ -3946,7 +4423,7 @@ int ospCalibrateTilt ( float *buffp ,
                        struct OSP_CONTEXT *wfsSpecific )
 {
 
-    int   buffSize;        /* size of frame buffer */
+    int   buffSize; 
     int   nbSubApertureUsed ;
     int   i ;
     float *p;
@@ -3955,19 +4432,25 @@ int ospCalibrateTilt ( float *buffp ,
     float *maxp;
     float errorX, meanY ;
 
+    /******************************** Check the number of frames to average ***/
+
 #ifdef DEBUG
     if ( (N <= 0) ) 
     {
        fprintf ( stderr,
-                 "Error: ospCalibrateTilt called with wrong number of frames\n" ) ;
+       "Error: ospCalibrateTilt called with wrong number of frames\n" ) ;
        return ( ERROR ) ;
     }
 #endif
     
+    /****************************************************** Initializations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     sumbuffp = wfsSpecific->sumbuff;
     maxp = (float *)((int)sumbuffp + buffSize * sizeof(float)) ;
     bp = buffp ;
+
+    /**************************************************************** Coadd ***/
 
     if ( wfsSpecific->coaddcounter == 0 )
     {
@@ -3998,28 +4481,36 @@ int ospCalibrateTilt ( float *buffp ,
            * p = * (p++) / wfsSpecific->coaddcounter;
        }
        wfsSpecific->coaddcounter=0;
+
+       /************************************************* Compute Centroids ***/
            
        if ( ospFGCentroidWrapper ( sumbuffp , wfsSpecific ) == ERROR )
        {
           fprintf ( stderr,
-                    "Error: ospCalibrateTilt centroid computation fails...\n" ) ;
+          "Error: ospCalibrateTilt centroid computation fails...\n" ) ;
           return ( ERROR ) ;
        } ;
 
+       /************************************************** Rotate Centroids ***/
+
        ospRotateCentroids ( wfsSpecific ) ;
+
+       /************************************************** Compute mean tip ***/
 
        errorX = 0.0 ;
        meanY = 0.0 ;
        nbSubApertureUsed = 0 ;
        for ( i = 1 ; i <= wfsSpecific->mp ;  i += 2 )
        {
-           if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
+           if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && 
+                (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
            {
               errorX += wfsSpecific->s[i] ;
               meanY += wfsSpecific->s[i+1] ;
               nbSubApertureUsed ++ ;
            } ;
        }
+
        if ( nbSubApertureUsed != 0 )
        { 
           errorX = errorX/nbSubApertureUsed ;
@@ -4040,23 +4531,62 @@ int ospCalibrateTilt ( float *buffp ,
        }
     }
 
+    /**************************************************************************/
+
     return(OK);
 }
 
-/* Add by CB 8 March 1999 */
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospAoCor
+ *
+ * INVOCATION:
+ * ospAoCor ( buffp, N, wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) Number of frames to average
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status to be returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute AO corrections
+ * 8 March 1999 - cb
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospAoCor ( float *buffp ,
 	       int N , 
                struct OSP_CONTEXT *wfsSpecific )
 {
-    int   buffSize;        /* size of frame buffer */
-    int   i ;
+    int   buffSize;
+    int   i, j ;
     int   nbSubapertures ;
     float *p;
     float *bp;
     float *sumbuffp;
     float *redsubp;
     float *maxp;
+
+    /******************************** Check the number of frames to average ***/
 
 #ifdef DEBUG
     if ( (N <= 0) ) 
@@ -4067,12 +4597,17 @@ int ospAoCor ( float *buffp ,
     }
 #endif
     
+    /****************************************************** Initializations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     sumbuffp = wfsSpecific->sumbuff;
     redsubp = wfsSpecific->redsubbuff;
     maxp = (float *)((int)sumbuffp + buffSize * sizeof(float)) ;
     bp = buffp ;
-    nbSubapertures = 2 * (wfsSpecific->ospxsubap) * (wfsSpecific->ospysubap) * (wfsSpecific->sectors) ;  
+    nbSubapertures = 2 * (wfsSpecific->ospxsubap) * (wfsSpecific->ospysubap) * 
+                     (wfsSpecific->sectors) ;  
+
+    /**************************************************************** Coadd ***/
 
     if ( wfsSpecific->coaddcounter == 0 )
     {
@@ -4104,7 +4639,7 @@ int ospAoCor ( float *buffp ,
        }
        wfsSpecific->coaddcounter=0;
            
-       /* Compute the centroids */
+       /********************************************* Compute the centroids ***/
 
        if ( ospFGCentroidWrapper ( sumbuffp , wfsSpecific ) == ERROR )
        {
@@ -4113,40 +4648,54 @@ int ospAoCor ( float *buffp ,
           return ( ERROR ) ;
        } ;
 
-       /* protect write to ospdiag with guard fields */
-
-       /* set guard field */
+       /*************************************************** Set guard field ***/
 
        wfsSpecific->ospdiag[GUARD1] = 1.0;    
    
-       /* write data */
+       /******************************************************** Write data ***/
 
-       wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
+       j = 1 ;
+       for ( i = 1 ; i < DIAG_ARRAY_SIZE - 3 ; i ++ )
+       {
+           if ( wfsSpecific->subapertureUsed[(i-1)] == TRUE )
+           {
+              wfsSpecific->ospdiag[i] = wfsSpecific->s[j] ;
+              j ++ ;
+           }
+           else
+           {
+              wfsSpecific->ospdiag[i] = -999.99 ;
+           }
+       }
+
+       /*wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
        wfsSpecific->ospdiag[2] = wfsSpecific->s[2];
        wfsSpecific->ospdiag[3] = wfsSpecific->s[3];
        wfsSpecific->ospdiag[4] = wfsSpecific->s[4];
        wfsSpecific->ospdiag[5] = wfsSpecific->s[5];
        wfsSpecific->ospdiag[6] = wfsSpecific->s[6];
        wfsSpecific->ospdiag[7] = wfsSpecific->s[7];
-       wfsSpecific->ospdiag[8] = wfsSpecific->s[8];
+       wfsSpecific->ospdiag[8] = wfsSpecific->s[8];*/
 
-       /* unset guard field - write complete */
+       /******************************** Unset guard field - write complete ***/
 
        wfsSpecific->ospdiag[GUARD1] = 0.0;    
 
-       /* Rotation of the centroids */
+       /***************************************** Rotation of the centroids ***/
 
        ospRotateCentroids ( wfsSpecific ) ;
 
-       /* Multiply by control matrix */
+       /**************************************** Multiply by control matrix ***/
 
        if ( wfsSpecific->osplight == 0 )
        {
-          printf ( "ospAoCor() : osplight=%d, apply control matrix...\n" , wfsSpecific->osplight ) ;
+          printf ( "ospAoCor() : osplight=%d, apply control matrix...\n" , 
+                   wfsSpecific->osplight ) ;
        	  ospApplyControlMatrix ( wfsSpecific->c,wfsSpecific->z,wfsSpecific->s,
                                   wfsSpecific->np,wfsSpecific->mp);
 
-          /* Multiply by scale factor */
+          /*************************************** Multiply by scale factor ***/
+
           for ( i = 1 ; i <= wfsSpecific->np ; i ++ )
           {
               wfsSpecific->z[i] *= wfsSpecific->aoscalevect[i] ;
@@ -4155,7 +4704,8 @@ int ospAoCor ( float *buffp ,
        }
        else
        {
-          printf ( "ospAoCor() : osplight=%d, do not apply control matrix...\n" , wfsSpecific->osplight ) ;
+          printf ( "ospAoCor(): osplight=%d, do not apply control matrix...\n" ,
+                   wfsSpecific->osplight ) ;
           for ( i = 1 ; i <= wfsSpecific->np ; i ++ )
           {
               wfsSpecific->z[i] = 0.0 ;
@@ -4163,7 +4713,10 @@ int ospAoCor ( float *buffp ,
           }
        }
 
-       /* Get a timestamp to record at which time zernikes data are sent to the TCS */
+       /* 
+        * Get a timestamp to record at which time zernikes data are sent to 
+        * the TCS 
+        */
 
 #ifdef vxWorks
        if ( timeNow (&(wfsSpecific->time)) != OK )
@@ -4176,6 +4729,9 @@ int ospAoCor ( float *buffp ,
 #endif /*vxWorks*/
 
     }
+
+    /**************************************************************************/
+
     return ( OK ) ;
 }
 
@@ -4966,6 +5522,21 @@ int /*STATUS*/ ospReadNulls(char * nullfile,
 	fprintf(stderr,"...during function ospReadNulls\n");
     }
 
+    for ( i = 0 ; i < OSP_SUBAPSMAX ; i ++ )
+    {
+        if ( ( wfsSpecific->nulls[2*i] < 0 ) && ( wfsSpecific->nulls[2*i+1] < 0 ) )
+        {
+           wfsSpecific->subapertureUsed[2*i] = FALSE ;
+           wfsSpecific->subapertureUsed[2*i+1] = FALSE ;
+        }
+        else
+        {
+           wfsSpecific->subapertureUsed[2*i] = TRUE ;
+           wfsSpecific->subapertureUsed[2*i+1] = TRUE ;
+        }
+        printf ( "Subaper %d, subapertureUsed[%d]=%d, subapertureUsed[%d]=%d\n",
+                 i , 2*i, wfsSpecific->subapertureUsed[2*i] , 2*i+1, wfsSpecific->subapertureUsed[2*i+1] ) ;
+    }
 
     fclose(fp1);
     return(ospstatus);
@@ -6453,7 +7024,8 @@ int /*STATUS*/ ospWriteUShortImage( unsigned short int * buffp, char * outfile,i
  * (int)   A status value equal to OK or ERROR
  *
  * PURPOSE:
- * To perform offset correction, thresholding and centroiding on a data frame quickly for fast guiding
+ * To perform offset correction, thresholding and centroiding on a data frame 
+ * quickly for fast guiding
  *
  * DESCRIPTION:
  * Performs subtraction and  multiplication of offset frames, thresholding and 
@@ -6464,7 +7036,7 @@ int /*STATUS*/ ospWriteUShortImage( unsigned short int * buffp, char * outfile,i
  * updated, which may be advantageous for minor glitches, but the variances are
  * returned as 99 for the subaperture in this case.
  * Author: Steven Heddle, UKATC, Edinburgh 18/1/1999
- *
+ * Error in centroid computations fixed by cb 8 March 1999
  *
  * EXTERNAL VARIABLES:
  * None
@@ -6478,15 +7050,15 @@ int /*STATUS*/ ospWriteUShortImage( unsigned short int * buffp, char * outfile,i
  * DEFICIENCIES:
  * Corner averaging of subap pixels for thresholding is not available, error 
  * estimation is simplified
-  *-
+ *-
  */
-int /*STATUS*/ ospFGCentroidWrapper(float * buffp, 
-				  struct OSP_CONTEXT * wfsSpecific)
+int ospFGCentroidWrapper ( float * buffp, 
+                           struct OSP_CONTEXT * wfsSpecific)
 {
     int j;            /* general purpose counter */
     int i=1;          /* general purpose counter */
-    int ii;                   /* counter */
-    int jj;                   /* counter */
+    int ii;           /* counter */
+    int jj;           /* counter */
     int x0;
     int y0;
     int buffSize;
@@ -6496,12 +7068,12 @@ int /*STATUS*/ ospFGCentroidWrapper(float * buffp,
     float *p, *redsubp, *redmulp, * maxp;
     float xdiff;
     float ydiff;
-    float itotal=0;           /* total intensity in subap */
+    float itotal=0;   /* total intensity in subap */
     float ireptotal;
-    float mu1x=0;             /* unnormalised/normalised sum of x moments */
-    float mu1y=0;             /* unnormalised/normalised sum of y moments */
-    float * index00;          /* ptr to first pixel (bottom L) of subaperture */
-    float * indxy;            /* pointer to current pixel of subaperture */
+    float mu1x=0;     /* unnormalised/normalised sum of x moments */
+    float mu1y=0;     /* unnormalised/normalised sum of y moments */
+    float * index00;  /* ptr to first pixel (bottom L) of subaperture */
+    float * indxy;    /* pointer to current pixel of subaperture */
     float pixval;
     float * rowinc;
     float corner[4];
@@ -6539,7 +7111,9 @@ int /*STATUS*/ ospFGCentroidWrapper(float * buffp,
            corner[1] = *(index00 + (wfsSpecific->xframesize)*jump) ;
            corner[2] = *(index00 + jump) ;
            corner[3] = *(index00 + (wfsSpecific->xframesize)*jump + jump) ;
-           printf ( "suba=%d, corner[0]=%f, corner[1]=%f, corner[2]=%f, corner[3]=%f\n" , j , corner[0] , corner[1] , corner[2] , corner[3] ) ;
+           printf ( 
+           "suba=%d, corner[0]=%f, corner[1]=%f, corner[2]=%f, corner[3]=%f\n" ,
+            j , corner[0] , corner[1] , corner[2] , corner[3] ) ;
 
            bigCorner = 0.0 ;
            index = 0 ;
@@ -6608,7 +7182,7 @@ int /*STATUS*/ ospFGCentroidWrapper(float * buffp,
     }
     else
     {
-       printf ( "Threshold positive = %f\n" , wfsSpecific->thresh ) ;
+       /*printf ( "Threshold positive = %f\n" , wfsSpecific->thresh ) ;*/
        for (j = 1; j <= wfsSpecific->centres[0]; j=j+4) 
        {
 	   itotal=0;
@@ -6737,7 +7311,41 @@ int /*STATUS*/ ospFGMeasure(float * buffp, struct OSP_CONTEXT * wfsSpecific)
     return(ospstatus);
 }
 
-/* Added by CB Feb 9 1999 in order to have simple tip/tilt correction */
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospTracking
+ *
+ * INVOCATION:
+ * ospTracking ( buffp , wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute mean tip and tilt over the whole subaperture
+ *
+ * DESCRIPTION:
+ * Added by CB Feb 9 1999 in order to have simple tip/tilt correction
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospTracking ( float * buffp , 
 		  struct OSP_CONTEXT * wfsSpecific )
@@ -6752,6 +7360,8 @@ int ospTracking ( float * buffp ,
     float localbuff[OSP_BUFFMAX] ;
     float *p, *redsubp, *redmulp, * maxp, *localp ;
 
+    /****************************************************** Initializations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize ;
     maxp = (float *)((int)buffp + buffSize*sizeof(float)) ;
     redsubp = wfsSpecific->redsubbuff ;
@@ -6760,14 +7370,15 @@ int ospTracking ( float * buffp ,
     cosAngle = (float) cos(wfsSpecific->angle) ;
     sinAngle = (float) sin(wfsSpecific->angle) ;
 
+    /***************************************************** Dark subtraction ***/
 
-    /* Substract dark */
     for ( p = buffp ; p < maxp ; )
     {
 	*p = (*(p++) - *(redsubp ++)) ;
     } 
 
-    /* Threshold and centroid */
+    /***************************************** Thresholding and centroiding ***/
+
     total = 0 ;
     x = 0 ;
     y = 0 ;
@@ -6778,12 +7389,13 @@ int ospTracking ( float * buffp ,
 	{   
             pixval = *(localp + wfsSpecific->xframesize*j + i) ;
 
-            if ( pixval > wfsSpecific->thresh )
+            if ( pixval > wfsSpecific->guideThreshold )
             {
                x += pixval*(i+1) ;
                y += pixval*(j+1) ;
                total += pixval ;
-               /*printf ( "i=%d, j=%d, pixval=%f, x=%f, y=%f, total=%f\n" , i , j, pixval , x , y , total ) ;*/
+               /*printf ( "i=%d, j=%d, pixval=%f, x=%f, y=%f, total=%f\n" , 
+                          i , j, pixval , x , y , total ) ;*/
             }
         }
      }
@@ -6791,43 +7403,46 @@ int ospTracking ( float * buffp ,
      if ( total > 0 )
      {
         /*printf ( "x=%f, y=%f, total=%f\n" , x , y , total ) ;*/ 
-        wfsSpecific->s[9] = (x / total) - wfsSpecific->xcenter ;
-        wfsSpecific->s[10] = (y / total) - wfsSpecific->ycenter ;
-	wfsSpecific->dssq[9] = 0.0 ;
-	wfsSpecific->dssq[10] = 0.0 ;
-        wfsSpecific->z[1] = wfsSpecific->tipscale * ( cosAngle*(wfsSpecific->s[9]) - sinAngle*(wfsSpecific->s[10]) ) ; 
-        wfsSpecific->z[2] = wfsSpecific->tiltscale * ( sinAngle *(wfsSpecific->s[9]) + cosAngle*(wfsSpecific->s[10]) ) ; 
-        /*printf ( "z[1]=%f, z[2]=%f\n" , wfsSpecific->z[1], wfsSpecific->z[2] ) ;*/ 
+        wfsSpecific->guide[0] = (x / total) - wfsSpecific->xcenter ;
+        wfsSpecific->guide[1] = (y / total) - wfsSpecific->ycenter ;
+	wfsSpecific->guideError[0] = 0.0;
+	wfsSpecific->guideError[1] = 0.0;
+        wfsSpecific->FGZernikes[0] = wfsSpecific->tipscale * 
+        ( cosAngle*(wfsSpecific->guide[0]) - sinAngle*(wfsSpecific->guide[1]) ) ; 
+        wfsSpecific->FGZernikes[1] = wfsSpecific->tiltscale * 
+        ( sinAngle *(wfsSpecific->guide[0]) + cosAngle*(wfsSpecific->guide[1]) ) ; 
+        /*printf ( "FGZernikes[0]=%f, FGZernikes[1]=%f\n" , 
+                 wfsSpecific->FGZernikes[0], wfsSpecific->FGZernikes[1] ) ;*/ 
      }
      else
      {
         /*printf ( "no light\n" ) ;*/
-        wfsSpecific->s[9] = 0.0 ;
-        wfsSpecific->s[10] = 0.0 ;
-	wfsSpecific->dssq[9] = OSP_NO_LIGHT;
-	wfsSpecific->dssq[10] = OSP_NO_LIGHT;
-        wfsSpecific->z[1] = 0.0 ;
-        wfsSpecific->z[2] = 0.0 ;
+        wfsSpecific->guide[0] = 0.0 ;
+        wfsSpecific->guide[1] = 0.0 ;
+	wfsSpecific->guideError[0] = OSP_NO_LIGHT;
+	wfsSpecific->guideError[1] = OSP_NO_LIGHT;
+        wfsSpecific->FGZernikes[0] = 0.0 ;
+        wfsSpecific->FGZernikes[1] = 0.0 ;
      }
-     wfsSpecific->z[3] = 0.0 ;
-     wfsSpecific->err[1] = 0.0 ;
-     wfsSpecific->err[2] = 0.0 ;
-     wfsSpecific->err[3] = 0.0 ;
+     wfsSpecific->FGZernikes[2] = 0.0 ;
+     wfsSpecific->FGZernikesError[0] = 0.0 ;
+     wfsSpecific->FGZernikesError[1] = 0.0 ;
+     wfsSpecific->FGZernikesError[2] = 0.0 ;
 
-    /* protect write to ospdiag with guard fields */
-
-    /* set guard field */
+    /****************************************************** Set guard field ***/
 
     wfsSpecific->ospdiag[GUARD1] = 1.0;    
    
-    /* write data */
+    /*********************************************************** Write data ***/
 
-    wfsSpecific->ospdiag[9] = wfsSpecific->s[9];
-    wfsSpecific->ospdiag[10] = wfsSpecific->s[10];
+    wfsSpecific->ospdiag[73] = wfsSpecific->guide[0];
+    wfsSpecific->ospdiag[74] = wfsSpecific->guide[1];
 
-    /* unset guard field - write complete */
+    /*********************************** Unset guard field - write complete ***/
 
     wfsSpecific->ospdiag[GUARD1] = 0.0;    
+
+    /******************************************** Write data to synchro bus ***/
 
 #ifdef vxWorks
     if ( timeNow (&(wfsSpecific->time)) != OK )
@@ -6836,23 +7451,60 @@ int ospTracking ( float * buffp ,
        "Error: ospTracking failed to take bancom time\n" ) ;
     } ;
   
-    /*if ( writeWfsToSynchro(wfsSpecific) != OK )
+    if ( writeWfsToSynchro(wfsSpecific) != OK )
     {
        fprintf (stderr,
        "Error: ospTracking failed to write data to tcs\n" ) ;
-    } ;*/
+    } ;
 #endif /*vxWorks*/
+
+    /**************************************************************************/
 
     return (OK) ;
 }
 
-/* Added by CB 2Mar1999 in order to compute reference vector */
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospCalibrateRefVector
+ *
+ * INVOCATION:
+ * ospCalibrateRefVector ( buffp, N, wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) number of frames to average
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute reference WFS vector
+ *
+ * DESCRIPTION:
+ * Added by cb 2 March 1999 in order to compute reference vector
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospCalibrateRefVector ( float *buffp ,
 	                    int N , 
                             struct OSP_CONTEXT *wfsSpecific )
 {
-    int   buffSize;        /* size of frame buffer */
+    int   buffSize; 
     int   i ;
     int   j ;
     int   nbSubapertures ;
@@ -6863,21 +7515,28 @@ int ospCalibrateRefVector ( float *buffp ,
     float *maxp;
     FILE  *fp;
 
+    /************************************ Check number of frames to average ***/
+
 #ifdef DEBUG
     if ( (N <= 0) ) 
     {
        fprintf ( stderr,
-                 "Error: ospCalibrateRefVector called with wrong number of frames\n" ) ;
+       "Error: ospCalibrateRefVector called with wrong number of frames\n" ) ;
        return ( ERROR ) ;
     }
 #endif
     
+    /****************************************************** Initializations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     sumbuffp = wfsSpecific->sumbuff;
     redsubp = wfsSpecific->redsubbuff;
     maxp = (float *)((int)sumbuffp + buffSize * sizeof(float)) ;
     bp = buffp ;
-    nbSubapertures = 2 * (wfsSpecific->ospxsubap) * (wfsSpecific->ospysubap) * (wfsSpecific->sectors) ;  
+    nbSubapertures = 2 * (wfsSpecific->ospxsubap) * 
+                     (wfsSpecific->ospysubap) * (wfsSpecific->sectors) ;  
+
+    /**************************************************************** Coadd ***/
 
     if ( wfsSpecific->coaddcounter == 0 )
     {
@@ -6909,39 +7568,45 @@ int ospCalibrateRefVector ( float *buffp ,
        }
        wfsSpecific->coaddcounter=0;
            
+       /********************************************* Centroids computation ***/
+
        if ( ospFGCentroidWrapper ( sumbuffp , wfsSpecific ) == ERROR )
        {
           fprintf ( stderr,
-                    "Error: ospCalibrateRefVector centroid computation fails...\n" ) ;
+             "Error: ospCalibrateRefVector centroid computation fails...\n" ) ;
           return ( ERROR ) ;
        } ;
 
-       /* protect write to ospdiag with guard fields */
-
-       /* set guard field */
+       /*************************************************** Set guard field ***/
 
        wfsSpecific->ospdiag[GUARD1] = 1.0;    
    
-       /* write data */
+       /******************************************************** Write data ***/
 
-       wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
+       for ( i = 1 ; i < DIAG_ARRAY_SIZE - 3 ; i ++ )
+           wfsSpecific->ospdiag[i] = wfsSpecific->s[i];
+
+       /*wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
        wfsSpecific->ospdiag[2] = wfsSpecific->s[2];
        wfsSpecific->ospdiag[3] = wfsSpecific->s[3];
        wfsSpecific->ospdiag[4] = wfsSpecific->s[4];
        wfsSpecific->ospdiag[5] = wfsSpecific->s[5];
        wfsSpecific->ospdiag[6] = wfsSpecific->s[6];
        wfsSpecific->ospdiag[7] = wfsSpecific->s[7];
-       wfsSpecific->ospdiag[8] = wfsSpecific->s[8];
+       wfsSpecific->ospdiag[8] = wfsSpecific->s[8];*/
 
-       /* unset guard field - write complete */
+       /******************************** Unset guard field - write complete ***/
 
        wfsSpecific->ospdiag[GUARD1] = 0.0;    
 
-       /*ospRotateCentroids ( wfsSpecific ) ;*/
+       /************************************* Calculate new nulls positions ***/
 
        if ( wfsSpecific->osplight == 0 )
        {
-          printf ( "ospCalibraterefVector() : osplight=%d, calculate new null pos...\n" , wfsSpecific->osplight ) ;
+          printf ( 
+          "ospCalibraterefVector(): osplight=%d, calculate new null pos...\n" , 
+          wfsSpecific->osplight ) ;
+
           j=0;
           for ( i = 0 ; i < nbSubapertures ;  i += 2 )
           {
@@ -6955,42 +7620,79 @@ int ospCalibrateRefVector ( float *buffp ,
 
           ospCalculateSubaps(wfsSpecific);
 
-          /* Save new nulls positions in a file */
+          /***************************** Save new nulls positions in a file ***/
 
           fp = fopen ( "./data/reference.dat" , "w" ) ;
           if ( fp == (FILE *)NULL )
           {
              fprintf ( stderr,
-                       "Error: ospCalibrateRefVector opening file ./data/reference.dat fails...\n" ) ;
+             "Error: ospCalibrateRefVector opening file ./data/reference.dat fails...\n" ) ;
           }
           else
           {
              for ( i = 0 ; i < nbSubapertures ;  i += 2 )
-                 fprintf ( fp , "%f %f\n" , wfsSpecific->nulls[i] , wfsSpecific->nulls[i+1] ) ;
+                 fprintf ( fp , "%f %f\n" , wfsSpecific->nulls[i] , 
+                           wfsSpecific->nulls[i+1] ) ;
              fclose (fp) ;
           }
        }
     }
+
+    /**************************************************************************/
+
     return ( OK ) ;
 }
-/*------------------------------------------------------------------------*/
 
-/* Add by CB, allow to compute only averaged focus                        */
-/* Fev 10 1999                             */
-/* Comments to be added */
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospCoaAddFocus
+ *
+ * INVOCATION:
+ * ospCoAddFocus ( buffp , N , wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) number of frames to average
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute only averaged focus
+ *
+ * DESCRIPTION:
+ * Added by cb Fev 10 1999
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospCoAddFocus ( float *buffp , 
                     int N ,
                     struct OSP_CONTEXT *wfsSpecific )
 {
 
-    int   buffSize;        /* size of frame buffer */
+    int   buffSize; 
     float *p;
     float *bp;
     float *sumbuffp;
     float *maxp;
     float focus ;
 
+    /************************************ Check number of frames to average ***/
 #ifdef DEBUG
     if ( (N <= 0) ) 
     {
@@ -7000,10 +7702,14 @@ int ospCoAddFocus ( float *buffp ,
     }
 #endif
     
+    /****************************************************** Initialisations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize;
     sumbuffp = wfsSpecific->sumbuff;
     maxp = (float *)((int)sumbuffp + buffSize * sizeof(float)) ;
     bp = buffp ;
+
+    /**************************************************************** Coadd ***/
 
     if ( wfsSpecific->coaddcounter == 0 )
     {
@@ -7013,7 +7719,7 @@ int ospCoAddFocus ( float *buffp ,
 	}
        
         wfsSpecific->coaddcounter ++;
-        wfsSpecific->err[3] = 0.0 ;
+        wfsSpecific->FGZernikesError[2] = 0.0 ;
     }
     else
     {
@@ -7025,7 +7731,7 @@ int ospCoAddFocus ( float *buffp ,
 	   }
 	
            wfsSpecific->coaddcounter ++;
-           wfsSpecific->err[3] = 0.0 ;
+           wfsSpecific->FGZernikesError[2] = 0.0 ;
         }
     }
 
@@ -7037,6 +7743,8 @@ int ospCoAddFocus ( float *buffp ,
        }
        wfsSpecific->coaddcounter=0;
            
+       /********************************************** Centroid computation ***/
+
        if ( ospFGCentroidWrapper ( sumbuffp , wfsSpecific ) == ERROR )
        {
           fprintf ( stderr,
@@ -7044,17 +7752,14 @@ int ospCoAddFocus ( float *buffp ,
           return ( ERROR ) ;
        } ;
 
-       /*ospRotateCentroids ( wfsSpecific ) ;*/
+       /************************************************* Focus computation ***/
 
        focus = 0.0 ;
-       
-       /*if ( (wfsSpecific->dssq[1] != OSP_NO_LIGHT) && (wfsSpecific->dssq[2] != OSP_NO_LIGHT) &&
-            (wfsSpecific->dssq[3] != OSP_NO_LIGHT) && (wfsSpecific->dssq[4] != OSP_NO_LIGHT) &&
-            (wfsSpecific->dssq[5] != OSP_NO_LIGHT) && (wfsSpecific->dssq[6] != OSP_NO_LIGHT) &&
-            (wfsSpecific->dssq[7] != OSP_NO_LIGHT) && (wfsSpecific->dssq[8] != OSP_NO_LIGHT) )*/
+
        if ( wfsSpecific->osplight == 0 )
        {
-          printf ( "ospCoAddAndFocus() : osplight=%d, calculate focus...\n" , wfsSpecific->osplight ) ;
+          /*printf ( "ospCoAddAndFocus() : osplight=%d, calculate focus...\n" , 
+                   wfsSpecific->osplight ) ;*/
           focus = (wfsSpecific->s[3] + wfsSpecific->s[7]) - 
                   (wfsSpecific->s[1] + wfsSpecific->s[5]) +
                   (wfsSpecific->s[6] + wfsSpecific->s[8]) - 
@@ -7065,15 +7770,57 @@ int ospCoAddFocus ( float *buffp ,
        }
        else
        {
-          printf ( "ospCoAddAndFocus() at least one subaperture has no light, %d\n" , wfsSpecific->osplight) ;
+          printf ( 
+          "ospCoAddAndFocus() at least one subaperture has no light, %d\n" , 
+          wfsSpecific->osplight) ;
           focus = 0.0 ;
        }
-       wfsSpecific->z[3] = wfsSpecific->focusscale * focus ;
-       wfsSpecific->err[3] = -99.0 ; /* temporary solution for testing focus */
+       wfsSpecific->FGZernikes[2] = wfsSpecific->focusscale * focus ;
+       wfsSpecific->FGZernikesError[2] = -99.0 ; /* temporary solution for testing focus */
     }
+
+    /**************************************************************************/
 
     return(OK);
 }
+
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospTrackingAndFocus 
+ *
+ * INVOCATION:
+ * ospTrackingAndFocus ( buffp , N , wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) N (int) number of frames to average
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute tip/tilt over the whole CCD and averaged focus
+ *
+ * DESCRIPTION:
+ * Added by cb Fev 10 1999
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ * This function can not be used with PWFS1
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospTrackingAndFocus ( float * buffp , 
                           int N ,
@@ -7089,6 +7836,8 @@ int ospTrackingAndFocus ( float * buffp ,
     float localbuff[OSP_BUFFMAX] ;
     float *p, *redsubp, *redmulp, * maxp, *localp ;
 
+    /****************************************************** Initialisations ***/
+
     buffSize = wfsSpecific->xframesize * wfsSpecific->yframesize ;
     maxp = (float *)((int)buffp + buffSize*sizeof(float)) ;
     redsubp = wfsSpecific->redsubbuff ;
@@ -7097,14 +7846,14 @@ int ospTrackingAndFocus ( float * buffp ,
     cosAngle = (float) cos(wfsSpecific->angle) ;
     sinAngle = (float) sin(wfsSpecific->angle) ;
 
+    /***************************************************** Dark subtraction ***/
 
-    /* Substract and multiply in one time */
     for ( p = buffp ; p < maxp ; )
     {
 	*(p) = (*(p++) - *(redsubp ++)) ;
     }
 
-    /* Threshold and centroid */
+    /*********************************** Threshold and centroid computation ***/ 
     total = 0 ;
     x = 0 ;
     y = 0 ;
@@ -7115,12 +7864,13 @@ int ospTrackingAndFocus ( float * buffp ,
 	{   
             pixval = *(localp + wfsSpecific->xframesize*j + i) ;
 
-            if ( pixval > wfsSpecific->thresh )
+            if ( pixval > wfsSpecific->guideThreshold )
             {
                x += pixval*(i+1) ;
                y += pixval*(j+1) ;
                total += pixval ;
-               /*printf ( "i=%d, j=%d, pixval=%f, x=%f, y=%f, total=%f\n" , i , j, pixval , x , y , total ) ;*/ 
+               /*printf ( "i=%d, j=%d, pixval=%f, x=%f, y=%f, total=%f\n" , 
+                        i , j, pixval , x , y , total ) ;*/ 
             }
         }
      }
@@ -7128,25 +7878,26 @@ int ospTrackingAndFocus ( float * buffp ,
      if ( total > 0 )
      {
         /*printf ( "x=%f, y=%f, total=%f\n" , x , y , total ) ; */
-        wfsSpecific->s[9] = (x / total) - wfsSpecific->xcenter ;
-        wfsSpecific->s[10] = (y / total) - wfsSpecific->ycenter ;
-	wfsSpecific->dssq[9] = 0.0 ;
-	wfsSpecific->dssq[10] = 0.0 ;
-        wfsSpecific->z[1] = wfsSpecific->tipscale * ( cosAngle*(wfsSpecific->s[9]) - sinAngle*(wfsSpecific->s[10]) ) ; 
-        wfsSpecific->z[2] = wfsSpecific->tiltscale * ( sinAngle *(wfsSpecific->s[9]) + cosAngle*(wfsSpecific->s[10]) ) ; 
+        wfsSpecific->guide[0] = (x / total) - wfsSpecific->xcenter ;
+        wfsSpecific->guide[1] = (y / total) - wfsSpecific->ycenter ;
+	wfsSpecific->guideError[0] = 0.0 ;
+	wfsSpecific->guideError[1] = 0.0 ;
+        wfsSpecific->FGZernikes[0] = wfsSpecific->tipscale * 
+        ( cosAngle*(wfsSpecific->guide[0]) - sinAngle*(wfsSpecific->guide[1]) ) ; 
+        wfsSpecific->FGZernikes[1] = wfsSpecific->tiltscale * 
+        ( sinAngle *(wfsSpecific->guide[0]) + cosAngle*(wfsSpecific->guide[1]) ) ; 
      }
      else
      {
-        wfsSpecific->s[9] = 0.0 ;
-        wfsSpecific->s[10] = 0.0 ;
-	wfsSpecific->dssq[9] = OSP_NO_LIGHT;
-	wfsSpecific->dssq[10] = OSP_NO_LIGHT;
-        wfsSpecific->z[1] = 0.0 ;
-        wfsSpecific->z[2] = 0.0 ;
+        wfsSpecific->guide[0] = 0.0 ;
+        wfsSpecific->guide[1] = 0.0 ;
+	wfsSpecific->guideError[0] = OSP_NO_LIGHT;
+	wfsSpecific->guideError[1] = OSP_NO_LIGHT;
+        wfsSpecific->FGZernikes[0] = 0.0 ;
+        wfsSpecific->FGZernikes[1] = 0.0 ;
      }
-     /*wfsSpecific->z[3] = 0.0 ;*/
 
-    /* Compute Focus */
+    /******************************************************** Compute Focus ***/
 
     if ( ospCoAddFocus ( buffp , N , wfsSpecific ) != OK )
     {
@@ -7154,34 +7905,35 @@ int ospTrackingAndFocus ( float * buffp ,
        		"Error: ospTrackingAndFocus failed to coadd focus\n" ) ;
     };
 
-     wfsSpecific->err[1] = 0.0 ;
-     wfsSpecific->err[2] = 0.0 ;
-    /* wfsSpecific->err[3] = 0.0 ;*/
-    /* printf ( "wfsSpecific->err[3] = %f\n" , wfsSpecific->err[3]);*/
+    wfsSpecific->FGZernikesError[0] = 0.0 ;
+    wfsSpecific->FGZernikesError[1] = 0.0 ;
 
-    /* protect write to ospdiag with guard fields */
-
-    /* set guard field */
+    /****************************************************** Set guard field ***/
 
     wfsSpecific->ospdiag[GUARD1] = 1.0;    
    
-    /* write data */
+    /*********************************************************** Write data ***/
 
-    wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
+    for ( i = 1 ; i < DIAG_ARRAY_SIZE - 3 ; i ++ )
+        wfsSpecific->ospdiag[i] = wfsSpecific->s[i];
+
+    /*wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
     wfsSpecific->ospdiag[2] = wfsSpecific->s[2];
     wfsSpecific->ospdiag[3] = wfsSpecific->s[3];
     wfsSpecific->ospdiag[4] = wfsSpecific->s[4];
     wfsSpecific->ospdiag[5] = wfsSpecific->s[5];
     wfsSpecific->ospdiag[6] = wfsSpecific->s[6];
     wfsSpecific->ospdiag[7] = wfsSpecific->s[7];
-    wfsSpecific->ospdiag[8] = wfsSpecific->s[8];
-    wfsSpecific->ospdiag[9] = wfsSpecific->s[9];
-    wfsSpecific->ospdiag[10] = wfsSpecific->s[10];
+    wfsSpecific->ospdiag[8] = wfsSpecific->s[8];*/
 
-    /* unset guard field - write complete */
+    wfsSpecific->ospdiag[73] = wfsSpecific->guide[0];
+    wfsSpecific->ospdiag[74] = wfsSpecific->guide[1];
+
+    /*********************************** Unset guard field - write complete ***/
 
     wfsSpecific->ospdiag[GUARD1] = 0.0;    
 
+    /******************************************** Write data to synchro bus ***/
 #ifdef vxWorks
     if ( timeNow (&(wfsSpecific->time)) != OK )
     {
@@ -7196,10 +7948,422 @@ int ospTrackingAndFocus ( float * buffp ,
     } ;
 #endif /*vxWorks*/
 
+    /**************************************************************************/
+
     return (OK) ;
 }
 
-/* Added by CB 23Janv1999 in order to have simple tip/tilt correction */
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospNewTrackingAndFocus 
+ *
+ * INVOCATION:
+ * ospNewTrackingAndFocus ( buffp , wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute tip/tilt over whole CCD and averaged focus with boxcar average
+ *
+ * DESCRIPTION:
+ * Added by cb 8 April 1999
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ * This function can not be used with PWFS1
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
+
+int ospNewTrackingAndFocus ( float * buffp , 
+                             struct OSP_CONTEXT * wfsSpecific )
+{
+    int   buffSize ;
+    int   i, j ;
+    int   offset ;
+    float xs, ys ;
+    float x, y ;
+    float xdiff, ydiff ;
+    float totals ;
+    float total ;
+    float focus ;
+    float meanFocus ;
+    float *p ;
+    float *minp, *maxp ;
+    float *redsubp ;
+
+    /****************************************************** Initializations ***/
+
+    buffSize = wfsSpecific->buffsize ;
+    maxp = (float *)((int)buffp + buffSize*sizeof(float)) ;
+    redsubp = wfsSpecific->redsubbuff ;
+
+    /******************************************************* Substract dark ***/
+
+    for ( p = buffp ; p < maxp ; )
+    {
+	*p = (*(p++) - *(redsubp ++)) ;
+    } 
+
+    /*********************************************** Threshold and centroid ***/
+
+    x = 0.0 ;
+    y = 0.0 ;
+    total = 0.0 ;
+    wfsSpecific->osplight = 0 ;
+    xdiff = 20.5 ;
+    ydiff = 20.5 ;
+
+    /**************************************************** First subaperture ***/
+
+    xs = 0.0 ;
+    ys = 0.0 ;
+    totals = 0.0 ;
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize ;
+        maxp = minp + wfsSpecific->ospxraster ;
+
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            if ( *p > wfsSpecific->guideThreshold )
+            {
+               xs += (*p)*j ;
+               ys += (*p)*i ;
+               totals += (*p) ;
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > 0 )
+    {
+       wfsSpecific->s[1] = (xs / totals) - xdiff ;
+       wfsSpecific->s[2] = (ys / totals) - ydiff ;
+       wfsSpecific->dssq[1] = 0.0 ;
+       wfsSpecific->dssq[2] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[1] = 0.0 ;
+       wfsSpecific->s[2] = 0.0 ;
+       wfsSpecific->dssq[1] = OSP_NO_LIGHT ;
+       wfsSpecific->dssq[2] = OSP_NO_LIGHT ;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[1]=%f, s[2]=%f\n" , 
+             wfsSpecific->s[1] , wfsSpecific->s[2] ) ;*/
+
+    x += xs ;
+    y += ys ;
+    total += totals ;
+
+    /*************************************************** Second subaperture ***/
+
+    xs = 0.0 ;
+    ys = 0.0 ;
+    totals = 0.0 ;
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize + wfsSpecific->ospxraster ;
+        maxp = minp + wfsSpecific->ospxraster ;
+
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            if ( *p > wfsSpecific->guideThreshold )
+            {
+               xs += (*p)*j ;
+               ys += (*p)*i ;
+               totals += (*p) ;
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > 0 )
+    {
+       wfsSpecific->s[3] = (xs / totals) - xdiff ;
+       wfsSpecific->s[4] = (ys / totals) - ydiff ;
+       wfsSpecific->dssq[3] = 0.0 ;
+       wfsSpecific->dssq[4] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[3] = 0.0 ;
+       wfsSpecific->s[4] = 0.0 ;
+       wfsSpecific->dssq[3] = OSP_NO_LIGHT;
+       wfsSpecific->dssq[4] = OSP_NO_LIGHT;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[3]=%f, s[4]=%f\n" , 
+             wfsSpecific->s[3] , wfsSpecific->s[4] ) ;*/
+
+    x += (xs + totals*wfsSpecific->ospxraster) ;
+    y += ys ;
+    total += totals ;
+
+    /**************************************************** Third subaperture ***/
+
+    xs = 0.0 ;
+    ys = 0.0 ;
+    totals = 0.0 ;
+
+    offset = wfsSpecific->ospyraster*wfsSpecific->xframesize ;
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize + offset ;
+        maxp = minp + wfsSpecific->ospxraster ;
+
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            if ( *p > wfsSpecific->guideThreshold )
+            {
+               xs += (*p)*j ;
+               ys += (*p)*i ;
+               totals += (*p) ;
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > 0 )
+    {
+       wfsSpecific->s[5] = (xs / totals) - xdiff ;
+       wfsSpecific->s[6] = (ys / totals) - ydiff ;
+       wfsSpecific->dssq[5] = 0.0 ;
+       wfsSpecific->dssq[6] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[5] = 0.0 ;
+       wfsSpecific->s[6] = 0.0 ;
+       wfsSpecific->dssq[5] = OSP_NO_LIGHT;
+       wfsSpecific->dssq[6] = OSP_NO_LIGHT;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[5]=%f, s[6]=%f\n" , 
+             wfsSpecific->s[5] , wfsSpecific->s[6] ) ;*/
+
+    x += xs ;
+    y += (ys + totals*wfsSpecific->ospyraster) ;
+    total += totals ;
+
+    /***************************************************** Last subaperture ***/
+
+    xs = 0 ;
+    ys = 0 ;
+    totals  = 0 ;
+    offset = wfsSpecific->ospyraster*wfsSpecific->xframesize +
+             wfsSpecific->ospxraster ;
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize + offset ;
+        maxp = minp + wfsSpecific->ospxraster ;
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            if ( *p > wfsSpecific->guideThreshold )
+            {
+               xs += (*p)*j ;
+               ys += (*p)*i ;
+               totals += (*p) ;
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > 0 )
+    {
+       wfsSpecific->s[7] = (xs / totals) - xdiff ;
+       wfsSpecific->s[8] = (ys / totals) - ydiff ;
+       wfsSpecific->dssq[7] = 0.0 ;
+       wfsSpecific->dssq[8] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[7] = 0.0 ;
+       wfsSpecific->s[8] = 0.0 ;
+       wfsSpecific->dssq[7] = OSP_NO_LIGHT;
+       wfsSpecific->dssq[8] = OSP_NO_LIGHT;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[7]=%f, s[8]=%f\n" , 
+             wfsSpecific->s[7] , wfsSpecific->s[8] ) ;*/
+
+    x += (xs + totals*wfsSpecific->ospxraster) ;
+    y += (ys + totals*wfsSpecific->ospyraster) ;
+    total += totals ;
+
+    /******************************* Computation of Tip/Tilt for each frame ***/
+
+    if ( total > 0 )
+    {
+       wfsSpecific->guide[0] = (x / total) - wfsSpecific->xcenter ;
+       wfsSpecific->guide[1] = (y / total) - wfsSpecific->ycenter ;
+       wfsSpecific->guideError[0] = 0.0 ;
+       wfsSpecific->guideError[1] = 0.0 ;
+       wfsSpecific->FGZernikes[0] = wfsSpecific->tipscale * 
+       ((wfsSpecific->cosAngle)*(wfsSpecific->guide[0]) - 
+        (wfsSpecific->sinAngle)*(wfsSpecific->guide[1]) ) ;
+       wfsSpecific->FGZernikes[1] = wfsSpecific->tiltscale * 
+       ((wfsSpecific->sinAngle)*(wfsSpecific->guide[0]) + 
+        (wfsSpecific->cosAngle)*(wfsSpecific->guide[1]) ) ;
+       /*printf ( "guide[0]=%f, guide[1] = %f, FGZ[0]= %f, FGZ[1]=%f\n" , 
+                wfsSpecific->guide[0], wfsSpecific->guide[1], 
+                wfsSpecific->FGZernikes[0] , wfsSpecific->FGZernikes[1] ) ;*/
+    }
+    else
+    {
+       wfsSpecific->guide[0] = 0.0 ;
+       wfsSpecific->guide[1] = 0.0 ;
+       wfsSpecific->guideError[0] = OSP_NO_LIGHT;
+       wfsSpecific->guideError[1] = OSP_NO_LIGHT;
+       wfsSpecific->FGZernikes[0] = 0.0 ;
+       wfsSpecific->FGZernikes[1] = 0.0 ;
+    } 
+
+    wfsSpecific->FGZernikesError[0] = 0.0 ;
+    wfsSpecific->FGZernikesError[1] = 0.0 ;
+
+    /************************************************* Computation of focus ***/
+
+    if ( wfsSpecific->osplight == 0 )
+    {
+       focus = (wfsSpecific->s[3] + wfsSpecific->s[7]) -
+               (wfsSpecific->s[1] + wfsSpecific->s[5]) +
+               (wfsSpecific->s[6] + wfsSpecific->s[8]) -
+               (wfsSpecific->s[2] + wfsSpecific->s[4]) ;
+
+       focus = focus/8.0 ;
+    }
+    else
+    {
+       focus = 0.0 ;
+    }
+    printf ( "focus=%f, previousfocus=%f\n" , focus, 
+             wfsSpecific->previousFocus ) ;
+
+    if ( wfsSpecific->coaddcounter == 0 )
+    {
+       wfsSpecific->previousFocus = focus ;
+       
+       wfsSpecific->coaddcounter ++ ;
+    } ;
+
+    meanFocus = (wfsSpecific->gainFocus * focus) +
+                (wfsSpecific->one_gainFocus * wfsSpecific->previousFocus) ;
+
+    wfsSpecific->FGZernikes[2]= (wfsSpecific->focusscale * meanFocus) ;
+
+    wfsSpecific->FGZernikesError[2] = -99.0 ; /* temporary solution for testing focus */
+
+    wfsSpecific->previousFocus = meanFocus ;
+
+    printf ( "FGZ[2]=%f\n" , wfsSpecific->FGZernikes[2] ) ;
+
+    /*************************** Protect write to ospdiag with guard fields ***/
+
+    wfsSpecific->ospdiag[GUARD1] = 1.0;    
+   
+    /*********************************************************** Write data ***/
+
+    for ( i = 1 ; i < 73 ; i ++ ) 
+        wfsSpecific->ospdiag[i] = wfsSpecific->s[i];
+
+    /*wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
+    wfsSpecific->ospdiag[2] = wfsSpecific->s[2];
+    wfsSpecific->ospdiag[3] = wfsSpecific->s[3];
+    wfsSpecific->ospdiag[4] = wfsSpecific->s[4];
+    wfsSpecific->ospdiag[5] = wfsSpecific->s[5];
+    wfsSpecific->ospdiag[6] = wfsSpecific->s[6];
+    wfsSpecific->ospdiag[7] = wfsSpecific->s[7];
+    wfsSpecific->ospdiag[8] = wfsSpecific->s[8];*/
+
+    wfsSpecific->ospdiag[73] = wfsSpecific->guide[0];
+    wfsSpecific->ospdiag[74] = wfsSpecific->guide[1];
+
+    /*********************************** Unset guard field - write complete ***/
+
+    wfsSpecific->ospdiag[GUARD1] = 0.0;    
+
+    /******************************************** Write data to synchro bus ***/
+
+#ifdef vxWorks
+    if ( timeNow (&(wfsSpecific->time)) != OK )
+    {
+       fprintf (stderr,
+       "Error: ospNewTrackingAndFocus failed to take bancom time\n" ) ;
+    } ;
+  
+    if ( writeWfsToSynchro(wfsSpecific) != OK )
+    {
+       fprintf (stderr,
+       "Error: ospNewTrackingAndFocus failed to write data to tcs\n" ) ;
+    } ;
+#endif /*vxWorks*/
+
+    /**************************************************************************/
+
+    return (OK) ;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospTtCor 
+ *
+ * INVOCATION:
+ * ospTtCor ( buffp , output , wfsSpecific )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute simpe tip/tilt correction
+ *
+ * DESCRIPTION:
+ * Added by cb 23 Janv 1999 in order to have simple tip/tilt correction
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
 
 int ospTtCor ( float *buffp ,
 	       int output , 
@@ -7210,20 +8374,28 @@ int ospTtCor ( float *buffp ,
     int nbSubApertureUsed ;
     float meanX, meanY ;
 
+    /************************************************* Centroid computation ***/
+
     if ( ospFGCentroidWrapper ( buffp , wfsSpecific ) == ERROR )
     {
        fprintf ( stderr,
                  "Error: ospTtCor centroid computation fails...\n" ) ;
        return ( ERROR ) ;
     } ;
+
+    /**************************************************** Centroid rotation ***/
+
     ospRotateCentroids ( wfsSpecific ) ;
+
+    /************************************************* tip/tilt computation ***/
 
     meanX = 0.0 ;
     meanY = 0.0 ;
     nbSubApertureUsed = 0 ;
     for ( i = 1 ; i <= wfsSpecific->mp ;  i += 2 )
     {
-        if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
+        if ( (wfsSpecific->dssq[i] != OSP_NO_LIGHT) && 
+             (wfsSpecific->dssq[i+1] != OSP_NO_LIGHT) )
         {
            meanX += wfsSpecific->s[i] ;
            meanY += wfsSpecific->s[i+1] ;
@@ -7235,9 +8407,11 @@ int ospTtCor ( float *buffp ,
        meanX = meanX/nbSubApertureUsed ;
        meanY = meanY/nbSubApertureUsed ;
        wfsSpecific->z[1] = meanX * wfsSpecific->tipCor * wfsSpecific->tipscale ;
-       wfsSpecific->z[2] = meanY * wfsSpecific->tiltCor * wfsSpecific->tiltscale ; 
-       /*printf ("Number of subapertures used=%d, z1=%f, z2=%f\n", nbSubApertureUsed,
-           wfsSpecific->z[1], wfsSpecific->z[2] );*/
+       wfsSpecific->z[2] = meanY * wfsSpecific->tiltCor * 
+                           wfsSpecific->tiltscale ; 
+       /*printf ("Number of subapertures used=%d, z1=%f, z2=%f\n", 
+               nbSubApertureUsed,
+               wfsSpecific->z[1], wfsSpecific->z[2] );*/
     }
     else
     {
@@ -7254,6 +8428,8 @@ int ospTtCor ( float *buffp ,
         wfsSpecific->err[i]=sqrt(wfsSpecific->fvars[i]+wfsSpecific->mvars[i]);
     }
 
+    /******************************************** Write data to synchro bus ***/
+
 #ifdef vxWorks
     if ( timeNow (&(wfsSpecific->time)) != OK )
     {
@@ -7266,6 +8442,8 @@ int ospTtCor ( float *buffp ,
     else
        ospstatus=writeWfsToTcs(wfsSpecific);
 #endif /*vxWorks*/
+
+    /**************************************************************************/
 
     return(ospstatus);
 }

@@ -15,9 +15,9 @@ xform 0 1376 1360
 p 2368 -112 200 0 -1 author:$Author: cboyer $
 p 2880 -144 100 0 0 border:D
 p 2368 -192 200 0 1 checked:B.Goodrich
-p 2864 -208 200 0 -1 date:$Date: 1999-05-18 22:39:47 $
-p 2352 2896 200 0 -1 id:$Id: templateD.sch,v 1.2 1999-05-18 22:39:47 cboyer Exp $
+p 2864 -208 200 0 -1 date:$Date: 1999-06-10 03:55:35 $
+p 2352 2896 200 0 -1 id:$Id: templateD.sch,v 1.3 1999-06-10 03:55:35 cboyer Exp $
 p 2880 144 200 0 -1 project:Gemini Wavefront Sensing System
-p 2368 64 200 0 -1 revision:$Revision: 1.2 $
+p 2368 64 200 0 -1 revision:$Revision: 1.3 $
 p 2880 16 200 0 -1 title:Diagram Title
 [comments]

@@ -43,7 +43,6 @@ LIBSRCS.c	= \
 
 APPLSRCS.c	= \
 	../drvVmi5588.c \
-	../drvXy240.c \
 	../detControl.c \
 	../errorLog.c \
 	../simpleLog.c \

@@ -7,12 +7,14 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="11"
-	nstr="56"
+	nstr="52"
 	ndynamic="11"
 	nplot="0"
-	nrd="2"
+	nrd="1"
 	nes="0"
 	nkd="1"
+	npd="0"
+	npo="0"
 	object {
 		x="0"
 		y="0"
@@ -21,29 +23,36 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2124"
+	nwords_dspy="2130"
 	nwords_sta="548"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1238"
-	osta="690"
-	odynamic="1238"
-	oplot="1988"
-	ord="1988"
-	oes="2112"
-	okd="2112"
-	opc="58"
-	ostr="186"
-	ocmap="690"
-	ocrules="690"
+	odyng="1208"
+	osta="660"
+	odynamic="1208"
+	oplot="1958"
+	ord="1958"
+	oes="2118"
+	okd="2118"
+	opd="2130"
+	opo="2130"
+	opc="68"
+	ostr="196"
+	ocmap="660"
+	ocrules="660"
 	style="solid"
 	fill="outline"
 	width="0"
 	clrmod="static"
 	vismod="static"
+	precision="-1"
 	clrrule="alarm"
 	pv=""
 	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -66,13 +75,12 @@ display {
 	object {
 		x="12"
 		y="156"
-		width="125"
+		width="208"
 		height="24"
 		groupid="0"
 	}
 	textix="PARAMETERS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "line" {
 	object {
@@ -136,67 +144,61 @@ display {
 	}
 	textix="$(sensor): SET TEMPERATURE"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="12"
 		y="243"
-		width="451"
-		height="16"
+		width="448"
+		height="14"
 		groupid="0"
 	}
 	textix="B: Temperature control coefficient (u_tcf)  ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="12"
 		y="185"
-		width="451"
-		height="16"
+		width="448"
+		height="15"
 		groupid="0"
 	}
 	textix="A: Target temperature (in Celsius)  ... ... ... :"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="13"
 		y="105"
-		width="93"
+		width="126"
 		height="21"
 		groupid="0"
 	}
 	textix="MESSAGE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="13"
 		y="48"
-		width="112"
-		height="24"
+		width="125"
+		height="21"
 		groupid="0"
 	}
 	textix="DIRECTIVE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="68"
-		width="119"
+		width="129"
 		height="21"
 		groupid="0"
 	}
 	textix="CLIENT ID:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -208,31 +210,28 @@ display {
 	}
 	textix="MESSAGE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="87"
-		width="147"
-		height="21"
+		width="169"
+		height="20"
 		groupid="0"
 	}
 	textix="ERROR NUMBER:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="327"
 		y="47"
-		width="115"
-		height="24"
+		width="166"
+		height="23"
 		groupid="0"
 	}
 	textix="CAR STATE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "message button" {
 	object {
@@ -652,7 +651,6 @@ display {
 		convertParams=""
 	}
 	format="decimal"
-	RISC_pad="0"
 }
 "text entry" {
 	object {
@@ -698,7 +696,6 @@ display {
 		convertParams=""
 	}
 	format="hexadecimal"
-	RISC_pad="0"
 }
 "message button" {
 	object {
@@ -750,60 +747,6 @@ display {
 }
 "related display" {
 	object {
-		x="499"
-		y="6"
-		width="67"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="HELP"
-		name="help1.dl"
-		args=""
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title=""
-	decorate="none"
-}
-"related display" {
-	object {
 		x="13"
 		y="78"
 		width="80"
@@ -851,6 +794,86 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
 	menu_title=""
@@ -864,7 +887,6 @@ display {
 		height="23"
 		groupid="0"
 	}
-	RISCpad="0"
 	label="EXIT"
 	clr="1"
 	bclr="9"

@@ -1,5 +1,5 @@
 /* xy240_driver.c */
-/* base/src/drv $Id: drvXy240.c,v 1.2 1999-05-18 22:40:19 cboyer Exp $ */
+/* base/src/drv $Id: drvXy240.c,v 1.3 1999-06-10 03:56:28 cboyer Exp $ */
 /*
  *	routines used to test and interface with Xycom240
  *	digital i/o module

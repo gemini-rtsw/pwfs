@@ -18,7 +18,7 @@
 /* declare the card pointer as a global so you can get it anywhere */
 
 int swapFlag = 0;
-xycomCard *ptr = NULL;
+xycomCard *xycom_ptr = NULL;
 
 /* function to initialise the card */
 
@@ -31,37 +31,37 @@ void    xycomInit (void)
 	if (vxMemProbe ((void *) XYCOM_BASE_ADDRESS, READ, sizeof (char), &test) != OK)
 	{
 		printf ("xycom card not detected\n");
-		ptr = NULL;
+		xycom_ptr = NULL;
 		return;
 	}
 	else
 	{
-	    ptr = (xycomCard *)XYCOM_BASE_ADDRESS;
+	    xycom_ptr = (xycomCard *)XYCOM_BASE_ADDRESS;
 	}
 
 	/* Green LED on, red off */
 
-/*	ptr->statConReg = 3;*/
+/*	xycom_ptr->statConReg = 3;*/
 
 	/* Ensure the flag output register is clear */
 
-	/*ptr->flagOutReg = 0;*/
+	/*xycom_ptr->flagOutReg = 0;*/
 
 	/* set port directions 0 - 7 as output = in, setting a '1' in the
 	 * port selects output; '0' for input. */
 
-	/*ptr->portDirReg = 0xff;*/
+	/*xycom_ptr->portDirReg = 0xff;*/
 
 	/* clear all output ports */
 
-	/*ptr->port0 = 0x0;
-	ptr->port1 = 0x0;
-	ptr->port2 = 0x0;
-	ptr->port3 = 0x0;
-	ptr->port4 = 0x0;
-	ptr->port5 = 0x0;
-	ptr->port6 = 0x0;
-	ptr->port7 = 0x0;*/
+	/*xycom_ptr->port0 = 0x0;
+	xycom_ptr->port1 = 0x0;
+	xycom_ptr->port2 = 0x0;
+	xycom_ptr->port3 = 0x0;
+	xycom_ptr->port4 = 0x0;
+	xycom_ptr->port5 = 0x0;
+	xycom_ptr->port6 = 0x0;
+	xycom_ptr->port7 = 0x0;*/
 
 	return;
 }
@@ -82,14 +82,14 @@ void changeBits(void)
 {
   /* set bit zero of port 7 */
 
-  if(ptr != NULL)
-	ptr->port7 = ptr->port7 | BIT_ZERO_ON;
+  if(xycom_ptr != NULL)
+	xycom_ptr->port7 = xycom_ptr->port7 | BIT_ZERO_ON;
 
 
 
   /* clear bit zero of port 7 */
 
-  if(ptr != NULL)
-	ptr->port7 = ptr->port7 & BIT_ZERO_OFF;
+  if(xycom_ptr != NULL)
+	xycom_ptr->port7 = xycom_ptr->port7 & BIT_ZERO_OFF;
 
 }

@@ -7,43 +7,52 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="45"
-	nstr="54"
+	nstr="57"
 	ndynamic="44"
 	nplot="0"
 	nrd="0"
 	nes="0"
 	nkd="1"
+	npd="0"
+	npo="0"
 	object {
 		x="328"
 		y="298"
-		width="448"
+		width="514"
 		height="797"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="4264"
+	nwords_dspy="4286"
 	nwords_sta="368"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1348"
-	osta="980"
-	odynamic="1348"
-	oplot="4252"
-	ord="4252"
-	oes="4252"
-	okd="4252"
-	opc="58"
-	ostr="590"
-	ocmap="980"
-	ocrules="980"
+	odyng="1370"
+	osta="1002"
+	odynamic="1370"
+	oplot="4274"
+	ord="4274"
+	oes="4274"
+	okd="4274"
+	opd="4286"
+	opo="4286"
+	opc="68"
+	ostr="600"
+	ocmap="1002"
+	ocrules="1002"
 	style="solid"
 	fill="outline"
 	width="0"
 	clrmod="static"
 	vismod="static"
+	precision="-1"
 	clrrule="alarm"
 	pv=""
 	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -55,15 +64,14 @@ display {
 }
 "text" {
 	object {
-		x="11"
-		y="10"
+		x="10"
+		y="9"
 		width="472"
 		height="28"
 		groupid="0"
 	}
 	textix="$(sensor) - Guide Values"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -73,54 +81,50 @@ display {
 		height="22"
 		groupid="0"
 	}
-	textix="FILTERED FAST GUIDE:"
+	textix="FAST GUIDE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "rectangle" {
 	object {
 		x="11"
 		y="41"
-		width="428"
+		width="485"
 		height="147"
 		groupid="0"
 	}
 }
 "text" {
 	object {
-		x="97"
-		y="76"
+		x="122"
+		y="74"
 		width="102"
 		height="20"
 		groupid="0"
 	}
 	textix="Zernike:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
-		x="267"
-		y="76"
+		x="292"
+		y="74"
 		width="122"
 		height="20"
 		groupid="0"
 	}
 	textix="Std Error:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="17"
 		y="128"
-		width="35"
+		width="59"
 		height="20"
 		groupid="0"
 	}
-	textix="3:"
+	textix="Tilt:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -132,13 +136,12 @@ display {
 	}
 	textix="AO:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "rectangle" {
 	object {
 		x="11"
 		y="196"
-		width="428"
+		width="485"
 		height="593"
 		groupid="0"
 	}
@@ -153,7 +156,6 @@ display {
 	}
 	textix="2:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -165,7 +167,6 @@ display {
 	}
 	textix="3:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -177,7 +178,6 @@ display {
 	}
 	textix="4:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -189,7 +189,6 @@ display {
 	}
 	textix="5:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -201,7 +200,6 @@ display {
 	}
 	textix="6:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -213,7 +211,6 @@ display {
 	}
 	textix="7:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -225,7 +222,6 @@ display {
 	}
 	textix="8:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -237,7 +233,6 @@ display {
 	}
 	textix="9:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -249,7 +244,6 @@ display {
 	}
 	textix="10:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -261,7 +255,6 @@ display {
 	}
 	textix="11:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -273,7 +266,6 @@ display {
 	}
 	textix="12:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -285,7 +277,6 @@ display {
 	}
 	textix="13:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -297,7 +288,6 @@ display {
 	}
 	textix="14:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -309,7 +299,6 @@ display {
 	}
 	textix="15:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -321,7 +310,6 @@ display {
 	}
 	textix="16:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -333,7 +321,6 @@ display {
 	}
 	textix="17:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -345,7 +332,6 @@ display {
 	}
 	textix="18:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -357,31 +343,28 @@ display {
 	}
 	textix="19:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="17"
 		y="101"
-		width="35"
+		width="58"
 		height="20"
 		groupid="0"
 	}
-	textix="2:"
+	textix="Tip:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="17"
 		y="156"
-		width="35"
+		width="70"
 		height="20"
 		groupid="0"
 	}
-	textix="4:"
+	textix="Focus:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -393,7 +376,6 @@ display {
 	}
 	textix="Zernike:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -405,7 +387,6 @@ display {
 	}
 	textix="Std Error:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -417,12 +398,11 @@ display {
 	}
 	textix="20:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text update" {
 	object {
-		x="64"
-		y="101"
+		x="89"
+		y="99"
 		width="160"
 		height="21"
 		groupid="0"
@@ -467,8 +447,8 @@ display {
 }
 "text update" {
 	object {
-		x="247"
-		y="101"
+		x="272"
+		y="99"
 		width="160"
 		height="21"
 		groupid="0"
@@ -513,8 +493,8 @@ display {
 }
 "text update" {
 	object {
-		x="64"
-		y="128"
+		x="89"
+		y="126"
 		width="160"
 		height="21"
 		groupid="0"
@@ -559,8 +539,8 @@ display {
 }
 "text update" {
 	object {
-		x="247"
-		y="128"
+		x="272"
+		y="126"
 		width="160"
 		height="21"
 		groupid="0"
@@ -605,8 +585,8 @@ display {
 }
 "text update" {
 	object {
-		x="64"
-		y="156"
+		x="89"
+		y="154"
 		width="160"
 		height="21"
 		groupid="0"
@@ -651,8 +631,8 @@ display {
 }
 "text update" {
 	object {
-		x="247"
-		y="156"
+		x="272"
+		y="154"
 		width="160"
 		height="21"
 		groupid="0"
@@ -2445,13 +2425,12 @@ display {
 }
 "kill display" {
 	object {
-		x="361"
-		y="11"
+		x="426"
+		y="10"
 		width="70"
 		height="23"
 		groupid="0"
 	}
-	RISCpad="0"
 	label="EXIT"
 	clr="1"
 	bclr="9"

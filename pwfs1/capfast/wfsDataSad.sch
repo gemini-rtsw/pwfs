@@ -56,10 +56,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 1999-05-18 22:39:52 $
-p 2576 2320 200 0 -1 id:$Id: wfsDataSad.sch,v 1.2 1999-05-18 22:39:52 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 1999-06-10 03:55:39 $
+p 2576 2320 200 0 -1 id:$Id: wfsDataSad.sch,v 1.3 1999-06-10 03:55:39 cboyer Exp $
 p 2704 -784 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2608 -496 200 0 -1 revision:$Revision: 1.2 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Data Header Records
 [comments]

@@ -7,12 +7,14 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="12"
-	nstr="106"
+	nstr="103"
 	ndynamic="7"
 	nplot="0"
-	nrd="6"
+	nrd="5"
 	nes="0"
 	nkd="1"
+	npd="0"
+	npo="0"
 	object {
 		x="328"
 		y="298"
@@ -21,29 +23,36 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2592"
+	nwords_dspy="3008"
 	nwords_sta="128"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1746"
-	osta="1618"
-	odynamic="1746"
-	oplot="2208"
-	ord="2208"
-	oes="2580"
-	okd="2580"
-	opc="58"
-	ostr="196"
-	ocmap="1618"
-	ocrules="1618"
+	odyng="1734"
+	osta="1606"
+	odynamic="1734"
+	oplot="2196"
+	ord="2196"
+	oes="2996"
+	okd="2996"
+	opd="3008"
+	opo="3008"
+	opc="68"
+	ostr="206"
+	ocmap="1606"
+	ocrules="1606"
 	style="solid"
 	fill="outline"
 	width="0"
 	clrmod="static"
 	vismod="static"
+	precision="-1"
 	clrrule="alarm"
 	pv=""
 	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -72,7 +81,6 @@ display {
 	}
 	textix="$(sensor) - DETECTOR CONTROLLER"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -84,7 +92,6 @@ display {
 	}
 	textix="STATUS INFORMATION:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "rectangle" {
 	object {
@@ -105,7 +112,6 @@ display {
 	}
 	textix="HEALTH:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -117,7 +123,6 @@ display {
 	}
 	textix="SDSU STATUS:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -129,7 +134,6 @@ display {
 	}
 	textix="CONTROLLER STATE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -141,19 +145,17 @@ display {
 	}
 	textix="OBSERVATION STATE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
 		x="16"
 		y="229"
-		width="240"
+		width="296"
 		height="22"
 		groupid="0"
 	}
 	textix="COMMANDS BY CATEGORY:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -165,7 +167,6 @@ display {
 	}
 	textix="HEARTBEAT:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text" {
 	object {
@@ -177,7 +178,6 @@ display {
 	}
 	textix="INIT STATE:"
 	align="horiz. left"
-	RISC_pad="0"
 }
 "text update" {
 	object {
@@ -503,60 +503,6 @@ display {
 }
 "related display" {
 	object {
-		x="545"
-		y="13"
-		width="70"
-		height="23"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="HELP"
-		name="$help1.dl"
-		args=""
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title=""
-	decorate="none"
-}
-"related display" {
-	object {
 		x="17"
 		y="257"
 		width="300"
@@ -604,9 +550,89 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
-	menu_title="HIGH LEVEL"
+	menu_title="WFS PARAMETERS"
 	decorate="none"
 }
 "related display" {
@@ -654,6 +680,86 @@ display {
 		args=""
 	}
 	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
 		label=""
 		name=""
 		args=""
@@ -712,9 +818,89 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
-	menu_title="LOW LEVEL"
+	menu_title="DSP CODE PARAMETERS"
 	decorate="none"
 }
 "related display" {
@@ -747,9 +933,9 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detTest,car=det"
 	}
 	display[4] {
-		label="GIVE UP CONTROL"
-		name="cad0.dl"
-		args="top=$(top),label=$(sensor),cad=detGiveUp,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[5] {
 		label=""
@@ -762,6 +948,86 @@ display {
 		args=""
 	}
 	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
 		label=""
 		name=""
 		args=""
@@ -820,6 +1086,86 @@ display {
 		name=""
 		args=""
 	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
 	clr="0"
 	bclr="6"
 	menu_title="TEMPERATURE CONTROL"
@@ -833,7 +1179,6 @@ display {
 		height="23"
 		groupid="0"
 	}
-	RISCpad="0"
 	label="EXIT"
 	clr="1"
 	bclr="9"
