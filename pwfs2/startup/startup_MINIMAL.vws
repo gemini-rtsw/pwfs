@@ -1,0 +1,11 @@
+< /usr/local/vxworks/vxUsers
+
+shellPromptSet "Minimal startup > "
+
+loginStringSet "MVME2700 PPC vxWorks (pwfs2)\n\nlogin: "
+
+# Make delete key work for backspace
+tyBackspaceSet 0177
+
+# cd to application install startup directory (beware automounter problems)
+cd "$(iocpath)/bin/$(arch)"

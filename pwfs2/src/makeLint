@@ -1,0 +1,132 @@
+#!/bin/csh -f
+#
+# Description
+#    C-shell script to run lint program on libraries and sources of this directory.
+# 
+# Usage
+#    makeLint
+#
+
+# Define the wfs directory where lib and .c are stored
+
+set WFSDIR = "/home/cboyer/epics/pwfs2-ppc-01"
+
+
+#define h directory of VxWorks
+
+set VWH = "/usr/local/vxworks/ppc/target/h"
+
+
+#define the include directory of the cfitsio library
+
+set CFITH = "/home/cboyer/wfs_lib/cfitsio-ppc/include"
+
+
+#define DHS directory
+
+set DHSDIR = "/home/cboyer/wfs_lib/dhs-ppc/include"
+
+
+#define where are timelib, slalib and astlib
+set TIMELIB = "/home/ajf/epics3.12.2GEM6T/extensions/src/gemini/timelib"
+set SLALIB = "/home/ajf/epics3.12.2GEM6T/extensions/src/gemini/slalib"
+set ASTLIB = "/home/cboyer/wfs_lib/astlib-ppc/include"
+
+# Run lint on epToVxLib library
+
+echo Generating lint messages for epToVxLib in file epToVxLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks -DDEBUG -DCHANNEL_ACCESS \
+     -I$WFSDIR/epics/base/include                          \
+     -I$WFSDIR/include/rec                                 \
+     -I$WFSDIR/epics/extensions/include                    \
+     -I$VWH                                                \
+     -I$WFSDIR/src                                         \
+     $WFSDIR/src/epToVxLib.c >& $WFSDIR/src/epToVxLib.lint
+
+
+# Run lint on epToVxLib library
+
+echo Generating lint messages for sdsuLib in file sdsuLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks -DDEBUG   \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/sdsuLib.c >& $WFSDIR/src/sdsuLib.lint
+
+
+# Run lint on errorLib library
+
+echo Generating lint messages for errorLib in file errorLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks -DDEBUG   \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/errorLib.c >& $WFSDIR/src/errorLib.lint
+
+
+# Run lint on cicsLib library
+
+echo Generating lint messages for cicsLib in file cicsLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks           \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/cicsLib.c >& $WFSDIR/src/cicsLib.lint
+
+
+# Run lint on ospLib library
+
+echo Generating lint messages for ospLib in file ospLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks           \
+     -I$TIMELIB                             \
+     -I$CFITH                               \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/ospLib.c >& $WFSDIR/src/ospLib.lint
+
+
+# Run lint on timeoutLib library
+
+echo Generating lint messages for timeoutLib in file timeoutLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks           \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/timeoutLib.c >& $WFSDIR/src/timeoutLib.lint
+
+
+# Run lint on wfsLib library
+
+echo Generating lint messages for wfsLib in file wfsLib.lint
+lint -umb -DCPU=PPC604 -DvxWorks           \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/wfsLib.c >& $WFSDIR/src/wfsLib.lint
+
+
+# Run lint on detControl source file
+
+echo Generating lint messages for detControl in file detControl.lint
+lint -umb -DCPU=PPC604 -DvxWorks           \
+     -I$DHSDIR                              \
+     -I$TIMELIB -I$ASTLIB -I$SLALIB         \
+     -I$WFSDIR/epics/base/include           \
+     -I$WFSDIR/include/rec                  \
+     -I$WFSDIR/epics/extensions/include     \
+     -I$VWH                                 \
+     -I$WFSDIR/src                          \
+     $WFSDIR/src/detControl.c >& $WFSDIR/src/detControl.lint
