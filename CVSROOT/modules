@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.61 2002-02-28 20:29:30 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.62 2002-03-27 17:56:28 gemvx Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -153,6 +153,10 @@ docs	docs
 #D	gcal	Gemini Calibration Unit
 #M	gcal	Gemini Calibration Unit
 gcal	gcal
+
+#D	gcalgpol	Gemini Calibration & Polarisation Units
+#M	gcalgpol	Gemini Calibration & Polarisation Unit
+gcalgpol	gcalgpol
 
 #D	hrwfs	High Resolution WFS
 #M	hrwfs	High Resolution WFS
