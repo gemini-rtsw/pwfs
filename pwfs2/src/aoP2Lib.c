@@ -76,6 +76,8 @@
  *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   25 Feb 2002: CB - aoThresholdCompute() and aoThresholdPerSubapCompute()
+ *                     background now computed between index1 and index2
  *   07 Feb 2002: CB - Add flip in header of fg and ao circular buffers in order
  *                     to be identical to oiwfs gmos circular buffer
  *   21 Jan 2002: CB - Add pWfsStatus to writeWfsToTcs()
@@ -3937,7 +3939,8 @@ STATUS aoThresholdCompute (
    double *     pThreshold
    )
 {
-   int          index;
+   int          index1;
+   int          index2;
    int          imageSize;
    int          gap;
    int          i, j;
@@ -3986,15 +3989,21 @@ STATUS aoThresholdCompute (
 
    /* Determine the threshold: corresponds to ratePixel% of brightest pixels */
 
-   index = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
-   printf ( "index = %d\n" ,index);
+   index2 = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
+
+   if ( ratePixel < 0.5 )
+      index1 = (int) ceil ((double)(aoCcdId->pixelsNb) * ratePixel);
+   else
+      index1 = 0;
+
+   printf ( "index1=%d, index2 = %d\n", index1, index2);
 
    pn = newImageVect;
    averageThresh = 0.0;
-   for ( i = 0 ; i < index ; i ++ )
+   for ( i = index1 ; i < index2 ; i ++ )
        averageThresh += (double)(*(pn + i));
 
-   *pThreshold = (averageThresh / (double)(index)) + 
+   *pThreshold = (averageThresh / (double)(index2-index1)) + 
                  (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
 
    return (OK);
@@ -8445,7 +8454,8 @@ STATUS aoThresholdPerSubapCompute (
    double *     pThreshold
    )
 {
-   int          index;
+   int          index1;
+   int          index2;
    int          gap;
    int          pixelsNb;
    int          subapNb;
@@ -8534,18 +8544,23 @@ STATUS aoThresholdPerSubapCompute (
 
               /* Now compute the threshold for this subaperture */
 
-              index = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
+              index2 = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
+
+              if ( ratePixel < 0.5 )
+                 index1 = (int) ceil ((double)(pixelsNb) * ratePixel);
+              else
+                 index1 = 0;
     
               pn = newImageVect;
               averageThresh = 0.0;
-              for ( i = 0 ; i < index ; i ++ )
+              for ( i = index1 ; i < index2 ; i ++ )
                   averageThresh += (double)(*(pn + i));
 
-              *(pThreshold + m) = (averageThresh / (double)(index)) + 
+              *(pThreshold + m) = (averageThresh / (double)(index2-index1)) + 
               (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
 
 #ifdef DEBUG
-              printf ( "index = %d\n" ,index);
+              printf ( "index1 = %d, index2 = %d\n", index1, index2);
               printf ( "threshold[%d] = %f\n" , m , *(pThreshold + m));
 #endif
               m ++;

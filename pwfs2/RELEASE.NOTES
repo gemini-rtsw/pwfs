@@ -214,9 +214,14 @@ V3-1 07 February 2002 CB:
   - Add flip in header of fg and ao circular buffers in order to be identical 
     to oiwfs gmos circular buffers
 
-dev equivalent to V3-1
+V3-2 04 March 2002 CB:
+----------------------
   - Init averageImageNb in the aoCbAoCtrlId
   - small bug fixed in sequence closed loop if no GG
     (prevThresh was not initialized)
   - startup: dhs has now been compiled with tornado 2.0
   - detInit: init geometry SIR records
+  - aoThresholdCompute() and aoThresholdPerSubapCompute(): background now 
+    computed between index1 and index2
+
+dev equivalent V3-2
