@@ -213,3 +213,10 @@ V3-1 07 February 2002 CB:
     detObserveStart if signal processing not initialized
   - Add flip in header of fg and ao circular buffers in order to be identical 
     to oiwfs gmos circular buffers
+
+dev equivalent to V3-1
+  - Init averageImageNb in the aoCbAoCtrlId
+  - small bug fixed in sequence closed loop if no GG
+    (prevThresh was not initialized)
+  - startup: dhs has now been compiled with tornado 2.0
+  - detInit: init geometry SIR records
