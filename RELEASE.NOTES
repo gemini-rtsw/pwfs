@@ -133,4 +133,11 @@ V1-6 09 February 2001 CB:
   - remeasure defFullP2DarkMK.fits and defBinP2DarkMK.fits
   - Save zernikes vect after rotation in circular buffer
 
-newDev equivalent to V1-6
+V1-7 20 February 2001 CB:
+-------------------------
+  - when reboot, exit properly the dhs. Add detDhsConnected flag.
+  - sir record dhsCon in sad to indicates status of the connection,
+    remove detDhsSem leftover when we have one detControl for 3 WFS
+  - Now startupCP.vws and startupMK.vws
+
+newDev equivalent to V1-7

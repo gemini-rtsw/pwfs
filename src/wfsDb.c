@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.12 2001-02-09 20:17:16 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.13 2001-02-21 00:01:24 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 20 February 2001 - cb - add dhsCon sir record
  * 10 January 2001 - cb - detSigInit according to the site
  * 11 December 2000 - cb - add detSigReset
  * 30 October 2000 - cb - add detSigInitBW
@@ -897,6 +898,10 @@ SIR_RECORD pWfsDbSirList [] =
  },
  {
   RECORD_NAME ("dc:utend"),
+  EPICS_DATA_TYPE_STRING
+ },
+ {
+  RECORD_NAME ("dc:dhsCon"),
   EPICS_DATA_TYPE_STRING
  }
 };
