@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 04 Feb 2003: CB - Add aoThreshold to aoCtrlId
  * 24 Sep 2002: CB - Implement seeing computation according FR's method
  * 18 Jun 2002: CB - Implement seeing computation according BE's method
  * 07 Feb 2002: CB - Add flip in header of fg and ao circular buffers in order 
@@ -505,6 +506,9 @@ typedef struct
    double        seeingScaleFactor;    /* Scale factor used to compute the    */
                                        /* seeing                              */
 
+   double       aoThreshold;           /* aO threshold above which the aO     */
+                                       /* gains are increased                 */
+
 } AO_CTRL_ID_STRUCT, * AO_CTRL_ID;
 
 /********************************** Definition of the image circular buffer ***/
@@ -914,8 +918,8 @@ STATUS aoCtrlContextUpdate (char * pDarkFileName, char * pFlatFileName,
                             char * pSeeingCoeffVectFileName, 
                             double xCenter, double yCenter, 
                             double angleWithM2, double angleWithM1, 
-                            double seeingScaleFactor, AO_CCD_ID aoCcdId,
-                            AO_CTRL_ID aoCtrlId);
+                            double seeingScaleFactor, double aoThreshold,
+                            AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
 STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels,
                        int yPixels);
@@ -975,7 +979,7 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        char * pSeeingCmFileName, char * pSeeingCvFileName,
                        double * pRms, double * pThresh, double * pTotalThresh,
                        double * pAngleM2, double * pAngleM1, 
-                       double * pSeeingGain);
+                       double * pSeeingGain, double * pAoThreshold);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
                   FOCUS_ZP_MODEL_ID focModelId);
