@@ -98,4 +98,18 @@ V1-4 15 December 2000 CB :
   - Modify formula composite angle in ttfZero in writeZernikes.c :
     RT - CR + PA as for active optics
 
-newDev equivalent to V1-4
+V1-5 28 January 2001 CB:
+------------------------
+  - pwfs1Install : replace the link to cfitsio
+    (/home/cboyer/wfs_lib/cfitsio-ppc) per /gemini/cfitsio/cfitsio
+    and also add the site
+  - add a striptool for the temperature
+  - par: replace defFullCtrlP1.dat def...CP.dat and def...MK.dat
+    same for defBinCtrlP1.dat, same for dark and flat fits files
+    src: modify the software to include site into detControl.c and to
+    read the good file with good darks and flats
+  - par: add a new init file for CP and MK in order to have default
+    temp, ADC offsets and SN of the CCD
+  - replace the button X, Y X 2 per YES in det_frameSize.dl
+
+newDev equivalent to V1-5

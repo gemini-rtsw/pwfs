@@ -13,6 +13,12 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   26 Jan 2001: CB - Add DET_CONTROL_PWFS1_CP_INIT_FILE
+ *                         DET_CONTROL_PWFS1_MK_INIT_FILE
+ *                     Replace/add DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE
+ *                                 DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE
+ *                                 DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE
+ *                                 DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE
  *   08 Dec 2000: CB - Add aoFlag in sequence closed loop
  *                     add detSigReset
  *   07 Dec 2000: CB - Add aoSaveCbIm, aoSaveCbCtrl, aoSaveCbFgCtrl sir records
@@ -267,17 +273,41 @@
 #define DET_CONTROL_MAX_WCSPOINTS             40   
                                      /* Max number of WCS calibration points. */
 
-#define DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE   "defFullCtrlP1.dat"  
-                                    /* Define the default ao control init file*/
-                                    /* for PWFS1 when no binning. Set to      */
+#define DET_CONTROL_PWFS1_MK_INIT_FILE        "defDetContP1MK.dat"
+                                    /* Define the MK default init file for    */
+                                    /* PWFS1 detector controller. Set to      */
+                                    /* "NONE" if no default settings is       */
+                                    /* required.                              */
+
+#define DET_CONTROL_PWFS1_CP_INIT_FILE        "defDetContP1CP.dat"
+                                    /* Define the CP default init file for    */
+                                    /* PWFS1 detector controller. Set to      */
+                                    /* "NONE" if no default settings is       */
+                                    /* required.                              */
+
+#define DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE   "defFullCtrlP1MK.dat"  
+                                    /* Define the MK default ao control init  */
+                                    /* file for PWFS1 when no binning. Set to */
                                     /* "NONE" if no default ao control        */
                                     /* initialisation is required.            */
 
-#define DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE    "defBinCtrlP1.dat"  
-                                    /* Define the default ao control init file*/
-                                    /* for PWFS1 when binning. Set to "NONE"  */
-                                    /* if no default ao control initialisation*/
-                                    /* is required.                           */
+#define DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE    "defBinCtrlP1MK.dat"  
+                                    /* Define the MK default ao control init  */
+                                    /* file for PWFS1 when binning. Set to    */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE   "defFullCtrlP1CP.dat"  
+                                    /* Define the CP default ao control init  */
+                                    /* file for PWFS1 when no binning. Set to */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE    "defBinCtrlP1CP.dat"  
+                                    /* Define the CP default ao control init  */
+                                    /* file for PWFS1 when binning. Set to    */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
 
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
                                     /* Directory containing OMF files for the */

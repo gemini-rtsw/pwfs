@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.14 2000-12-16 03:32:57 cboyer Exp $"};
+   "$Id: detControl.c,v 1.15 2001-01-29 08:49:44 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   26 Jan 2001: CB - read the detector init file according to the site
+ *                     read the ao init file according to the site
  *   08 Dec 2000: CB - Add parameter detSigModeSeq (ao yes/no)
  *                     add detSigReset
  *   07 Dec 2000: CB - Add aoSaveCbIm, aoSaveCbCtrl, aoSaveCbFgCtrl sir records
@@ -458,6 +460,10 @@ uint32 detSimulateImage (int xPixels, int yPixels, float * pImage);
 uint32 detComputeCoeffButterworth (double expTime, double cutoffFreq,
                                    double * pCoeffData);
 
+uint32 detContInit (char * pInitFileName, uint32 * pTempCode,
+                    uint32 * pTempCoeff, long *pOffset0, long * pOffset1,
+                    long * pOffset2, long * pOffset3, char * pCcdSn);
+
 /* -------------------------------------------------------------------------- */
 
 STATUS   detControl
@@ -563,11 +569,14 @@ STATUS   detControl
                                     /* DSP code                               */
    uint32         tempCode;         /* Target temperature code                */
    uint32         tempCoeff;        /* Coefficient for temperature control    */
-   /*long           offset0;*/          /* ADC offset for output 0.               */
-   /*long           offset1;*/          /* ADC offset for output 1.               */
-   /*long           offset2;*/          /* ADC offset for output 2.               */
-   /*long           offset3;*/          /* ADC offset for output 3.               */
+   long           offset0;          /* ADC offset for output 0.               */
+   long           offset1;          /* ADC offset for output 1.               */
+   long           offset2;          /* ADC offset for output 2.               */
+   long           offset3;          /* ADC offset for output 3.               */
 
+   char           detContInitFileName [ STRING_SIZE ] ;
+                                    /* Full Name of the detector controller   */
+                                    /* init file                              */
 
    /* Variables associated with active optics */
 
@@ -581,6 +590,8 @@ STATUS   detControl
                                     /* FG control circular buffer context     */
                                     /* structure                              */
 
+   char         defFileName [ STRING_SIZE ] ;
+                                    /* Default file name according to the site*/
    char         aoInitFileName [ STRING_SIZE ] ;
                                     /* Name of the ao control structure init  */
                                     /* file                                   */
@@ -897,12 +908,6 @@ STATUS   detControl
    if (epToVxRecContextGet (pRecordName, & pDetIdContext, NULL) == ERROR)
    {
       ERROR_LOG ("Failed to get DET_CONTROL_DETID_SIR_NAME SIR context");
-      return (ERROR);
-   }
-
-   if (epToVxPipeWrite( NULL, DET_CCD_SN, pDetIdContext ) == ERROR)
-   {
-      ERROR_LOG ("Failed to set default detector type");
       return (ERROR);
    }
 
@@ -1561,8 +1566,69 @@ STATUS   detControl
 
    strcpy (obsId->pWfsName, "PWFS1");
 
+   /* 
+    * Read the default settings from the detector controller init file
+    */
+
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS1_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS1_CP_INIT_FILE);
+#endif
+
+   printf ( "defFileName =%s\n", defFileName);
+
+   if ( strcmp (defFileName, "NONE") != 0 )
+   {
+      strcpy ( detContInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( detContInitFileName , "/" ) ;
+      strcat ( detContInitFileName , defFileName ) ;
+
+      if ( detContInit ( detContInitFileName, &tempCode, &tempCoeff,
+                         &offset0, &offset1, &offset2, &offset3,
+                         obsId->detId) == ERROR )
+      {
+         MESSAGE_LOG ( MSG_LOG,
+           "Failed to init detector controller default settings from file");
+
+         /* Set the temperature to -20.0C anyway and ADC offsets to 2560
+            which is default value */
+
+         tempCode = (uint32)1282 ;
+         tempCoeff = (uint32)128 ;
+         offset0 = 2560;
+         offset1 = 2560;
+         offset2 = 2560;
+         offset3 = 2560;
+         strcpy ( obsId->detId , DET_CCD_SN ) ;
+      }
+   }
+   else
+   {
+      /* Set the temperature to -20.0C anyway and ADC offsets to 2560
+         which is default value */
+
+      tempCode = (uint32)1282 ;
+      tempCoeff = (uint32)128 ;
+      offset0 = 2560;
+      offset1 = 2560;
+      offset2 = 2560;
+      offset3 = 2560;
+      strcpy ( obsId->detId , DET_CCD_SN ) ;
+   }
+
    /*
-    * Set the default temperature to -20
+    * Write the CCD serial number to the corresponding SIR record
+    */
+
+   if (epToVxPipeWrite( NULL, obsId->detId, pDetIdContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set default detector type");
+      return (ERROR);
+   }
+
+   /*
+    * Set the temperature to the default
     */
 
    if ( sdsuId == NULL )
@@ -1572,9 +1638,6 @@ STATUS   detControl
    }
    else
    {
-      tempCode = (uint32)1282 ;
-      tempCoeff = (uint32)128 ;
-
       MESSAGE_LOG2 (MSG_LOG,
                     "Defining temperature control parameters: %#lx %#lx",
                     tempCode, tempCoeff);
@@ -1594,18 +1657,13 @@ STATUS   detControl
     * Set the default offsets for the PWFS1 CCD sectors
     */
 
-   /*if ( sdsuId == NULL )
+   if ( sdsuId == NULL )
    {
       ERROR_LOG ("Failed to set CCD default offset");
       initFailed = TRUE;
    }
    else
    {
-      offset0 = 2100 ;
-      offset1 = 2250 ;
-      offset2 = 2530 ;
-      offset3 = 2190 ;
-
       MESSAGE_LOG4 (MSG_LOG, 
               "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
               offset0, offset1, offset2, offset3);
@@ -1644,7 +1702,7 @@ STATUS   detControl
          "Failed to activate TIMING DSP parameters with LDP command");
          initFailed = TRUE;
       }
-   }*/
+   }
 
    /*
     * Now init all the geometry SIR records
@@ -1745,11 +1803,17 @@ STATUS   detControl
     * Init the AO control context structure
     */
 
-   if ( strcmp (DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE);
+#endif
+
+   if ( strcmp (defFileName, "NONE") != 0 )
    {
       strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
       strcat ( aoInitFileName , "/" ) ;
-      strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE ) ;
+      strcat ( aoInitFileName , defFileName ) ;
 
       if ( aoCtrlContextInit ( aoInitFileName, aoCcdId, aoCtrlId ) == ERROR )
       {
@@ -12773,6 +12837,7 @@ uint32 detFrameSize
    char         fullCmFileName[STRING_SIZE];
    char         fgCmFileName[STRING_SIZE];
    char         fullFgCmFileName[STRING_SIZE];
+   char         defFileName[STRING_SIZE];
    char         aoInitFileName[STRING_SIZE];
    double       angleM2;
    double       angleM1;
@@ -12910,11 +12975,17 @@ uint32 detFrameSize
 
       /* Read default parameters from par file */
 
-      if ( strcmp (DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE, "NONE") != 0 )
+#if (MK)
+      strcpy ( defFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE ) ;
+#else
+      strcpy ( defFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE ) ;
+#endif
+
+      if ( strcmp (defFileName, "NONE") != 0 )
       {
          strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
          strcat ( aoInitFileName , "/" ) ;
-         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE ) ;
+         strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, imFileName, 
@@ -13034,11 +13105,17 @@ uint32 detFrameSize
 
       /* Read default parameters from par file */
 
-      if ( strcmp (DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+#if (MK)
+      strcpy (defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE);
+#else
+      strcpy (defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE);
+#endif
+
+      if ( strcmp (defFileName, "NONE") != 0 )
       {
          strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
          strcat ( aoInitFileName , "/" ) ;
-         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE ) ;
+         strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, imFileName, 
@@ -17979,6 +18056,7 @@ STATUS detInitSigInit
    char imFileName[STRING_SIZE];
    char cmFileName[STRING_SIZE];
    char fgCmFileName[STRING_SIZE];
+   char defFileName[STRING_SIZE];
    char aoInitFileName[STRING_SIZE];
    double angleM2;
    double angleM1;
@@ -18000,11 +18078,17 @@ STATUS detInitSigInit
    {
       /* Read default parameters from par file */
 
-      if ( strcmp (DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE, "NONE") != 0 )
+#if (MK)
+      strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE );
+#else
+      strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE );
+#endif
+
+      if ( strcmp (defFileName, "NONE") != 0 )
       {
          strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
          strcat ( aoInitFileName , "/" ) ;
-         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_FULL_CTRL_INIT_FILE ) ;
+         strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, imFileName, 
@@ -18028,27 +18112,33 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->valk, fgCmFileName );
 
          /*strcpy ( (char *)pgsub->vala, "." );
-         strcpy ( (char *)pgsub->valb, "data/defFullP1Dark.fits" );
-         strcpy ( (char *)pgsub->valc, "data/defFullP1Flat.fits" );
+         strcpy ( (char *)pgsub->valb, "data/defFullP1DarkMK.fits" );
+         strcpy ( (char *)pgsub->valc, "data/defFullP1FlatMK.fits" );
          *(double *)pgsub->vald = 0.0;
          *(double *)pgsub->vale = 39.5;
          *(double *)pgsub->valf = 39.5;
          *(double *)pgsub->valg = 0.0;
          strcpy ( (char *)pgsub->valh, "data/defFullRefP1.dat" );
-         strcpy ( (char *)pgsub->vali, "data/defIntMatP1.dat" );
-         strcpy ( (char *)pgsub->valj, "data/defContMatP1.dat" );
-         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1.dat" );*/
+         strcpy ( (char *)pgsub->vali, "data/defIntMatP1MK.dat" );
+         strcpy ( (char *)pgsub->valj, "data/defContMatP1MK.dat" );
+         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1MK.dat" );*/
       }
    }
    else if ( (xbin == 2) && (ybin == 2) )
    {
       /* Read default parameters from par file */
 
-      if ( strcmp (DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE, "NONE") != 0 )
+#if (MK)
+      strcpy ( defFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE );
+#else
+      strcpy ( defFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE );
+#endif
+
+      if ( strcmp (defFileName, "NONE") != 0 )
       {
          strcpy ( aoInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
          strcat ( aoInitFileName , "/" ) ;
-         strcat ( aoInitFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_INIT_FILE ) ;
+         strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
                                refFileName, &refX, &refY, imFileName, 
@@ -18072,16 +18162,16 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->valk, fgCmFileName );
 
          /*strcpy ( (char *)pgsub->vala, "." );
-         strcpy ( (char *)pgsub->valb, "data/defBinP1Dark.fits" );
-         strcpy ( (char *)pgsub->valc, "data/defBinP1Flat.fits" );
+         strcpy ( (char *)pgsub->valb, "data/defBinP1DarkMK.fits" );
+         strcpy ( (char *)pgsub->valc, "data/defBinP1FlatMK.fits" );
          *(double *)pgsub->vald = 0.0;
          *(double *)pgsub->vale = 18.5;
          *(double *)pgsub->valf = 18.5;
          *(double *)pgsub->valg = 0.0;
          strcpy ( (char *)pgsub->valh, "data/defBinRefP1.dat" );
-         strcpy ( (char *)pgsub->vali, "data/defIntMatP1.dat" );
-         strcpy ( (char *)pgsub->valj, "data/defContMatP1.dat" );*/
-         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1.dat" );
+         strcpy ( (char *)pgsub->vali, "data/defIntMatP1MK.dat" );
+         strcpy ( (char *)pgsub->valj, "data/defContMatP1MK.dat" );*/
+         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1MK.dat" );
       }
    }
    else
@@ -18494,4 +18584,350 @@ uint32 detSigReset
    obsId->averageFlux = 0.0;
 
    return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detContInit
+ *
+ *   INVOCATION:
+ *   detContInit (pInitFileName, pTempCode, pTempCoeff, pOffset0, pOffset1, 
+ *                pOffset2, pOffset3, pCcdSn)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName (char *)   Init file Name
+ *   (>) pTempCode     (uint32 *) Target temperature code
+ *   (>) pTempCoeff    (uint32 *) Coefficient for temperature control
+ *   (>) pOffset0      (long *)   ADC offset for output 0
+ *   (>) pOffset1      (long *)   ADC offset for output 1
+ *   (>) pOffset2      (long *)   ADC offset for output 2
+ *   (>) pOffset3      (long *)   ADC offset for output 3
+ *   (>) pCcdSn        (char *)   CCD serial number
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Init defaults values for the detector controller
+ *
+ *   DESCRIPTION:
+ *   Init default values for target temperature, ADC offsets and 
+ *   the serial number of the CCD from a init file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+
+uint32 detContInit
+   (
+   char *   pInitFileName,          /* Init file Name                         */
+   uint32 * pTempCode,              /* Target temperature code                */
+   uint32 * pTempCoeff,             /* Coefficient for temperature control    */
+   long   * pOffset0,               /* ADC offset for output 0                */
+   long   * pOffset1,               /* ADC offset for output 1                */
+   long   * pOffset2,               /* ADC offset for output 2                */
+   long   * pOffset3,               /* ADC offset for output 3                */
+   char *   pCcdSn                  /* CCD serial number                      */
+   )
+{
+   FILE *       pFile;
+   char         comment [STRING_SIZE];
+   float        tempTarget;
+   int          coeff;
+   int          offset;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      printf ( "Failed to open the Detector Controller init file %s",
+		   pInitFileName );
+      ERROR_SET1 ( 0, "Failed to open the Detector Controller init file %s",
+		   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read first line of comments from the DC init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): first line of comments:\n" );
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the default target temperature */
+
+   if ( (fscanf (pFile, "%f\n", &tempTarget)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read the target temperature from the DC init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( tempTarget <= -40.0 )
+   {
+      ERROR_SET ( 0,
+                  "Target temperature should be greater than -40.0C",
+                  ERROR_LOG_SAVE);
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( tempTarget <= 0.0 )
+   {
+      *pTempCode = (uint32) ((SDSU_TEMP_BASE - tempTarget) / SDSU_TEMP_UNIT);
+      *pTempCode &= 0xfff; 
+			  /* Truncate to 0xfff (which is the maximum allowed) */
+   }
+   else
+   {
+      /* Switch off cooling altogether for temperatures above 0C. */
+      *pTempCode = 0;
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): target temperature = %d\n", *pTempCode );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the default temperature coefficient */
+
+   if ( (fscanf (pFile, "%d\n", &coeff)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the temperature coefficient from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pTempCoeff = coeff;
+
+#ifdef DEBUG
+   printf ( "detContInit(): temperature coefficient = %d\n", coeff );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the default ADC offset for output 0 */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset for output 0 from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pOffset0 = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 0 = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the ADC offset for output 1 */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset for output 1 from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pOffset1 = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 1 = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the ADC offset for output 2 */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset for output 2 from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pOffset2 = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 2 = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the ADC offset for output 3 */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset for output 3 from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pOffset3 = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 3 = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the CCD serial number from the file */
+
+   if ( fgets (pCcdSn, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the CCD SN from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( pCcdSn[strlen(pCcdSn) - 1] == '\n' )
+   {
+      pCcdSn[strlen(pCcdSn) - 1] = '\0';
+#ifdef DEBUG
+      printf ( "detControlInit(): last character of %s was return\n",
+               pCcdSn );
+#endif
+
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): CCD serial number: %s\n", pCcdSn );
+#endif
+
+   return (OK);
 }

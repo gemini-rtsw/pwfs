@@ -1,14 +1,14 @@
 # Init file for control structure of PWFS1
-# Name of the full dark fits file (string)
-data/defFullP1Dark.fits
-# Name of the full flat fits file (string)
-data/defFullP1Flat.fits
+# Name of the bin dark fits file (string)
+data/defBinP1DarkMK.fits
+# Name of the bin flat fits file (string)
+data/defBinP1FlatMK.fits
 # Name of the AO SH reference file (string)
-data/defFullRefP1.dat
+data/defBinRefP1.dat
 # Value for the x center for the whole CCD (double)
-39.5
+18.5
 # Value for the y center for the whole CCD (double)
-39.5
+18.5
 # aO modes number to correct (int)
 19
 # FG modes number to correct (int)
@@ -16,11 +16,11 @@ data/defFullRefP1.dat
 # Name of aO scale factor file
 data/defAoScaleP1.dat
 # Name of aO interaction matrix file
-data/defIntMatP1.dat
+data/defIntMatP1MK.dat
 # Name of aO control matrix file
-data/defContMatP1.dat
+data/defContMatP1MK.dat
 # Name of FG control matrix file
-data/defFgContMatP1.dat
+data/defFgContMatP1MK.dat
 # Scale factor for tip mode (double)
 -0.1
 # Scale factor for tilt mode (double)
