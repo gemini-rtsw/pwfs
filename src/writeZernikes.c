@@ -862,7 +862,8 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
                 /*printf ( "Before rotate: z2=%f, z3=%f, z4=%f\n" , pWfs->z[1] , pWfs->z[2] , pWfs->z[3] ) ;*/
 		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2]) - f->null[5];
 		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2]) - f->null[6];
-		result.z4 = pWfs->z[3] - f->null[7];
+		/*result.z4 = pWfs->z[3] - f->null[7];*/
+		result.z4 = pWfs->z[3];
 
                 /*printf ( "z2=%f, z3=%f, z4=%f\n" , result.z2 , result.z3 , result.z4 ) ;*/
 		semGive(f->access);
