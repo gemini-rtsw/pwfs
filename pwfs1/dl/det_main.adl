@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="12"
-	nstr="103"
+	nstr="102"
 	ndynamic="7"
 	nplot="0"
 	nrd="5"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3008"
+	nwords_dspy="3002"
 	nwords_sta="128"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1734"
-	osta="1606"
-	odynamic="1734"
-	oplot="2196"
-	ord="2196"
-	oes="2996"
-	okd="2996"
-	opd="3008"
-	opo="3008"
+	odyng="1728"
+	osta="1600"
+	odynamic="1728"
+	oplot="2190"
+	ord="2190"
+	oes="2990"
+	okd="2990"
+	opd="3002"
+	opo="3002"
 	opc="68"
 	ostr="206"
-	ocmap="1606"
-	ocrules="1606"
+	ocmap="1600"
+	ocrules="1600"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -511,9 +511,9 @@ display {
 	}
 	selfkill="off"
 	display[0] {
-		label="SET EXPOSURE PARAMETERS"
-		name="det_exposure.dl"
-		args="top=$(top),sensor=$(sensor),cad=detExposure,car=det"
+		label="SET CHOP MASK"
+		name="det_chop.dl"
+		args="top=$(top),sensor=$(sensor),cad=detChop,car=det"
 	}
 	display[1] {
 		label="SET OBSERVATION TYPE"
@@ -526,19 +526,19 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detSetWcs,car=det"
 	}
 	display[3] {
-		label="SET CHOP MASK"
-		name="det_chop.dl"
-		args="top=$(top),sensor=$(sensor),cad=detChop,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[4] {
-		label="LOAD PARAMETERS"
-		name="det_setup.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSetup,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[5] {
-		label="SAVE PARAMETERS"
-		name="det_save.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSave,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[6] {
 		label=""
@@ -794,14 +794,14 @@ display {
 		args="top=$(top),sensor=$(sensor),cad=detOffset,car=det"
 	}
 	display[3] {
-		label=""
-		name=""
-		args=""
+		label="LOAD PARAMETERS"
+		name="det_setup.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSetup,car=det"
 	}
 	display[4] {
-		label=""
-		name=""
-		args=""
+		label="SAVE PARAMETERS"
+		name="det_save.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSave,car=det"
 	}
 	display[5] {
 		label=""

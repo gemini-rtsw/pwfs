@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="10"
-	nstr="56"
+	nstr="58"
 	ndynamic="6"
 	nplot="0"
 	nrd="6"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2268"
+	nwords_dspy="2300"
 	nwords_sta="116"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="900"
-	osta="784"
-	odynamic="900"
-	oplot="1296"
-	ord="1296"
-	oes="2256"
-	okd="2256"
-	opd="2268"
-	opo="2268"
+	odyng="932"
+	osta="816"
+	odynamic="932"
+	oplot="1328"
+	ord="1328"
+	oes="2288"
+	okd="2288"
+	opd="2300"
+	opo="2300"
 	opc="68"
 	ostr="180"
-	ocmap="784"
-	ocrules="784"
+	ocmap="816"
+	ocrules="816"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -75,7 +75,7 @@ display {
 	object {
 		x="9"
 		y="14"
-		width="505"
+		width="554"
 		height="28"
 		groupid="0"
 	}
@@ -722,9 +722,9 @@ display {
 	}
 	selfkill="off"
 	display[0] {
-		label="UPDATE AO GAINS"
-		name="sig_update.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigUpdate,car=det"
+		label="INIT AO GAINS"
+		name="sig_initGain.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitGain,car=det"
 	}
 	display[1] {
 		label=""
@@ -843,7 +843,7 @@ display {
 	}
 	clr="0"
 	bclr="6"
-	menu_title="UPDATE AO GAINS"
+	menu_title="INIT AO GAINS"
 	decorate="none"
 }
 "related display" {
@@ -1124,9 +1124,9 @@ display {
 	}
 	selfkill="off"
 	display[0] {
-		label="UPDATE FG GAINS"
+		label="INIT FG GAINS"
 		name="sig_FGupdate.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigFGUpdate,car=det"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitFGGain,car=det"
 	}
 	display[1] {
 		label=""
@@ -1245,7 +1245,7 @@ display {
 	}
 	clr="0"
 	bclr="6"
-	menu_title="UPDATE FG GAINS"
+	menu_title="INIT FG GAINS"
 	decorate="none"
 }
 "kill display" {

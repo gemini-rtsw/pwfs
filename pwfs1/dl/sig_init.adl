@@ -7,10 +7,10 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="23"
-	nstr="69"
-	ndynamic="22"
+	nstr="65"
+	ndynamic="20"
 	nplot="0"
-	nrd="2"
+	nrd="1"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="4048"
-	nwords_sta="1144"
+	nwords_dspy="3678"
+	nwords_sta="1108"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2246"
-	osta="1102"
-	odynamic="2246"
-	oplot="3716"
-	ord="3716"
-	oes="4036"
-	okd="4036"
-	opd="4048"
-	opo="4048"
+	odyng="2168"
+	osta="1060"
+	odynamic="2168"
+	oplot="3506"
+	ord="3506"
+	oes="3666"
+	okd="3666"
+	opd="3678"
+	opo="3678"
 	opc="68"
 	ostr="368"
-	ocmap="1102"
-	ocrules="1102"
+	ocmap="1060"
+	ocrules="1060"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -294,28 +294,6 @@ display {
 }
 "text" {
 	object {
-		x="414"
-		y="350"
-		width="150"
-		height="16"
-		groupid="0"
-	}
-	textix="X Tilt gain :"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="414"
-		y="377"
-		width="142"
-		height="16"
-		groupid="0"
-	}
-	textix="Y Tilt gain :"
-	align="horiz. left"
-}
-"text" {
-	object {
 		x="12"
 		y="352"
 		width="159"
@@ -367,17 +345,6 @@ display {
 		groupid="0"
 	}
 	textix="Reference 6x6 file name ... ...:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="10"
-		y="640"
-		width="166"
-		height="16"
-		groupid="0"
-	}
-	textix="Zernikes gains :"
 	align="horiz. left"
 }
 "line" {
@@ -441,8 +408,8 @@ display {
 }
 "text" {
 	object {
-		x="418"
-		y="642"
+		x="11"
+		y="636"
 		width="107"
 		height="16"
 		groupid="0"
@@ -1006,96 +973,6 @@ display {
 }
 "text entry" {
 	object {
-		x="545"
-		y="350"
-		width="110"
-		height="19"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigInit.H"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigInit.VAL"
-		rulechan[1] = "$(top)detSigInit.VAL"
-		rulechan[2] = "$(top)detSigInit.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigInit"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
-		x="545"
-		y="377"
-		width="110"
-		height="19"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigInit.I"
-		clr="0"
-		bclr="6"
-		label="none"
-		clrmod="rule"
-		rulechan[0] = "$(top)detSigInit.VAL"
-		rulechan[1] = "$(top)detSigInit.VAL"
-		rulechan[2] = "$(top)detSigInit.VAL"
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="acceptReject"
-		clrargs="C=$(top)detSigInit"
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	format="decimal"
-}
-"text entry" {
-	object {
 		x="173"
 		y="342"
 		width="110"
@@ -1238,7 +1115,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.K"
+		chan="$(top)detSigInit.J"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -1283,7 +1160,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.J"
+		chan="$(top)detSigInit.H"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -1328,7 +1205,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.L"
+		chan="$(top)detSigInit.I"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -1373,7 +1250,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.M"
+		chan="$(top)detSigInit.K"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -1418,7 +1295,7 @@ display {
 		groupid="0"
 	}
 	control {
-		chan="$(top)detSigInit.N"
+		chan="$(top)detSigInit.L"
 		clr="0"
 		bclr="6"
 		label="none"
@@ -1456,142 +1333,8 @@ display {
 }
 "related display" {
 	object {
-		x="173"
-		y="638"
-		width="148"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="INITIALIZE"
-		name="sig_initGain.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitGain,car=det"
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="INITIALIZE"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="530"
-		y="639"
+		x="123"
+		y="633"
 		width="148"
 		height="22"
 		groupid="0"

@@ -598,9 +598,9 @@ display {
 }
 "text entry" {
 	object {
-		x="567"
+		x="548"
 		y="187"
-		width="75"
+		width="101"
 		height="19"
 		groupid="0"
 	}
@@ -780,9 +780,9 @@ display {
 		convertFunc=""
 		convertParams=""
 	}
-	inactive_label="ZNULL"
-	pressed_label="ZNULL"
-	press_msg="ZNULL"
+	inactive_label="ZERO"
+	pressed_label="ZERO"
+	press_msg="ZERO"
 	release_msg=""
 }
 "message button" {
@@ -828,9 +828,9 @@ display {
 		convertFunc=""
 		convertParams=""
 	}
-	inactive_label="WFS"
-	pressed_label="WFS"
-	press_msg="WFS"
+	inactive_label="OBJECT"
+	pressed_label="OBJECT"
+	press_msg="OBJECT"
 	release_msg=""
 }
 "related display" {
