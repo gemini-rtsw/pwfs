@@ -79,6 +79,7 @@
  *                   in writeZernikes.c
  * 06-Jun-2001: cb - add zero point model for focus off axis and now sliding
  *                   average in writeZernikes.c
+ * 30-Nov-2001: cb - add writeToRm to writeWfsToSynchro
  *
  */
 /* INDENT ON */
@@ -1189,7 +1190,7 @@ STATUS writeWfsToTcs
  *
  * STATUS writeWfsToSynchro(AO_CTRL_ID aoCtrlId, double *pFgVect,
  *                          double *pFgVectAfterRot, double *pFgErrorsVect, 
- *                          double *pTime)
+ *                          double *pTime, int writeToRm)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > AO_CTRL_ID aoCtrlId        - Pointer to the AO control context structure
@@ -1198,6 +1199,7 @@ STATUS writeWfsToTcs
  * >                              rotation
  * > double *   pFgErrorsVect   - Vector containing the associated errors
  * > double *   pTime           - Pointer to the associated time stamp value
+ * > int        writeToRm       - Flag to indicate if data are written to RM
  *
  * FUNCTION VALUE:
  * long  Status value returned to calling routine, a non-zero value indicates
@@ -1243,7 +1245,8 @@ STATUS writeWfsToSynchro
    double     *pFgVect,
    double     *pFgVectAfterRot,
    double     *pFgErrorsVect,
-   double     *pTime
+   double     *pTime,
+   int        writeToRm
    )
 {
    converted  result;
@@ -1313,7 +1316,7 @@ STATUS writeWfsToSynchro
    /* scale data and write to the synchro bus, check that pointer has been 
       initialised with null check */
 
-   if(ptrPwfs1 != NULL)
+   if ( (ptrPwfs1 != NULL) && (writeToRm == TRUE) )
    {
      ptrPwfs1->z1 = (float)(result.z2);
      ptrPwfs1->z2 = (float)(result.z3);
@@ -1507,7 +1510,7 @@ long ttfZero
 
    /* Compute focus zero point model */
 
-   if(semTake(accessFocusModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessFocusModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (focusModel.applyModel == 0 )
      {
@@ -1704,7 +1707,7 @@ long aoZero
 
    /* compute astigmatism zero point model */
 
-   if(semTake(accessAstigModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessAstigModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (astigModel.applyModel == 0 )
      {
@@ -1737,7 +1740,7 @@ long aoZero
 
    /* compute trefoil zero point model */
 
-   if(semTake(accessTrefoilModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (trefoilModel.applyModel == 0 )
      {
@@ -1766,7 +1769,7 @@ long aoZero
 
    /* compute coma zero point model */
 
-   if(semTake(accessComaModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessComaModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (comaModel.applyModel == 0 )
      {

@@ -1,4 +1,4 @@
-# $Id: startup_nodhs.vws,v 1.1 2001-04-03 01:36:10 gemvx Exp $
+# $Id: startup_nodhs.vws,v 1.2 2001-12-22 00:00:20 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -126,7 +126,7 @@ epToVxCaInitRecords ()
 
 # Initialise the DHS for the detector controllers (clientName, numConnect, hostName, serverName)
 # (Uncomment this line to activate the DHS. Comment it to prevent the DHS from being used).
-#detDhsInit ("pwfs1", 16, "172.17.4.15", "dataServerSS")
+#detDhsParamInit ("pwfs1", 16, "172.17.4.15", "dataServerSS")
 
 # Spawn generic-record i/o Daemon task after querying the number of processors
 NProc = 1

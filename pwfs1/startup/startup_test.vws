@@ -1,4 +1,4 @@
-# $Id: startup_test.vws,v 1.4 2001-03-24 03:30:03 cboyer Exp $
+# $Id: startup_test.vws,v 1.5 2001-12-22 00:00:20 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -128,7 +128,7 @@ iocInit ("$(version)/data/resource.def")
 
 # Initialise the DHS for the detector controllers (clientName, numConnect, hostName, serverName)
 # (Uncomment this line to activate the DHS. Comment it to prevent the DHS from being used).
-#detDhsInit ("pwfs1", 16, "10.2.4.56", "dataServerNS")
+#detDhsParamInit ("pwfs1", 16, "10.2.4.56", "dataServerNS")
 
 # Spawn generic-record i/o Daemon task after querying the number of processors
 NProc = 1

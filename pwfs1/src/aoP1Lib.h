@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 21 Dec 2001: CB - add automatic init of zero point models from par file
  * 06 June 2001: CB - add FOCUS_ZP_MODEL_ID structure 
  * 29 May 2001: CB - add COMA_ZP_MODEL_ID structure 
  * 23 May 2001: CB - replace ZP_MODEL_ID by AST_ZP_MODEL_ID structure
@@ -66,6 +67,9 @@
 
 #define AO_MIN_DOUBLE        1.0e-10   /* Mininum double used when comparing  */
                                        /* total counts to threshold           */
+
+#define ZP_MODEL_SEM_TIMEOUT 100       /* Timeout for zero point model        */
+                                       /* semaphore                           */
 
 /********************************************************************* Enum ***/
 
@@ -776,12 +780,13 @@ STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels, int yPixels);
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       double * pTotalCountsVect, double * pGuidesVect, 
                       double * pFgVect, double * pFgVectAfterRot, 
-                      double * pFgErrorsVect, double * pTime, int * pWfsStatus);
+                      double * pFgErrorsVect, double * pTime, int * pWfsStatus,
+                      int writeToRm);
 STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId, 
                               AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
                               double * pGuidesVect, double * pFgVect, 
                               double * pFgVectAfterRot, double * pFgErrorsVect, 
-                              double * pTime, int * pWfsStatus);
+                              double * pTime, int * pWfsStatus, int writeToRm);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
 STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
@@ -807,7 +812,7 @@ STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                         double *pTotalCountsVect, double *pCentroidsVect,
                         double *pErrorCentroidsVect, double *pFgVect,
                         double *pFgVectAfterRot, double *pFgErrorsVect, 
-                        double *pTime, int *pWfsStatus);
+                        double *pTime, int *pWfsStatus, int writeToRm);
 STATUS aoModeAnalyze (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       AO_CB_CTRL_ID aoCbCtrlId);
 STATUS aoCentroidsWrite (char * pCentroidsFileName, double * pCentroids, 
@@ -824,6 +829,25 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        char * pCmFileName, char * pFgCmFileName,
                        double * pThresh, double * pTotalThresh,
                        double * pAngleM2, double * pAngleM1);
+STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
+                  TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
+                  FOCUS_ZP_MODEL_ID focModelId);
+STATUS aoModAstFileRead (char * pInitFileName, double * pA1, double * pA2,
+                         double * pA3, double * pP1, double * pP2,
+                         double * pP3, double * pC, double * pB1,
+                         double * pB2, double * pB3, double * pPp1,
+                         double * pPp2, double * pPp3, double * pD,
+                         double * pGain0, double * pGain45,
+                         double * pOffset0, double * pOffset45, int * pApply);
+STATUS aoModTrefFileRead (char * pInitFileName, double * pA, double * pP,
+                          double * pC, double * pB, double * pPp, double * pD,
+                          int * pApply);
+STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
+                          double * pC, double * pB, double * pPp,
+                          double * pD, int * pApply);
+STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1,
+                         double * pA2, double * pP2, double * pC,
+                         int * pApply);
 #endif
 
 #endif /* __INCaoP1Libh */

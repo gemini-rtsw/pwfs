@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   21 Dec 2001: CB - add automatic init of zero point models from par file
  *   06 Jun 2001: CB - add detSigInitModFoc
  *   29 May 2001: CB - add detSigInitModComa
  *   23 May 2001: CB - add detSigInitModTref and replace detSigInitMod by
@@ -339,6 +340,16 @@
                                     /* "NONE" if no default ao control        */
                                     /* initialisation is required.            */
 
+#define DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE         "defAoModP1MK.dat"
+                                    /* Define the MK default model init file  */
+                                    /* for PWFS1. Set to "NONE" if no default */
+                                    /* zero point models required             */
+
+#define DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE         "defAoModP1CP.dat"
+                                    /* Define the CP default model init file  */
+                                    /* for PWFS1. Set to "NONE" if no default */
+                                    /* zero point models required             */
+
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
                                     /* Directory containing OMF files for the */
                                     /* DSP code                               */
@@ -488,6 +499,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         nFramesAverageFlux;
                            /* Number of frames to average for computing the   */
                            /* average flux                                    */
+   long         writeToRm; /* Write to RM flag (TRUE/FALSE)                   */
    double       fgTime;    /* Time with FG only over the whole CCD in the     */
                            /* closed loop sequence                            */
    double       saveCbFgCtrlClosedLoopTime;
@@ -808,5 +820,6 @@ IMPORT void   detDhsErrorCallback (DHS_CONNECT connect,
                                    DHS_STATUS errorNum,
                                    DHS_ERR_LEVEL errorLev, 
                                    char * msg, DHS_TAG tag, void * userData);
-IMPORT STATUS detDhsInit (const char * pClientName, const int numConnect,
-                          const char * pHostName, const char * pServerName);
+IMPORT STATUS detDhsParamInit (const char * pClientName, const int numConnect,
+                               const char * pHostName, 
+                               const char * pServerName);

@@ -177,7 +177,14 @@ V2-4 15 June 2001 CB:
   - sliding average for focus removed from aoP1Lib.c and add in writeZernikes.c
   - reject observe command if no binning and exposure time < 0.01s
 
-newDev equivalent to V2-4
+V2-5 21 December 2001 CB:
+-------------------------
   - set the default for init zero point coma and astigmatism and trefoil
   - fix a init pb in aoP1Lib.c
   - fix AO_MODE_AO only: add dark subtraction
+  - add writeToRm flag when doing guiding (need to init this flag at beginning + need to add in detObsShow + need to init it in detSigMeasIm)
+  - Reject observe command if selected outOption = dhs and DHS is not connected
+  - detDhsInit is now started from detControl.c
+  - init zero point model from par file and according to site
+
+newDev equivalent to V2-5

@@ -1,5 +1,5 @@
 [schematic2]
-uniq 63
+uniq 64
 [tools]
 [detail]
 w 708 1659 100 0 n#45 systemCar.systemCar#18.FLNK 640 1920 704 1920 704 1408 1056 1408 egenSub.combActive.SLNK
@@ -14,6 +14,9 @@ w 824 2019 100 0 n#36 systemCar.systemCar#18.CLID 640 2016 1056 2016 egenSub.com
 s 1488 80 500 512 pwfs1.sch
 s -576 2224 500 0 Gemini A&G PWFS1
 [cell use]
+use wfsGensubMore -96 999 100 0 wfsGensubMore#63
+xform 0 0 1120
+p -96 992 100 0 1 set1:wfs dc:
 use wfsCadMore1 -600 535 100 0 wfsCadMore1#61
 xform 0 -488 672
 p -576 544 100 0 1 set1:wfs dc:
@@ -69,10 +72,10 @@ xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 0 checked:
-p 1776 16 100 0 -1 date:$Date: 2001-02-15 05:39:28 $
+p 1776 16 100 0 -1 date:$Date: 2001-12-22 00:00:17 $
 p 1552 2368 100 0 -1 id:
 p 1568 32 100 0 1 modified:C. Boyer
 p 1792 176 100 0 -1 project:Gemini PWFS1
-p 1552 144 100 0 -1 revision:$Revision: 1.5 $
+p 1552 144 100 0 -1 revision:$Revision: 1.6 $
 p 1792 112 100 0 -1 title:Under Top Level Schematic for Main Database
 [comments]
