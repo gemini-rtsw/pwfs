@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.37 2001-03-28 07:58:43 gemvx Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.38 2001-04-12 23:40:23 gemvx Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -87,6 +87,14 @@ niri	niri
 gn-4	niri/gn-4
 #M	niricnfg	NIRI configurator tool
 niricnfg	niri/niricnfg
+
+#D	gmos	Gemini GMOS Software (HIA/UKATC)
+#M	gmos	Gemini GMOS Software (HIA/UKATC)
+gmos	gmos
+
+#D	gmosdc	Gemini GMOS Detector Controller (NOAO)
+#M	gmosdc	Gemini GMOS Detector Controller (NOAO)
+gmosdc	gmosdc
 
 #D	scs	Gemini Secondary Control System
 #M	scs	Gemini Secondary Control System
