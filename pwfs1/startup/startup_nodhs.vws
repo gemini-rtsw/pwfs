@@ -1,4 +1,4 @@
-# $Id: startupCP.vws,v 1.2 2001-04-03 01:36:10 gemvx Exp $
+# $Id: startup_nodhs.vws,v 1.1 2001-04-03 01:36:10 gemvx Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #

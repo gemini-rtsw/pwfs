@@ -143,4 +143,13 @@ V1-9 23 March 2001 CB:
   - wfsControl: add a dhsErrno=0 before doing the dhsExit() and increase the 
     delay before doing the reboot
 
-newDev equivalent to V1-9
+V2-0 02 April 2001 CB:
+----------------------
+  - fix focus factor when binning and also aO
+  - fix rotation bug in aoP1Lib.c, in writeZernikes.c
+  - writeZernikes.c: now applyAstig is always 1 except if change by cau
+    and also data from TCS * gains of ao
+  - add adc0, adc1, adc2, adc3 sir records
+  - add startup_nodhs.vws
+
+newDev equivalent to V2-0

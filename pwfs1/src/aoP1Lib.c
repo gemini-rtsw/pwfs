@@ -68,6 +68,9 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   29 March 2001: CB - For guide and focus and ao multiply focus per two 
+ *                       when binning
+ *                       for TT fix bug in rotation matrix
  *   02 February 2001: CB - Add aoVectAfterRot and fgVectAfterRot vectors in the
  *                          circular buffers AO_CB_CTRL_ID and AO_CB_FG_CTRL_ID
  *   01 February 2001: CB - Fix a bug in aoModeCompute()
@@ -3356,12 +3359,12 @@ STATUS aoGlobalGuide (
       *(pGuidesVect + 1) = (y / total) - yCenter;
 
       *(pFgVect) = tipScale *
-      ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) -
+      ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
         aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
       *(pFgVect + 1) = tiltScale *
-      ( aoCtrlId->sinAngleWithM2 * (*pGuidesVect) +
-        aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) );
+      ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
+        aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
 
       *(pFgVect + 2) = 0.0;
 
@@ -3580,12 +3583,12 @@ STATUS aoGlobalGuideAndError (
       *(pGuidesVect + 1) = yTemp - yCenter;
 
       *(pFgVect) = tipScale *
-      ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) -
+      ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
         aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
       *(pFgVect + 1) = tiltScale *
-      ( aoCtrlId->sinAngleWithM2 * (*pGuidesVect) +
-        aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) );
+      ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
+        aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
 
       *(pFgVect + 2) = 0.0;
 
@@ -4253,6 +4256,7 @@ STATUS aoModeCompute (
          pMaxAo = pAoVect + aoCtrlId->aoModeNb;
          pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
          pMat = aoCtrlId->contMat;
+
          pScale = aoCtrlId->aoScaleFactorVect;
 
          if ( aoCentroidsCompute ( aoCtrlId->sumVect, aoCcdId, aoCtrlId, 
@@ -4272,11 +4276,22 @@ STATUS aoModeCompute (
                 for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
                     *pAo += (*(pMat ++)) * (*(pCent ++));
 
-            for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
-            {
-                *pAo *= (*(pScale ++));
-                *(pErrorAo ++) = 0.0;
-            }
+            if ( aoCcdId->binningFlag == TRUE )
+	    {
+               for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+               {
+                   *pAo *= (2.0)*(*(pScale ++));
+                   *(pErrorAo ++) = 0.0;
+               }
+	    }
+	    else
+	    {
+               for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+               {
+                   *pAo *= (*(pScale ++));
+                   *(pErrorAo ++) = 0.0;
+               }
+	    }
          }
          else
          {
@@ -5501,6 +5516,7 @@ STATUS aoGuideAndFocus (
    pMaxFg = fg + aoCtrlId->fgModeNb;
    pErrorFg = pFgErrorsVect;
    pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
+
    pMat = aoCtrlId->fgContMat;
 
    tipScale = aoCtrlId->fgScaleFactorVect[0];
@@ -5531,11 +5547,14 @@ STATUS aoGuideAndFocus (
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
       *(pFgVect) = tipScale * 
-                   ( aoCtrlId->cosAngleWithM2 * (*fg) -
+                   ( aoCtrlId->cosAngleWithM2 * (*fg) +
                    aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
       *(pFgVect + 1) = tiltScale * 
-                       ( aoCtrlId->sinAngleWithM2 * (*fg) +
-                         aoCtrlId->cosAngleWithM2 * (*(fg + 1)) );
+                       ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
+                       aoCtrlId->sinAngleWithM2 * (*fg) );
+
+      if ( aoCcdId->binningFlag == TRUE )
+	 *(fg+2) *= 2.0;
 
       if ( aoCtrlId->focusCounter == 0 )
       {
@@ -5688,10 +5707,21 @@ STATUS aoModeAnalyze (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pAo += (*(pMat ++)) * (*(pCent ++));
 
-      for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+      if ( aoCcdId->binningFlag == TRUE )
       {
-          *pAo *= (*(pScale ++));
-          *(pErrorAo ++) = 0.0;
+         for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+         {
+             *pAo *= (2.0)*(*(pScale ++));
+             *(pErrorAo ++) = 0.0;
+         }
+      }
+      else
+      {
+         for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
+         {
+             *pAo *= (*(pScale ++));
+             *(pErrorAo ++) = 0.0;
+         }
       }
    }
    else

@@ -1,5 +1,5 @@
 [schematic2]
-uniq 123
+uniq 127
 [tools]
 [detail]
 w 2978 299 100 0 n#122 esirs.ybin.FLNK 2784 512 2880 512 2880 288 3136 288 egenSubB.initSigInit.SLNK
@@ -8,37 +8,6 @@ w 2930 971 100 0 n#120 esirs.xbin.VAL 2784 960 3136 960 egenSubB.initSigInit.INP
 s 2464 -704 500 512 wfsDetSad.sch
 s 128 2176 500 0 PWFS1 - WFS Detector Status Records
 [cell use]
-use egenSubB 3136 199 100 0 initSigInit
-xform 0 3280 624
-p 3200 144 100 0 1 DESC:Init the detSigInit record
-p 3216 960 100 0 1 FTB:LONG
-p 3216 896 100 0 1 FTD:LONG
-p 3520 992 100 0 1 FTVA:STRING
-p 3520 960 100 0 1 FTVB:STRING
-p 3520 928 100 0 1 FTVC:STRING
-p 3520 896 100 0 1 FTVD:DOUBLE
-p 3520 864 100 0 1 FTVE:DOUBLE
-p 3520 832 100 0 1 FTVF:DOUBLE
-p 3520 800 100 0 1 FTVG:DOUBLE
-p 3520 768 100 0 1 FTVH:STRING
-p 3520 736 100 0 1 FTVI:STRING
-p 3520 704 100 0 1 FTVJ:STRING
-p 3520 672 100 0 1 FTVK:STRING
-p 3520 352 100 0 1 FTVU:LONG
-p 3200 48 100 0 1 PV:$(sadtop)$(wfs)
-p 3200 112 100 0 1 SCAN:Passive
-p 3200 80 100 0 1 SNAM:detInitSigInit
-p 3680 992 100 0 1 def(OUTA):$(top)$(wfs)detSigInit.A
-p 3680 960 100 0 1 def(OUTB):$(top)$(wfs)detSigInit.B
-p 3680 928 100 0 1 def(OUTC):$(top)$(wfs)detSigInit.C
-p 3680 896 100 0 1 def(OUTD):$(top)$(wfs)detSigInit.D
-p 3680 864 100 0 1 def(OUTE):$(top)$(wfs)detSigInit.E
-p 3680 832 100 0 1 def(OUTF):$(top)$(wfs)detSigInit.F
-p 3680 800 100 0 1 def(OUTG):$(top)$(wfs)detSigInit.G
-p 3680 768 100 0 1 def(OUTH):$(top)$(wfs)detSigInit.H
-p 3680 736 100 0 1 def(OUTI):$(top)$(wfs)detSigInit.I
-p 3680 704 100 0 1 def(OUTJ):$(top)$(wfs)detSigInit.J
-p 3680 672 100 0 1 def(OUTK):$(top)$(wfs)detSigInit.K
 use esirs 2368 263 100 0 ybin
 xform 0 2576 416
 p 2432 224 100 0 1 DESC:Binning factor in Y direction
@@ -138,7 +107,7 @@ p 608 224 100 0 1 DESC:Detector head temperature
 p 608 128 100 0 1 EGU:Celsius
 p 480 0 100 0 0 FDSC:Detector head temperature
 p 608 192 100 0 1 FTVL:DOUBLE
-p 608 32 100 0 1 PREC:4
+p 768 192 100 0 1 PREC:4
 p 608 160 100 0 1 PV:$(sadtop)$(wfs)
 p 608 96 100 0 1 SCAN:5 second
 p 608 64 100 0 1 SNAM:detHeadTempGet
@@ -181,6 +150,61 @@ p 0 -288 100 0 1 DESC:Number of outputs
 p -128 -512 100 0 0 FDSC:Number of outputs
 p 0 -320 100 0 1 FTVL:LONG
 p 0 -352 100 0 1 PV:$(sadtop)$(wfs)
+use esirs 544 -249 100 0 adc0
+xform 0 752 -96
+p 608 -288 100 0 1 DESC:ADC 0
+p 480 -512 100 0 0 FDSC:SDSU parameter T_ADC_OS0
+p 608 -320 100 0 1 FTVL:LONG
+p 608 -352 100 0 1 PV:$(sadtop)$(wfs)
+use esirs 1152 -249 100 0 adc1
+xform 0 1360 -96
+p 1216 -288 100 0 1 DESC:ADC 1
+p 1088 -512 100 0 0 FDSC:SDSU parameter T_ADC_OS1
+p 1216 -320 100 0 1 FTVL:LONG
+p 1216 -352 100 0 1 PV:$(sadtop)$(wfs)
+use esirs 1760 -249 100 0 adc2
+xform 0 1968 -96
+p 1824 -288 100 0 1 DESC:ADC 2
+p 1696 -512 100 0 0 FDSC:SDSU parameters T_ADC_OS2
+p 1824 -320 100 0 1 FTVL:LONG
+p 1824 -352 100 0 1 PV:$(sadtop)$(wfs)
+use esirs 2368 -249 100 0 adc3
+xform 0 2576 -96
+p 2432 -288 100 0 1 DESC:ADC 3
+p 2304 -512 100 0 0 FDSC:SDSU parameter T_ADC_OS3
+p 2432 -320 100 0 1 FTVL:LONG
+p 2432 -352 100 0 1 PV:$(sadtop)$(wfs)
+use egenSubB 3136 199 100 0 initSigInit
+xform 0 3280 624
+p 3200 144 100 0 1 DESC:Init the detSigInit record
+p 3216 960 100 0 1 FTB:LONG
+p 3216 896 100 0 1 FTD:LONG
+p 3520 992 100 0 1 FTVA:STRING
+p 3520 960 100 0 1 FTVB:STRING
+p 3520 928 100 0 1 FTVC:STRING
+p 3520 896 100 0 1 FTVD:DOUBLE
+p 3520 864 100 0 1 FTVE:DOUBLE
+p 3520 832 100 0 1 FTVF:DOUBLE
+p 3520 800 100 0 1 FTVG:DOUBLE
+p 3520 768 100 0 1 FTVH:STRING
+p 3520 736 100 0 1 FTVI:STRING
+p 3520 704 100 0 1 FTVJ:STRING
+p 3520 672 100 0 1 FTVK:STRING
+p 3520 352 100 0 1 FTVU:LONG
+p 3200 48 100 0 1 PV:$(sadtop)$(wfs)
+p 3200 112 100 0 1 SCAN:Passive
+p 3200 80 100 0 1 SNAM:detInitSigInit
+p 3680 992 100 0 1 def(OUTA):$(top)$(wfs)detSigInit.A
+p 3680 960 100 0 1 def(OUTB):$(top)$(wfs)detSigInit.B
+p 3680 928 100 0 1 def(OUTC):$(top)$(wfs)detSigInit.C
+p 3680 896 100 0 1 def(OUTD):$(top)$(wfs)detSigInit.D
+p 3680 864 100 0 1 def(OUTE):$(top)$(wfs)detSigInit.E
+p 3680 832 100 0 1 def(OUTF):$(top)$(wfs)detSigInit.F
+p 3680 800 100 0 1 def(OUTG):$(top)$(wfs)detSigInit.G
+p 3680 768 100 0 1 def(OUTH):$(top)$(wfs)detSigInit.H
+p 3680 736 100 0 1 def(OUTI):$(top)$(wfs)detSigInit.I
+p 3680 704 100 0 1 def(OUTJ):$(top)$(wfs)detSigInit.J
+p 3680 672 100 0 1 def(OUTK):$(top)$(wfs)detSigInit.K
 use notes 3568 -313 100 0 notes#13
 xform 0 3824 -128
 p 4096 -162 100 0 0 AUTHOR:S.M.Beard and N.Dillon
@@ -195,10 +219,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2001-02-15 05:39:29 $
+p 3120 -784 200 0 -1 date:$Date: 2001-04-03 01:36:08 $
 p 2576 2320 200 0 -1 id:
 p 2704 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2608 -496 200 0 -1 revision:$Revision: 1.6 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.7 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Detector Status Records
 [comments]

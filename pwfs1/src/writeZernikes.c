@@ -72,6 +72,8 @@
  * 08-Dec-2000: cb - New routine for the butterworth filtering
  * 02-Feb-2001: cb - Add a vector in circular buffers control and fg control
  *                   to contain the modes after rotation
+ * 29-Mar-2001: cb - fix bug for rotation matrix (two bugs which compensate
+ *                   each others)
  *
  */
 /* INDENT ON */
@@ -782,6 +784,7 @@ long gensubToTcsAo
  * 11-Nov-1998  Add frame of reference conversion
  * 05-Jan-1999  Add null zernike calculation
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
+ * 29-Mar-2001   Fix rotation matrix (cb)
  */
 
 STATUS writeWfsToTcs
@@ -818,8 +821,8 @@ STATUS writeWfsToTcs
 
       /* tip and tilt: r * cos(t) and r * sin(t) */
 
-      result.z2 = (f->cosTheta*(*pz) - f->sinTheta*(*(pz+1)));
-      result.z3 = (f->sinTheta*(*pz) + f->cosTheta*(*(pz+1)));
+      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1)));
+      result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz));
 
       /* focus : 2*r^2 -1 */
 
@@ -827,43 +830,43 @@ STATUS writeWfsToTcs
 
       /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
 
-      result.z5 = (f->cos2Theta*(*(pz+3)) - f->sin2Theta*(*(pz+4))) 
-                  - (f->null[8])*1000.0;
-      result.z6 = (f->sin2Theta*(*(pz+3)) + f->cos2Theta*(*(pz+4))) 
-                  - (f->null[9])*1000.0;
+      result.z5 = (f->cos2Theta*(*(pz+3)) + f->sin2Theta*(*(pz+4))) 
+                  - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3]);
+      result.z6 = (f->cos2Theta*(*(pz+4)) - f->sin2Theta*(*(pz+3))) 
+                  - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4]);
 
       /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and 
          (3*r^2 - 2) * r * sin(t) */
 
-      result.z7 = (f->cosTheta*(*(pz+5)) - f->sinTheta*(*(pz+6)));
-      result.z8 = (f->sinTheta*(*(pz+5)) + f->cosTheta*(*(pz+6)));
+      result.z7 = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)));
+      result.z8 = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)));
 
       /* spherical: 6*r^4 - 6*r^2 + 1 */
       result.z9 = (*(pz+7));
 
       /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
-      result.z10 = (f->cos3Theta*(*(pz+8)) - f->sin3Theta*(*(pz+9)));
-      result.z11 = (f->sin3Theta*(*(pz+8)) + f->cos3Theta*(*(pz+9)));
+      result.z10 = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)));
+      result.z11 = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)));
 
       /* (4*r^2-3) * r^2 * cos(2t) and (4*r^2-3) * r^2 * sin(2t) */
-      result.z12 = (f->cos2Theta*(*(pz+10)) - f->sin2Theta*(*(pz+11)));
-      result.z13 = (f->sin2Theta*(*(pz+10)) + f->cos2Theta*(*(pz+11)));
+      result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11)));
+      result.z13 = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)));
 
       /* (10*r^4 -12*r^3 + 3) * r * cos(t) and 
          (10*r^4 -12*r^3 + 3) * r * sin(t) */
-      result.z14 = (f->cosTheta*(*(pz+12)) - f->sinTheta*(*(pz+13)));
-      result.z15 = (f->sinTheta*(*(pz+12)) + f->cosTheta*(*(pz+13)));
+      result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)));
+      result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)));
 
       /* 20*r^6 - 30*r^4 + 12*r^2 - 1 */
       result.z16 = (*(pz+14));
 
       /* r^4 * cos(4t) and r^4 * sin(4t) */
-      result.z17 = (f->cos4Theta*(*(pz+15)) - f->sin4Theta*(*(pz+16)));
-      result.z18 = (f->sin4Theta*(*(pz+15)) + f->cos4Theta*(*(pz+16)));
+      result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)));
+      result.z18 = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)));
 
       /* (5*r^2 - 4) * r^3 * cos(3t) and (5*r^2 - 4) * r^3 * cos(3t) */
-      result.z19 = (f->cos3Theta*(*(pz+17)) - f->sin3Theta*(*(pz+18)));
-      result.z20 = (f->sin3Theta*(*(pz+17)) + f->cos3Theta*(*(pz+18)));
+      result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)));
+      result.z20 = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)));
 
       /* Store the result into pAoVectAfterRot */
 
@@ -1003,6 +1006,7 @@ STATUS writeWfsToTcs
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  * 26-Nov-1999  Update interval as for P2 (cb)
  * 24-Apr-2000  Inputs now fit the new aoP1Lib (cb)
+ * 29-Mar-2001  Fix rotation matrix (cb)
  *-
  */
 
@@ -1030,8 +1034,8 @@ STATUS writeWfsToSynchro
    {
       /* first rotate the tip and tilt values to the m2 frame of reference */
 
-      result.z2 = (f->cosTheta*(*pz) - f->sinTheta*(*(pz+1))) - f->null[5];
-      result.z3 = (f->sinTheta*(*pz) + f->cosTheta*(*(pz+1))) - f->null[6];
+      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) - f->null[5];
+      result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) - f->null[6];
       result.z4 = *(pz+2) ;
 
       /*result.z4 = (*(pz+2)) - (pWfs->focusscale * f->null[7]);*/
@@ -1155,6 +1159,7 @@ STATUS writeWfsToSynchro
  *              (zeiss angle + rotationFudge))
  * 23-Apr-1999  Simplified version for split backplane PWFS1 (cb)
  * 11-Dec-2000  CompositeAngle = RT - CR + PA (cb)
+ * 29-Mar-2001: Composite angle now * (-1) in ttfZero (cb)
  *
  */
 
@@ -1223,7 +1228,7 @@ long ttfZero
       (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;   */
                              /* null[3] corresponds to the cass rotator angle */
 
-      compositeAngle = 
+      compositeAngle = (-1.0) *
       (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec00*/
 
       f->theta       = compositeAngle;
@@ -1310,6 +1315,7 @@ long ttfZero
  * 26-Nov-1999  Change sign in the magic formula for the composite angle(cb)
  * 13-Dec-1999  Remove limit checks for the cass rotator angle (cb)
  * 12-jan-2000  Change sign in the magic formula +arm now (cb)
+ * 29-Mar-2001: Composite angle now * (-1) in aoZero (cb)
  *
  */
 
@@ -1329,7 +1335,7 @@ long aoZero
    double  fudgeAngle = 0.0;
    double  armAngle = 0.0;
    double  compositeAngle = 0.0;
-   double  applyAstig = 0.0;
+   double  applyAstig = 1.0;
 
    ptr = (double *) pgsub->j;
 
@@ -1352,7 +1358,7 @@ long aoZero
 
    if (sscanf(pgsub->d, "%lf", &applyAstig) != 1)
    {
-      applyAstig = 0.0;
+      applyAstig = 1.0;
    }
 
    /* sanity check conversion factors */
@@ -1391,7 +1397,7 @@ long aoZero
       /* calculate composite correction angle */
 
 
-      compositeAngle = 
+      compositeAngle = (-1.0) *
       (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS;
 
       f->theta       = compositeAngle;
