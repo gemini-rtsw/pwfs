@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.3 1999-11-10 23:59:35 cboyer Exp $"};
+   "$Id: detControl.c,v 1.4 2000-02-03 01:56:29 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -35,6 +35,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   22 Nov 99: CB - Now telescope name is read from TCS ie TELESCOP and OBSERVAT
  *   2 Nov 99: CB - debug detGeometry, allow binning x2,y2
  *                  modify ospUpdate, ospNewTrackingAndFocus
  *   1 Nov 99: CB - Create detCreateFileName -> combine path and file
@@ -2082,6 +2083,7 @@ uint32 detObserveStart
    uint32         origin[2];
    char           *qlStreams[1];
    char           *contrib[1];
+   char           telName [40];
 
    /* Variables associated with the provision of WCS information. */
 
@@ -3004,6 +3006,9 @@ uint32 detObserveStart
          qlStreams[0] = "pwfs2Science"; 
                                 /* THIS IS A FUDGE. DEFINE IN setDhs command. */
 
+         wfsGetTelName ( telName ) ;
+         printf ( "telName=%s\n" , telName ) ;
+
          /* NOTE: Lifetime should be definable
           * PERMANENT for permanent data (e.g. calibrations)
           * TRANSIENT for display only (e.g. acquisition camera in continuous 
@@ -3050,10 +3055,10 @@ uint32 detObserveStart
                             0, NULL, pDetDhsClientName, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataset, "telescope", DHS_DT_STRING, 
-                            0, NULL, "Gemini_North", &dhsErrno);
+                            0, NULL, telName, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataset, "observatory", DHS_DT_STRING,
-                            0, NULL, "Gemini_North", &dhsErrno);
+                            0, NULL, telName, &dhsErrno);
             CHECK_DHS (dhsErrno);
          }
 
@@ -8910,6 +8915,7 @@ STATUS detWriteFits
    int            nBlocks;
    int            block;
    int            extra;
+   char           telName[40];
 
    /*
     * Check the parameters provided.
@@ -8954,6 +8960,8 @@ STATUS detWriteFits
             obsId->timeArrayEnd[0], obsId->timeArrayEnd[1], obsId->timeArrayEnd[2],
             obsId->timeArrayEnd[3], obsId->timeArrayEnd[4], obsId->timeArrayEnd[5]);
 
+   wfsGetTelName ( telName ) ;
+
    fp = fopen (filename, "w");
 
    if (fp == NULL)
@@ -8988,11 +8996,11 @@ STATUS detWriteFits
    headerCount++;
    fprintf (fp, "ELAPSED =      %15f /                                                ", (obsId->rawtEnd - obsId->rawtStart));
    headerCount++;
-   fprintf (fp, "TELESCOP='%20s'/                                                ", "Gemini_North");
+   fprintf (fp, "TELESCOP='%20s'/                                                ", telName);
    headerCount++;
    fprintf (fp, "INSTRUME='%20s'/                                                ", obsId->pWfsName);
    headerCount++;
-   fprintf (fp, "OBSERVAT='%20s'/                                                ", "Gemini_North");
+   fprintf (fp, "OBSERVAT='%20s'/                                                ", telName);
    headerCount++;
    fprintf (fp, "BUNIT   ='%20s'/                                                ", "SDSU ADC units");
    headerCount++;

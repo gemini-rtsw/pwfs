@@ -1,6 +1,6 @@
 < /usr/local/vxworks/vxUsers
 
-shellPromptSet "Minimal startup > "
+shellPromptSet "Minimal startup pwfs2> "
 
 loginStringSet "MVME2700 PPC vxWorks (pwfs2)\n\nlogin: "
 
