@@ -349,6 +349,8 @@ V4-6 13 AUG 2004 AAG:
 
    - src/writeZerniques.c
 	make sure that spherical and Z11-Z19 aberrations are not sent to TCS
+   - src/wfsDb.c
+	Ao Gains (spherical and Z11-Z19) changed to 1.0
    - par/defAoContMatP1MK.dat
    - par/defAoContMatP1CP.dat
 	add new rows in MK Ao Control Matrix  
@@ -404,3 +406,6 @@ V4-6 13 AUG 2004 AAG:
     - aoP2Lib.c
 	check average of the background is not < 0, if yes force it to 0 
 	in order to have threshold always >= 2.5 * RMS
+
+6) writeZernikes.c remove clamping and gain increase for monitored
+   mode (spherical and Z11 and higher) - CB
