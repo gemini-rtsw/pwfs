@@ -1,4 +1,4 @@
-# $Id: startup.vws,v 1.6 2000-07-10 21:47:48 cboyer Exp $
+# $Id: startup.vws,v 1.7 2000-10-26 01:52:25 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -72,7 +72,7 @@ ld < $(version)/bin/$(arch)/testKit
 taskCreateHookAdd( usrFppCreateHook )
 
 # Initialise the Gemini time system (1=master, 1=simulate, intPerSecond, intperTick, timeOffset)
-timeClockInit (0, 1, 200, 1, 0)
+timeClockInit (0, 0, 200, 1, 0)
 
 # Configure the Timestamp system (1=Master IOC, synch rate, clock rate, master, port, timeout, type)
 TSconfigure 1, 0, 200, 0, 0, 0, 0

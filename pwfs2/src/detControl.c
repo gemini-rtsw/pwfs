@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.6 2000-07-24 20:51:34 cboyer Exp $"};
+   "$Id: detControl.c,v 1.7 2000-10-26 01:52:25 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   05 Sep 2000: CB - modify detHeadTempGet to compute the average 
+ *                     temperature over 1 sample
  *   07 Jun 2000: CB - add detSigModeSeqDark + detSigModeFgCoadd
  *                     rename fast guide by global guide...
  *                     add directory for save CB
@@ -13916,7 +13918,7 @@ STATUS detHeadTempGet
    {
 
       meanValue6 = meanValue7 = 0.0;
-      for ( sample=0; sample<20; sample++)
+      for ( sample = 0 ; sample < 1 ; sample ++ )
       {
          if (sdsuParamRead (detSdsuIdP2, SDSU_IDENT_UTL, "U_ADC6", &value) == 
              ERROR)
@@ -13941,8 +13943,8 @@ STATUS detHeadTempGet
          }
       }
 
-      meanValue6 /= 20.0;
-      meanValue7 /= 20.0;
+      /*meanValue6 /= 20.0;
+      meanValue7 /= 20.0;*/
 
       sdsuTemp6 = meanValue6 * (-0.01545); 
                                       /* 0.01545 is not quite SDSU_TEMP_UNIT*/
