@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.39 2001-06-14 19:06:43 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.40 2001-06-14 19:09:11 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -198,19 +198,7 @@ timelib	timelib
 #M	vii	Visiting Instrument Interface
 vii	vii
 
-#D	wfs	Visiting Instrument Interface
-#M	wfs	Visiting Instrument Interface
-wfs	wfs
-
 ## don't think this is used ...
 ##D	wfs	WFS
 ##M	wfs	WFS
 #wfs	wfs
-
-
-
-
-
-
-
-
