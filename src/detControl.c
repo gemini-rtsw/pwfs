@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.23 2002-03-28 02:00:52 cboyer Exp $"};
+   "$Id: detControl.c,v 1.24 2002-05-16 22:16:25 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   24 Apr 2002: CB - Add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
+ *                     cfTipTiltBw SIR records
  *   20 Mar 2002: CB - Major modifications to download the timing and utility 
  *                     code from EEPROMS
  *   22 Feb 2002: CB - detInit: init all geometry SIR records
@@ -240,7 +242,7 @@ extern AO_CTRL_ID aoCtrlIdP2 ;     /* Pointer to the aO control context       */
 extern double sampleData[5][3];    /* Samples for butterworth filter          */
                                    /* defined in writeZernikes.c              */
 
-extern double coeffData[5];        /* Coefficients for butterworth filter     */
+extern double coeffData[5][3];     /* Coefficients for butterworth filter     */
                                    /* defined in writeZernikes.c              */
 
 extern AST_ZP_MODEL_ID_STRUCT astigModel;
@@ -513,8 +515,8 @@ STATUS detWriteFits (char * filename, OBS_ID obsId, int xPixels, int yPixels,
 
 uint32 detSimulateImage (int xPixels, int yPixels, float * pImage);
 
-uint32 detComputeCoeffButterworth (double expTime, double cutoffFreq,
-                                   double * pCoeffData);
+uint32 detComputeCoeffButterworth (double expTime, double *pCutoffFreqTT,
+                                   double *pCutoffFreqFoc); 
 
 uint32 detContInit (char * pInitFileName, uint32 * pTempCode,
                     uint32 * pTempCoeff, long *pOffsetFullVect, 
@@ -524,6 +526,8 @@ uint32 detGetSirContext (const char * pRecordPrefix, OBS_ID obsId);
 
 uint32 detWriteDefSirContext (OBS_ID obsId);
 
+uint32 detInitBwDef (char * pInitFileName, double * pCfTipTiltBw, 
+                     double * pCfFocusBw);
 
 /* -------------------------------------------------------------------------- */
 
@@ -627,13 +631,14 @@ STATUS   detControl
 
    char         pStatusString [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                                     /* Status string.                         */
+   char         detBwInitFileName [ STRING_SIZE ] ;
+                                    /* Full Name of the BW init file          */
 
    long         nExp;               /* Number of exposure                     */
    long         outOption;          /* Output option                          */
    double       expTime;            /* Exposure time                          */
-   double       cutoffFreq;         /* Cutoff frequency                       */
-   double       rateSampFreq;       /* Cutoff frequency                       */
-
+   double       cutoffFreqTT;       /* Cutoff frequency for fast TT           */
+   double       cutoffFreqFoc;      /* Cutoff frequency for fast Focus        */
 
    /* Create and init an error context structure for this task */
 
@@ -1314,6 +1319,7 @@ STATUS   detControl
       {
          angleWithM1 = aoCtrlId->angleWithM1;
          angleWithM2 = aoCtrlId->angleWithM2;
+         obsId->defFocusScale100Hz = aoCtrlId->fgScaleFactorVect[2];
 
          if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext) 
              == ERROR)
@@ -1394,6 +1400,30 @@ STATUS   detControl
          "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
       }
 
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (aoCtrlId->fgScaleFactorVect[0]),
+                           obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (aoCtrlId->fgScaleFactorVect[1]),
+                           obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (aoCtrlId->fgScaleFactorVect[2]),
+                           obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
 #ifdef DEBUG
       aoCtrlContextShow (aoCcdId, aoCtrlId, FALSE);
 #endif
@@ -1403,6 +1433,46 @@ STATUS   detControl
       MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
    }
 #endif
+
+   /*
+    * Read the default settings from the BW init file
+    */
+
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_CP_INIT_FILE);
+#endif
+
+   printf ( "defFileName =%s\n", defFileName);
+
+   if ( strcmp (defFileName, "NONE") != 0 )
+   {
+      strcpy ( detBwInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( detBwInitFileName , "/" ) ;
+      strcat ( detBwInitFileName , defFileName ) ;
+
+      if ( detInitBwDef ( detBwInitFileName, &cutoffFreqTT, &cutoffFreqFoc) 
+           == ERROR )
+      {
+         MESSAGE_LOG ( MSG_LOG,
+           "Failed to read BW default settings from file");
+
+         /* Set the focus cutoff frequency to 0.0167Hz anyway (1mn convergence 
+            time) and cutoff TT frequency to 10Hz */
+
+         cutoffFreqFoc = 0.0167; /* in Hz */
+         cutoffFreqTT = 10.0;    /* in Hz */
+      }
+   }
+   else
+   {
+      /* Set the focus cutoff frequency to 0.0167Hz anyway (1mn convergence 
+         time) and cutoff TT frequency to 10Hz */
+
+      cutoffFreqFoc = 0.0167; /* in Hz */
+      cutoffFreqTT = 10.0;    /* in Hz */
+   }
 
    /*
     * Mode is no processing, init the fields of the observe CAD record
@@ -1419,15 +1489,32 @@ STATUS   detControl
       expTime = 0.005 ; /* 5ms */
 
    obsId->exposureTime = expTime;
-   rateSampFreq = 6.0 / 100.0 ;                  /* 6% of sampling frequency */
-   obsId->rateSamplingFrequency = rateSampFreq;
-   cutoffFreq = rateSampFreq / expTime ;
-   obsId->cutoffFrequency = cutoffFreq;
+   obsId->cutoffFrequencyTipTilt = cutoffFreqTT;
+   obsId->cutoffFrequencyFocus = cutoffFreqFoc;
 
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
       ERROR_LOG ( "Failed to init fields of observe record");
+   }
+
+   if ( detComputeCoeffButterworth ( obsId->exposureTime,
+                                     &(obsId->cutoffFrequencyTipTilt),
+                                     &(obsId->cutoffFrequencyFocus)) == ERROR )
+   {
+      ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus),
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
    }
 
    /*
@@ -3434,16 +3521,41 @@ uint32 detExposure
    }
 
    /*
+    * Update scale factor for the focus according to exposure time
+    */
+
+   obsId->aoCtrlId->fgScaleFactorVect[2] = obsId->defFocusScale100Hz * 
+                                           (100.0 * obsId->exposureTime);
+
+   if (epToVxPipeWrite (NULL,
+                        (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                        obsId->pFgFocusGainContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+   }
+
+   /*
     * Init the butterworth filter for probe arm guiding
     */
 
-   obsId->cutoffFrequency = obsId->rateSamplingFrequency / obsId->exposureTime;
-
    if ( detComputeCoeffButterworth ( obsId->exposureTime,
-                                     obsId->cutoffFrequency,
-                                     coeffData ) == ERROR )
+                                     &(obsId->cutoffFrequencyTipTilt),
+                                     &(obsId->cutoffFrequencyFocus)) == ERROR )
    {
       ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt), 
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus), 
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
    }
 
    /*
@@ -5667,17 +5779,44 @@ uint32 detObserveStart
          }
 
          /*
+          * Update scale factor for the focus according to exposure time
+          */
+
+         obsId->aoCtrlId->fgScaleFactorVect[2] = obsId->defFocusScale100Hz * 
+         (100.0 * obsId->exposureTime);
+
+         if (epToVxPipeWrite (NULL,
+                   (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                   obsId->pFgFocusGainContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+         }
+
+         /*
           * Init the butterworth filter for probe arm guiding
           */
 
-         obsId->cutoffFrequency = 
-         obsId->rateSamplingFrequency / obsId->exposureTime;
-
          if ( detComputeCoeffButterworth ( obsId->exposureTime, 
-                                           obsId->cutoffFrequency, 
-                                           coeffData ) == ERROR )
+                                           &(obsId->cutoffFrequencyTipTilt),
+                                           &(obsId->cutoffFrequencyFocus)) 
+              == ERROR )
          {
             ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+         }
+
+         if (epToVxPipeWrite( NULL, 
+                              (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                              obsId->pCfTipTiltBwContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+         }
+
+         if (epToVxPipeWrite( NULL, 
+                              (char *)(int)&(obsId->cutoffFrequencyFocus), 
+                              obsId->pCfFocusBwContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set the BW Foc cutoff frequency SIR record");
          }
 
          /* 
@@ -15061,6 +15200,8 @@ STATUS detObsShow
    printf ("Tip scale                        : %f\n", obsId->tipScale);
    printf ("Tilt scale                       : %f\n", obsId->tiltScale);
    printf ("Focus scale                      : %f\n", obsId->focusScale);
+   printf ("Default focus scale 100Hz        : %f\n", 
+           obsId->defFocusScale100Hz);
    printf ("Sliding Focus gain               : %f\n", obsId->slidingFocusGain);
    printf ("aoScaleVect                      : %p\n", obsId->aoScaleVect);
    printf ("Coadd file name                  : %s\n", obsId->pCoaddFileName);
@@ -15080,9 +15221,10 @@ STATUS detObsShow
    printf ("Time at observation start/end    : %f %f\n", obsId->rawtStart,
            obsId->rawtEnd);
    printf ("Exposure time in seconds         : %f\n", obsId->exposureTime);
-   printf ("Cutoff frequency in Hz           : %f\n", obsId->cutoffFrequency);
-   printf ("Rate sampling frequency          : %f\n",
-           obsId->rateSamplingFrequency);
+   printf ("Tip tilt cutoff frequency in Hz  : %f\n", 
+           obsId->cutoffFrequencyTipTilt);
+   printf ("Focus cutoff frequency in Hz     : %f\n", 
+           obsId->cutoffFrequencyFocus);
    printf ("Exposure in seconds reqst/actual : %f %f\n", obsId->exposedRQ,
            obsId->exposed);
 
@@ -15721,6 +15863,31 @@ uint32 detSigInitFgGain
       obsId->focusScale = focusScale ;
       obsId->slidingFocusGain = slidingFocusGain ;
       obsId->updateFgScale = TRUE ;
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->tipScale),
+                           obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->tiltScale),
+                           obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->focusScale),
+                           obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
    }
    else
    {
@@ -15735,6 +15902,30 @@ uint32 detSigInitFgGain
       obsId->aoCtrlId->fgScaleFactorVect[2] = focusScale ;
       obsId->aoCtrlId->slidingFocusGain = slidingFocusGain;
       obsId->aoCtrlId->one_slidingFocusGain = 1.0 - slidingFocusGain ;
+
+      if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[0]),
+                obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[1]),
+                obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
    }
 
    return (errorNumber);
@@ -19273,8 +19464,8 @@ uint32 detSigInitBw
 {
    uint32       errorNumber;      /* Error number reported by task.           */
 
-   double       cutoffFreq;
-   double       rateSampFreq;
+   double       cutoffFreqTT;
+   double       cutoffFreqFoc;
 
    /*
     * Initialise the error number and get the attributes provided with this
@@ -19283,7 +19474,9 @@ uint32 detSigInitBw
 
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
-                          (char *)&rateSampFreq);
+                          (char *)&cutoffFreqTT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
+                          (char *)&cutoffFreqFoc);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -19311,19 +19504,29 @@ uint32 detSigInitBw
     * Compute the new coefficients for the Butterworth filter 
     */
 
-   rateSampFreq = rateSampFreq / 100.0;
-   obsId->rateSamplingFrequency = rateSampFreq;
-   cutoffFreq = rateSampFreq / obsId->exposureTime;
-   obsId->cutoffFrequency = cutoffFreq;
+   obsId->cutoffFrequencyTipTilt = cutoffFreqTT;
+   obsId->cutoffFrequencyFocus = cutoffFreqFoc;
 
-   if ( detComputeCoeffButterworth ( obsId->exposureTime, cutoffFreq, 
-                                     coeffData ) == ERROR )
+   if ( detComputeCoeffButterworth ( obsId->exposureTime, &cutoffFreqTT, 
+                                     &cutoffFreqFoc ) == ERROR )
    {
       ERROR_SET (S_detControl_INTERNAL,
-                 "Failed to init butterworth coeff filter",
+                 "Failed to init butterworth coeff filters",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus), 
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
    }
 
    return (errorNumber);
@@ -19336,12 +19539,14 @@ uint32 detSigInitBw
  *   detComputeCoeffButterworth
  *
  *   INVOCATION:
- *   detComputeCoeffButterworth (expTime, cutoffFreq, pCoeffData)
+ *   detComputeCoeffButterworth (expTime, pCutoffFreqTT, pCutoffFreqFoc)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) expTime    (double)   Exposure time in sec
- *   (>) cutoffFreq (double)   Cutoff frequency of the butterworth filter in Hz
- *   (>) pCoeffData (double *) Coeffcients of the butterworth filter
+ *   (>) expTime        (double)    Exposure time
+ *   (>) pCutoffFreqTT  (double *)  Cutoff frequency of the TT butterworth 
+ *                                  filter in Hz
+ *   (>) pCutoffFreqFoc (double *)  Cutoff frequency of the focus butterworth 
+ *                                  filter in Hz
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -19350,11 +19555,11 @@ uint32 detSigInitBw
  *   Execute detComputeCoeffButterworth command
  *
  *   DESCRIPTION:
- *   This function computes the coefficients of the butterworth filter used for 
- *   probe arm guiding
+ *   This function computes the coefficients of the butterworth filters used 
+ *   for probe arm guiding and focus correction
  *
  *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
+ *   coeffData[5][3]
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -19370,39 +19575,51 @@ uint32 detSigInitBw
 uint32 detComputeCoeffButterworth
    (
    double     expTime,
-   double     cutoffFreq,
-   double   * pCoeffData
+   double   * pCutoffFreqTT,
+   double   * pCutoffFreqFoc
    )
 {
    int        i;
 
-   double     threshFreq;
+   double     threshFreqTT;
+   double     threshFreqFoc;
    double     dt;
    double     omega0;
    double     denom;
    double     coeff[5];
 
    /*
-    * The cutoff frequency should be maximum 1/10 of the sampling frequency.
-    * The sampling frequency = 1 / exposure time.
+    * Check the cutoff frequencies 
     */
    
-   threshFreq = 1.0 / (expTime * 10.0);
+   printf ( "detComputeCoeffButterworth: cutoff freq TT=%f, Foc=%f\n",
+            *pCutoffFreqTT, *pCutoffFreqFoc);
 
-   if ( cutoffFreq > threshFreq )
+   threshFreqTT = 20.0;      /* 20Hz */
+   threshFreqFoc = 0.1;      /* 0.1Hz -> 10s */
+
+   if ( *pCutoffFreqTT > threshFreqTT )
    {
-      cutoffFreq = threshFreq;
+      *pCutoffFreqTT = threshFreqTT;
 /*#ifdef DEBUG*/
-      printf ( "cutoffFreq = threshFreq = %f\n", threshFreq);
+      printf ( "*pCutoffFreqTT = threshFreqTT = %f\n", threshFreqTT);
+/*#endif*/
+   }
+
+   if ( *pCutoffFreqFoc > threshFreqFoc )
+   {
+      *pCutoffFreqFoc = threshFreqFoc;
+/*#ifdef DEBUG*/
+      printf ( "*pCutoffFreqFoc = threshFreqFoc = %f\n", threshFreqFoc);
 /*#endif*/
    }
 
    /*
-    * Now compute the coefficents 
+    * Now compute the coefficents for the TT filter
     */
 
    dt = expTime;
-   omega0 = 2 * PI * cutoffFreq;
+   omega0 = 2 * PI * *pCutoffFreqTT;
    denom = dt*dt*omega0*omega0 + sqrt(8.0)*dt*omega0 + 4.0;
 
    coeff[0] = (8.0 - 2.0*dt*dt*omega0*omega0)/denom;
@@ -19413,15 +19630,46 @@ uint32 detComputeCoeffButterworth
 
 /*#ifdef DEBUG*/
    for ( i = 0 ; i < 5 ; i ++ )
-      printf ( "coeff[%d]=%f\n", i, coeff[i] );
+      printf ( "coeff for TT [%d]=%f\n", i, coeff[i] );
 /*#endif*/
 
    /*
-    * Update the butterworth coefficients
+    * Update the TT butterworth coefficients
     */
 
    for ( i = 0 ; i < 5 ; i ++ )
-       *(pCoeffData + i) = coeff[i];
+   {
+       coeffData[i][0] = coeff[i];
+       coeffData[i][1] = coeff[i];
+   }
+
+   /*
+    * Now compute the coefficents for the Focus filter
+    */
+
+   dt = expTime;
+   omega0 = 2 * PI * *pCutoffFreqFoc;
+   denom = dt*dt*omega0*omega0 + sqrt(8.0)*dt*omega0 + 4.0;
+
+   coeff[0] = (8.0 - 2.0*dt*dt*omega0*omega0)/denom;
+   coeff[1] = (sqrt(8.0)*dt*omega0 - dt*dt*omega0*omega0 - 4.0)/denom;
+   coeff[2] = dt*dt*omega0*omega0/denom;
+   coeff[3] = 2.0 * coeff[2];
+   coeff[4] = coeff[2];
+
+/*#ifdef DEBUG*/
+   for ( i = 0 ; i < 5 ; i ++ )
+      printf ( "coeff for Focus [%d]=%f\n", i, coeff[i] );
+/*#endif*/
+
+   /*
+    * Update the focus butterworth coefficients
+    */
+
+   for ( i = 0 ; i < 5 ; i ++ )
+   {
+       coeffData[i][2] = coeff[i];
+   }
 
    return ( OK );
 }
@@ -20097,6 +20345,10 @@ uint32 detContInit
    printf ( "detContInit(): CCD serial number: %s\n", pCcdSn );
 #endif
 
+   /* End - close and return */
+
+   fclose (pFile);
+
    return (OK);
 }
 
@@ -20382,6 +20634,61 @@ uint32 detGetSirContext
                             NULL) == ERROR)
    {
       ERROR_LOG ("Failed to get DET_CONTROL_AO_PROCESS_MODE_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgTipGain" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_TIP_GAIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgTipGainContext), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_FG_TIP_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgTiltGain" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_TILT_GAIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgTiltGainContext), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_FG_TILT_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgFocusGain" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgFocusGainContext), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "cfFocusBw" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_CF_FOCUS_BW_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pCfFocusBwContext), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_CF_FOCUS_BW_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "cfTipTiltBw" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_CF_TT_BW_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pCfTipTiltBwContext), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_CF_TT_BW_SIR_NAME context") ;
       errorNumber = ERROR;
    }
 
@@ -22084,3 +22391,173 @@ STATUS detInitSigInitModFoc
 
    return (OK) ;
 }
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitBwDef
+ *
+ *   INVOCATION:
+ *   detInitBwDef (pInitFileName, pCfTipTiltBw, pCfFocusBw)  
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName   (char *)   Init file Name
+ *   (>) pCfTipTiltBw    (double *) Tip tilt butterworth cutoff frequency
+ *   (>) pCfFocusBw      (double *) Focus butterworth cutoff frequency
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Init defaults values for the butterworth filters
+ *
+ *   DESCRIPTION:
+ *   Init default values for the cutoff frequencies for the butterworth filters
+ *   from a init file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+
+uint32 detInitBwDef
+   (
+   char *   pInitFileName,         /* Init file Name                         */
+   double * pCfTipTiltBw,          /* Tip tilt butterworth cutoff frequency  */
+   double * pCfFocusBw             /* Focus butterworth cutoff frequency     */
+   )
+{
+   FILE *       pFile;
+   char         comment [STRING_SIZE];
+   float        freq;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      printf ( "Failed to open the Butterworth filter init file %s",
+               pInitFileName );
+      ERROR_SET1 ( 0, "Failed to open the Butterworth filter init file %s",
+		   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read first line of comments from the BW init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): first line of comments:\n" );
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the BW init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): %s\n", comment );
+#endif
+
+   /* Read the default tip tilt cutoff frequency */
+
+   if ( (fscanf (pFile, "%f\n", &freq)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the tip-tilt cutoff frequency from the BW init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( freq > 20.0 )
+   {
+      ERROR_SET ( 0,
+                  "Focus cutoff frequency should be smaller than 20Hz",
+                  ERROR_LOG_SAVE);
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pCfTipTiltBw = (double)freq; 
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): tip-tilt cutoff frequency = %f\n", 
+            (float)*pCfTipTiltBw );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the BW init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): %s\n", comment );
+#endif
+
+   /* Read the default focus cutoff frequency */
+
+   if ( (fscanf (pFile, "%f\n", &freq)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the focus cutoff frequency from the BW init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( freq > 0.1 )
+   {
+      ERROR_SET ( 0,
+                  "Focus cutoff frequency should be smaller than 0.1Hz",
+                  ERROR_LOG_SAVE);
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pCfFocusBw = (double)freq; 
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): focus cutoff frequency = %f\n", 
+            (float)*pCfFocusBw );
+#endif
+
+   /* Close the file and return */
+
+   fclose (pFile);
+   return (OK) ;
+}
+

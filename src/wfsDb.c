@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.22 2002-03-28 02:00:53 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.23 2002-05-16 22:16:26 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,25 +61,27 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 24 Apr 2002 - cb add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
+ *                  cfTipTiltBw sir records
  * 21 Mar 2002 - cb modify init and detReset
  * 18 Jan 2002 - cb add detPowerOn
  * 14 Dec 2001 - cb add rms sir record
  * 30 Nov 2001 - cb add writeToRm parameter to GG and FG CADs
  * 22 Aug 2001 - cb Major modifications to have aO correction with pwfs2
  * 02 Apr 2001 - cb add adc0, adc1, adc2, adc3
- * 20 February 2001 - cb - add dhsCon sir record
- * 10 January 2001 - cb - detSigInit according to the site
- * 11 December 2000 - cb - add detSigReset
- * 30 October 2000 - cb - add detSigInitBW
- * 12 April 2000 - cb - add detType, detID, dataLabel, intTime, nexpRQ,
- *                      nexp, nframes, bunit, exposedRQ, exposed, utstart, 
- *                      utend, elapsed sir records
- * 11 April 2000 - cb - replace detSigMode by a set of CAD
- * 7 April 2000 - cb - add parameters to detSigMode 
- * 30 March 2000 - cb - add detFrameSize 
- * 22 March 2000 - cb - remove detSetup
- * 8 March 2000 - cb - tidy up, and replace detInit and detTest with init 
- *                and test after deleting the original init and test
+ * 20 Feb 2001 - cb add dhsCon sir record
+ * 10 Jan 2001 - cb detSigInit according to the site
+ * 11 Dec 2000 - cb add detSigReset
+ * 30 Oct 2000 - cb add detSigInitBW
+ * 12 Apr 2000 - cb add detType, detID, dataLabel, intTime, nexpRQ,
+ *                  nexp, nframes, bunit, exposedRQ, exposed, utstart, 
+ *                  utend, elapsed sir records
+ * 11 Apr 2000 - cb replace detSigMode by a set of CAD
+ * 07 Apr 2000 - cb add parameters to detSigMode 
+ * 30 Mar 2000 - cb add detFrameSize 
+ * 22 Mar 2000 - cb remove detSetup
+ * 08 Mar 2000 - cb tidy up, and replace detInit and detTest with init 
+ *                  and test after deleting the original init and test
  *
  *-
  */
@@ -453,6 +455,20 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_R, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS}
  },
+#if (MK)
+ {
+  RECORD_NAME ("dc:detSigInitFgGain"),
+  TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_SIG_INIT_FG_GAIN,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  180.0,
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "0.05", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0005", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0005", {NO_ATTRIBUTE_LIMITS}
+ },
+#else
  {
   RECORD_NAME ("dc:detSigInitFgGain"),
   TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
@@ -465,6 +481,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "0.0001", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0003", {NO_ATTRIBUTE_LIMITS}
  },
+#endif
  {
   RECORD_NAME ("dc:detSigInitBw"),
   TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
@@ -472,7 +489,8 @@ CAD_RECORD pWfsDbCadList [] =
   STOP_DIRECTIVE_UNSUPPORTED,
   SIMULATION_MODE_SUPPORTED,
   180.0,
-  CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "6.0", {"0.0","100"}
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "10.0", {"0.0","20"},
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, ".0167", {"0.0","0.1"}
  },
  {
   RECORD_NAME ("dc:detSigModeNone"),
@@ -510,7 +528,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
-  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "3", {"0.0", NO_HI_LIMIT}
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT}
  },
  {
   RECORD_NAME ("dc:detSigModeAo"),
@@ -545,7 +563,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
-  CAD_ATTRIB_F, EPICS_DATA_TYPE_DOUBLE, "3", {"0.0", NO_HI_LIMIT}
+  CAD_ATTRIB_F, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT}
  },
  {
   RECORD_NAME ("dc:detSigModeCoadd"),
@@ -572,7 +590,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_E, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_F, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_G, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
-  CAD_ATTRIB_H, EPICS_DATA_TYPE_DOUBLE, "3", {"0.0", NO_HI_LIMIT}
+  CAD_ATTRIB_H, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT}
  },
  {
   RECORD_NAME ("dc:detSigModeThresh"),
@@ -584,7 +602,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "2"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
-  CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "3", {"0.0", NO_HI_LIMIT},
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT},
   CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "50", {"0.0", "65536.0"},
   CAD_ATTRIB_F, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
@@ -625,7 +643,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_P, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_Q, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_R, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
-  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "3", {"0.0", NO_HI_LIMIT}
+  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT}
  },
  {
   RECORD_NAME ("dc:detSigModeTotal"),
@@ -689,7 +707,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_B, EPICS_DATA_TYPE_STRING, DET_CONTROL_PAR_FILE_PATH, {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_STRING, "coadd.fits", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_LONG, "100", {"1", NO_HI_LIMIT},
-  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "3", {"0.0", NO_HI_LIMIT}
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT}
  },
  {
   RECORD_NAME ("dc:detSigInitModAst"),
@@ -1008,6 +1026,26 @@ SIR_RECORD pWfsDbSirList [] =
  {
   RECORD_NAME ("dc:aoProcessMode"),
   EPICS_DATA_TYPE_STRING
+ },
+ {
+  RECORD_NAME ("dc:fgTipGain"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:fgTiltGain"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:fgFocusGain"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:cfFocusBw"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:cfTipTiltBw"),
+  EPICS_DATA_TYPE_DOUBLE
  },
  {
   RECORD_NAME ("dc:initialising"),

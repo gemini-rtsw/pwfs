@@ -13,16 +13,18 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
- *   20 Mar 2002: CB - Major modification to download the code from EEPROMS
- *   18 Jan 2002: CB - Add detPowerOn
- *   14 Dec 2001: CB - Add rms sir recordAdd rms sir record
- *   21 Aug 2001: CB - Major modifications to have aO correction with P2 also
- *   02 Apr 2001: CB - add sir adc0, adc1, adc2, adc3
- *   20 Feb 2001: CB - add sir dhsCon
- *   06 Feb 2001: CB - Move all the DATREC_CONTEXT structures into the obsId
- *                     structure
+ *   24 Apr 2002 - cb Add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
+ *                    cfTipTiltBw sir records
+ *   20 Mar 2002 - cb Major modification to download the code from EEPROMS
+ *   18 Jan 2002 - cb Add detPowerOn
+ *   14 Dec 2001 - cb Add rms sir recordAdd rms sir record
+ *   21 Aug 2001 - cb Major modifications to have aO correction with P2 also
+ *   02 Apr 2001 - cb add sir adc0, adc1, adc2, adc3
+ *   20 Feb 2001 - cb add sir dhsCon
+ *   06 Feb 2001 - cb Move all the DATREC_CONTEXT structures into the obsId
+ *                    structure
  *   12 jan 2001 - cb add DET_CONTROL_PWFS2_CP_INIT_FILE
- *                        DET_CONTROL_PWFS2_MK_INIT_FILE
+ *                    DET_CONTROL_PWFS2_MK_INIT_FILE
  *   10 jan 2001 - cb replace/add DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE
  *                                DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE
  *                                DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE
@@ -31,10 +33,10 @@
  *   30 oct 2000 - cb add cutoffFrequency rateSamplingFrequency
  *   25 oct 2000 - cb add aoSaveCbIm and aoSaveCbCtrl sir records
  *   13 apr 2000 - cb add parameters to measure the average flux during the 
- *                 sequence closed loop
+ *                    sequence closed loop
  *   12 apr 2000 - cb add detType, detId, dataLabel, intTime nexpRQ,
- *                 nexp, nframes, bunit, exposedRQ, exposed, utstart, 
- *                 utend, elapsed sir records
+ *                    nexp, nframes, bunit, exposedRQ, exposed, utstart, 
+ *                    utend, elapsed sir records
  *   11 apr 2000 - cb replace detSigMode by several detSigModexxx cad
  *   04 apr 2000 - cb include coadd file + save cb
  *   03 apr 2000 - cb add all the geometry sir records
@@ -150,6 +152,28 @@
 #define   DET_CONTROL_AO_PROCESS_MODE_SIR_NAME    "aoProcessMode"
                                     /* Name of SIR record containing the      */
                                     /* processing mode                        */
+
+#define   DET_CONTROL_FG_TIP_GAIN_SIR_NAME    "fgTipGain"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Tip gain                            */
+
+#define   DET_CONTROL_FG_TILT_GAIN_SIR_NAME    "fgTiltGain"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Tilt gain                           */
+
+#define   DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME   "fgFocusGain"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Focus gain                          */
+
+#define   DET_CONTROL_CF_FOCUS_BW_SIR_NAME    "cfFocusBw"
+                                    /* Name of SIR record containing the      */
+                                    /* cutoff frequency of the Focus          */
+                                    /* butterworth filter                     */
+
+#define   DET_CONTROL_CF_TT_BW_SIR_NAME       "cfTipTiltBw"
+                                    /* Name of SIR record containing the      */
+                                    /* cutoff frequency of the tip tilt       */
+                                    /* butterworth filter                     */
 
 #define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
                                     /* Name of SIR record containing the      */
@@ -350,6 +374,16 @@
                                     /* for PWFS2. Set to "NONE" if no default */
                                     /* zero point models required             */
 
+#define DET_CONTROL_PWFS2_BW_MK_INIT_FILE             "defBwP2MK.dat"
+                                    /* Define the MK butterworth filter init  */
+                                    /* file for PWFS2. Set to "NONE" if no    */
+                                    /* butterworth filter required            */
+
+#define DET_CONTROL_PWFS2_BW_CP_INIT_FILE             "defBwP2CP.dat"
+                                    /* Define the CP butterworth filter init  */
+                                    /* file for PWFS2. Set to "NONE" if no    */
+                                    /* butterworth filter required            */
+
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
                                     /* Directory containing OMF files for the */
                                     /* DSP code                               */
@@ -528,6 +562,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       tipScale;  /* Scale factor of the tip mode                    */
    double       tiltScale; /* Scale factor of the tilt mode                   */
    double       focusScale;/* Scale factor of the focus mode                  */
+   double       defFocusScale100Hz;
+                           /* Default scale factor of the focus mode at 100Hz */
    double       slidingFocusGain; 
                            /* Gain for the sliding average for the focus mode */
    double       amplitude; /* Amplitude of the mode when computing a column   */
@@ -564,10 +600,10 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       rawtEnd;   /* Raw Gemini time at end of observation.          */
    double       exposureTime;
                            /* Current exposure time                           */
-   double       cutoffFrequency;
-                           /* Cuttof frequency (bandwidth ) of the system     */
-   double       rateSamplingFrequency;
-                           /* Rate of sampling frequency (between 0 and 1)    */
+   double       cutoffFrequencyTipTilt;
+                           /* Cuttof frequency (bandwidth) of the system      */
+   double       cutoffFrequencyFocus;
+                           /* Cuttof frequency (bandwidth) of the system      */
    double       exposedRQ; /* Requested total exposure time.                  */
    double       exposed;   /* Actual total exposure time.                     */
 
@@ -679,6 +715,16 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT pAoSaveCbFgCtrlContext;
                                       /* Context structure for aoSaveCbFgCtrl */
                                       /* SIR record.                          */
+   DATREC_CONTEXT pFgTipGainContext;  /* Context structure for fgTipGain SIR  */
+                                      /* record.                              */
+   DATREC_CONTEXT pFgTiltGainContext; /* Context structure for fgTiltGain SIR */
+                                      /* record.                              */
+   DATREC_CONTEXT pFgFocusGainContext;/* Context structure for fgFocusGain SIR*/
+                                      /* record.                              */
+   DATREC_CONTEXT pCfFocusBwContext;  /* Context structure for cfFocusBw SIR  */
+                                      /* record.                              */
+   DATREC_CONTEXT pCfTipTiltBwContext;/* Context structure for cfTipTiltBw SIR*/
+                                      /* record.                              */
    DATREC_CONTEXT pDetTypeContext;    /* Context structure for detector       */
                                       /* controller type.                     */
    DATREC_CONTEXT pDetIdContext;      /* Context structure for detector Id or */
