@@ -415,4 +415,7 @@ V4-6 13 AUG 2004 AAG:
 dev 27 SEP 2004 AAG:
 --------------------
 
- - defAoScaleP1.dat - Default values updated
+ - par/defAoScaleP1.dat
+	Default values updated
+ - src/writeZernikes.c
+	Whole aoDataTcs array written (to be read by TCS)
