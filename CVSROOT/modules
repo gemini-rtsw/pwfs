@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.25 2000-12-18 22:40:16 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.26 2001-01-13 00:26:49 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -89,3 +89,6 @@ m2	m2
 #D	m2cfg	Gemini M2 Tilt System Configuration
 #M	m2cfg	Gemini M2 Tilt System Configuration
 m2cfg	m2cfg
+#D	somtest	some test
+#M	somtest	some test
+somtest	mbec/sometest
