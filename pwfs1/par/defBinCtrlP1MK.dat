@@ -39,5 +39,3 @@ data/defFgContMatP1MK.dat
 0.0
 # Angle in radians between M1 and PWFS1 (double)
 0.0
-# Threshold above which the aO gain is increased (double)
-0.5
