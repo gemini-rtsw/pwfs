@@ -281,3 +281,126 @@ V4-5 17 May 2004 AAG:
   - adl/detSigModeSeqDark.adl
   - src/aoP1Lib.c, modified aoTotalThresholdCompute 
   - pwfs1Unsetup: modified
+
+V4-6 13 AUG 2004 AAG:
+------------------------
+
+1) Removed not used parameters of Closed Loop Mode 
+   (which determines threshold in not Real Time) 
+
+   - capfast/wfsCadMore.sch 
+   	fields B,C,D,E,F,G of detSigModeSeq record not used 
+   - capfast/wfsGensub1.sch	
+	fields OUTB/C/D/E/F/G from initSigModeSeq record not used
+   - src/wfsDb.c
+	modify dc:detSigModeSeq (attributes B,C,D,E,F,G not used and 
+	   with O.0 value as default)
+   - src/detControl.c
+	modify detSigModeSeq procedure to read/use only needed fields
+	modify detObserveStart procedure for CLOSED_LOOP mode
+	modify detObserveEnd procedure for CLOSED_LOOP mode
+   - src/pwfs1SetDefCommandMK.pv
+   - src/pwfs1SetDefCommandCP.pv
+	modify default setting in detSigModeSeq CAD commands 
+   - adl/detSigModeSeq.adl
+	remove 'more' option
+   - adl/detSigModeSeqMore.adl
+	remove display
+
+2) Implement pause time between 2 aO commands
+
+   - capfast/wfsCadMore.sch
+	add Pause fields for detSigInitAoGain (), 
+	   detSigModeAo (FTVC:DOUBLE), 
+	   detSigModeGgAo (FTVD:DOUBLE), 
+	   detSigModeFgFocusAo (FTVG:DOUBLE), 
+	   detSigModeSeq (FTVB:DOUBLE)
+   - capfast/wfsGensub1.sch
+	modify OUTB to add aoPause
+   - src/wfsDb.c
+	add field C for aoPause in dc:detSigModeAo record
+	add field D for aoPause in dc:detSigModeGgAo record
+	add field G for aoPause in dc:detSigModeFgFocusAo record
+	add field B for aoPause in dc:detSigModeSeq record
+	(default value for apPause is 7h)
+   - src/aoP1Lib.h
+   - src/aoP1Lib.c
+	include pauseNb in aoModeCompute procedure
+   - src/detControl.h
+	add aoPause & nPauseFrames into OBS_ID structure
+   - src/detControl.c
+	obsId->nPauseFrames added in detObserveStart procedure 
+	nPause added in detObserveEnd procedure
+	obsId->nPauseFrames displayed in detObsShow
+	detSigModeAo procedure modified to read/include aoPause
+	detSigModeGgAo procedure modified to read/include aoPause
+	detSigModeFgFocusAo procedure modified to read/include aoPause
+	detSigModeSeq procedure modified to read/include aoPause
+   - src/pwfs1SetDefCommandMK.pv
+   - src/pwfs1SetDefCommandCP.pv
+	modify default setting in detSigModeSeq CAD commands 
+   - adl/detSigModeAo.adl
+   - adl/detSigModeGgAo.adl
+   - adl/detSigModeFgFocusAo.adl
+   - adl/detSigModeSeq.adl
+	add Pause between 2 aO commands
+
+3) Monitor spherical and Z11-Z19 
+
+   - src/writeZerniques.c
+	make sure that spherical and Z11-Z19 aberrations are not sent to TCS
+   - par/defAoContMatP1MK.dat
+   - par/defAoContMatP1CP.dat
+	add new rows in MK Ao Control Matrix  
+
+4) Clamp ao commands above a max threshold
+    
+   - capfast/wfsCadMore.sch
+	added detSigInitAoThresh record
+	T field not used in detSigInitAoGain record
+   - capfast/wfsGensub1.sch
+	add initSigInitAoThresh record
+   - src/wfsDb.c
+	remove aoThreshold (T) from detSigInitAoGain
+	add detSigInitAoThresh record
+   - src/aoP1Lib.h
+	add aoMaxThreshold to aoCtrlId
+ 	remove aoThreshold from aoCtrlContextUpdate
+	remove pAothreshold from aoCtrlFileRead  
+   - src/aoP1Lib.c
+	include aoMaxThreshold in ContextShow proc
+	remove aoThreshold from aoCtrlContextInit
+ 	remove aoThreshold from aoCtrlContextUpdate
+	remove pAothreshold from aoCtrlFileRead  
+   - src/detControl.h
+	add DET_CONTROL_CMD_SIG_INIT_AO_THRESH
+	add updateAoThresh and aoMaxThreshold
+   - src/detControl.c
+	add detSigInitAoThresh
+	check DET_CONTROL_CMD_SIG_INIT_AO_THRES
+	add updateAoThresh and aoMaxThreshold
+	remove aoThreshold fom detFrameSize, detSigInitAoGain, detInitSigInit
+   - src/writeZerniques.c
+	Used aoCtrlId->aoMaxThreshold in writeWfsToTcs
+   - src/pwfs1SetDefCommandMK.pv
+   - src/pwfs1SetDefCommandCP.pv
+	Init new aoThreshold  defaults at startup
+   - adl/detSigInitAoThresh.adl
+	added
+   - adl/detSigInitAoGain.adl
+	remove threshold widget
+   - adl/sig_main.adl
+	add detSigInitAoThresh option
+   - par/defBinCtrlP1MK.dat
+   - par/defBinCtrlP1CP.dat
+   - par/defFullCtrlP1MK.dat
+   - par/defFullCtrlP1CP.dat
+	remove aoThreshold from par files
+   - startup/startupCP.vws
+   - startup/startupMK.vws
+	Database initialization - loaded at the end
+
+5) Real Time Threshold per sub-apertureine: 
+    - aoP2Lib.c
+	check average of the background is not < 0, if yes force it to 0 
+	in order to have threshold always >= 2.5 * RMS
