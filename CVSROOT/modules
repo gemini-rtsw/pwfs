@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.59 2001-08-16 23:04:16 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.60 2001-10-30 21:14:07 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -72,25 +72,28 @@ pcs	pcs
 mbec	mbec
 #M	pcstest	Jmaclean Runtime version of the PCS
 pcstest	mbec/pcstest
-#M	niriIS	Niri Instrument sequencer (devlpt)
-niriIS	mbec/niriIS
-#M	niri-dc	Niri Detector controller (R3.13.4GEM7)
-niri-dc	mbec/niri-dc
 #M	gnaacSrc-mv167-gem5	Niri temporary backup for mv167 target
 gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
 #M	gnaacSrc-ppc-gem6t	Niri temporary backup for ppc target
 gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
 #M	vaioc	IOC vaio
 vaioc	mbec/vaioc
-#M	comcon	Components Controller
-comcon	niri/comcon
+#M	comcon	Components Controller 3.12
+comcon	niri3.12/comcon
+#D	niri3.12	Gemini NIRI Software 3.12
+niri3.12	niri3.12
+#M	gn-4	Detector Controller (1fps coadder) 3.12
+gn-4	niri3.12/gn-4
+#M	niricnfg	NIRI configurator tool 3.12
+niricnfg	niri3.12/niricnfg
 
 #D	niri	Gemini NIRI Software
 niri	niri
-#M	gn-4	Detector Controller (1fps coadder)
-gn-4	niri/gn-4
-#M	niricnfg	NIRI configurator tool
-niricnfg	niri/niricnfg
+#M	niri-dc	Niri Detector controller
+niri-dc	niri/dc
+#M	niri-cc	Niri Component controller
+niri-cc	niri/cc
+
 
 #D	seqexec	Sequence Executor
 #M	seqexec	Sequence Executor
