@@ -4463,8 +4463,7 @@ STATUS aoModeCompute (
    }
    else if ( aoCtrlId->coaddCounter < (imageNb+pauseNb+1) )
    {
-      printf ("aoModeCompute(): pause between 2 aO commands: %d\n",
-              aoCtrlId->coaddCounter);
+
 #ifdef DEBUG
       printf ("aoModeCompute(): pause between 2 aO commands: %d\n",
               aoCtrlId->coaddCounter);

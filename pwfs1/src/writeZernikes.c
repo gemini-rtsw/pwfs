@@ -201,6 +201,7 @@ frame   *ag2tcs;
 wfs     *ptrPwfs1;
 double  ttfData[AO_ARRAY_SIZE+2];
 double  aoData[AO_ARRAY_SIZE+2];
+double  aoDataTcs[AO_ARRAY_SIZE+2];
 float   data[AO_ARRAY_SIZE+2];
 float   errors[AO_ARRAY_SIZE+2];
 SEM_ID  wfsLock;
@@ -814,7 +815,8 @@ long gensubToTcsTtf
  *
  * EXTERNAL VARIABLES:
  * wfsLock       - mutex semaphores
- * aoData        - ao data
+ * aoData        - ao Data
+ * aoDataTcs     - ao Data actually sent to Tcs
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -855,26 +857,24 @@ long gensubToTcsAo
       }
 
       /* write whole array to valj for the TCS to pick up */
-
-
       /* but make sure that spherical and Z11-Z19 aberrations are not sent to TCS
        */
-      /*
-      aoData[2]=0.0;
-      aoData[3]=0.0;
-      aoData[4]=0.0;
-      aoData[9]=0.0;
-      aoData[12]=0.0;
-      aoData[13]=0.0;
-      aoData[14]=0.0;
-      aoData[15]=0.0;
-      aoData[16]=0.0;
-      aoData[17]=0.0;
-      aoData[18]=0.0;
-      aoData[19]=0.0;
-      aoData[20]=0.0;
-      */
-      memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
+ 
+      aoDataTcs[2]=0.0;
+      aoDataTcs[3]=0.0;
+      aoDataTcs[4]=0.0;
+      aoDataTcs[9]=0.0;
+      aoDataTcs[12]=0.0;
+      aoDataTcs[13]=0.0;
+      aoDataTcs[14]=0.0;
+      aoDataTcs[15]=0.0;
+      aoDataTcs[16]=0.0;
+      aoDataTcs[17]=0.0;
+      aoDataTcs[18]=0.0;
+      aoDataTcs[19]=0.0;
+      aoDataTcs[20]=0.0;
+ 
+      memcpy (pgsub->valj, aoDataTcs, AO_ARRAY_SIZE * sizeof (double));
 
       /* write Zernike values to vala for display */
 
@@ -883,6 +883,7 @@ long gensubToTcsAo
       /* write error values to valb for display */
 
       memcpy (pgsub->valb, errors, 19 * sizeof (double));
+
 
       semGive(wfsLock);
    }
@@ -1494,10 +1495,16 @@ STATUS writeWfsToTcs
       aoData[19] = result.z19;
       aoData[20] = result.z20;
 
+      for(i = 0; i <= 20; i++)
+      {
+         aoDataTcs[i] = aoData[i];
+      }
+
       /* copy across error terms */
       for ( i = 0 ; i < aoCtrlId->aoModeNb ; i ++ )
       {
          aoData[21+i] = *(pAoErrorsVect +i);
+	 aoDataTcs[21+i] = *(pAoErrorsVect +i);
       }
 
       /* release mutex */
