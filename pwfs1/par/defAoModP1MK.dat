@@ -21,7 +21,7 @@
 1
 # coma X = a*cos(X+p) + c (double)
 # a p c
-0.025 -130.0 0.1
+0.025 -130.0 0.3
 # coma Y = b*sin(X+pp) + d (double)
 # b pp d
 0.015 90.0 -0.15
