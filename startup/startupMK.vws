@@ -1,4 +1,4 @@
-# $Id: startupMK.vws,v 1.5 2004-01-08 23:38:06 cboyer Exp $
+# $Id: startupMK.vws,v 1.6 2004-08-18 22:07:12 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -113,7 +113,6 @@ iocInit ("$(version)/data/resource.def")
 # Configure the initial state of the system
 #dbpf "pwfs2:dc:initialising.VAL","2"
 pvload "$(version)/data/pwfs2.pv","top=pwfs2:, sadtop=pwfs2:, wfs=dc:"
-pvload "$(version)/data/pwfs2SetDefCommandMK.pv","top=pwfs2:, wfs=dc:"
 
 # Initialise the database records not initialised by iocInit.
 epToVxCaInitRecords ()
@@ -157,6 +156,9 @@ taskSpawn ("wfsResMonitor", 255, 0x8, 4000, wfsResourceMonitor, 10000000, 200000
 
 # Do not allow to use D64 cycles on the bus
 *0xfd050128 &= 0xffffbfff
+
+# More database initializations
+pvload "$(version)/data/pwfs2SetDefCommandMK.pv","top=pwfs2:, wfs=dc:"
 
 # Start sequences
 seq &timeSeq, "sys=pwfs2:"
