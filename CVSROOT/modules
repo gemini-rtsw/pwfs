@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.70 2004-03-09 03:10:17 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.71 2004-03-12 13:40:05 aaguayo Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -244,4 +244,8 @@ pyRemedy	mbec/pyRemedy
 
 #M	pythonCA	Channel Access for Python
 pythonCA	mbec/pythonCA
+
+#M	etools	Engineering Tools
+etools	etools
+
 
