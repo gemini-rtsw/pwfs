@@ -75,9 +75,6 @@
  *   aoThresholdPerSubapCompute() - Compute a threshold per subaperture
  * 
  *INDENT-OFF*
- *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
- *   31 Oct 2001: CB - aoGlobalGuide and aoGuideAndFocus x2 the TT values when
- *                     binning
  *   13 Sep 2001: CB - Add aoThresholdPerSubapCompute()
  *   08 Aug 2001: CB - Major modifications to have ao correction with P2 also
  *   29 Mar 2001: CB - For guide and focus multiply focus per two when binning
@@ -3199,8 +3196,7 @@ STATUS aoDarkSubtract (
  *
  *   INVOCATION:
  *   aoGlobalGuide (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, pGuidesVect,
- *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
- *                  writeToRm)
+ *                  pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3219,7 +3215,6 @@ STATUS aoDarkSubtract (
  *                                     vectors
  *   (<) pWfsStatus       (int *)      Pointer to the status flag when 
  *                                     computing the centroids 
- *   (>) writeToRm        (int)        Flag to write or not to RM (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3257,8 +3252,7 @@ STATUS aoGlobalGuide (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -3336,18 +3330,18 @@ STATUS aoGlobalGuide (
       *(pGuidesVect) = xCenter - (x / total);
       *(pGuidesVect + 1) = yCenter - (y / total);
 
-      if ( aoCcdId->binningFlag == TRUE )
-      {
-         *(pFgVect) = 2.0 * (*pGuidesVect);
-         *(pFgVect + 1) = 2.0 * (*(pGuidesVect+1));
-         *(pFgVect + 2) = 0.0;
-      }
-      else
-      {
-         *(pFgVect) = (*pGuidesVect);
-         *(pFgVect + 1) = *(pGuidesVect+1);
-         *(pFgVect + 2) = 0.0;
-      }
+/*
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
+                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
+
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect+1)) -
+                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
+*/
+      *(pFgVect) = (*pGuidesVect);
+
+      *(pFgVect + 1) = *(pGuidesVect+1);
+
+      *(pFgVect + 2) = 0.0;
 
       *(pFgErrorsVect) = 0.0;
       *(pFgErrorsVect + 1) = 0.0;
@@ -3382,8 +3376,9 @@ STATUS aoGlobalGuide (
       *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
+ 
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
-                          pTime, writeToRm) != OK )
+                          pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -3401,7 +3396,7 @@ STATUS aoGlobalGuide (
  *   INVOCATION:
  *   aoGlobalGuideAndError (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                          pGuidesVect, pFgVect, pFgVectAfterRot, 
- *                          pFgErrorsVect, pTime, pWfsStatus, writeToRm)
+ *                          pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to 
@@ -3420,7 +3415,6 @@ STATUS aoGlobalGuide (
  *                                     the vectors
  *   (<) pWfsStatus       (int *)      Pointer to the status flag when 
  *                                     computing the centroids 
- *   (>) writeToRm        (int)        Write to RM flag (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -3459,8 +3453,7 @@ STATUS aoGlobalGuideAndError (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -3557,19 +3550,18 @@ STATUS aoGlobalGuideAndError (
 
       *(pGuidesVect) = xCenter - xTemp;
       *(pGuidesVect + 1) = yCenter - yTemp;
+/*
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
+                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
-      if ( aoCcdId->binningFlag == TRUE )
-      {
-         *(pFgVect) = 2.0 * (*(pGuidesVect));
-         *(pFgVect + 1) = 2.0 * (*(pGuidesVect +1));
-         *(pFgVect + 2) = 0.0;
-      }
-      else
-      {
-         *(pFgVect) = *(pGuidesVect);
-         *(pFgVect + 1) = *(pGuidesVect +1);
-         *(pFgVect + 2) = 0.0;
-      }
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
+                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
+*/
+      *(pFgVect) = *(pGuidesVect) ;
+
+      *(pFgVect + 1) = *(pGuidesVect +1);
+
+      *(pFgVect + 2) = 0.0;
 
       xSigma = (((xErr / total) - (xTemp * xTemp))/total);
       ySigma = (((yErr / total) - (yTemp * yTemp))/total);
@@ -3614,7 +3606,7 @@ STATUS aoGlobalGuideAndError (
 
  
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
-                          pFgErrorsVect, pTime, writeToRm) != OK )
+                          pFgErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -5222,14 +5214,14 @@ STATUS aoCbFgCtrlSave
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "./D%04d%02d%02dT%02d%02d%02dP2.cbcfg",
+                   "./D%04d%02d%02dT%02d%02d%02dP2.cbfgc",
                    timeArray[0], timeArray[1], timeArray[2], timeArray[3],
                    timeArray[4], timeArray[5]);
       }
       else
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "%s/D%04d%02d%02dT%02d%02d%02dP2.cbcfg",
+                   "%s/D%04d%02d%02dT%02d%02d%02dP2.cbfgc",
                    pCbFgCtrlFilePath, timeArray[0], timeArray[1], timeArray[2],
                    timeArray[3], timeArray[4], timeArray[5]);
       }
@@ -5239,11 +5231,11 @@ STATUS aoCbFgCtrlSave
       if ( ( strcmp (pCbFgCtrlFilePath, "") == 0 ) ||
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
-         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP2.cbcfg" );
+         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP2.cbfgc" );
       }
       else
       {
-         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP2.cbcfg",
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP2.cbfgc",
                    pCbFgCtrlFilePath );
       }
    }
@@ -5436,8 +5428,7 @@ STATUS aoCbFgCtrlSave
  *   INVOCATION:
  *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
  *                    pCentroidsVect, pErrorCentroidsVect, pFgVect, 
- *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus,
- *                    writeToRm)
+ *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the image from which to 
@@ -5459,7 +5450,6 @@ STATUS aoCbFgCtrlSave
  *                                        the vectors
  *   (<) pWfsStatus          (int *)      Pointer to the status flag when 
  *                                        computing the centroids 
- *   (>) writeToRm           (int)        Write to RM flag (TRUE/FALSE)
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -5502,8 +5492,7 @@ STATUS aoGuideAndFocus (
    double *     pFgVectAfterRot,
    double *     pFgErrorsVect,
    double *     pTime,
-   int *        pWfsStatus,
-   int          writeToRm
+   int *        pWfsStatus
    )
 {
    int          imageSize;
@@ -5556,15 +5545,18 @@ STATUS aoGuideAndFocus (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
-      if ( aoCcdId->binningFlag == TRUE )
-      {
-         *(fg) *= 2.0;
-         *(fg+1) *= 2.0;
-         *(fg+2) *= 2.0;
-      }
-
+/*
+      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*fg) +
+                   aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
+      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
+                       aoCtrlId->sinAngleWithM2 * (*fg) );
+*/
       *(pFgVect) = *(fg);
       *(pFgVect + 1) = *(fg + 1);
+
+      if ( aoCcdId->binningFlag == TRUE )
+         *(fg+2) *= 2.0;
+
       *(pFgVect + 2) = *(fg+2);
 
       *(pErrorFg + 0) = 0.0;
@@ -5591,7 +5583,7 @@ STATUS aoGuideAndFocus (
    };
  
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
-                          pFgErrorsVect, pTime, writeToRm) != OK )
+                          pFgErrorsVect, pTime) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);

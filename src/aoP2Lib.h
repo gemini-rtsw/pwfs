@@ -790,13 +790,12 @@ STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels,
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                       double * pTotalCountsVect, double * pGuidesVect, 
                       double * pFgVect, double * pFgVectAfterRot,
-                      double * pFgErrorsVect, double * pTime, int * pWfsStatus,
-                      int writeToRm);
+                      double * pFgErrorsVect, double * pTime, int * pWfsStatus);
 STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId, 
                               AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
                               double * pGuidesVect, double * pFgVect, 
                               double * pFgVectAfterRot, double * pFgErrorsVect, 
-                              double * pTime, int * pWfsStatus, int writeToRm);
+                              double * pTime, int * pWfsStatus);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
 STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
@@ -821,7 +820,7 @@ STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                         double *pTotalCountsVect, double * pCentroidsVect, 
                         double * pErrorCentroidsVect, double * pFgVect, 
                         double * pFgVectAfterRot, double * pFgErrorsVect, 
-                        double * pTime, int * pWfsStatus, int writeToRm);
+                        double * pTime, int * pWfsStatus);
 STATUS aoModeAnalyze (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
                       AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCentroidsWrite ( char * pCentroidsFileName, double * pCentroids, 

@@ -493,7 +493,6 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         nFramesAverageFlux;
                            /* Number of frames to average for computing the   */
                            /* average flux                                    */
-   long         writeToRm; /* Write to RM flag (TRUE/FALSE)                   */
    double       fgTime;    /* Time with FG only over the whole CCD in the     */
                            /* closed loop sequence                            */
    double       saveCbFgCtrlClosedLoopTime;
