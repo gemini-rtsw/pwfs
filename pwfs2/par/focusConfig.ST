@@ -19,13 +19,13 @@ Strip.Color.Color10           52685     33924     16448
 Strip.Option.GridXon          1
 Strip.Option.GridYon          1
 Strip.Option.AxisXnumTics     5
-Strip.Option.AxisYnumTics     11
+Strip.Option.AxisYnumTics     10
 Strip.Option.AxisYcolorStat   1
 Strip.Option.GraphLineWidth   2
 Strip.Option.LegendVisible    1
 Strip.Curve.0.Name            pwfs2:dc:ttf.VALC
 Strip.Curve.0.Precision       4
-Strip.Curve.0.Min             -100.0000
-Strip.Curve.0.Max              100.0000
+Strip.Curve.0.Min             -1.0000
+Strip.Curve.0.Max              1.0000
 Strip.Curve.0.PenStatus       1
 Strip.Curve.0.PlotStatus      1
