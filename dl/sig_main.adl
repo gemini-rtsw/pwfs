@@ -5,12 +5,12 @@ display {
 	magic="305419896"
 	majv="2"
 	mnrv="4"
-	ndyng="1"
-	npc="19"
-	nstr="143"
-	ndynamic="15"
+	ndyng="0"
+	npc="11"
+	nstr="87"
+	ndynamic="8"
 	nplot="0"
-	nrd="11"
+	nrd="7"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -18,28 +18,28 @@ display {
 	object {
 		x="328"
 		y="298"
-		width="754"
-		height="669"
+		width="701"
+		height="456"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5640"
-	nwords_sta="224"
+	nwords_dspy="3200"
+	nwords_sta="152"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2812"
-	osta="2588"
-	odynamic="2872"
-	oplot="3868"
-	ord="3868"
-	oes="5628"
-	okd="5628"
-	opd="5640"
-	opo="5640"
+	odyng="1540"
+	osta="1388"
+	odynamic="1540"
+	oplot="2068"
+	ord="2068"
+	oes="3188"
+	okd="3188"
+	opd="3200"
+	opo="3200"
 	opc="68"
-	ostr="304"
-	ocmap="2588"
-	ocrules="2588"
+	ostr="192"
+	ocmap="1388"
+	ocrules="1388"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -52,7 +52,7 @@ display {
 	pixwid="1280"
 	pixht="1024"
 	mmwid="361"
-	mmht="288"
+	mmht="289"
 }
 "<<basic attribute>>" {
 	attr {
@@ -65,9 +65,9 @@ display {
 "rectangle" {
 	object {
 		x="9"
-		y="468"
-		width="737"
-		height="189"
+		y="296"
+		width="680"
+		height="152"
 		groupid="0"
 	}
 }
@@ -97,20 +97,20 @@ display {
 	object {
 		x="9"
 		y="53"
-		width="737"
-		height="408"
+		width="680"
+		height="239"
 		groupid="0"
 	}
 }
 "text" {
 	object {
 		x="17"
-		y="143"
+		y="141"
 		width="365"
 		height="19"
 		groupid="0"
 	}
-	textix="SIGNAL PROCESSING INITIALIZED ..:"
+	textix="SIGNAL PROCESSING INITIALIZED:"
 	align="horiz. left"
 }
 "text" {
@@ -138,7 +138,7 @@ display {
 "text" {
 	object {
 		x="16"
-		y="476"
+		y="304"
 		width="335"
 		height="22"
 		groupid="0"
@@ -149,179 +149,63 @@ display {
 "text" {
 	object {
 		x="17"
-		y="169"
-		width="370"
+		y="168"
+		width="332"
 		height="19"
 		groupid="0"
 	}
-	textix="SKY/DARK INITIALIZED ... ... ...:"
+	textix="DARK INITIALIZED:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
-		y="195"
-		width="382"
+		y="193"
+		width="209"
 		height="19"
 		groupid="0"
 	}
-	textix="FLAT INITIALIZED ... ... ... ...:"
+	textix="FLAT INITIALIZED:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="16"
+		y="244"
+		width="199"
+		height="19"
+		groupid="0"
+	}
+	textix="THRESHOLD ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
-		y="328"
-		width="365"
+		y="218"
+		width="209"
 		height="19"
 		groupid="0"
 	}
-	textix="THRESHOLD ... ... ... ... ... ..:"
+	textix="PROCESSING MODE :"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="17"
-		y="222"
-		width="372"
+		x="16"
+		y="269"
+		width="199"
 		height="19"
 		groupid="0"
 	}
-	textix="PROCESSING MODE ... ... ... ... :"
+	textix="FLUX THRESHOLD .:"
 	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="354"
-		width="365"
-		height="19"
-		groupid="0"
-	}
-	textix="FLUX THRESHOLD ... ... ... ... .:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="381"
-		width="364"
-		height="19"
-		groupid="0"
-	}
-	textix="SAVE IMAGE CIRCULAR BUFFER ... .:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="407"
-		width="387"
-		height="19"
-		groupid="0"
-	}
-	textix="SAVE aO CONTROL CIRCULAR BUFFER :"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="248"
-		width="371"
-		height="19"
-		groupid="0"
-	}
-	textix="aO INTERACTION MATIX INITIALIZED:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="275"
-		width="363"
-		height="19"
-		groupid="0"
-	}
-	textix="aO CONTROL MATRIX INITIALIZED ..:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="301"
-		width="364"
-		height="19"
-		groupid="0"
-	}
-	textix="FG CONTROL MATRIX INITIALIZED ..:"
-	align="horiz. left"
-}
-"text" {
-	object {
-		x="17"
-		y="434"
-		width="385"
-		height="19"
-		groupid="0"
-	}
-	textix="SAVE FG CONTROL CIRCULAR BUFFER :"
-	align="horiz. left"
-}
-"<<basic attribute>>" {
-	attr {
-		clr="2"
-		style="solid"
-		fill="solid"
-		width="0"
-	}
-}
-"<<dynamic attribute>>" {
-	attr {
-		mod {
-			clrmod="static"
-			vis="if not zero"
-		}
-		param {
-			rulecolorfg="1"
-			rulecolorbg="1"
-			chan="$(top)initSigInit.VALU"
-			rulechan[0] = ""
-			rulechan[1] = ""
-			rulechan[2] = ""
-			rulechan[3] = ""
-			rulechan[4] = ""
-			rulechan[5] = ""
-			rulechan[6] = ""
-			rulechan[7] = ""
-			rulechan[8] = ""
-			rulechan[9] = ""
-			rulechan[10] = ""
-			rulechan[11] = ""
-			rulechan[12] = ""
-			rulechan[13] = ""
-			rulechan[14] = ""
-			rulechan[15] = ""
-			clrrule=""
-			clrargs=""
-		}
-	}
-}
-"text" {
-	object {
-		x="504"
-		y="19"
-		width="114"
-		height="21"
-		groupid="0"
-	}
-	textix="Binning"
-	align="horiz. right"
 }
 "text update" {
 	object {
-		x="381"
-		y="138"
-		width="355"
+		x="353"
+		y="139"
+		width="328"
 		height="21"
 		groupid="0"
 	}
@@ -457,9 +341,9 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="164"
-		width="355"
+		x="211"
+		y="166"
+		width="469"
 		height="21"
 		groupid="0"
 	}
@@ -503,9 +387,9 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="190"
-		width="355"
+		x="211"
+		y="191"
+		width="468"
 		height="21"
 		groupid="0"
 	}
@@ -549,9 +433,9 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="322"
-		width="149"
+		x="211"
+		y="241"
+		width="125"
 		height="21"
 		groupid="0"
 	}
@@ -595,9 +479,9 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="217"
-		width="355"
+		x="211"
+		y="216"
+		width="468"
 		height="21"
 		groupid="0"
 	}
@@ -641,9 +525,9 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="348"
-		width="355"
+		x="211"
+		y="266"
+		width="125"
 		height="21"
 		groupid="0"
 	}
@@ -685,408 +569,84 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
-"text update" {
-	object {
-		x="381"
-		y="400"
-		width="355"
-		height="22"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)aoSaveCbAoCtrl"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule=""
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="2"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="381"
-		y="375"
-		width="355"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)aoSaveCbIm"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule=""
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="2"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"message button" {
-	object {
-		x="656"
-		y="60"
-		width="83"
-		height="29"
-		groupid="0"
-	}
-	control {
-		chan="$(top)detSigReset.DIR"
-		clr="1"
-		bclr="23"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule="alarm"
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	inactive_label="RESET"
-	pressed_label="RESET"
-	press_msg="MARK"
-	release_msg="START"
-}
-"text update" {
-	object {
-		x="381"
-		y="243"
-		width="355"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)aoIntMatInit"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule=""
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="381"
-		y="269"
-		width="355"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)aoContMatInit"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule=""
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="381"
-		y="296"
-		width="355"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)fgContMatInit"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule=""
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="-1"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
-"text update" {
-	object {
-		x="381"
-		y="428"
-		width="355"
-		height="21"
-		groupid="0"
-	}
-	monitor {
-		chan="$(top)aoSaveCbFgCtrl"
-		clr="0"
-		bclr="7"
-		label="none"
-		clrmod="static"
-		rulechan[0] = ""
-		rulechan[1] = ""
-		rulechan[2] = ""
-		rulechan[3] = ""
-		rulechan[4] = ""
-		rulechan[5] = ""
-		rulechan[6] = ""
-		rulechan[7] = ""
-		rulechan[8] = ""
-		rulechan[9] = ""
-		rulechan[10] = ""
-		rulechan[11] = ""
-		rulechan[12] = ""
-		rulechan[13] = ""
-		rulechan[14] = ""
-		rulechan[15] = ""
-		clrrule=""
-		clrargs=""
-		rulecolorbg="1"
-		rulecolorfg="1"
-		hdl="0"
-		ldl="0"
-		prec="2"
-		newunits=""
-		units="none"
-		decorate="none"
-		convertFunc=""
-		convertParams=""
-	}
-	align="horiz. left"
-	format="decimal"
-}
 "related display" {
 	object {
-		x="17"
-		y="532"
+		x="15"
+		y="356"
 		width="329"
 		height="24"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="NO PROCESSING"
-		name="detSigModeNone.dl"
+		label="NO_PROCESSING"
+		name="sig_mode_none.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeNone,car=det"
 	}
 	display[1] {
-		label="SKY/DARK SUBTRACTION"
-		name="detSigModeDark.dl"
+		label="DARK SUBTRACTION"
+		name="sig_mode_dark.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeDark,car=det"
 	}
 	display[2] {
 		label="AVERAGE IMAGES"
-		name="detSigModeCoadd.dl"
+		name="sig_mode_coadd.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeCoadd,car=det"
 	}
 	display[3] {
 		label="THRESHOLD COMPUTATION"
-		name="detSigModeThresh.dl"
+		name="sig_mode_thresh.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeThresh,car=det"
 	}
 	display[4] {
 		label="AVERAGE FLUX COMPUTATION"
-		name="detSigModeTotal.dl"
+		name="sig_mode_total.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeTotal,car=det"
 	}
 	display[5] {
 		label="GLOBAL GUIDE ON WHOLE CCD"
-		name="detSigModeGg.dl"
+		name="sig_mode_gg.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeGg,car=det"
 	}
 	display[6] {
 		label="GLOBAL GUIDE ON WHOLE CCD AND AVERAGE IMAGES"
-		name="detSigModeGgCoadd.dl"
+		name="sig_mode_gg_coadd.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeGgCoadd,car=det"
 	}
 	display[7] {
 		label="FAST GUIDE AND FOCUS"
-		name="detSigModeFgFocus.dl"
+		name="sig_mode_fg_focus.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeFgFocus,car=det"
 	}
 	display[8] {
 		label="FAST GUIDE AND FOCUS AND AVERAGE IMAGES"
-		name="detSigModeFgCoadd.dl"
+		name="sig_mode_fg_focus_coadd.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigModeFgCoadd,car=det"
 	}
-	display[9] {
-		label="ACTIVE OPTICS"
-		name="detSigModeAo.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigModeAo,car=det"
-	}
+        display[9] {
+                label="SEQUENCE DARK"
+                name="sig_mode_seq_dark.dl"
+                args="top=$(top),sensor=$(sensor),cad=detSigModeSeqDark,car=det"
+        }
 	display[10] {
-		label="GLOBAL GUIDE AND ACTIVE OPTICS"
-		name="detSigModeGgAo.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigModeGgAo,car=det"
+		label="SEQUENCE CLOSED LOOP"
+		name="sig_mode_seq.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigModeSeq,car=det"
 	}
 	display[11] {
-		label="FAST GUIDE AND FOCUS AND ACTIVE OPTICS"
-		name="detSigModeFgFocusAo.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigModeFgFocusAo,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[12] {
-		label="SEQUENCE SKY/DARK"
-		name="detSigModeSeqDark.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigModeSeqDark,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[13] {
-		label="SEQUENCE CLOSED LOOP"
-		name="detSigModeSeq.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigModeSeq,car=det"
+		label=""
+		name=""
+		args=""
 	}
 	display[14] {
 		label=""
@@ -1145,8 +705,142 @@ display {
 }
 "related display" {
 	object {
-		x="17"
-		y="504"
+		x="351"
+		y="330"
+		width="330"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SHOW CENTROIDS"
+		name="showDiag.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="SHOW CENTROIDS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="15"
+		y="330"
 		width="329"
 		height="21"
 		groupid="0"
@@ -1154,7 +848,7 @@ display {
 	selfkill="off"
 	display[0] {
 		label="INITIALIZE"
-		name="detSigInit.dl"
+		name="sig_init.dl"
 		args="top=$(top),sensor=$(sensor),cad=detSigInit,car=det"
 	}
 	display[1] {
@@ -1279,16 +973,150 @@ display {
 }
 "related display" {
 	object {
-		x="367"
-		y="593"
+		x="15"
+		y="386"
 		width="329"
 		height="23"
 		groupid="0"
 	}
 	selfkill="off"
 	display[0] {
-		label="SHOW ZERNIKES"
-		name="showZernikes.dl"
+		label="INIT GUIDING PARAMETERS"
+		name="sig_initGain.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitGain,car=det"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="INIT GUIDING PARAMETERS"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="351"
+		y="356"
+		width="329"
+		height="23"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SHOW GUIDING"
+		name="showFg.dl"
 		args="top=$(top),sensor=$(sensor)"
 	}
 	display[1] {
@@ -1408,13 +1236,13 @@ display {
 	}
 	clr="0"
 	bclr="6"
-	menu_title="SHOW ZERNIKES"
+	menu_title="SHOW GUIDING"
 	decorate="none"
 }
 "related display" {
 	object {
-		x="367"
-		y="624"
+		x="351"
+		y="386"
 		width="330"
 		height="23"
 		groupid="0"
@@ -1422,7 +1250,7 @@ display {
 	selfkill="off"
 	display[0] {
 		label="SHOW CIRCULAR BUFFERS"
-		name="showCbDiag.dl"
+		name="showCb.dl"
 		args="top=$(top),sensor=$(sensor)"
 	}
 	display[1] {
@@ -1547,8 +1375,8 @@ display {
 }
 "related display" {
 	object {
-		x="367"
-		y="502"
+		x="15"
+		y="415"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1556,8 +1384,8 @@ display {
 	selfkill="off"
 	display[0] {
 		label="SAVE CIRCULAR BUFFER"
-		name="detSigSaveCb.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigSaveCb,car=det"
+		name="sig_initCB.dl"
+		args="top=$(top),sensor=$(sensor),cad=detSigInitCB,car=det"
 	}
 	display[1] {
 		label=""
@@ -1679,813 +1507,9 @@ display {
 	menu_title="SAVE CIRCULAR BUFFER"
 	decorate="none"
 }
-"related display" {
-	object {
-		x="17"
-		y="593"
-		width="329"
-		height="23"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="INIT BUTTERWORTH FILTER"
-		name="detSigInitBw.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitBw,car=det"
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="INIT BUTTERWORTH FILTER"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="17"
-		y="564"
-		width="328"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="INIT FG GAINS"
-		name="detSigInitFgGain.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitFgGain,car=det"
-	}
-	display[1] {
-		label="INIT AO GAINS"
-		name="detSigInitAoGain.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitAoGain,car=det"
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="INIT GAINS"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="367"
-		y="534"
-		width="328"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="MEASUREMENT OF THE AO INTERACTION MATRIX"
-		name="detSigMeasAoIm.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigMeasAoIm,car=det"
-	}
-	display[1] {
-		label="COMPUTE AND SAVE AO MATRIXES"
-		name="detSigCompAoMat.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigCompAoMat,car=det"
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="MATRIX"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="367"
-		y="564"
-		width="328"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="SHOW FG CENTROIDS"
-		name="showFgDiagP2.dl"
-		args="top=$(top),sensor=$(sensor)"
-	}
-	display[1] {
-		label="SHOW AO CENTROIDS"
-		name="showAoDiagP2.dl"
-		args="top=$(top),sensor=$(sensor)"
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="SHOW CENTROIDS"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="17"
-		y="625"
-		width="328"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="INIT ASTIGMATISM ZERO POINT MODEL"
-		name="detSigInitModAst.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitModAst,car=det"
-	}
-	display[1] {
-		label="INIT TREFOIL ZERO POINT MODEL"
-		name="detSigInitModTref.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitModTref,car=det"
-	}
-	display[2] {
-		label="INIT COMA ZERO POINT MODEL"
-		name="detSigInitModComa.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitModComa,car=det"
-	}
-	display[3] {
-		label="INIT FOCUS ZERO POINT MODEL"
-		name="detSigInitModFoc.dl"
-		args="top=$(top),sensor=$(sensor),cad=detSigInitModFoc,car=det"
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="INIT ZERO POINT MODEL"
-	decorate="none"
-}
-"related display" {
-	object {
-		x="535"
-		y="321"
-		width="201"
-		height="22"
-		groupid="0"
-	}
-	selfkill="off"
-	display[0] {
-		label="PER SUBAPERTURE"
-		name="showThreshDiagP2.dl"
-		args="top=$(top),sensor=$(sensor)"
-	}
-	display[1] {
-		label=""
-		name=""
-		args=""
-	}
-	display[2] {
-		label=""
-		name=""
-		args=""
-	}
-	display[3] {
-		label=""
-		name=""
-		args=""
-	}
-	display[4] {
-		label=""
-		name=""
-		args=""
-	}
-	display[5] {
-		label=""
-		name=""
-		args=""
-	}
-	display[6] {
-		label=""
-		name=""
-		args=""
-	}
-	display[7] {
-		label=""
-		name=""
-		args=""
-	}
-	display[8] {
-		label=""
-		name=""
-		args=""
-	}
-	display[9] {
-		label=""
-		name=""
-		args=""
-	}
-	display[10] {
-		label=""
-		name=""
-		args=""
-	}
-	display[11] {
-		label=""
-		name=""
-		args=""
-	}
-	display[12] {
-		label=""
-		name=""
-		args=""
-	}
-	display[13] {
-		label=""
-		name=""
-		args=""
-	}
-	display[14] {
-		label=""
-		name=""
-		args=""
-	}
-	display[15] {
-		label=""
-		name=""
-		args=""
-	}
-	display[16] {
-		label=""
-		name=""
-		args=""
-	}
-	display[17] {
-		label=""
-		name=""
-		args=""
-	}
-	display[18] {
-		label=""
-		name=""
-		args=""
-	}
-	display[19] {
-		label=""
-		name=""
-		args=""
-	}
-	display[20] {
-		label=""
-		name=""
-		args=""
-	}
-	display[21] {
-		label=""
-		name=""
-		args=""
-	}
-	display[22] {
-		label=""
-		name=""
-		args=""
-	}
-	display[23] {
-		label=""
-		name=""
-		args=""
-	}
-	clr="0"
-	bclr="6"
-	menu_title="MORE"
-	decorate="none"
-}
 "kill display" {
 	object {
-		x="656"
+		x="600"
 		y="17"
 		width="90"
 		height="23"

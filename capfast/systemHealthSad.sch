@@ -8,19 +8,17 @@ w 1476 1019 100 0 n#73 esirs.controlHealth.FLNK 1376 1376 1472 1376 1472 672 195
 w 2468 923 100 0 n#54 egenSub.combHlt.FLNK 2240 640 2464 640 2464 1216 2560 1216 esirs.health.SLNK
 w 2328 1291 100 0 n#53 egenSub.combHlt.OUTB 2240 1280 2464 1280 2464 1344 2560 1344 esirs.health.IMSS
 w 2376 1387 100 0 n#52 egenSub.combHlt.VALA 2240 1376 2560 1376 esirs.health.INP
-s -496 2224 500 0 PWFS2 - System Health Status Records
-s 2512 -704 500 512 systemHealthSad.sch
-s 1760 1248 100 2048 ---->
-s 1760 1184 100 2048 ---->
 s 1536 1216 100 0 DC HEALTH
+s 1760 1184 100 2048 ---->
+s 1760 1248 100 2048 ---->
+s 2512 -704 500 512 systemHealthSad.sch
+s -496 2224 500 0 PWFS2 - System Health Status Records
 [cell use]
-use esirs 960 1127 100 0 controlHealth
-xform 0 1168 1280
-p 1056 1088 100 0 1 DESC:WFS controller health
-p 911 704 100 0 0 EGU: 
-p 1056 1056 100 0 1 FTVL:STRING
-p 1056 992 100 0 1 PV:$(sadtop)
-p 1056 1024 100 0 1 SNAM:
+use notes 3520 -265 100 0 notes#13
+xform 0 3776 -80
+p 4048 -114 100 0 0 AUTHOR:S.M.Beard and N.Dillon
+p 3548 46 100 0 -1 COMMENT1:This schematic contains the systemwide
+p 3548 14 100 0 -1 COMMENT2:health status records.
 use esirs 2560 1127 100 0 health
 xform 0 2768 1280
 p 2624 1088 100 0 1 DESC:Overall system health
@@ -28,6 +26,13 @@ p 2496 864 100 0 0 FDSC:Overall system health
 p 2624 1056 100 0 1 FTVL:STRING
 p 2624 992 100 0 1 PV:$(sadtop)
 p 2624 1024 100 0 1 SNAM:
+use esirs 960 1127 100 0 controlHealth
+xform 0 1168 1280
+p 1056 1088 100 0 1 DESC:WFS controller health
+p 911 704 100 0 0 EGU: 
+p 1056 1056 100 0 1 FTVL:STRING
+p 1056 992 100 0 1 PV:$(sadtop)
+p 1056 1024 100 0 1 SNAM:
 use egenSub 1952 583 100 0 combHlt
 xform 0 2096 1008
 p 2016 544 100 0 1 DESC:Combine health values
@@ -51,10 +56,10 @@ xform 0 1616 800
 p 2608 -672 200 0 1 author:S.M.Beard
 p 3120 -704 100 0 0 border:D
 p 2608 -752 200 0 0 checked:B.Goodrich
-p 3184 -688 200 0 -1 date:$Date: 2001-09-04 19:52:57 $
+p 3184 -688 200 0 -1 date:$Date: 2000-07-10 21:47:05 $
 p 2592 2336 200 0 -1 id:
 p 2720 -752 100 0 1 modified:C. Boyer
 p 3120 -416 200 0 -1 project:Gemini PWFS2
-p 2592 -480 200 0 -1 revision:$Revision: 1.4 $
+p 2592 -480 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -544 200 0 -1 title:System Health Status Records
 [comments]

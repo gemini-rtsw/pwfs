@@ -11,63 +11,45 @@
  * PURPOSE: 
  * Include file for PWFS2 active optics library 
  * Contains all the types and constants definition of this library
- * Note: aO means active optics, FG means fast guide
  * 
  * AUTHORS:
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
- * 13 Sep 2001: CB - Add aoThresholdPerSubapCompute(), thresholdVect, 
- *                   thresholdDarkFull and thresholdDarkBin
- * 08 Aug 2001: CB - Major modifications to have ao correction with P2 also
- * 08 Feb 2001: CB - Add zernikesVectAfterRot in circular buffer AO_CB_CTRL_ID 
- * 25 Oct 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
- * 13 May 1999: CB - Original creation
+ * 13 May 1999 - CB - Original creation
  *
  */
 
 /***************************************************** Constants definition ***/
 
-#define STRING_SIZE          160       /* Size of a string                    */
+#define STRING_SIZE       160          /* Size of a string                    */
 
-#define CCD_XSIZE            80        /* Default value for X size of the CCD */
+#define CCD_XSIZE         80           /* Default value for X size of the CCD */
 
-#define CCD_YSIZE            80        /* Default value for Y size of the CCD */
+#define CCD_YSIZE         80           /* Default value for Y size of the CCD */
 
-#define CCD_SIZE             (CCD_XSIZE * CCD_YSIZE)
+#define CCD_SIZE          (CCD_XSIZE * CCD_YSIZE)
                                        /* Default value for CCD size          */
 
-#define SUBAP_NB             4         /* Max number of subapertures          */
+#define SUBAP_NB          4            /* Max number of subapertures          */
 
-#define FG_MODE_NB           3         /* Max number of FG modes to correct   */
+#define MODE_NB           19           /* Max number of zernikes mode to be   */
+                                       /* corrected - for P2 only 3           */
 
-#define AO_MODE_NB           19        /* Max number of aO mode to correct    */
-
-#define MODE_NB              (FG_MODE_NB + AO_MODE_NB)
-
-#define CB_IM_RECORD_NB      100       /* Number of records of the image      */
+#define CB_IM_RECORD_NB   100          /* Number of records of the image      */
                                        /* circular buffer                     */
 
-#define CB_AO_CTRL_RECORD_NB 500       /* Number of records of the aO control */
+#define CB_CTRL_RECORD_NB 2000         /* Number of records of the control    */
                                        /* circular buffer                     */
 
-#define CB_FG_CTRL_RECORD_NB 2000      /* Number of records of the FG control */
-                                       /* circular buffer                     */
-
-#define AO_SUBAP_OFF         32767     /* Indicates there is no light on at   */
+#define AO_SUBAP_OFF      32767        /* Indicates there is no light on at   */
                                        /* least one subaperture               */
 
-#define AO_SH_OFF            65536     /* Indicates there is no light on at   */
+#define AO_SH_OFF         65536        /* Indicates there is no light on at   */
                                        /* least two subapertures              */
 
-#define AO_MIN_DOUBLE        1.0e-10   /* Mininum double used when comparing  */
+#define AO_MIN_DOUBLE     1.0e-10      /* Mininum double used when comparing  */
                                        /* total counts to threshold           */
-
-#define AO_TIME_NOW_ERROR    -5.55e9   /* If time Now returns an error, time  */
-                                       /* is set to this value                */
-
-#define ZP_MODEL_SEM_TIMEOUT 100       /* Timeout for zero point model        */
-                                       /* semaphore                           */
 
 /********************************************************************* Enum ***/
 
@@ -82,15 +64,10 @@ enum
    AO_MODE_GG_COADD,       /* Global Guide and Coadd mode.           */
    AO_MODE_FG_FOCUS,       /* FG and focus correction mode           */
    AO_MODE_FG_FOCUS_COADD, /* FG and focus and Coadd mode            */
-   AO_MODE_MEAS_IM,        /* Interaction matrix measurement mode.   */
-   AO_MODE_AO,             /* Active optics correction mode only     */
-   AO_MODE_GG_AO,          /* Global Guide and aO correction mode    */
-   AO_MODE_FG_FOCUS_AO,    /* FG and Focus and aO correction mode    */
    AO_MODE_SEQ_DARK,       /* Sequence dark starting averaging       */
                            /* images and then computing the threshold*/
    AO_MODE_CLOSED_LOOP,    /* Sequence of closed loop starting       */
-                           /* with GG and next with FG and focus and */
-                           /* aO correction                          */
+                           /* with FG and next with FG and focus     */
    AO_MODE_MAX             /* Maximum mode marker.                   */
 };
 
@@ -107,45 +84,15 @@ enum
    AO_TOTAL_VALUE      /* No computation, used given value       */
 };
 
-enum
-{
-   AO_INT_MAT_TYPE = 0, /* Control matrix type                    */
-   AO_CONT_MAT_TYPE     /* No computation, used given value       */
-};
-
 /***************************************** Definition of vectors and matrix ***/
 
 typedef float IMAGE_VECT [ CCD_SIZE ];
 
-typedef double WFS_VECT [ (2 * SUBAP_NB) ];  
-                                       /* 2 informations per subaperture      */
+typedef double WFS_VECT [ (2 * SUBAP_NB) + 2 ];  
+                                       /* 2 informations per subaperture +    */
+                                       /* 2 information for the whole CCD     */
 
-typedef double GUIDE_VECT [ 2 ];       /* only 2 information for the whole CCD*/
-
-typedef double FG_VECT [ FG_MODE_NB ];
-
-typedef double AO_VECT [ AO_MODE_NB ];
-
-typedef double AO_MATRIX [ 2 * SUBAP_NB * AO_MODE_NB ];
-
-typedef double FG_MATRIX [ 2 * SUBAP_NB * FG_MODE_NB ];
-
-typedef struct                         /* Structure needed to measure a column*/
-                                       /* of the interaction matrixes         */
-{
-   double     posAmplitude;            /* Positive amplitude of the measured  */
-                                       /* mode                                */
-
-   double     negAmplitude;            /* Negative amplitude of the measured  */
-                                       /* mode                                */
-
-   WFS_VECT   posCentroidsVect;        /* Centroids vector corresponding to   */
-                                       /* a positive amplitude                */
-
-   WFS_VECT   negCentroidsVect;        /* Centroids vector corresponding to   */
-                                       /* a negative amplitude                */
-
-} CIM_STRUCT;
+typedef double COMMAND_VECT [ MODE_NB ];
 
 /*************************** Definition of the structure describing the WFS ***/
 
@@ -268,18 +215,6 @@ typedef struct
    int          refInitFlag;           /* TRUE or FALSE, if a reference is    */
                                        /* init or not                         */
 
-   int          aoScaleInitFlag;       /* TRUE or FALSE, if a aO scale factor */
-                                       /* vector is init or not               */
-
-   int          aoIntMatInitFlag;      /* TRUE or FALSE, if an aO interaction */
-                                       /* matrix is init or not               */
-
-   int          aoContMatInitFlag;     /* TRUE or FALSE, if aO control matrix */
-                                       /* is init or not                      */
-
-   int          fgContMatInitFlag;     /* TRUE or FALSE, if FG control matrix */
-                                       /* is init or not                      */
-
    char         darkFileName [ STRING_SIZE ]; 
                                        /* Name of the file which contains the */
                                        /* dark image                          */
@@ -291,20 +226,6 @@ typedef struct
    char         refVectFileName [ STRING_SIZE ]; 
                                        /* Name of the reference vector file   */
                                        /* used for centroids computation      */
-
-   char         aoScaleFileName [ STRING_SIZE ];
-                                       /* Name of the ao scale factor vector  */
-                                       /* file                                */
-
-   char         aoIntMatFileName [ STRING_SIZE ];
-                                       /* Name of the aO interaction matrix   */
-                                       /* file                                */
-
-   char         aoContMatFileName [ STRING_SIZE ];
-                                       /* Name of the aO control matrix file  */
-
-   char         fgContMatFileName [ STRING_SIZE ];
-                                       /* Name of the FG control matrix file  */
    
    IMAGE_VECT   darkVect;              /* Vector containing the dark image for*/
                                        /* the whole CCD                       */
@@ -314,27 +235,11 @@ typedef struct
 
    IMAGE_VECT   sumVect;               /* Vector containing a coadd image     */
 
-   WFS_VECT     refWfsVect;            /* Vector containing the center of each*/
+   WFS_VECT     refVect;               /* Vector containing the center of each*/
                                        /* subapertures                        */
 
-   GUIDE_VECT   refGuideVect;          /* Vector containing the center of the */
-                                       /* whole CCD                           */
-
-   AO_VECT      aoScaleFactorVect;     /* Vector containing the scale factor  */
-                                       /* for each ao modes                   */
-
-   FG_VECT      fgScaleFactorVect;     /* Vector containing the scale factor  */
-                                       /* for each ao modes                   */
-
-   CIM_STRUCT   aoIntMatStruct[AO_MODE_NB];
-                                       /* Structure needed to compute the     */
-                                       /* aO interaction matrix               */
-
-   AO_MATRIX    aoIntMat;              /* aO interaction matrix               */
-
-   AO_MATRIX    aoContMat;             /* aO control matrix                   */
-
-   FG_MATRIX    fgContMat;             /* FG control matrix                   */
+   COMMAND_VECT scaleFactorVect;       /* Vector containing the scale factor  */
+                                       /* for each modes                      */
 
    int          thresholdMethod;       /* Method to compute threshold         */
                                        /* AO_THRESH_SPOTS, AO_THRESH_NOSPOTS, */
@@ -351,15 +256,8 @@ typedef struct
    double       thresholdMultCoeff;    /* Multiplicative coefficient for      */
                                        /* threshold computation               */
 
-   double       thresholdDarkFull;     /* Threshold computed during sequence  */
-                                       /* dark when no binning - save         */ 
-
-   double       thresholdDarkBin;      /* Threshold computed during sequence  */
-                                       /* dark when binning - save            */ 
-
-   WFS_VECT     thresholdVect;         /* Threshold computed for each         */
-                                       /* subaperture                         */
-
+   double       thresholdDark;         /* Threshold computed during sequence  */
+                                       /* dark - save                         */ 
    double       averageTotal;          /* Average of the total counts for the */
                                        /* whole CCD                           */
 
@@ -372,15 +270,9 @@ typedef struct
 
    double       angleWithM2;           /* Angle between M2 and P2 coordinates */
 
-   double       cosAngleWithM2;        /* Cos of the angleWithM2              */
+   double       cosAngle;              /* Cos of the angleWithM2              */
 
-   double       sinAngleWithM2;        /* Sinus of the angleWithM2            */
-
-   double       angleWithM1;           /* Angle between M1 and P2 coordinates */
-
-   double       cosAngleWithM1;        /* Cos of the angleWithM1              */
-
-   double       sinAngleWithM1;        /* Sinus of the angleWithM1            */
+   double       sinAngle;              /* Sinus of the angleWithM2            */
 
    double       slidingFocusGain;      /* Gain for sliding average for focus  */
 
@@ -388,31 +280,18 @@ typedef struct
 
    double       previousFocus;         /* Previous focus mode value           */
 
-   int          allowedSubapOff;       /* Number of subapertures allowed to   */
-                                       /* be off when computing the centroids */
+   int          coaddCounter;          /* Counter used for coadd images       */
 
    int          focusCounter;          /* Counter used for computing the focus*/
 
+   int          modeNb;                /* Number of modes to correct          */
 
-   int          coaddCounter;          /* Counter used for coadd images       */
-
-   int          aoModeNb;              /* Number of aO modes to correct       */
-
-   int          aoModeNotUsedNb;       /* Number of aO modes not used         */
-
-   int          aoModeUsedNb;          /* Total number of used modes, must be */
-                                       /* equal to aoModeNb - aoModeNotUsedNb */
-
-   int          aoModeUsedVect [ AO_MODE_NB ];
-                                       /* Vector describing the aO modes      */
-                                       /* which are used or not used for the  */
-                                       /* correction : TRUE or FALSE          */
-
-   int          fgModeNb;              /* Number of FG modes to correct       */
+   int          allowedSubapOff;       /* Number of subapertures allowed to   */
+                                       /* be off when computing the centroids */
 
 } AO_CTRL_ID_STRUCT, * AO_CTRL_ID;
 
-/********************************** Definition of the image circular buffer ***/
+/*********************************** Definition of the WFS circular buffers ***/
 
 typedef struct                         /* Definition of the image circular    */
 {                                      /* buffer record                       */
@@ -441,30 +320,24 @@ typedef struct                         /* Image circular buffer               */
 
 } AO_CB_IM_ID_STRUCT , * AO_CB_IM_ID;
 
-/***************************** Definition of the aO control circular buffer ***/
-
-typedef struct                         /* Definition of the aO control        */
-{                                      /* circular  buffer record             */
+typedef struct                         /* Definition of the control circular  */
+{                                      /* buffer record                       */
 
    WFS_VECT     totalCountsVect;       /* Vector which contains the total of  */
-                                       /* counts for each subaperture         */
-                                       /* (subapUsedNb values) + the total of */
-                                       /* counts for the whole CCD (1 value)  */
+                                       /* counts for each subaperture (4      */
+                                       /* values) + the total of counts for   */
+                                       /* the whole CCD (1 value)             */
 
    WFS_VECT     centroidsVect;         /* Vector which contains the centroids */
+                                       /* + the whole guiding value           */
 
    WFS_VECT     errorCentroidsVect;    /* Vector which contains the errors of */
                                        /* the centroids computation           */
 
-   AO_VECT      aoVect;                /* Vector which contains the zernikes  */
-                                       /* modes to send to M1 before a&g and  */
-                                       /* cass rotator rotation               */
+   COMMAND_VECT zernikesVect;          /* Vector which contains the zernikes  */
+                                       /* modes to send to the SCS            */
 
-   AO_VECT      aoVectAfterRot;        /* Vector which contains the zernikes  */
-                                       /* modes to send to M1 after a&g and   */
-                                       /* cass rototator rotation             */
-
-   AO_VECT      aoErrorsVect;          /* Vector which contains the errors    */
+   COMMAND_VECT errorsVect;            /* Vector which contains the errors    */
                                        /* associated with the zernikes modes  */
 
    double       time;                  /* Time stamp of the record            */
@@ -475,100 +348,27 @@ typedef struct                         /* Definition of the aO control        */
    int          unused;                /* The structure size must be equal to */
                                        /* a number multiple of a double       */
 
-} CB_AO_CTRL_RECORD_STRUCT;
-
-typedef struct                         /* aO control circular buffer          */
-{
-
-   CB_AO_CTRL_RECORD_STRUCT cbAoCtrlRecord [ CB_AO_CTRL_RECORD_NB ];
-
-   double                   exposureTime; 
-                                       /* Exposure time in second             */
- 
-   int                      processingMode;
-                                       /* Processing mode used: AO_MODE_NODE  */
-                                       /* ... to AO_MODE_FG_FOCUS             */
-
-   int                      averageImageNb;
-                                       /* Number of images averaging before   */
-                                       /* computing the aO modes              */
-
-   int                      position;  /* From 0 to CB_AO_CTRL_RECORD_NB - 1  */
-
-   int                      offset;    /* Offset of a record from the         */
-                                       /* beginning of the circular buffer    */
- 
-   int                      counter;      
-
-   int                      unused;    /* The structure size must be equal to */
-                                       /* a number multiple of a double       */
-
-} AO_CB_AO_CTRL_ID_STRUCT , * AO_CB_AO_CTRL_ID;
-
-/***************************** Definition of the FG control circular buffer ***/
-
-typedef struct                         /* Definition of the FG control        */
-{                                      /* circular buffer record              */
-
-   GUIDE_VECT   guidesVect;            /* Vector which contains the guides    */
-                                       /* values                              */
-
-   GUIDE_VECT   errorGuidesVect;       /* Vector which contains the errors of */
-                                       /* the guide values computation        */
-
-   WFS_VECT     totalCountsVect;       /* Vector which contains the total of  */
-                                       /* counts for each subaperture         */
-                                       /* (subapUsedNb values) + 1 value      */
-                                       /* equivalent to the sum of the        */
-                                       /* subapUsedNb values or to the total  */
-                                       /* of the whole CCD                    */
-
-   WFS_VECT     centroidsVect;         /* Vector which contains the centroids */
-
-   WFS_VECT     errorCentroidsVect;    /* Vector which contains the errors of */
-                                       /* the centroids computation           */
-
-   FG_VECT      fgVect;                /* Vector which contains the zernikes  */
-                                       /* modes to send to M2 before a&G and  */
-                                       /* cass rotator rotation               */
-
-   FG_VECT      fgVectAfterRot;        /* Vector which contains the zernikes  */
-                                       /* modes to send to M2 after a&g and   */
-                                       /* cass rotator rotation               */
-
-   FG_VECT      fgErrorsVect;          /* Vector which contains the errors    */
-                                       /* associated with the zernikes modes  */
-
-   double       time;                  /* Time stamp of the record            */
-
-   int          wfsStatus;             /* Status when computing guide values  */
-                                       /* OK or AO_SH_OFF                     */
-
-   int          unused;                /* The structure size must be equal to */
-                                       /* a number multiple of a double       */
-
-} CB_FG_CTRL_RECORD_STRUCT;
+} CB_CTRL_RECORD_STRUCT;
 
 typedef struct                         /* Control circular buffer             */
 {
 
-   CB_FG_CTRL_RECORD_STRUCT cbFgCtrlRecord [ CB_FG_CTRL_RECORD_NB ];
+   CB_CTRL_RECORD_STRUCT cbCtrlRecord [ CB_CTRL_RECORD_NB ];
 
-   double                   exposureTime; 
-                                       /* Exposure time in second             */
-
-   int                      processingMode;
+   double                exposureTime; /* Exposure time in second             */
+ 
+   int                   processingMode;
                                        /* Processing mode used: AO_MODE_NODE  */
-                                       /* ... to AO_MODE_FG_AO                */
+                                       /* ... to AO_MODE_FG_FOCUS             */
 
-   int                      position;  /* From 0 to CB_AO_CTRL_RECORD_NB - 1  */
+   int                   position;     /* From 0 to CB_CTRL_RECORD_NB - 1     */
 
-   int                      offset;    /* Offset of a record from the         */
+   int                   offset;       /* Offset of a record from the         */
                                        /* beginning of the circular buffer    */
+ 
+   int                   counter;      
 
-   int                      counter;
-
-} AO_CB_FG_CTRL_ID_STRUCT , * AO_CB_FG_CTRL_ID;
+} AO_CB_CTRL_ID_STRUCT , * AO_CB_CTRL_ID;
 
 /************************* Header structures for circular buffer save files ***/
 
@@ -594,63 +394,27 @@ typedef struct
 
 typedef struct
 {
-   char         cbAoCtrlFileName [ STRING_SIZE ];
-                                       /* Name of the aO control circular     */
-                                       /* buffer save file                    */
+   char         cbCtrlFileName [ STRING_SIZE ];
+                                       /* Name of the control circular buffer */
+                                       /* save file                           */
 
    int          recordNb;              /* Saved record number                 */
 
    int          processingMode;        /* Processing mode                     */
 
-   int          centroidsNb;           /* Number of centroid values           */
+   int          centroidsNb;           /* Number of centroid and guiding      */
+                                       /* values                              */
                                        
-   int          aoModeNb;              /* Number of aO modes                  */
-
-   int          averageImageNb;        /* Number of images averaged before    */
-                                       /* computing the centroids             */
-
-   int          unused;                /* The size of the structure should be */
-                                       /* a multiple of a double              */
+   int          modeNb;                /* Number of modes                     */
    
    double       exposureTime;          /* Exposure time in second             */
-                                       
-   double       threshold;             /* Threshold used for the centroids    */
-                                       /* computation                         */
 
-   double       totalThreshold;        /* Threshold for total count used for  */
-                                       /* the centroids computation           */
-
-   double       angleWithM1;           /* Angle between M1 and P2 coordinates */
-
-   WFS_VECT     refWfsVect;            /* Vector containing the center of each*/
+   WFS_VECT     refVect;               /* Vector containing the center of each*/
                                        /* subapertures                        */
 
-   AO_VECT      aoScaleFactorVect;     /* Vector containing the scale factor  */
+   COMMAND_VECT scaleFactorVect;       /* Vector containing the scale factor  */
                                        /* for each modes                      */
-
-} AO_HEADER_CB_AO_CTRL_ID_STRUCT, * AO_HEADER_CB_AO_CTRL_ID;
-
-typedef struct
-{
-   char         cbFgCtrlFileName [ STRING_SIZE ];
-                                       /* Name of the FG control circular     */
-                                       /* buffer save file                    */
-
-   int          recordNb;              /* Saved record number                 */
-
-   int          processingMode;        /* Processing mode                     */
-
-   int          guidesNb;              /* Number of guiding values            */
-
-   int          centroidsNb;           /* Number of centroid values           */
-
-   int          fgModeNb;              /* Number of FG modes                  */
-
-   int          unused;                /* The size of the structure should be */
-                                       /* a multiple of a double              */
-
-   double       exposureTime;          /* Exposure time in second             */
-
+                                       
    double       threshold;             /* Threshold used for the centroids    */
                                        /* computation                         */
 
@@ -661,97 +425,7 @@ typedef struct
 
    double       slidingFocusGain;      /* Gain for sliding average for focus  */
 
-   WFS_VECT     refWfsVect;            /* Vector containing the center of each*/
-
-   GUIDE_VECT   refGuideVect;          /* Vector containing the center of each*/
-                                       /* subapertures                        */
-
-   FG_VECT      fgScaleFactorVect;     /* Vector containing the scale factor  */
-                                       /* for each modes                      */
-
-} AO_HEADER_CB_FG_CTRL_ID_STRUCT, * AO_HEADER_CB_FG_CTRL_ID;
-
-/****************** Structure for zero point model for astigmatism off axis ***/
-
-typedef struct
-{
-
-   double   a1;                        /* Scale factor of cos (theta)         */
-   double   a2;                        /* Scale factor of cos (2*theta)       */
-   double   a3;                        /* Scale factor of cos (4*theta)       */
-   double   p1;                        /* Phase of cos (theta)                */
-   double   p2;                        /* Phase of cos (2*theta)              */
-   double   p3;                        /* Phase of cos (4*theta)              */
-   double   c;                         /* Constant term for astig0            */
-   double   b1;                        /* Scale factor of sin (theta)         */
-   double   b2;                        /* Scale factor of sin (2*theta)       */
-   double   b3;                        /* Scale factor of sin (4*theta)       */
-   double   pp1;                       /* Phase of sin (theta)                */
-   double   pp2;                       /* Phase of sin (2*theta)              */
-   double   pp3;                       /* Phase of sin (4*theta)              */
-   double   d;                         /* Constant term for astig45           */
-   double   astig0;                    /* Zero point model for astig 0        */
-   double   astig45;                   /* Zero point model for astig45        */
-   int      applyModel;                /* Apply the astigmatism zero point    */
-                                       /* model TRUE|FALSE                    */
-   double   gain0;
-   double   gain45;
-   double   offsetAstig0;           
-   double   offsetAstig45;         
-
-} AST_ZP_MODEL_ID_STRUCT, *AST_ZP_MODEL_ID;
-
-/********************** Structure for zero point model for trefoil off axis ***/
-
-typedef struct
-{
-
-   double   a;                         /* Scale factor of cos (3*theta)       */
-   double   p;                         /* Phase of cos (3*theta)              */
-   double   c;                         /* Constant term for cos trefoil       */
-   double   b;                         /* Scale factor of sin (3*theta)       */
-   double   pp;                        /* Phase of sin (3*theta)              */
-   double   d;                         /* Constant term for sin trefoil       */
-   double   costref;                   /* Zero point model for cos trefoil    */
-   double   sintref;                   /* Zero point model for sin trefoil    */
-   int      applyModel;                /* Apply the trefoil zero point model  */
-                                       /* TRUE|FALSE                          */
-
-} TREF_ZP_MODEL_ID_STRUCT, *TREF_ZP_MODEL_ID;
-
-/************************* Structure for zero point model for coma off axis ***/
-
-typedef struct
-{
-
-   double   a;                         /* Scale factor of cos (theta)         */
-   double   p;                         /* Phase of cos (theta)                */
-   double   c;                         /* Constant term for comaX             */
-   double   b;                         /* Scale factor of sin (theta)         */
-   double   pp;                        /* Phase of sin (theta)                */
-   double   d;                         /* Constant term for comaY             */
-   double   comaX;                     /* Zero point model for comaX          */
-   double   comaY;                     /* Zero point model for comaY          */
-   int      applyModel;                /* Apply the coma zero point model     */
-                                       /* TRUE|FALSE                          */
-
-} COMA_ZP_MODEL_ID_STRUCT, *COMA_ZP_MODEL_ID;
-
-/************************ Structure for zero point model for focus off axis ***/
-
-typedef struct
-{
-
-   double   a1;                        /* Scale factor of cos (theta)         */
-   double   a2;                        /* Scale factor of cos (2*theta)       */
-   double   p1;                        /* Phase of cos (theta)                */
-   double   p2;                        /* Phase of cos (2*theta)              */
-   double   c;                         /* Constant term for focus             */
-   double   focus;                     /* Zero point model for comaX          */
-   int      applyModel;                /* Apply the focus zero point model    */
-                                       /* TRUE|FALSE                          */
-
-} FOCUS_ZP_MODEL_ID_STRUCT, *FOCUS_ZP_MODEL_ID;
+} AO_HEADER_CB_CTRL_ID_STRUCT, * AO_HEADER_CB_CTRL_ID;
 
 /**************************************************************** Functions ***/
 
@@ -759,106 +433,60 @@ typedef struct
 AO_CCD_ID aoCcdContextCreate (void);
 AO_CTRL_ID aoCtrlContextCreate (void);
 AO_CB_IM_ID aoCbImContextCreate (void);
-AO_CB_AO_CTRL_ID aoCbAoCtrlContextCreate (void);
-AO_CB_FG_CTRL_ID aoCbFgCtrlContextCreate (void);
+AO_CB_CTRL_ID aoCbCtrlContextCreate (void);
 STATUS aoCcdContextShow (AO_CCD_ID aoCcdId);
 STATUS aoRefRead (char * pRefFileName, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
-STATUS aoScaleRead (char * pAoScaleFileName, AO_CTRL_ID aoCtrlId);
-STATUS aoScaleUpdate (double * pAoScaleVect, AO_CTRL_ID aoCtrlId);
 STATUS aoFitsImageFloatRead (char * pFitsFileName, float * pImageBuffer,
                               int xBufferSize, int yBufferSize);
 STATUS aoFitsImageFloatWrite (char * pFitsFileName, float * pImageBuffer,
                                int xBufferSize, int yBufferSize);
-STATUS aoMatRead (char * pMatFileName, int typeExpected, AO_CCD_ID aoCcdId,
-                  AO_CTRL_ID aoCtrlId);
-STATUS aoMatWrite (char * pMatFileName, double * pMat, int rowNb, int colNb,
-                   int type);
-STATUS aoFgContMatRead (char * pFgContMatFileName, AO_CCD_ID aoCcdId,
-                        AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextInit (char * pInitFileName, AO_CCD_ID aoCcdId,
                           AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextUpdate (char * pDarkFileName, char * pFlatFileName,
-                            char * pRefFileName, char * pAoIntMatFileName,
-                            char * pAoContMatFileName, 
-                            char * pFgContMatFileName, double xCenter, 
-                            double yCenter, double angleWithM2, 
-                            double angleWithM1, AO_CCD_ID aoCcdId,
+                            char * pRefFileName, double xCenter, double yCenter,
+                            double angle, AO_CCD_ID aoCcdId,
                             AO_CTRL_ID aoCtrlId);
-STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
 STATUS aoDarkSubtract (float * pImage, float * pDark, int xPixels,
                        int yPixels);
 STATUS aoGlobalGuide (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                      double * pTotalCountsVect, double * pGuidesVect, 
-                      double * pFgVect, double * pFgVectAfterRot,
-                      double * pFgErrorsVect, double * pTime, int * pWfsStatus,
-                      int writeToRm);
+                      double * pTotalCountsVect, double * pCentroidsVect, 
+                      double * pZernikesVect, double * pErrorsVect, 
+                      double * pTime, int * pWfsStatus);
 STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId, 
                               AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
-                              double * pGuidesVect, double * pFgVect, 
-                              double * pFgVectAfterRot, double * pFgErrorsVect, 
-                              double * pTime, int * pWfsStatus, int writeToRm);
+                              double * pCentroidsVect, double * pZernikesVect, 
+                              double * pErrorsVect, double * pTime, 
+                              int * pWfsStatus);
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
-STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
-                               double * pRmsNoise);
+STATUS aoRmsNoiseDarkCompute (float * pDark, AO_CCD_ID aoCcdId, 
+                              double * pRmsNoise);
 STATUS aoThresholdCompute (float * pImage, AO_CCD_ID aoCcdId, double ratePixel, 
                            double * pThreshold);
-STATUS aoCentroidsCompute (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                           double * pTotalCountsVect, double * pCentroidsVect, 
-                           double * pErrorCentroidsVect, int * pWfsStatus);
-STATUS aoModeCompute (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                      int imageNb, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
-STATUS aoCbImSave (char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                   AO_CB_IM_ID aoCbImId);
-STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
-STATUS aoCbAoCtrlZero (AO_CB_AO_CTRL_ID aoCbAoCtrlId);
-STATUS aoCbFgCtrlZero (AO_CB_FG_CTRL_ID aoCbFgCtrlId);
-STATUS aoCbAoCtrlSave (char * pCbAoCtrlFilePath, AO_CCD_ID aoCcdId, 
-                       AO_CTRL_ID aoCtrlId, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
-STATUS aoCbFgCtrlSave (char * pCbFgCtrlFilePath, AO_CCD_ID aoCcdId, 
-                       AO_CTRL_ID aoCtrlId, AO_CB_FG_CTRL_ID aoCbFgCtrlId);
+STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                         double *pTotalCountsVect, double * pCentroidsVect, 
-                        double * pErrorCentroidsVect, double * pFgVect, 
-                        double * pFgVectAfterRot, double * pFgErrorsVect, 
-                        double * pTime, int * pWfsStatus, int writeToRm);
-STATUS aoModeAnalyze (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
-                      AO_CB_AO_CTRL_ID aoCbAoCtrlId);
-STATUS aoCentroidsWrite ( char * pCentroidsFileName, double * pCentroids, 
-                          int centNb, char * pComment);
-STATUS aoIntMatStructZero (AO_CTRL_ID aoCtrlId);
-STATUS aoIntMatStructShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
-STATUS aoMatZero (AO_CTRL_ID aoCtrlId);
-STATUS aoMatCompute (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
+                        double * pErrorCentroidsVect, double * pZernikesVect, 
+                        double * pErrorsVect, double * pTime, int * pWfsStatus);
+STATUS aoGuideAndFocusAndError (float * pImage, AO_CCD_ID aoCcdId, 
+                                AO_CTRL_ID aoCtrlId, double *pTotalCountsVect, 
+                                double * pCentroidsVect, 
+                                double * pErrorCentroidsVect, 
+                                double * pZernikesVect, double * pErrorsVect, 
+                                double * pTime, int * pWfsStatus);
+STATUS aoCbImSave (char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
+                   AO_CB_IM_ID aoCbImId);
+STATUS aoCbCtrlSave (char *pCbCtrlFilePath, AO_CCD_ID aoCcdId, 
+                     AO_CTRL_ID aoCtrlId, AO_CB_CTRL_ID aoCbCtrlId);
+STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
+STATUS aoCbCtrlZero (AO_CB_CTRL_ID aoCbCtrlId);
 STATUS aoDarkUpdate (char * pDarkFileName, AO_CCD_ID aoCcdId,
                      AO_CTRL_ID aoCtrlId);
-STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
-                       char * pFlatFileName, char * pRefFileName, 
-                       double * pRefX, double * pRefY, char * pAoImFileName, 
-                       char * pAoCmFileName, char * pFgCmFileName, 
-                       double * pThresh, double * pTotalThresh,
-                       double * pAngleM2, double * pAngleM1);
-STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
-                  TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
-                  FOCUS_ZP_MODEL_ID focModelId);
-STATUS aoModAstFileRead (char * pInitFileName, double * pA1, double * pA2,
-                         double * pA3, double * pP1, double * pP2,
-                         double * pP3, double * pC, double * pB1,
-                         double * pB2, double * pB3, double * pPp1,
-                         double * pPp2, double * pPp3, double * pD,
-                         double * pGain0, double * pGain45,
-                         double * pOffset0, double * pOffset45, int * pApply);
-STATUS aoModTrefFileRead (char * pInitFileName, double * pA, double * pP,
-                          double * pC, double * pB, double * pPp, double * pD,
-                          int * pApply);
-STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
-                          double * pC, double * pB, double * pPp,
-                          double * pD, int * pApply);
-STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1, 
-                         double * pA2, double * pP2, double * pC,
-                         int * pApply);
-STATUS aoThresholdPerSubapCompute (float * pImage, AO_CCD_ID aoCcdId, 
-                                   double ratePixel, double * pThreshold);
+STATUS aoCtrlFileRead (char * pInitFileName, char * pPath,
+                       char * pDarkFileName,
+                       char * pFlatFileName, double * pAngle, double * pRefX,
+                       double * pRefY, char * pRefFileName, double * pThresh,
+                       double * pTotalThresh);
 #endif
 
 #endif /* __INCaoP2Libh */
