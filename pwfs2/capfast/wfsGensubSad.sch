@@ -14,7 +14,7 @@ xform 0 1488 1552
 p 1408 1072 100 0 1 DESC:Display AO Zernike values
 p 1408 1040 100 0 1 INAM:
 p 1408 912 100 0 1 NOA:19
-p 1056 1678 100 0 0 PREC:4
+p 1408 880 100 0 1 PREC:4
 p 1408 976 100 0 1 PV:$(top)$(wfs)
 p 1408 944 100 0 1 SCAN:Passive
 p 1408 1008 100 0 1 SNAM:gensubFanDoubles
@@ -23,7 +23,7 @@ xform 0 944 1552
 p 864 1072 100 0 1 DESC:Display AO Error values
 p 864 1040 100 0 1 INAM:
 p 864 912 100 0 1 NOA:19
-p 512 1678 100 0 0 PREC:4
+p 864 880 100 0 1 PREC:4
 p 864 976 100 0 1 PV:$(top)$(wfs)
 p 864 944 100 0 1 SCAN:Passive
 p 864 1008 100 0 1 SNAM:gensubFanDoubles
@@ -47,13 +47,17 @@ p 224 1072 100 0 1 DESC:Active optics data
 p 240 1392 100 0 1 FTJ:DOUBLE
 p 240 1904 100 0 1 FTVA:DOUBLE
 p 240 1824 100 0 1 FTVB:DOUBLE
+p 240 1760 100 0 1 FTVC:DOUBLE
+p 240 1696 100 0 1 FTVD:DOUBLE
 p 240 1360 100 0 1 FTVJ:DOUBLE
 p 224 1040 100 0 1 INAM:gensubToTcsInit
+p 240 1664 100 0 1 NOD:1
 p 240 1328 100 0 1 NOJ:40
 p 240 1872 100 0 1 NOVA:19
 p 240 1792 100 0 1 NOVB:19
+p 240 1728 100 0 1 NOVC:1
 p 240 1296 100 0 1 NOVJ:40
-p -128 1678 100 0 0 PREC:2
+p 224 912 100 0 1 PREC:4
 p 224 976 100 0 1 PV:$(sadtop)$(wfs)
 p 224 944 100 0 1 SCAN:.1 second
 p 224 1008 100 0 1 SNAM:gensubToTcsAo
@@ -63,10 +67,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2001-09-04 19:52:58 $
+p 3120 -784 200 0 -1 date:$Date: 2001-09-13 18:57:45 $
 p 2576 2320 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2608 -496 200 0 -1 revision:$Revision: 1.1 $
+p 2608 -496 200 0 -1 revision:$Revision: 1.2 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Gensub Status Records
 [comments]

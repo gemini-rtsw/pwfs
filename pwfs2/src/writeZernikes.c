@@ -181,7 +181,7 @@ frame   *ag2m2;
 frame   *ag2tcs;
 wfs     *ptrPwfs2;
 double  ttfData[AO_ARRAY_SIZE+2];
-double  aoData[AO_ARRAY_SIZE+2];
+double  aoData[AO_ARRAY_SIZE+2+2]; /* add 2 data for astig0 and astig45 */
 float   data[AO_ARRAY_SIZE+2];
 float   errors[AO_ARRAY_SIZE+2];
 SEM_ID  wfsLock;
@@ -190,28 +190,31 @@ WFS_VECT localCentroidsVect;
 WFS_VECT localTotalCountsVect;
 WFS_VECT localFgCentroidsVect;
 WFS_VECT localFgTotalCountsVect;
-SEM_ID   accessAoData;
-SEM_ID   accessFgData;
+SEM_ID   accessAoData=NULL;
+SEM_ID   accessFgData=NULL;
 
 AO_CCD_ID aoCcdIdP2;
 AO_CB_AO_CTRL_ID aoCbAoCtrlIdP2;
 AO_CB_FG_CTRL_ID aoCbFgCtrlIdP2;
 AO_CB_IM_ID aoCbImIdP2;
+AO_CTRL_ID aoCtrlIdP2;
+double angleWithM1=0.0;
+double angleWithM2=0.0;
 
 double sampleData[5][3];
 double coeffData[5];
 
 AST_ZP_MODEL_ID_STRUCT astigModel;
-SEM_ID  accessAstigModel;
+SEM_ID  accessAstigModel=NULL;
 
 TREF_ZP_MODEL_ID_STRUCT trefoilModel;
-SEM_ID  accessTrefoilModel;
+SEM_ID  accessTrefoilModel=NULL;
 
 COMA_ZP_MODEL_ID_STRUCT comaModel;
-SEM_ID  accessComaModel;
+SEM_ID  accessComaModel=NULL;
 
 FOCUS_ZP_MODEL_ID_STRUCT focusModel;
-SEM_ID  accessFocusModel;
+SEM_ID  accessFocusModel=NULL;
 
 /* declare prototypes */
 
@@ -495,6 +498,30 @@ long gensubToTcsInit
       {
              printf ("unable to create accessAstigModel sem\n");
       }
+
+      /* init structure astigModel */
+
+      astigModel.a1 = 0.0;
+      astigModel.a2 = 0.0;
+      astigModel.a3 = 0.0;
+      astigModel.p1 = 0.0;
+      astigModel.p2 = 0.0;
+      astigModel.p3 = 0.0;
+      astigModel.c = 0.0;
+      astigModel.b1 = 0.0;
+      astigModel.b2 = 0.0;
+      astigModel.b3 = 0.0;
+      astigModel.pp1 = 0.0;
+      astigModel.pp2 = 0.0;
+      astigModel.pp3 = 0.0;
+      astigModel.d = 0.0;
+      astigModel.astig0 = 0.0;
+      astigModel.astig45 = 0.0;
+      astigModel.applyModel = 0.0;
+      astigModel.gain0 = 1.0;
+      astigModel.gain45 = 1.0;
+      astigModel.offsetAstig0 = 0.0;
+      astigModel.offsetAstig45 = 0.0;
    }
 
    /* create semaphore to prevent multiple access to trefoilModel data */
@@ -507,6 +534,18 @@ long gensubToTcsInit
       {
              printf ("unable to create accessTrefoilModel sem\n");
       }
+
+      /* init structure trefoilModel */
+
+      trefoilModel.a = 0.0;
+      trefoilModel.p = 0.0;
+      trefoilModel.c = 0.0;
+      trefoilModel.b = 0.0;
+      trefoilModel.pp = 0.0;
+      trefoilModel.d = 0.0;
+      trefoilModel.costref = 0.0;
+      trefoilModel.sintref = 0.0;
+      trefoilModel.applyModel = 0.0;
    }
 
    /* create semaphore to prevent multiple access to comaModel data */
@@ -519,6 +558,18 @@ long gensubToTcsInit
       {
              printf ("unable to create accessComaModel sem\n");
       }
+
+      /* init structure comaModel */
+
+      comaModel.a = 0.0;
+      comaModel.p = 0.0;
+      comaModel.c = 0.0;
+      comaModel.b = 0.0;
+      comaModel.pp = 0.0;
+      comaModel.d = 0.0;
+      comaModel.comaX = 0.0;
+      comaModel.comaY = 0.0;
+      comaModel.applyModel = 0.0;
    }
 
    /* create semaphore to prevent multiple access to focusModel data */
@@ -531,64 +582,16 @@ long gensubToTcsInit
       {
              printf ("unable to create accessFocusModel sem\n");
       }
+
+      /* init structure focusModel */
+
+      focusModel.a1 = 0.0;
+      focusModel.a2 = 0.0;
+      focusModel.p1 = 0.0;
+      focusModel.p2 = 0.0;
+      focusModel.c = 0.0;
+      focusModel.focus = 0.0;
    }
-
-   /* init structure astigModel */
-
-   astigModel.a1 = 0.0;
-   astigModel.a2 = 0.0;
-   astigModel.a3 = 0.0;
-   astigModel.p1 = 0.0;
-   astigModel.p2 = 0.0;
-   astigModel.p3 = 0.0;
-   astigModel.c = 0.0;
-   astigModel.b1 = 0.0;
-   astigModel.b2 = 0.0;
-   astigModel.b3 = 0.0;
-   astigModel.pp1 = 0.0;
-   astigModel.pp2 = 0.0;
-   astigModel.pp3 = 0.0;
-   astigModel.d = 0.0;
-   astigModel.astig0 = 0.0;
-   astigModel.astig45 = 0.0;
-   astigModel.applyModel = 0.0;
-   astigModel.gain0 = 1.0;
-   astigModel.gain45 = 1.0;
-   astigModel.offsetAstig0 = 0.0;
-   astigModel.offsetAstig45 = 0.0;
-
-   /* init structure trefoilModel */
-
-   trefoilModel.a = 0.0;
-   trefoilModel.p = 0.0;
-   trefoilModel.c = 0.0;
-   trefoilModel.b = 0.0;
-   trefoilModel.pp = 0.0;
-   trefoilModel.d = 0.0;
-   trefoilModel.costref = 0.0;
-   trefoilModel.sintref = 0.0;
-   trefoilModel.applyModel = 0.0;
-
-   /* init structure comaModel */
-
-   comaModel.a = 0.0;
-   comaModel.p = 0.0;
-   comaModel.c = 0.0;
-   comaModel.b = 0.0;
-   comaModel.pp = 0.0;
-   comaModel.d = 0.0;
-   comaModel.comaX = 0.0;
-   comaModel.comaY = 0.0;
-   comaModel.applyModel = 0.0;
-
-   /* init structure focusModel */
-
-   focusModel.a1 = 0.0;
-   focusModel.a2 = 0.0;
-   focusModel.p1 = 0.0;
-   focusModel.p2 = 0.0;
-   focusModel.c = 0.0;
-   focusModel.focus = 0.0;
 
    /* create structure holding angle and null values for ao data */
 
@@ -811,6 +814,8 @@ long gensubToTcsAo
    int index = 0;
    double zernikes[19];
    double errors[19];
+   double astig0;
+   double astig45;
 
    /* write array to TCS system */
 
@@ -827,6 +832,9 @@ long gensubToTcsAo
          errors[index] = aoData[index+21];
       }
 
+      astig0 = aoData[40];
+      astig45 = aoData[41];
+
       /* write whole array to valj for the TCS to pick up */
 
       memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
@@ -838,6 +846,14 @@ long gensubToTcsAo
       /* write error values to valb for display */
 
       memcpy (pgsub->valb, errors, 19 * sizeof (double));
+
+      /* write astig0 to valc for display */
+   
+      *(double *)pgsub->valc = astig0 ;
+
+      /* write astig45 to vald for display */
+
+      *(double *)pgsub->vald = astig45 ;
 
       semGive(wfsLock);
    }
@@ -913,6 +929,7 @@ STATUS writeWfsToTcs
    )
 {
    int       i=0;
+   int       index;
    frame     *f;
    converted result;
    double    *pz;
@@ -1090,6 +1107,12 @@ STATUS writeWfsToTcs
       {
          aoData[21+i] = *(pAoErrorsVect +i);
       }
+
+      /* Copy intermediate values astig0 and astig45 */
+
+      index = 2*(aoCtrlId->aoModeNb) + 2;
+      aoData[index] = astig0;
+      aoData[index+1] = astig45;
 
       /* release mutex */
 
@@ -1398,8 +1421,8 @@ long ttfZero
       /* calculate composite correction angle */
       /* null[3] corresponds to the cass rotator angle */
 
-      compositeAngle = (-1.0) *
-      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec00*/
+      compositeAngle = angleWithM2 - 
+      ((tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS); /*11dec00*/
 
       f->theta       = compositeAngle;
       f->sinTheta    = sin(f->theta);
@@ -1422,7 +1445,7 @@ long ttfZero
 
    /* Compute focus zero point model */
 
-   if(semTake(accessFocusModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessFocusModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (focusModel.applyModel == 0 )
      {
@@ -1594,8 +1617,8 @@ long aoZero
 
       /* calculate composite correction angle */
 
-      compositeAngle = (-1.0) *
-      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS;
+      compositeAngle = angleWithM1 -
+      ((tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS);
 
       f->theta       = compositeAngle;
       f->sinTheta    = sin(f->theta);
@@ -1618,7 +1641,7 @@ long aoZero
 
    /* compute astigmatism zero point model */
 
-   if(semTake(accessAstigModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessAstigModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (astigModel.applyModel == 0 )
      {
@@ -1651,7 +1674,7 @@ long aoZero
 
    /* compute trefoil zero point model */
 
-   if(semTake(accessTrefoilModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessTrefoilModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (trefoilModel.applyModel == 0 )
      {
@@ -1680,7 +1703,7 @@ long aoZero
 
    /* compute coma zero point model */
 
-   if(semTake(accessComaModel, WFS_TIMEOUT) == OK)
+   if(semTake(accessComaModel, ZP_MODEL_SEM_TIMEOUT) == OK)
    {
      if (comaModel.applyModel == 0 )
      {

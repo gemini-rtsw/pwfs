@@ -64,6 +64,9 @@
 #define AO_TIME_NOW_ERROR    -5.55e9   /* If time Now returns an error, time  */
                                        /* is set to this value                */
 
+#define ZP_MODEL_SEM_TIMEOUT 100       /* Timeout for zero point model        */
+                                       /* semaphore                           */
+
 /********************************************************************* Enum ***/
 
 enum
@@ -828,6 +831,22 @@ STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
                   FOCUS_ZP_MODEL_ID focModelId);
+STATUS aoModAstFileRead (char * pInitFileName, double * pA1, double * pA2,
+                         double * pA3, double * pP1, double * pP2,
+                         double * pP3, double * pC, double * pB1,
+                         double * pB2, double * pB3, double * pPp1,
+                         double * pPp2, double * pPp3, double * pD,
+                         double * pGain0, double * pGain45,
+                         double * pOffset0, double * pOffset45, int * pApply);
+STATUS aoModTrefFileRead (char * pInitFileName, double * pA, double * pP,
+                          double * pC, double * pB, double * pPp, double * pD,
+                          int * pApply);
+STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
+                          double * pC, double * pB, double * pPp,
+                          double * pD, int * pApply);
+STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1, 
+                         double * pA2, double * pP2, double * pC,
+                         int * pApply);
 #endif
 
 #endif /* __INCaoP2Libh */
