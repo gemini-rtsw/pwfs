@@ -860,8 +860,8 @@ STATUS aoCentroidsCompute (float * pImage, AO_CCD_ID aoCcdId,
                            AO_CTRL_ID aoCtrlId, double * pThreshVect,
                            double * pTotalCountsVect, double * pCentroidsVect, 
                            double * pErrorCentroidsVect, int * pWfsStatus);
-STATUS aoModeCompute (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
-                      int imageNb, double * pThreshVect,
+STATUS aoModeCompute (float * pImage, int imageStatus, AO_CCD_ID aoCcdId, 
+                      AO_CTRL_ID aoCtrlId, int imageNb, double * pThreshVect,
                       AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbImSave (char * pCbImFilePath, AO_CCD_ID aoCcdId, 
                    AO_CTRL_ID aoCtrlId, AO_CB_IM_ID aoCbImId);

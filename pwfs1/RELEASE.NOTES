@@ -223,4 +223,9 @@ V4-1 04 June 2002 CB:
   - adjust focus scale factor according to the exposure time, detSigInitFgGain
     and updates the default focus gain at 100Hz when no observing
 
-dev equivalent to V4-1
+V4-2 17 June 2002 CB:
+---------------------
+  - Allow ao + chopping: aoModeCompute() modified to check the status of the
+    raw image
+
+dev equivalent to V4-2
