@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="25"
-	nstr="68"
-	ndynamic="31"
+	npc="24"
+	nstr="70"
+	ndynamic="34"
 	nplot="0"
 	nrd="1"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="771"
-		height="677"
+		height="723"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5038"
-	nwords_sta="1592"
+	nwords_dspy="5478"
+	nwords_sta="1812"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2742"
-	osta="1150"
-	odynamic="2742"
-	oplot="4866"
-	ord="4866"
-	oes="5026"
-	okd="5026"
-	opd="5038"
-	opo="5038"
+	odyng="2972"
+	osta="1160"
+	odynamic="2972"
+	oplot="5306"
+	ord="5306"
+	oes="5466"
+	okd="5466"
+	opd="5478"
+	opo="5478"
 	opc="68"
-	ostr="404"
-	ocmap="1150"
-	ocrules="1150"
+	ostr="390"
+	ocmap="1160"
+	ocrules="1160"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="4"
 		y="37"
 		width="761"
-		height="633"
+		height="678"
 		groupid="0"
 	}
 }
@@ -229,7 +229,7 @@ display {
 }
 "text" {
 	object {
-		x="9"
+		x="8"
 		y="200"
 		width="518"
 		height="16"
@@ -251,7 +251,7 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="8"
 		y="450"
 		width="604"
 		height="16"
@@ -284,7 +284,7 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="8"
 		y="381"
 		width="389"
 		height="16"
@@ -295,7 +295,7 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="8"
 		y="414"
 		width="62"
 		height="16"
@@ -358,7 +358,7 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="8"
 		y="510"
 		width="604"
 		height="16"
@@ -417,7 +417,7 @@ display {
 }
 "text" {
 	object {
-		x="9"
+		x="8"
 		y="246"
 		width="474"
 		height="16"
@@ -428,7 +428,7 @@ display {
 }
 "text" {
 	object {
-		x="10"
+		x="8"
 		y="574"
 		width="168"
 		height="16"
@@ -450,8 +450,8 @@ display {
 }
 "text" {
 	object {
-		x="10"
-		y="613"
+		x="9"
+		y="657"
 		width="634"
 		height="16"
 		groupid="0"
@@ -462,7 +462,7 @@ display {
 "line" {
 	object {
 		x="4"
-		y="601"
+		y="645"
 		width="761"
 		height="0"
 		groupid="0"
@@ -470,11 +470,11 @@ display {
 	npoints="2"
 	point[0] {
 		x="4"
-		y="601"
+		y="645"
 	}
 	point[1] {
 		x="765"
-		y="601"
+		y="645"
 	}
 	orgpoint[0] {
 		x="0"
@@ -509,7 +509,7 @@ display {
 }
 "text" {
 	object {
-		x="9"
+		x="8"
 		y="276"
 		width="533"
 		height="16"
@@ -520,7 +520,7 @@ display {
 }
 "text" {
 	object {
-		x="9"
+		x="8"
 		y="305"
 		width="480"
 		height="16"
@@ -538,6 +538,43 @@ display {
 		groupid="0"
 	}
 	textix="%"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="4"
+		y="602"
+		width="761"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="4"
+		y="602"
+	}
+	point[1] {
+		x="765"
+		y="602"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="8"
+		y="617"
+		width="235"
+		height="16"
+		groupid="0"
+	}
+	textix="T: Seeing computation:"
 	align="horiz. left"
 }
 "message button" {
@@ -1750,8 +1787,8 @@ display {
 }
 "message button" {
 	object {
-		x="39"
-		y="637"
+		x="42"
+		y="681"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1798,8 +1835,8 @@ display {
 }
 "message button" {
 	object {
-		x="115"
-		y="637"
+		x="118"
+		y="681"
 		width="63"
 		height="26"
 		groupid="0"
@@ -1846,8 +1883,8 @@ display {
 }
 "text entry" {
 	object {
-		x="192"
-		y="637"
+		x="195"
+		y="681"
 		width="99"
 		height="27"
 		groupid="0"
@@ -1944,6 +1981,147 @@ display {
 	}
 	control {
 		chan="$(top)detSigModeSeq.R"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"message button" {
+	object {
+		x="232"
+		y="612"
+		width="63"
+		height="26"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.T"
+		clr="1"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	inactive_label="0: NO"
+	pressed_label=""
+	press_msg="0"
+	release_msg=""
+}
+"message button" {
+	object {
+		x="308"
+		y="612"
+		width="63"
+		height="26"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.T"
+		clr="1"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigModeSeq.VAL"
+		rulechan[1] = "$(top)detSigModeSeq.VAL"
+		rulechan[2] = "$(top)detSigModeSeq.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigModeSeq"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	inactive_label="1: YES"
+	pressed_label=""
+	press_msg="1"
+	release_msg=""
+}
+"text entry" {
+	object {
+		x="385"
+		y="612"
+		width="99"
+		height="27"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigModeSeq.T"
 		clr="0"
 		bclr="6"
 		label="none"

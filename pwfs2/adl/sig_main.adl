@@ -7,10 +7,10 @@ display {
 	mnrv="4"
 	ndyng="1"
 	npc="20"
-	nstr="148"
+	nstr="153"
 	ndynamic="16"
 	nplot="0"
-	nrd="12"
+	nrd="13"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -19,27 +19,27 @@ display {
 		x="328"
 		y="298"
 		width="754"
-		height="723"
+		height="752"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5994"
-	nwords_sta="248"
+	nwords_dspy="6222"
+	nwords_sta="260"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2940"
-	osta="2692"
-	odynamic="3000"
-	oplot="4062"
-	ord="4062"
-	oes="5982"
-	okd="5982"
-	opd="5994"
-	opo="5994"
+	odyng="3008"
+	osta="2748"
+	odynamic="3068"
+	oplot="4130"
+	ord="4130"
+	oes="6210"
+	okd="6210"
+	opd="6222"
+	opo="6222"
 	opc="68"
 	ostr="314"
-	ocmap="2692"
-	ocrules="2692"
+	ocmap="2748"
+	ocrules="2748"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -64,8 +64,8 @@ display {
 }
 "rectangle" {
 	object {
-		x="9"
-		y="523"
+		x="10"
+		y="555"
 		width="737"
 		height="189"
 		groupid="0"
@@ -84,7 +84,7 @@ display {
 }
 "text" {
 	object {
-		x="17"
+		x="16"
 		y="55"
 		width="300"
 		height="22"
@@ -98,14 +98,14 @@ display {
 		x="9"
 		y="53"
 		width="737"
-		height="465"
+		height="496"
 		groupid="0"
 	}
 }
 "text" {
 	object {
-		x="17"
-		y="138"
+		x="16"
+		y="139"
 		width="365"
 		height="19"
 		groupid="0"
@@ -115,8 +115,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="84"
+		x="16"
+		y="83"
 		width="218"
 		height="21"
 		groupid="0"
@@ -126,7 +126,7 @@ display {
 }
 "text" {
 	object {
-		x="17"
+		x="16"
 		y="111"
 		width="229"
 		height="20"
@@ -137,8 +137,8 @@ display {
 }
 "text" {
 	object {
-		x="16"
-		y="531"
+		x="17"
+		y="563"
 		width="335"
 		height="22"
 		groupid="0"
@@ -148,8 +148,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="166"
+		x="16"
+		y="167"
 		width="370"
 		height="19"
 		groupid="0"
@@ -159,8 +159,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="193"
+		x="16"
+		y="194"
 		width="382"
 		height="19"
 		groupid="0"
@@ -170,8 +170,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="358"
+		x="16"
+		y="360"
 		width="365"
 		height="19"
 		groupid="0"
@@ -181,8 +181,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="221"
+		x="16"
+		y="222"
 		width="372"
 		height="19"
 		groupid="0"
@@ -192,8 +192,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="385"
+		x="16"
+		y="388"
 		width="365"
 		height="19"
 		groupid="0"
@@ -203,8 +203,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="440"
+		x="16"
+		y="470"
 		width="364"
 		height="19"
 		groupid="0"
@@ -214,8 +214,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="467"
+		x="16"
+		y="498"
 		width="387"
 		height="19"
 		groupid="0"
@@ -225,8 +225,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="248"
+		x="16"
+		y="250"
 		width="371"
 		height="19"
 		groupid="0"
@@ -236,8 +236,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="275"
+		x="16"
+		y="277"
 		width="363"
 		height="19"
 		groupid="0"
@@ -247,8 +247,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="303"
+		x="16"
+		y="305"
 		width="364"
 		height="19"
 		groupid="0"
@@ -258,8 +258,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="495"
+		x="16"
+		y="526"
 		width="385"
 		height="19"
 		groupid="0"
@@ -269,8 +269,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="330"
+		x="16"
+		y="332"
 		width="363"
 		height="19"
 		groupid="0"
@@ -280,13 +280,24 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="412"
+		x="16"
+		y="415"
 		width="365"
 		height="19"
 		groupid="0"
 	}
 	textix="GAINS and BUTTERWORTH FILTERS ..:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="16"
+		y="443"
+		width="365"
+		height="19"
+		groupid="0"
+	}
+	textix="SEEING PARAMETERS ... ... ... ..:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -341,7 +352,7 @@ display {
 }
 "text update" {
 	object {
-		x="381"
+		x="380"
 		y="138"
 		width="355"
 		height="21"
@@ -479,7 +490,7 @@ display {
 }
 "text update" {
 	object {
-		x="381"
+		x="380"
 		y="165"
 		width="355"
 		height="21"
@@ -525,7 +536,7 @@ display {
 }
 "text update" {
 	object {
-		x="381"
+		x="380"
 		y="192"
 		width="355"
 		height="21"
@@ -571,8 +582,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="354"
+		x="380"
+		y="356"
 		width="149"
 		height="21"
 		groupid="0"
@@ -617,7 +628,7 @@ display {
 }
 "text update" {
 	object {
-		x="381"
+		x="380"
 		y="219"
 		width="355"
 		height="21"
@@ -663,8 +674,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="381"
+		x="380"
+		y="383"
 		width="355"
 		height="21"
 		groupid="0"
@@ -709,8 +720,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="461"
+		x="380"
+		y="491"
 		width="355"
 		height="22"
 		groupid="0"
@@ -755,8 +766,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="435"
+		x="380"
+		y="465"
 		width="355"
 		height="21"
 		groupid="0"
@@ -849,8 +860,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="246"
+		x="380"
+		y="247"
 		width="355"
 		height="21"
 		groupid="0"
@@ -895,8 +906,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="273"
+		x="380"
+		y="274"
 		width="355"
 		height="21"
 		groupid="0"
@@ -941,8 +952,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="300"
+		x="380"
+		y="301"
 		width="355"
 		height="21"
 		groupid="0"
@@ -987,8 +998,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="489"
+		x="380"
+		y="520"
 		width="355"
 		height="21"
 		groupid="0"
@@ -1033,8 +1044,8 @@ display {
 }
 "text update" {
 	object {
-		x="381"
-		y="327"
+		x="380"
+		y="329"
 		width="355"
 		height="21"
 		groupid="0"
@@ -1079,8 +1090,8 @@ display {
 }
 "related display" {
 	object {
-		x="17"
-		y="587"
+		x="18"
+		y="619"
 		width="329"
 		height="24"
 		groupid="0"
@@ -1213,8 +1224,8 @@ display {
 }
 "related display" {
 	object {
-		x="17"
-		y="559"
+		x="18"
+		y="591"
 		width="329"
 		height="21"
 		groupid="0"
@@ -1347,8 +1358,8 @@ display {
 }
 "related display" {
 	object {
-		x="367"
-		y="648"
+		x="368"
+		y="680"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1360,9 +1371,9 @@ display {
 		args="top=$(top),sensor=$(sensor)"
 	}
 	display[1] {
-		label=""
-		name=""
-		args=""
+		label="SHOW SEEING"
+		name="showSeeing.dl"
+		args="top=$(top),sensor=$(sensor)"
 	}
 	display[2] {
 		label=""
@@ -1476,13 +1487,13 @@ display {
 	}
 	clr="0"
 	bclr="6"
-	menu_title="SHOW ZERNIKES"
+	menu_title="SHOW ZERNIKES AND SEEING"
 	decorate="none"
 }
 "related display" {
 	object {
-		x="367"
-		y="679"
+		x="368"
+		y="711"
 		width="330"
 		height="23"
 		groupid="0"
@@ -1615,8 +1626,8 @@ display {
 }
 "related display" {
 	object {
-		x="367"
-		y="557"
+		x="368"
+		y="589"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1749,8 +1760,8 @@ display {
 }
 "related display" {
 	object {
-		x="17"
-		y="648"
+		x="18"
+		y="680"
 		width="329"
 		height="23"
 		groupid="0"
@@ -1883,8 +1894,8 @@ display {
 }
 "related display" {
 	object {
-		x="17"
-		y="619"
+		x="18"
+		y="651"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2017,8 +2028,8 @@ display {
 }
 "related display" {
 	object {
-		x="367"
-		y="589"
+		x="368"
+		y="621"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2151,8 +2162,8 @@ display {
 }
 "related display" {
 	object {
-		x="367"
-		y="619"
+		x="368"
+		y="651"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2285,8 +2296,8 @@ display {
 }
 "related display" {
 	object {
-		x="17"
-		y="680"
+		x="18"
+		y="712"
 		width="328"
 		height="22"
 		groupid="0"
@@ -2420,7 +2431,7 @@ display {
 "related display" {
 	object {
 		x="536"
-		y="353"
+		y="355"
 		width="201"
 		height="22"
 		groupid="0"
@@ -2553,8 +2564,8 @@ display {
 }
 "related display" {
 	object {
-		x="381"
-		y="407"
+		x="380"
+		y="409"
 		width="354"
 		height="22"
 		groupid="0"
@@ -2563,6 +2574,140 @@ display {
 	display[0] {
 		label="GAINS AND BUTTERWOTH FILTERS"
 		name="showGain.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="MORE"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="380"
+		y="437"
+		width="354"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="SEEING PARAMETERS"
+		name="showSeeingPar.dl"
 		args="top=$(top),sensor=$(sensor)"
 	}
 	display[1] {

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.24 2002-05-23 03:53:42 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.25 2002-07-04 03:43:08 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 18 Jun 2002 - cb Implement seeing computation (seeing SIR record, detSigInit
+ *                  modified)
  * 24 Apr 2002 - cb add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
  *                  cfTipTiltBw sir records
  * 21 Mar 2002 - cb modify init and detReset
@@ -405,7 +407,9 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_H, EPICS_DATA_TYPE_STRING, "defFullRefP2.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_I, EPICS_DATA_TYPE_STRING, "defAoIntMatP2MK.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_J, EPICS_DATA_TYPE_STRING, "defAoContMatP2MK.dat", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_K, EPICS_DATA_TYPE_STRING, "defFgContMatP2MK.dat", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_K, EPICS_DATA_TYPE_STRING, "defFgContMatP2MK.dat", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_L, EPICS_DATA_TYPE_DOUBLE,  "1.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_M, EPICS_DATA_TYPE_STRING, "defSeeingCoeffMatP2MK.dat", {NO_ATTRIBUTE_LIMITS}
  },
 #else
  {
@@ -425,7 +429,9 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_H, EPICS_DATA_TYPE_STRING, "defFullRefP2.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_I, EPICS_DATA_TYPE_STRING, "defAoIntMatP2CP.dat", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_J, EPICS_DATA_TYPE_STRING, "defAoContMatP2CP.dat", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_K, EPICS_DATA_TYPE_STRING, "defFgContMatP2CP.dat", {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_K, EPICS_DATA_TYPE_STRING, "defFgContMatP2CP.dat", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_L, EPICS_DATA_TYPE_DOUBLE,  "1.0", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_M, EPICS_DATA_TYPE_STRING, "defSeeingCoeffMatP2CP.dat", {NO_ATTRIBUTE_LIMITS}
  },
 #endif
  {
@@ -643,7 +649,8 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_P, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_Q, EPICS_DATA_TYPE_LONG, "1", {"0", "1"},
   CAD_ATTRIB_R, EPICS_DATA_TYPE_DOUBLE, "15.0", {"0.0", "100.0"},
-  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT}
+  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "2.5", {"0.0", NO_HI_LIMIT},
+  CAD_ATTRIB_T, EPICS_DATA_TYPE_LONG, "1", {"0", "1"}
  },
  {
   RECORD_NAME ("dc:detSigModeTotal"),
@@ -921,10 +928,6 @@ SIR_RECORD pWfsDbSirList [] =
   EPICS_DATA_TYPE_STRING
  },
  {
-  RECORD_NAME ("seeing"),
-  EPICS_DATA_TYPE_DOUBLE
- },
- {
   RECORD_NAME ("historyLog"),
   EPICS_DATA_TYPE_STRING
  },
@@ -1050,6 +1053,18 @@ SIR_RECORD pWfsDbSirList [] =
  {
   RECORD_NAME ("dc:cfTipTiltBw"),
   EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:seeing"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:seeingGain"),
+  EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:seeingCoeffMatInit"),
+  EPICS_DATA_TYPE_STRING
  },
  {
   RECORD_NAME ("dc:initialising"),

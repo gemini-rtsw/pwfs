@@ -39,3 +39,7 @@ data/defFgContMatP2CP.dat
 3.14159
 # Angle in radians between M1 and PWFS2 (double)
 3.14159
+# Name of seeing coefficient matrix file
+data/defSeeingCoeffMatP2CP.dat
+# Scale factor for seeing computation (double)
+1.0
