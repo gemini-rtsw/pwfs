@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.57 2001-08-16 23:02:08 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.58 2001-08-16 23:03:37 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -84,7 +84,7 @@ gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
 vaioc	mbec/vaioc
 #M	comcon	Components Controller
 comcon	niri/comcon
-NIRI	niri
+
 #D	niri	Gemini NIRI Software
 niri	niri
 #M	gn-4	Detector Controller (1fps coadder)
@@ -159,18 +159,18 @@ jcs	jcs
 
 #D	ocssupport	OCS support library
 ocssupport	ocssupport
-#M	acqcam	Acquisition Camera
-acqcam	ocssupport/acqcam
+#M	ocsacqcam	Acquisition Camera
+ocsacqcam	ocssupport/acqcam
 #M	dhshdr	DHS fits header
 dhshdr	ocssupport/dhshdr
-#M	gmos	GMOS
-gmos	ocssupport/gmos
-#M	niri	NIRI
-niri	ocssupport/niri
-#M	seq	Sequencing library
-seq	ocssupport/seq
-#M	tcclib	TCC library
-tcc	ocssupport/tcc
+#M	ocsgmos	GMOS
+ocsgmos	ocssupport/gmos
+#M	ocsniri	NIRI
+ocsniri	ocssupport/niri
+#M	ocsseq	Sequencing library
+ocsseq	ocssupport/seq
+#M	ocstcclib	TCC library
+ocstcclib	ocssupport/tcc
 
 #D	oiwfs	On-Instrument WFS
 #M	oiwfs	On-Instrument WFS
