@@ -6964,7 +6964,6 @@ STATUS aoCtrlFileRead (
       fclose (pFile);
       return (ERROR);
    }
-
 #ifdef DEBUG
    printf ( "aoCtrlFileRead(): sliding focus gain = %f\n", *pSlidingFocusGain );
 #endif
