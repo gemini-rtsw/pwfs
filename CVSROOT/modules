@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.63 2002-03-27 17:58:43 gemvx Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.64 2002-06-07 02:50:54 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -68,6 +68,10 @@ mcs     mcs
 #M	pcs	Gemini Primary Control System
 pcs	pcs
 
+#D	gca	Gemini Engineering Channel Archiver
+#M	gca	Gemini Engineering Channel Archiver
+geca	geca
+
 #D	mbec	Matthieu's test area
 mbec	mbec
 #M	pcstest	Jmaclean Runtime version of the PCS
@@ -78,8 +82,6 @@ gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
 gnaacSrc-ppc-gem6t	mbec/gnaacSrc-ppc-gem6t
 #M	vaioc	IOC vaio
 vaioc	mbec/vaioc
-#M	gca	Gemini Channel Archiver
-gca	mbec/archive
 #M	comcon	Components Controller 3.12
 comcon	niri3.12/comcon
 #D	niri3.12	Gemini NIRI Software 3.12
