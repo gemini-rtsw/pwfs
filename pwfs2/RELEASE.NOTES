@@ -233,7 +233,8 @@ V4-0 27 March 2002 CB:
   - remove from the user interface the detReset command
   - aoP2Lib.c: aoTotalThresholdCompute(): comment out ERROR_SET if N>2
 
-dev equivalent to V4-0
+V4-1 22 May 2002 CB:
+--------------------
   - add fgTipGain, fgTiltGain, fgFocusGain, cfTipTiltBw, cfFocusBw SIR records
   - split butterwoth filter in two one for probe arme guiding (TT only) and the
     second one for focus M2 guiding
