@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.9 2000-10-26 01:52:25 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.10 2000-11-11 01:11:53 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 30 October 2000 - cb - add detSigInitBW
  * 12 April 2000 - cb - add detType, detID, dataLabel, intTime, nexpRQ,
  *                      nexp, nframes, bunit, exposedRQ, exposed, utstart, 
  *                      utend, elapsed sir records
@@ -387,6 +388,15 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "-0.1", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_DOUBLE, "-0.001", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.001", {NO_ATTRIBUTE_LIMITS}
+ },
+ {
+  RECORD_NAME ("dc:detSigInitBW"),
+  TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_SIGINITBW,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  180.0,
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "6.0", {"0.0","100"}
  },
  {
   RECORD_NAME ("dc:detSigModeNone"),
@@ -732,6 +742,14 @@ SIR_RECORD pWfsDbSirList [] =
  {
   RECORD_NAME ("dc:aoTotal"),
   EPICS_DATA_TYPE_DOUBLE
+ },
+ {
+  RECORD_NAME ("dc:aoSaveCbIm"),
+  EPICS_DATA_TYPE_STRING
+ },
+ {
+  RECORD_NAME ("dc:aoSaveCbCtrl"),
+  EPICS_DATA_TYPE_STRING
  },
  {
   RECORD_NAME ("dc:aoProcessMode"),

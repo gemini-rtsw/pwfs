@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="14"
-	nstr="49"
+	nstr="53"
 	ndynamic="13"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2422"
+	nwords_dspy="2502"
 	nwords_sta="812"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1534"
-	osta="722"
-	odynamic="1534"
-	oplot="2410"
-	ord="2410"
-	oes="2410"
-	okd="2410"
-	opd="2422"
-	opo="2422"
+	odyng="1614"
+	osta="802"
+	odynamic="1614"
+	oplot="2490"
+	ord="2490"
+	oes="2490"
+	okd="2490"
+	opd="2502"
+	opo="2502"
 	opc="68"
 	ostr="264"
-	ocmap="722"
-	ocrules="722"
+	ocmap="802"
+	ocrules="802"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -160,11 +160,11 @@ display {
 	object {
 		x="6"
 		y="7"
-		width="540"
+		width="586"
 		height="25"
 		groupid="0"
 	}
-	textix="$(sensor) - SET SEQUENCE DARK MODE"
+	textix="$(sensor) - SET SEQUENCE SKY/DARK MODE"
 	align="horiz. left"
 }
 "text" {
@@ -238,7 +238,7 @@ display {
 		height="20"
 		groupid="0"
 	}
-	textix="Parameters for sequence dark mode:"
+	textix="Parameters for sequence Sky/Dark mode:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -257,7 +257,7 @@ display {
 		height="16"
 		groupid="0"
 	}
-	textix="B: Dark file path:"
+	textix="B: Sky/Dark file path:"
 	align="horiz. left"
 }
 "text" {
@@ -268,7 +268,7 @@ display {
 		height="16"
 		groupid="0"
 	}
-	textix="C: Dark file name:"
+	textix="C: Sky/Dark file name:"
 	align="horiz. left"
 }
 "text" {

@@ -227,6 +227,7 @@ p -704 16 100 0 1 FTVA:DOUBLE
 p -704 -16 100 0 1 FTVB:DOUBLE
 p -704 -48 100 0 1 FTVC:DOUBLE
 p -704 -80 100 0 1 FTVD:DOUBLE
+p -704 -112 100 0 0 FTVE:STRING
 p -736 -736 100 0 1 INAM:epToVxCadInit
 p -704 -320 100 0 0 PRIO:LOW
 p -448 -752 100 0 1 PV:$(top)$(wfs)
@@ -276,11 +277,11 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2000-07-10 21:47:05 $
-p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.4 2000-07-10 21:47:05 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2000-11-11 01:11:51 $
+p 2592 2304 200 0 -1 id:$Id: wfsCad.sch,v 1.5 2000-11-11 01:11:51 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.4 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.5 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 use notes 2560 -345 100 0 notes#13
 xform 0 2816 -160

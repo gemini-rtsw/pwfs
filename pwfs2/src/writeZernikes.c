@@ -177,6 +177,9 @@ AO_CCD_ID     aoCcdIdP2;
 AO_CB_CTRL_ID aoCbCtrlIdP2;
 AO_CB_IM_ID   aoCbImIdP2;
 
+double sampleData[5][3];
+double coeffData[5];
+
 /* declare prototypes */
 
 long rmIntSend(int interrupt, int node);
@@ -268,6 +271,82 @@ double dfilter
    sample[2][Id] = sample[1][Id];
    sample[1][Id] = sum;
 
+   return(sum);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * newDfilter
+ *
+ * INVOCATION:
+ * double newSample
+ * int Id
+ *
+ * double   newDfilter(double newSample, int Id)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > double newSample       - latest data sample
+ * > int    iD              - identification of zernikes (0 = xtilt, 1 = ytilt,
+ *                            2 = focus)
+ *
+ * FUNCTION VALUE:
+ * double     returns current filtered value
+ *
+ * PURPOSE:
+ * Filter the data in accordance with the IIR filter coefficients specified
+ *
+ * DESCRIPTION:
+ * The function performs a low pass butterworth filter on the supplied
+ * data. A history array is maintained for each zernikes identified by the 
+ * index Id.
+ * The cutoff frequency is set in detControl.c (detSigInitGain CAD) and 
+ * coefficients of the filter are computed according the cutoof frequency and
+ * exposure time.
+ *
+ * EXTERNAL VARIABLES:
+ * 
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ *
+ *
+ * HISTORY (optional):
+ * 27-Oct-1998  Coeff are computing in detControl.c and the cutoffFreq set by
+ *              the user
+ * 28-Oct-1998  Original version - Sean Prior
+ *-
+ */
+
+double newDfilter
+   (
+   double newSample,
+   int Id
+   )
+{
+   int i = 0;
+   double sum = 0;
+
+   /* put new sample into the array */
+
+   sampleData[2][Id] = newSample;
+
+   /* multiply samples by coefficients and accumulate */
+
+   for(i=0; i < 5; i++)
+      sum += sampleData[i][Id]*coeffData[i];
+
+   /* ripple samples ready for next call */
+
+   sampleData[4][Id] = sampleData[3][Id];
+   sampleData[3][Id] = sampleData[2][Id];
+   sampleData[1][Id] = sampleData[0][Id];
+   sampleData[0][Id] = sum;
+
+   /*printf ( "sum[%d] = %f\n" , Id, sum );*/
    return(sum);
 }
 
@@ -864,7 +943,8 @@ STATUS writeWfsToSynchro
       result.z2 = (f->cosTheta*(*pz) - f->sinTheta*(*(pz+1))) - f->null[5];
       result.z3 = (f->sinTheta*(*pz) + f->cosTheta*(*(pz+1))) - f->null[6];
       /*result.z4 = (*(pz+2)) - f->null[7];*/
-      result.z4 = *(pz+2);
+
+      result.z4 = newDfilter (*(pz+2),2);
 
       semGive(f->access);
    }
@@ -907,9 +987,15 @@ STATUS writeWfsToSynchro
    {
       ttfData[0] = (*pTime);
       ttfData[1] = (double)(aoCtrlId->modeNb);
+/*
       ttfData[2] = dfilter(result.z2, 6);
       ttfData[3] = dfilter(result.z3, 7);
       ttfData[4] = dfilter(result.z4, 8);
+*/
+      ttfData[2] = newDfilter(result.z2, 0);
+      ttfData[3] = newDfilter(result.z3, 1);
+      ttfData[4] = result.z4; /* focus is already filtered */
+
       ttfData[5] = (double)(*pErrorsVect);
       ttfData[6] = (double)(*(pErrorsVect + 1));
       ttfData[7] = (double)(*(pErrorsVect + 2));

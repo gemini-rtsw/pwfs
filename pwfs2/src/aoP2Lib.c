@@ -38,7 +38,7 @@
  *   aoGlobalGuideAndError() - Compute tip and tilt modes only over the whole 
  *                             CCD and the associated errors
  *   aoImageFloatAverage() - Average float images
- *   aoRmsNoiseDarkCompute() - To compute the rms of the noise
+ *   aoRmsNoiseImageCompute() - To compute the rms of the noise
  *   aoThresholdCompute() - Compute the threshold 
  *   aoCtrlContextShow() - Display a AO Control context structure
  *   aoGuideAndFocus() - Compute tip, tilt and focus modes
@@ -52,6 +52,11 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   10 November 2000: CB - Put back sliding average for focus computation in
+ *                          aoGuideAndFocus and aoGuideAndFocusAndError
+ *   31 October 2000: CB - Remove sliding average for focus computation in
+ *                         aoGuideAndFocus and aoGuideAndFocusAndError
+ *   25 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
  *   13 March 2000: CB - original creation
  *INDENT-ON*
  *-
@@ -1459,7 +1464,7 @@ STATUS aoCtrlContextInit (
    aoCtrlId->coaddCounter = 0;
    aoCtrlId->focusCounter = 0;
    aoCtrlId->previousFocus = 0;
-   aoCtrlId->allowedSubapOff = 1;
+   aoCtrlId->allowedSubapOff = 0;
 
    for ( i = 0 ; i < CCD_SIZE ; i ++ )
        aoCtrlId->sumVect[i] = 0.0;
@@ -2239,13 +2244,13 @@ STATUS aoImageFloatAverage (
 
 /*+
  *   FUNCTION NAME:
- *   aoRmsNoiseDarkCompute
+ *   aoRmsNoiseImageCompute
  *
  *   INVOCATION:
- *   aoRmsNoiseDarkCompute (pDark, aoCcdId, pRmsNoise) 
+ *   aoRmsNoiseImageCompute (pImage, aoCcdId, pRmsNoise) 
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pDark          (float *)    Pointer to the dark from which to compute 
+ *   (>) pImage         (float *)    Pointer to the image from which to compute 
  *                                   the rms of the noise
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context 
  *                                   structure
@@ -2258,7 +2263,7 @@ STATUS aoImageFloatAverage (
  *   To compute the rms of the noise
  *
  *   DESCRIPTION:
- *   This routine computes for a dedicated dark image pDark the rms of the 
+ *   This routine computes for a dedicated image pImage the rms of the 
  *   noise. 
  *
  *   EXTERNAL VARIABLES:
@@ -2275,15 +2280,15 @@ STATUS aoImageFloatAverage (
  *-
  */
 
-STATUS aoRmsNoiseDarkCompute (
-   float *      pDark,
+STATUS aoRmsNoiseImageCompute (
+   float *      pImage,
    AO_CCD_ID    aoCcdId,
    double *     pRmsNoise
    )
 {
    int          imageSize;
    float *      p;
-   float *      pd;
+   float *      pi;
    float *      pMax;
    double       value;
    double       meanPixel;
@@ -2293,15 +2298,15 @@ STATUS aoRmsNoiseDarkCompute (
    /* Some initialisations */
 
    imageSize = aoCcdId->pixelsNb;
-   pd = pDark;
-   pMax = (float *)((int)pd + imageSize*sizeof(float));
+   pi = pImage;
+   pMax = (float *)((int)pi + imageSize*sizeof(float));
 
    /* Compute mean and variance */
 
    meanPixel = 0.0;
    variance = 0.0;
 
-   for ( p = pd ; p < pMax ; p ++ )
+   for ( p = pi ; p < pMax ; p ++ )
    {
        value = (double)(*p);
 
@@ -2613,6 +2618,8 @@ STATUS aoCtrlContextShow (
  *   centering all the spots.
  *   Note also that a temporal filter is used for the focus mode. This filter 
  *   consists to a sliding average.
+ *   31 oct 2000 - cb remove the current sliding average. Replaced by a 
+ *   butterworth filter in writeZernikes.c
  *
  *   EXTERNAL VARIABLES:
  *   None. 
@@ -2950,11 +2957,19 @@ STATUS aoGuideAndFocus (
          *(pZernikesVect + 2) = focusScale * averageFocus;
 
          aoCtrlId->previousFocus = averageFocus; 
+
+#ifdef DEBUG
+         printf ( "focus=%f, averageFocus=%f\n", focus, averageFocus);
+#endif
+
+/*
+         *(pZernikesVect + 2) = focusScale * focus;
+*/
       
          *(pErrorsVect + 2) = 0.0;
 
 #ifdef DEBUG
-         printf ( "focus=%f, averageFocus=%f\n", focus, averageFocus);
+         printf ( "focus=%f\n", focus);
          printf ( "Z[2]=%f\n", *(pZernikesVect + 2));
 #endif
       }
@@ -3029,6 +3044,8 @@ STATUS aoGuideAndFocus (
  *   Note also that a temporal filter is used for the focus mode. This filter 
  *   consists to a sliding average.
  *   Associated errors are computed based on the centroiding error computation
+ *   31 oct 2000 - cb remove the current sliding average. Replaced by a 
+ *   butterworth filter in writeZernikes.c
  *
  *   EXTERNAL VARIABLES:
  *   None. 
@@ -3404,14 +3421,21 @@ STATUS aoGuideAndFocusAndError (
          *(pZernikesVect + 2) = focusScale * averageFocus;
 
          aoCtrlId->previousFocus = averageFocus; 
-      
+#ifdef DEBUG
+         printf ( "focus=%f, averageFocus=%f\n", focus, averageFocus);
+#endif
+
+/*
+         *(pZernikesVect + 2) = focusScale * focus;
+*/
+
          if ( focusErr < AO_MIN_DOUBLE )
             focusErr = 0.0;
 
          *(pErrorsVect + 2) = sqrt (focusScale2*focusErr) ;
 
 #ifdef DEBUG
-         printf ( "focus=%f, averageFocus=%f\n", focus, averageFocus);
+         printf ( "focus=%f\n", focus);
          printf ( "Z[2]=%f\n", *(pZernikesVect + 2));
 #endif
       }
