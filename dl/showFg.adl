@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="7"
-	nstr="41"
+	nstr="38"
 	ndynamic="6"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="1466"
+	nwords_dspy="1434"
 	nwords_sta="96"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="584"
-	osta="488"
-	odynamic="584"
-	oplot="980"
-	ord="980"
-	oes="980"
-	okd="1454"
-	opd="1466"
-	opo="1466"
+	odyng="552"
+	osta="456"
+	odynamic="552"
+	oplot="948"
+	ord="948"
+	oes="948"
+	okd="1422"
+	opd="1434"
+	opo="1434"
 	opc="68"
 	ostr="144"
-	ocmap="488"
-	ocrules="488"
+	ocmap="456"
+	ocrules="456"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -88,7 +88,7 @@ display {
 	object {
 		x="11"
 		y="42"
-		width="607"
+		width="614"
 		height="147"
 		groupid="0"
 	}
@@ -106,7 +106,7 @@ display {
 }
 "text" {
 	object {
-		x="299"
+		x="302"
 		y="75"
 		width="122"
 		height="20"
@@ -152,8 +152,8 @@ display {
 	object {
 		x="96"
 		y="100"
-		width="160"
-		height="21"
+		width="166"
+		height="22"
 		groupid="0"
 	}
 	monitor {
@@ -184,7 +184,7 @@ display {
 		rulecolorfg="1"
 		hdl="0"
 		ldl="0"
-		prec="-1"
+		prec="4"
 		newunits=""
 		units="none"
 		decorate="none"
@@ -198,8 +198,8 @@ display {
 	object {
 		x="279"
 		y="100"
-		width="160"
-		height="21"
+		width="179"
+		height="22"
 		groupid="0"
 	}
 	monitor {
@@ -230,7 +230,7 @@ display {
 		rulecolorfg="1"
 		hdl="0"
 		ldl="0"
-		prec="-1"
+		prec="6"
 		newunits=""
 		units="none"
 		decorate="none"
@@ -244,8 +244,8 @@ display {
 	object {
 		x="96"
 		y="127"
-		width="160"
-		height="21"
+		width="165"
+		height="22"
 		groupid="0"
 	}
 	monitor {
@@ -276,7 +276,7 @@ display {
 		rulecolorfg="1"
 		hdl="0"
 		ldl="0"
-		prec="-1"
+		prec="4"
 		newunits=""
 		units="none"
 		decorate="none"
@@ -290,8 +290,8 @@ display {
 	object {
 		x="279"
 		y="127"
-		width="160"
-		height="21"
+		width="179"
+		height="22"
 		groupid="0"
 	}
 	monitor {
@@ -322,7 +322,7 @@ display {
 		rulecolorfg="1"
 		hdl="0"
 		ldl="0"
-		prec="-1"
+		prec="6"
 		newunits=""
 		units="none"
 		decorate="none"
@@ -335,9 +335,9 @@ display {
 "text update" {
 	object {
 		x="96"
-		y="155"
-		width="160"
-		height="21"
+		y="156"
+		width="165"
+		height="22"
 		groupid="0"
 	}
 	monitor {
@@ -368,7 +368,7 @@ display {
 		rulecolorfg="1"
 		hdl="0"
 		ldl="0"
-		prec="-1"
+		prec="4"
 		newunits=""
 		units="none"
 		decorate="none"
@@ -381,9 +381,9 @@ display {
 "text update" {
 	object {
 		x="279"
-		y="155"
-		width="160"
-		height="21"
+		y="156"
+		width="179"
+		height="22"
 		groupid="0"
 	}
 	monitor {
@@ -414,7 +414,7 @@ display {
 		rulecolorfg="1"
 		hdl="0"
 		ldl="0"
-		prec="-1"
+		prec="6"
 		newunits=""
 		units="none"
 		decorate="none"
@@ -426,10 +426,10 @@ display {
 }
 "execute script" {
 	object {
-		x="462"
-		y="100"
-		width="144"
-		height="20"
+		x="472"
+		y="99"
+		width="146"
+		height="23"
 		groupid="0"
 	}
 	script[0] {
@@ -559,10 +559,10 @@ display {
 }
 "execute script" {
 	object {
-		x="462"
+		x="472"
 		y="127"
-		width="144"
-		height="20"
+		width="146"
+		height="22"
 		groupid="0"
 	}
 	script[0] {
@@ -692,10 +692,10 @@ display {
 }
 "execute script" {
 	object {
-		x="462"
-		y="153"
-		width="144"
-		height="20"
+		x="472"
+		y="156"
+		width="146"
+		height="22"
 		groupid="0"
 	}
 	script[0] {
@@ -825,7 +825,7 @@ display {
 }
 "kill display" {
 	object {
-		x="549"
+		x="556"
 		y="12"
 		width="70"
 		height="23"

@@ -1,7 +1,0 @@
-Written by write_matrix_to_file.
-Next line shows the row and column dimensions.
-3 3
-Remember row data should be separated by a single space
-5.000000 0.000000 0.000000 
-0.000000 5.000000 0.000000 
-0.000000 0.000000 5.000000 

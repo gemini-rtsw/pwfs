@@ -1,9 +1,9 @@
 [schematic2]
-uniq 60
+uniq 62
 [tools]
 [detail]
-w 708 1659 100 0 n#45 systemCar.systemCar#18.FLNK 640 1920 704 1920 704 1408 1056 1408 egenSub.combActive.SLNK
 w 648 1483 100 0 n#45 wfsCar.wfsCar#19.FLNK 640 1472 704 1472 junction
+w 708 1659 100 0 n#45 systemCar.systemCar#18.FLNK 640 1920 704 1920 704 1408 1056 1408 egenSub.combActive.SLNK
 w 1572 1659 100 0 n#48 egenSub.combActive.FLNK 1344 1376 1568 1376 1568 1952 1696 1952 carID.carID#23.SLNK
 w 1576 2051 100 0 n#47 egenSub.combActive.OUTB 1344 2016 1504 2016 1504 2048 1696 2048 carID.carID#23.ICID
 w 1496 2091 100 0 n#46 egenSub.combActive.OUTA 1344 2080 1696 2080 carID.carID#23.IVAL
@@ -11,9 +11,12 @@ w 772 1787 100 0 n#44 wfsCar.wfsCar#19.VAL 640 1632 768 1632 768 1952 1056 1952 
 w 804 1723 100 0 n#43 wfsCar.wfsCar#19.CLID 640 1568 800 1568 800 1888 1056 1888 egenSub.combActive.INPD
 w 824 2083 100 0 n#37 systemCar.systemCar#18.VAL 640 2080 1056 2080 egenSub.combActive.INPA
 w 824 2019 100 0 n#36 systemCar.systemCar#18.CLID 640 2016 1056 2016 egenSub.combActive.INPB
-s 1488 80 500 512 pwfs2.sch
 s -576 2224 500 0 Gemini A&G PWFS2
+s 1488 80 500 512 pwfs2.sch
 [cell use]
+use wfsCadMore -640 1063 100 0 wfsCadMore#61
+xform 0 -480 1184
+p -576 1056 100 0 1 set1:wfs dc:
 use wfsCar 448 1399 100 0 wfsCar#19
 xform 0 544 1520
 p 448 1344 100 0 1 set1:wfs dc:
@@ -63,10 +66,10 @@ xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 0 checked:
-p 1776 16 100 0 -1 date:$Date: 1999-07-17 02:13:26 $
+p 1776 16 100 0 -1 date:$Date: 2000-07-10 21:47:04 $
 p 1552 2368 100 0 -1 id:
 p 1568 32 100 0 1 modified:C. Boyer
 p 1792 176 100 0 -1 project:Gemini PWFS2
-p 1552 144 100 0 -1 revision:$Revision: 1.2 $
+p 1552 144 100 0 -1 revision:$Revision: 1.3 $
 p 1792 112 100 0 -1 title:Under Top Level Schematic for Main Database
 [comments]

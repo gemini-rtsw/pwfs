@@ -124,10 +124,10 @@ xform 0 1504 1120
 p 2496 -352 200 0 1 author:S.M.Beard
 p 3008 -384 100 0 0 border:D
 p 2496 -432 200 0 1 checked:B.Goodrich
-p 2992 -448 200 0 -1 date:$Date: 2000-06-27 20:16:41 $
-p 2480 2656 200 0 -1 id:$Id: systemTcs.sch,v 1.5 2000-06-27 20:16:41 cboyer Exp $
+p 2992 -448 200 0 -1 date:$Date: 2000-07-10 21:47:05 $
+p 2480 2656 200 0 -1 id:$Id: systemTcs.sch,v 1.6 2000-07-10 21:47:05 cboyer Exp $
 p 3008 -96 200 0 -1 project:Gemini Wavefront Sensing System
-p 2496 -176 200 0 -1 revision:$Revision: 1.5 $
+p 2496 -176 200 0 -1 revision:$Revision: 1.6 $
 p 3008 -224 200 0 -1 title:System TCS Interface Database
 use notes 3456 55 100 0 notes#13
 xform 0 3712 240

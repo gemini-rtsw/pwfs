@@ -19,7 +19,7 @@ include .applTop/config/CONFIG
 
 # Add the source code files to this variable. The default has all .c files 
 # SRCS.c	= $(wildcard ../*.c)
-SRCS.c	= ../ospLib.c ../ospInvertFuncs.c
+SRCS.c	= 
 
 # Add the object files in one of these two variables. 
 # LIBOBJS += test.o
@@ -28,7 +28,7 @@ OBJS	=  $(strip $(patsubst ../%.c,    %.o, $(SRCS.c)))
 # Standard macros for files which are to be built and installed.
 # PROD (products) and SCRIPTS are installed in INSTALL_BIN
 #PROD	= $(patsubst %.o, %, $(OBJS))
-PROD = ospMain
+PROD = 
 SCRIPTS	=
 
 LDLIBS  = /home/smb/gemini_lib/cfitsio/lib/solaris/cFitsIo -lm

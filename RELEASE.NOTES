@@ -30,3 +30,39 @@ V0-6 27 June 2000 CB:
 ---------------------
   - default temperature -20
   - writeWfsToSynchro remove TTF limits checks
+
+dev
+  - equivalent to V0-6
+
+V1-0 10 July 2000 CB:
+  - tidy up src directory:
+    remove config_hkbaja47.h config_mv167_16MB.h config_mv167_32MB.h 
+    dhstests.c epToVxLib2.c global_edit makeLint simpleLog2.c wfsDb2.c 
+    wfsDb2.h wfsIndent wfsPostscript wfsPrint hkbaja.h mpPipeDrv.c mpPipeDrv.h 
+    mv167.h sysLib_hkbaja47.c 
+    sysLib_mv167_16MB.c sysLib_mv167_32MB.c sysextLib.c sysextLib.h 
+    functionTemplate.c headerTemplate.h makeDocumentation moduleTemplate.c 
+    strcasecmp.c, errorLog.c
+  - tidy up capfast directory:
+    remove cadFanout.sch and sym, cadSequence.sch and sym, link2Dir.sch and 
+    sym and link2DirWfs.sch and sym and sequenceCad.sch and sym
+  - testResults now instead of dc:testResults
+  - Major modification: Include aoP2Lib and remove ospLib
+  - Major modification: Create a DHS task
+  - DHS tasks started by dhs and not WFS are running with
+    priority 1. For now do not use the WFS DHS task
+  - Add detFrameSize command + 3 SIR records for state of
+    signal processing
+  - Add detDhsReconnect command
+    Add temp at -20C per default, add detHeadTempGet()
+    Add readout mode per default to NONE
+  - 2 cb + save cb + coadd file name
+  - replace detSigMode by several detSigModexxx cad
+  - add detType, detId, dataLabel, intTime, nexpRQ,
+    nexp, nframes, bunit, exposedRQ, exposed, utstart,
+    utend, elapsed sir records : SAD database done
+  - IF with TCS done
+  - add detDhsDisplay + detSigModeFgCoadd rename fast guide by global guide...
+
+newDev 
+  - equivalent to V1-0

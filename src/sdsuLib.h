@@ -154,7 +154,7 @@
 
  /* Readout task constants */
 
-#define SDSU_READTASK_PRIORITY    30     /* Readout task priority-fairly high */
+#define SDSU_READTASK_PRIORITY    10     /* Readout task priority-fairly high */
 #define SDSU_READTASK_STACKSIZE   200000 /* Read task stack size - very large */
 #define SDSU_APPLICATION_PRIORITY 190    /* Application task priority - low   */
 
@@ -323,6 +323,7 @@ typedef struct             /* Context structure used as handle to controller  */
   void            *appPrivate;    /* Application pointer passed to sync       */
                                   /* callbacks                                */
   struct timespec timeoutStart;   /* Start time used for command timeout      */
+  int             readMethod;     /* Flag to indicate how to read the CCD     */
  } SDSU_ID_STRUCT, * SDSU_ID;
 
 typedef struct      /* Defines an SDSU primitive command */

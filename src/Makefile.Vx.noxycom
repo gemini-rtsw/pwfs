@@ -13,12 +13,7 @@ include .applTop/config/CONFIG
 
 # User compiler and loader flags (NO_EPICS flag is needed for all processors except zero)
 # SNC_FLAGS    =
-# USR_CFLAGS   = -DNO_EPICS
-# USR_CFLAGS = -DDEBUG -g
-# USR_CFLAGS = -g
-# (sysextLib and mpPipeDrv are not compatible with present hardware).
-#USR_CFLAGS = -DNO_SYSEXTLIB -DNO_MPPIPEDRV -g
-USR_CFLAGS = -DNO_SYSEXTLIB -DNO_MPPIPEDRV -O2
+USR_CFLAGS = -O2
 # USR_INCLUDES =
 # USR_LDFLAGS  =
 # USR_LDLIBS   =
@@ -33,29 +28,24 @@ LIBSRCS.c	= \
 	../cicsLib.c \
 	../epToVxLib.c \
 	../errorLib.c \
-	../ospInvertFuncs.c \
-	../ospLib.c \
+	../aoP2Lib.c \
 	../sdsuLib.c \
 	../timeoutLib.c \
 	../wfsLib.c \
-	../wfsWcs.c \
+	../wfsWcs.c\
 	../writeZernikes.c
 
 APPLSRCS.c	= \
 	../drvVmi5588.c \
 	../detControl.c \
-	../errorLog.c \
 	../simpleLog.c \
 	../wfsControl.c \
 	../wfsDb.c \
 	../wfsResourceMonitor.c \
 	../wfsSite.c \
-	../testHarness.c \
 	../testKit.c \
 	../sdsuRead.c \
-	../strcasecmp.c\
-	../fpscr.c\
-	../test_sharedmem.c
+	../fpscr.c
 
 SRCS.c	= $(LIBSRCS.c) $(APPLSRCS.c)
 
@@ -88,12 +78,8 @@ INC	= \
 	../errorLog.h \
 	../gemModNum.h \
 	../gemTypes.h \
-	../hkbaja.h \
-	../mpPipeDrv.h \
-	../mv167.h \
 	../sdsuLib.h \
 	../synchroMap.h \
-	../sysextLib.h \
 	../sysextMemMap.h \
 	../timeoutLib.h \
 	../vmi5588.h \
@@ -102,7 +88,7 @@ INC	= \
 	../wfsSite.h \
 	../wfsControl.h \
 	../wfsResourceMonitor.h \
-	../osp.h
+	../aoP2Lib.h
 
 # MAN1 is installed in INSTALL_MAN/man1
 MAN1	=
@@ -111,7 +97,7 @@ MAN1	=
 DOCS	=
 
 # DATA are installed in INSTALL_DATA
-DATA	=
+DATA	= ../pwfs2.pv
 
 # Any extra targets can be placed in a TARGETS macro (the build target
 # builds only pre_build, LIBNAME, TARGETS and PROD, not SCRIPTS, INC etc)

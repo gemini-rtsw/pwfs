@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsLib.c,v 1.3 2000-02-03 01:56:34 cboyer Exp $"};
+   "$Id: wfsLib.c,v 1.4 2000-07-10 21:47:45 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -29,9 +29,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   wfsTargetTypeGet      - Return the target type of the given processor
  *   wfsNumProcsGet        - Return the number of defined processors
  *   wfsSysInit            - Initialise a WFS control task on a given processor
- *   wfsWriteVersion       - Writes current s/w version to EPICS record
  *   wfsWriteState         - Writes current state variable to EPICS record
  *   wfsShow               - Display information about the current environment
+ *   wfsInitTelName        - Init the telescope name from the TCS
+ *   wfsGetTelName         - Get the local copy of the TCS Telescope name
  *
  *   IGNORED FUNCTION NAME(S):
  *   wfs_errorLogPipeSet   - Initialises the error logging pipe
@@ -577,86 +578,6 @@ STATUS wfsSysInit
 
 /*+
  *   FUNCTION NAME:
- *   wfsWriteVersion
- *
- *   INVOCATION:
- *   wfsWriteVersion (void)
- *
- *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   None
- *
- *   FUNCTION VALUE:
- *   (STATUS)   OK if successful, or ERROR if unsuccessful
- *
- *   PURPOSE:
- *   Writes the current software version to the "version" EPICS record
- *
- *   DESCRIPTION:
- *   This routine obtains the RCS revision number and commit date and time
- *   and writes this to an EPICS record called "version".
- *
- *   EXTERNAL VARIABLES:
- *   (>)   pWfsNumProcessors      (int)      Number of processors
- *
- *   PRIOR REQUIREMENTS:
- *   The numprocessor variable should have been initialised before calling
- *   this function.
- *
- *   It is assumed this module has been committed using CVS or RCS, so that the
- *   RCS "Revision" and "Date" keywords contain the revision number and commit
- *   date. If RCS is not available, the function can be made to use the compile
- *   date and time instead by defining the NO_RCS preprocessor flag.
- *
- *   It is assumed that an EPICS record daemon is running or will soon
- *   be spawned
- *
- *   INCLUDE FILES:
- *   gemTypes.h
- *   wfsLib.h
- *
- *   DEFICIENCIES:
- *   The RCS keywords are updated only when wfsLib is committed. They
- *   do not reflect the state of other modules in the system. It would
- *   be useful if the value of the tag describing the latest release
- *   of the whole AGWPS system could be obtained.
- *
- *   BUGS:
- *   The epToVxPipeWrite() function fails if the RCS keywords translate
- *   to a string longer than 40 characters. Because of this, only the RCS
- *   revision number is currently written.
- *-
- */
-
-STATUS   wfsWriteVersion (void)
-{
-
-   /*
-    * If RCS is available, use the revision [and date] keywords set by RCS; or
-    * if RCS is not available, use the COMPILE_DATE_AND_TIME macro
-    * (defined in gemTypes.h); to write the latest compile date and time to
-    * the "version" EPICS record.
-    */
-
-#ifdef NO_RCS
-   if (epToVxPipeWrite ("version", COMPILE_DATE_AND_TIME, 0) == ERROR)
-#else
-    if (epToVxPipeWrite ("version", "$Revision: 1.3 $", 0) == ERROR)
-#endif
-   {
-      ERROR_LOG ("Failed to write version number");
-      return (ERROR);
-   }
-   else
-   {
-      return (OK);
-   }
-}
-
-
-/* -------------------------------------------------------------------------- */
-
-/*+
- *   FUNCTION NAME:
  *   wfsWriteState
  *
  *   INVOCATION:
@@ -915,7 +836,7 @@ STATUS   wfs_errorLogPipeSet (void)
    return (OK);
 }
 
-/* ------------------------------------------------------------------------------------------------ */
+/* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
@@ -953,13 +874,14 @@ STATUS   wfsInitTelName (struct genSubRecord *pgensub)
 {
 
     strcpy ( tcsTelName , (char *)pgensub->a ) ; 
-    if ( (strcmp ( tcsTelName , "Gemini North" ) != 0) && ( strcmp ( tcsTelName , "Gemini South" ) != 0) )
+    if ( (strcmp ( tcsTelName , "Gemini North" ) != 0) && 
+         ( strcmp ( tcsTelName , "Gemini South" ) != 0) )
        strcpy ( tcsTelName , "Gemini North" ) ;
     return (OK) ;
 }
 
 
-/* ------------------------------------------------------------------------------------------------ */
+/* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:

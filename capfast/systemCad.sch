@@ -1,29 +1,50 @@
 [schematic2]
-uniq 83
+uniq 87
 [tools]
 [detail]
-s 1808 32 500 512 systemCad.sch
 s -448 2112 500 0 PWFS2 - System CAD Records
+s 1808 32 500 512 systemCad.sch
 [cell use]
+use ecad2 -320 1319 100 0 reboot
+xform 0 -160 1632
+p -256 1248 100 0 1 DESC:Reboot system
+p -224 1696 100 0 0 FTVA:STRING
+p -224 1632 100 0 0 FTVB:STRING
+p -256 1216 100 0 1 INAM:epToVxCadInit
+p -256 1152 100 0 1 PV:$(top)
+p -256 1184 100 0 1 SNAM:epToVxCadExecute
+use ecad2 320 1319 100 0 simulate
+xform 0 480 1632
+p 384 1248 100 0 1 DESC:Set simulation mode
+p 416 1696 100 0 1 FTVA:STRING
+p 416 1632 100 0 1 FTVB:STRING
+p 384 1216 100 0 1 INAM:epToVxCadInit
+p 384 1152 100 0 1 PV:$(top)
+p 384 1184 100 0 1 SNAM:epToVxCadExecute
+use ecad2 896 1319 100 0 debug
+xform 0 1056 1632
+p 960 1248 100 0 1 DESC:Set debugging mode
+p 992 1696 100 0 1 FTVA:STRING
+p 992 1632 100 0 1 FTVB:STRING
+p 960 1216 100 0 1 INAM:epToVxCadInit
+p 960 1152 100 0 1 PV:$(top)
+p 960 1184 100 0 1 SNAM:epToVxCadExecute
+use ecad2 1536 1319 100 0 park
+xform 0 1696 1632
+p 1600 1248 100 0 1 DESC:Park the WFS
+p 1632 1696 100 0 0 FTVA:STRING
+p 1632 1632 100 0 0 FTVB:STRING
+p 1600 1216 100 0 1 INAM:epToVxCadInit
+p 1600 1152 100 0 1 PV:$(top)
+p 1600 1184 100 0 1 SNAM:epToVxCadExecute
 use bc200tr -704 -152 -100 0 frame
 xform 0 976 1152
 p 1872 16 100 0 -1 author:S.M.Beard
 p 2096 0 100 0 -1 border:C
 p 1872 -16 100 0 1 checked:A.Foster
-p 2096 -32 100 0 -1 date:$Date: 1999-07-17 02:13:30 $
-p 1872 2320 100 0 -1 id:$Id: systemCad.sch,v 1.2 1999-07-17 02:13:30 cboyer Exp $
+p 2096 -32 100 0 -1 date:$Date: 2000-07-10 21:47:05 $
+p 1872 2320 100 0 -1 id:$Id: systemCad.sch,v 1.3 2000-07-10 21:47:05 cboyer Exp $
 p 2112 128 100 0 -1 project:Gemini PWFS2
-p 1872 96 100 0 -1 revision:$Revision: 1.2 $
+p 1872 96 100 0 -1 revision:$Revision: 1.3 $
 p 2112 64 100 0 -1 title:System CAD Records
-use sequenceCad 160 1159 100 0 sequenceCad#79
-xform 0 272 1280
-use notes 1936 247 100 0 notes#13
-xform 0 2192 432
-p 2464 398 100 0 0 AUTHOR:S.M.Beard and N.Dillon
-p 1964 558 100 0 -1 COMMENT1:This schematic contains the CAD records
-p 1964 526 100 0 -1 COMMENT2:for systemwide AGWPS commands.
-p 1964 496 100 0 -1 COMMENT3:.
-p 1964 464 100 0 -1 COMMENT4:See ICD 1.6.2/1.6.3 for a description
-p 1964 432 100 0 -1 COMMENT5:of what these commands do.
-p 1964 400 100 0 -1 COMMENT6:.
 [comments]

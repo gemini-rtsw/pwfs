@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsWcs.c,v 1.3 1999-11-10 23:59:44 cboyer Exp $"};
+   "$Id: wfsWcs.c,v 1.4 2000-07-10 21:47:46 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -27,11 +27,17 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * DEFICIENCIES:
- * These functions have to be separate from wfsLib because of problems including epToVxLib.h
- * and dbDefs.h at the same time - TO BE RESOLVED LATER. SMB - 16 November 1998.
+ * These functions have to be separate from wfsLib because of problems 
+ * including epToVxLib.h and dbDefs.h at the same time - 
+ * TO BE RESOLVED LATER. SMB - 16 November 1998.
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1999/11/10 23:59:44  cboyer
+ * WCS + Ra and Dec implemented, Fits header improved, new observe command,
+ * remove init gain from signal processing init and now init gain works in
+ * open and closed loop with the same command + binning at 200Hz
+ *
  * Revision 1.2  1999/07/17 02:14:29  cboyer
  * Minor modifications
  *
@@ -79,8 +85,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 /* Global variables */
 
 /*
- * Store the current TCS tracking variables in global variables. It is safe to do this
- * because all wavefront sensors will share this information.
+ * Store the current TCS tracking variables in global variables. It is safe 
+ * to do this because all wavefront sensors will share this information.
  * The global variables are initialised to sensible defaults.
  */
 
@@ -93,7 +99,7 @@ char        tcsTrackEpochType    = 'J';
 double      tcsTrackEpochYear    = 2000.0;
 double      tcsTrackWavelength   = 0.55;
 
-/* ------------------------------------------------------------------------------------------------ */
+/* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
@@ -151,7 +157,7 @@ STATUS   wfsUpdateAstCtxInit
 }
 
 
-/* ------------------------------------------------------------------------------------------------ */
+/* -------------------------------------------------------------------------- */
 
 /*+
  *   FUNCTION NAME:
@@ -161,24 +167,25 @@ STATUS   wfsUpdateAstCtxInit
  *   wfsUpdateAstCtx (pgensub)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>)   pgensub   (struct genSubRecord *)   pointer to genSub record structure
+ *   (>) pgensub (struct genSubRecord *)   pointer to genSub record structure
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK, or ERROR if the routine failed
  *
  *   PURPOSE:
- *   Update local World Coordinate System context based on inputs to genSub record
+ *   Update local WCS context based on inputs to genSub record
  *
  *   DESCRIPTION:
  *   This function updates the current World Coordinate System context using
  *   information obtained from the TCS. It is assumed that the INPA field
  *   of the genSub record with which this function is associated is connected
- *   to the VALA field of the "astCtx" record in the TCS database. It is assumed that the
- *   NOA field is defined as AST_CTXA_SIZE (=39) and the FTA field is defined as DOUBLE.
+ *   to the VALA field of the "astCtx" record in the TCS database. It is 
+ *   assumed that the NOA field is defined as AST_CTXA_SIZE (=39) and the FTA 
+ *   field is defined as DOUBLE.
  *
  *   REFERENCE:
- *   See the document tcs_ptw_008, "World Coordinates, Part I: Astrometry" (Section entitled
- *   "Real Time Aspects") for more information.
+ *   See the document tcs_ptw_008, "World Coordinates, Part I: Astrometry" 
+ *   (Section entitled "Real Time Aspects") for more information.
  *
  *   SUPPORT FOR THIS ROUTINE:
  *   This routine makes use of one or more EPICS libraries and can
@@ -188,8 +195,8 @@ STATUS   wfsUpdateAstCtxInit
  *   None
  *
  *   PRIOR REQUIREMENTS:
- *   It is assumed that the genSub record is connected in such a way that TCS WCS context
- *   information is written to the INPA link.
+ *   It is assumed that the genSub record is connected in such a way that 
+ *   TCS WCS context information is written to the INPA link.
  *
  *   INCLUDE FILES:
  *   epToVxLib.h
@@ -206,8 +213,8 @@ STATUS   wfsUpdateAstCtx
    )
 {
 #ifdef DEBUG
-   int         noa;         /* Number of input values.                  */
-   int         i;           /* Index.                              */
+   int         noa;         /* Number of input values.                        */
+   int         i;           /* Index.                                         */
    double *    darray;      /* Pointer to array of context values obtained.   */
 #endif
    FRAMETYPE   trackFrame;
@@ -219,15 +226,15 @@ STATUS   wfsUpdateAstCtx
    char        trackEpochType;
    double      trackEpochYear;
 
-   static BOOL   tcsWasConnected = TRUE;
-                        /* Flag used to record changes in TCS connection state. */
+   static BOOL tcsWasConnected = TRUE;
+                      /* Flag used to record changes in TCS connection state. */
    static BOOL firstTime = TRUE;
 
    /*
     * Don't do anything the first time this function is called to allow time for
-    * the database to settle down and all the connections to be made. This will prevent
-    * the output of a "TCS database not connected" error followed immediately by a
-    * "TCS database reconnected" message.
+    * the database to settle down and all the connections to be made. This 
+    * will prevent the output of a "TCS database not connected" error followed 
+    * immediately by a "TCS database reconnected" message.
     */
 
    if ( firstTime )
@@ -240,11 +247,12 @@ STATUS   wfsUpdateAstCtx
    }
 
    /*
-    * If the TCS database is not connected it will not be possible to obtain values.
-    * Whenever the TCS disconnects the genSub record changes its alarm severity to INVALID.
+    * If the TCS database is not connected it will not be possible to obtain 
+    * values. Whenever the TCS disconnects the genSub record changes its alarm 
+    * severity to INVALID.
     *
-    * This error message can get annoying if it repeats regularly, so only changes
-    * in status are recorded.
+    * This error message can get annoying if it repeats regularly, so only 
+    * changes in status are recorded.
     */
 
    if ( pgensub->sevr == INVALID_ALARM )
@@ -268,7 +276,8 @@ STATUS   wfsUpdateAstCtx
    }
 
    /*
-    * Pass the information contained in field A to astSetCtx to set the local WCS context.
+    * Pass the information contained in field A to astSetCtx to set the 
+    * local WCS context.
     */
 
 #ifdef DEBUG
@@ -319,7 +328,8 @@ STATUS   wfsUpdateAstCtx
 
    /* Separate the equinox type character from the year. */
 
-   if ( ( sscanf (pgensub->c, "%c%lf", &trackEquinoxType, &trackEquinoxYear) != 2 ) ||
+   if ( ( sscanf (pgensub->c, "%c%lf", &trackEquinoxType, &trackEquinoxYear) 
+        != 2 ) ||
         ( trackEquinoxType < 'A') ||
         ( trackEquinoxType > 'Z') ||
         ( trackEquinoxYear <= 0.0 )
@@ -353,8 +363,8 @@ STATUS   wfsUpdateAstCtx
 
 #ifdef DEBUG
    printf ("wfsUpdateAstCtx: Track frame=%s (%d), Track equinox=%s (%c %f), Wavelength=%f\n",
-      (char *) pgensub->b, (int) trackFrame, (char *) pgensub->c, trackEquinoxType,
-      trackEquinoxYear, trackWavelength);
+      (char *) pgensub->b, (int) trackFrame, (char *) pgensub->c, 
+      trackEquinoxType, trackEquinoxYear, trackWavelength);
    printf ("                 Track RA/Dec=(%f,%f), Track epoch=%s (%c %f)\n",
       trackRA, trackDec, (char *) pgensub->g, trackEpochType, trackEpochYear);
 #endif

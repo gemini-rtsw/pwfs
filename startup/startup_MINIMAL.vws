@@ -9,3 +9,4 @@ tyBackspaceSet 0177
 
 # cd to application install startup directory (beware automounter problems)
 cd "$(iocpath)/bin/$(arch)"
+#cd "$(install)/bin/$(arch)"
