@@ -4,20 +4,20 @@
 # Default temperature coefficient - do not change
 128
 # Default ADC offset for output 0 - no binning
-2560
+2630
 # Default ADC offset for output 1 - no binning
-2580
+2648
 # Default ADC offset for output 2 - no binning
-2530
+2597
 # default ADC offset for output 3 - no binning
-2454
+2525
 # Default ADC offset for output 0 - binning
-2560
+2630
 # Default ADC offset for output 1 - binning
-2560
+2639
 # Default ADC offset for output 2 - binning
-2560
+2590
 # default ADC offset for output 3 - binning
-2560
+2523
 # Default serial number of the CCD - do not change
 axxxxxxxxx

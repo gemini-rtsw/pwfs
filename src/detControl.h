@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   02 Apr 2001: CB - add sir adc0, adc1, adc2, adc3
  *   20 Feb 2001: CB - add sir dhsCon
  *   06 Feb 2001: CB - Move all the DATREC_CONTEXT structures into the obsId
  *                     structure
@@ -232,6 +233,22 @@
 #define   DET_CONTROL_DHSCON_SIR_NAME         "dhsCon"
                                     /* Name of SIR record containing the      */
                                     /* status of the dhs connection           */
+
+#define   DET_CONTROL_ADC0_SIR_NAME           "adc0"
+				    /* Name of SIR record containing the      */
+                                    /* ADC of the output 0                    */
+
+#define   DET_CONTROL_ADC1_SIR_NAME           "adc1"
+                                    /* Name of SIR record containing the      */
+                                    /* ADC of the output 1                    */
+
+#define   DET_CONTROL_ADC2_SIR_NAME           "adc2"
+                                    /* Name of SIR record containing the      */
+                                    /* ADC of the output 2                    */
+
+#define   DET_CONTROL_ADC3_SIR_NAME           "adc3"
+                                    /* Name of SIR record containing the      */
+                                    /* ADC of the output 3                    */
 
 #define   DET_CONTROL_OBSERVE_CAD_NAME        "observe"
                                     /* Name of observe CAD record       */
@@ -601,6 +618,10 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT pElapsedContext ;   /* Actual elapsed time SIR record       */
    DATREC_CONTEXT pDhsConContext ;    /* dhs connection status SIR record     */
                                       /* context structure                    */
+   DATREC_CONTEXT pAdc0Context ;      /* ADC 0 SIR record context structure   */
+   DATREC_CONTEXT pAdc1Context ;      /* ADC 1 SIR record context structure   */
+   DATREC_CONTEXT pAdc2Context ;      /* ADC 2 SIR record context structure   */
+   DATREC_CONTEXT pAdc3Context ;      /* ADC 3 SIR record context structure   */
 } OBS_ID_STRUCT, * OBS_ID;
 
    /*

@@ -52,6 +52,8 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   29 Mar 2001: CB - For guide and focus multiply focus per two when binning
+ *                     for TT fix bug in rotation matrix
  *   08 Feb 2001: CB - Add zernikesVectAfterRot in circular buffer AO_CB_CTRL_ID
  *   10 Nov 2000: CB - Put back sliding average for focus computation in
  *                     aoGuideAndFocus and aoGuideAndFocusAndError
@@ -1900,12 +1902,12 @@ STATUS aoGlobalGuideAndError (
       *(pGuidingVect + 1) = yTemp - yCenter;
 
       *(pZernikesVect) = tipScale * 
-      ( aoCtrlId->cosAngle * (*pGuidingVect) - 
+      ( aoCtrlId->cosAngle * (*pGuidingVect) + 
         aoCtrlId->sinAngle * (*(pGuidingVect+1)) );
 
       *(pZernikesVect + 1) = tiltScale *
-      ( aoCtrlId->sinAngle * (*pGuidingVect) + 
-        aoCtrlId->cosAngle * (*(pGuidingVect +1)) );
+      ( aoCtrlId->cosAngle * (*(pGuidingVect +1)) -
+        aoCtrlId->sinAngle * (*pGuidingVect) ); 
 
       *(pZernikesVect + 2) = 0.0;
 
@@ -2109,12 +2111,12 @@ STATUS aoGlobalGuide (
       *(pGuidingVect + 1) = (y / total) - yCenter;
 
       *(pZernikesVect) = tipScale * 
-      ( aoCtrlId->cosAngle * (*pGuidingVect) - 
+      ( aoCtrlId->cosAngle * (*pGuidingVect) + 
         aoCtrlId->sinAngle * (*(pGuidingVect+1)) );
 
       *(pZernikesVect + 1) = tiltScale *
-      ( aoCtrlId->sinAngle * (*pGuidingVect) + 
-        aoCtrlId->cosAngle * (*(pGuidingVect +1)) );
+      ( aoCtrlId->cosAngle * (*(pGuidingVect +1)) -
+        aoCtrlId->sinAngle * (*pGuidingVect) ); 
 
       *(pZernikesVect + 2) = 0.0;
 
@@ -2695,10 +2697,17 @@ STATUS aoGuideAndFocus (
    double       averageFocus;
    double       *pGuidingVect;
    double       *pTotalVect;
+   double       *pFocusMat;
 
    double       focusMatrix[2*SUBAP_NB] = {-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0};
+   double       binFocusMatrix[2*SUBAP_NB] = {-2.0, -2.0, 2.0, -2.0, -2.0, 2.0, 2.0, 2.0};
 
    /* Some initialisations */
+
+   if ( aoCcdId->binningFlag == TRUE )
+      pFocusMat = binFocusMatrix;
+   else
+      pFocusMat = focusMatrix;
 
    imageSize = aoCcdId->pixelsNb;
    pd = aoCtrlId->darkVect;
@@ -2898,10 +2907,10 @@ STATUS aoGuideAndFocus (
             tilt /= (double)(aoCcdId->subapUsedNb - 1);
 
             *(pZernikesVect + 0) = tipScale * 
-             ( (aoCtrlId->cosAngle * tip) - (aoCtrlId->sinAngle * tilt) );
+             ( (aoCtrlId->cosAngle * tip) + (aoCtrlId->sinAngle * tilt) );
 
             *(pZernikesVect + 1) = tiltScale *
-            ( (aoCtrlId->sinAngle * tip) + (aoCtrlId->cosAngle * tilt) );
+             ( (aoCtrlId->cosAngle * tilt) - (aoCtrlId->sinAngle * tip) ); 
 
             *(pZernikesVect + 2) = 0.0;
 
@@ -2932,10 +2941,10 @@ STATUS aoGuideAndFocus (
          tilt /= (double)(aoCcdId->subapUsedNb);
 
          *(pZernikesVect + 0) = tipScale * 
-          ( (aoCtrlId->cosAngle * tip) - (aoCtrlId->sinAngle * tilt) );
+          ( (aoCtrlId->cosAngle * tip) + (aoCtrlId->sinAngle * tilt) );
 
          *(pZernikesVect + 1) = tiltScale *
-         ( (aoCtrlId->sinAngle * tip) + (aoCtrlId->cosAngle * tilt) );
+          ( (aoCtrlId->cosAngle * tilt) - (aoCtrlId->sinAngle * tip) ); 
 
          *(pErrorsVect) = 0.0;
          *(pErrorsVect + 1) = 0.0;
@@ -2953,7 +2962,7 @@ STATUS aoGuideAndFocus (
             focus = 0.0;
             for ( m = 0 ; m < aoCcdId->centroidsNb ; m ++ )
             {
-                focus += (*(pCentroidsVect + m) * (*(focusMatrix + m)));
+                focus += (*(pCentroidsVect + m) * (*(pFocusMat + m)));
             }
 
             focus /= (double)(aoCcdId->centroidsNb);
@@ -3138,10 +3147,17 @@ STATUS aoGuideAndFocusAndError (
    double       averageFocus;
    double       *pGuidingVect;
    double       *pTotalVect;
+   double       *pFocusMat;
 
    double       focusMatrix[2*SUBAP_NB] = {-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0};
+   double       binFocusMatrix[2*SUBAP_NB] = {-2.0, -2.0, 2.0, -2.0, -2.0, 2.0, 2.0, 2.0};
 
    /* Some initialisations */
+
+   if ( aoCcdId->binningFlag == TRUE )
+      pFocusMat = binFocusMatrix;
+   else
+      pFocusMat = focusMatrix;
 
    imageSize = aoCcdId->pixelsNb;
    pd = aoCtrlId->darkVect;
@@ -3356,10 +3372,10 @@ STATUS aoGuideAndFocusAndError (
             tilt /= (double)(aoCcdId->subapUsedNb - 1);
 
             *(pZernikesVect + 0) = tipScale * 
-             ( (aoCtrlId->cosAngle * tip) - (aoCtrlId->sinAngle * tilt) );
+             ( (aoCtrlId->cosAngle * tip) + (aoCtrlId->sinAngle * tilt) );
 
             *(pZernikesVect + 1) = tiltScale *
-            ( (aoCtrlId->sinAngle * tip) + (aoCtrlId->cosAngle * tilt) );
+             ( (aoCtrlId->cosAngle * tilt) - (aoCtrlId->sinAngle * tip) ); 
 
             *(pZernikesVect + 2) = 0.0;
 
@@ -3400,10 +3416,10 @@ STATUS aoGuideAndFocusAndError (
          tilt /= (double)(aoCcdId->subapUsedNb);
 
          *(pZernikesVect + 0) = tipScale * 
-          ( (aoCtrlId->cosAngle * tip) - (aoCtrlId->sinAngle * tilt) );
+          ( (aoCtrlId->cosAngle * tip) + (aoCtrlId->sinAngle * tilt) );
 
          *(pZernikesVect + 1) = tiltScale *
-         ( (aoCtrlId->sinAngle * tip) + (aoCtrlId->cosAngle * tilt) );
+          ( (aoCtrlId->cosAngle * tilt) - (aoCtrlId->sinAngle * tip) ); 
 
          *(pErrorsVect) = sqrt(tipScale2 * (cos2*tipErr + sin2*tiltErr));
          *(pErrorsVect + 1) = sqrt(tiltScale2 * (sin2*tipErr + cos2*tiltErr));
@@ -3422,7 +3438,7 @@ STATUS aoGuideAndFocusAndError (
             focusErr = 0.0;
             for ( m = 0 ; m < aoCcdId->centroidsNb ; m ++ )
             {
-                focus += (*(pCentroidsVect + m) * (*(focusMatrix + m)));
+                focus += (*(pCentroidsVect + m) * (*(pFocusMat + m)));
                 focusErr += *(pErrorCentroidsVect + m);
             }
 
