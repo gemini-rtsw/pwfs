@@ -2941,7 +2941,7 @@ STATUS aoCtrlContextUpdate (
    aoCtrlId->angleWithM2 = angleWithM2;
 
    aoCtrlId->cosAngleWithM2 = cos ( aoCtrlId->angleWithM2 );
-   aoCtrlId->sinAngleWithM1 = sin ( aoCtrlId->angleWithM2 );
+   aoCtrlId->sinAngleWithM2 = sin ( aoCtrlId->angleWithM2 );
 
 #ifdef DEBUG
    printf ( "aoCtrlContextUpdate(): angleWithM2 = %f\n", 
