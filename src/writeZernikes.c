@@ -1140,6 +1140,10 @@ STATUS writeWfsToTcs
          z8AfterRot = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
                       - (comaModel.comaY);
 
+         result.z7 = z7AfterRot*aoCtrlId->aoScaleFactorVect[5];
+         result.z8 = z8AfterRot*aoCtrlId->aoScaleFactorVect[6];
+
+/*
          if ( z7AfterRot >= posThresh )
             result.z7 =
             (z7AfterRot*3.0 - posThresh*2.0)*
@@ -1171,6 +1175,7 @@ STATUS writeWfsToTcs
             result.z8 = posMaxThresh;
          else if (result.z8 <= negMaxThresh)
             result.z8 = negMaxThresh;
+*/
 
 /*
          result.z7 = ( (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
