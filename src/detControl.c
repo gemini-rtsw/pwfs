@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.28 2002-11-05 00:38:07 cboyer Exp $"};
+   "$Id: detControl.c,v 1.29 2002-11-26 03:22:13 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -23453,4 +23453,28 @@ uint32 detPowerOff
    }
 
    return (errorNumber);
+}
+
+uint32 testTDL (
+   SDSU_ID         sdsuId,         /* SDSU context structure.                */
+   uint32          destId,
+   int             tryNb
+)
+{
+   int i;
+   uint32 cmdArg[5];
+   uint32 repArg[5];
+
+   for ( i = 0 ; i < tryNb ; i ++ )
+   {
+       cmdArg[0] = (i*0x111111)&0xffffff;
+       sdsuPrimitive ( sdsuId, "TDL", destId, cmdArg, repArg );
+
+       if ( repArg[0] != cmdArg[0] )
+       {
+          printf ( "TDL failed %d\n", i ) ;
+       }
+   }
+
+   return (OK);
 }
