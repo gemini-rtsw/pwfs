@@ -53,17 +53,17 @@
  *   aoModeCompute() - Compute the aO modes
  *   aoCbImSave() - Save the image circular buffer
  *   aoCbImZero() - Set to zero the image circular buffer
- *   aoCbCtrlZero() - Set to zero the control circular buffer
+ *   aoCbAoCtrlZero() - Set to zero the aO control circular buffer
  *   aoCbFgCtrlZero() - Set to zero the FG control circular buffer
- *   aoCbCtrlSave() - Save the control circular buffer
+ *   aoCbAoCtrlSave() - Save the aO control circular buffer
  *   aoCbFgCtrlSave() - Save the FG control circular buffer
  *   aoGuideAndFocus() - Compute FG modes
  *   aoModeAnalyze() - Compute the centroids and modes for analyze
  *   aoCentroidsWrite() - Write centroids to a file
- *   aoColImStructZero() - Set to zero the interaction matrix structure
- *   aoColImStructShow() - Display the interaction matrix structure
- *   aoMatZero() - Set to zero the interaction and the control matrix 
- *   aoMatCompute() - Compute the interaction and the control matrix
+ *   aoIntMatStructZero() - Set to zero the aO interaction matrix structure
+ *   aoIntMatStructShow() - Display the aO interaction matrix structure
+ *   aoMatZero() - Set to zero the aO interaction and the control matrix 
+ *   aoMatCompute() - Compute the aO interaction and the control matrix
  *   aoDarkUpdate() - Update the dark buffer of the control context structure
  *   aoCtrlFileRead () - Read parameters from the AO control file
  *   aoModInit () - Init the zero point models
@@ -71,8 +71,13 @@
  *   aoModTrefFileRead () - Read trefoil zero point model from model file
  *   aoModComaFileRead () - Read coma zero point model from model file
  *   aoModFocFileRead () - Read focus zero point model from model file
+ *   aoThresholdPerSubapCompute() - Compute a threshold per subaperture
+ *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   23 May 2002: CB - aoThresholdCompute() and aoThresholdPerSubapCompute()
+ *                     background now computed between index1 and index2
+ *   08 Feb 2002: CB - Implement threshold per sub-aperture and in real time
  *   21 Jan 2002: CB - Add wfsStatus to writeWfsToTcs()
  *   21 Dec 2001: CB - Add automatic initialization of zero point from par file
  *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
@@ -309,17 +314,17 @@ AO_CB_IM_ID aoCbImContextCreate (void)
 
 /*+
  *   FUNCTION NAME:
- *   aoCbCtrlContextCreate
+ *   aoCbAoCtrlContextCreate
  *
  *   INVOCATION:
- *   aoCbCtrlContextCreate (void)
+ *   aoCbAoCtrlContextCreate (void)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   None
  *
  *   FUNCTION VALUE:
- *   (AO_CB_CTRL_ID) Pointer to aO control circular buffer context structure, 
- *                   or NULL if unsuccessful.
+ *   (AO_CB_AO_CTRL_ID) Pointer to aO control circular buffer context structure,
+ *                      or NULL if unsuccessful.
  *
  *   PURPOSE:
  *   Create a aO control circular buffer context structure
@@ -342,21 +347,22 @@ AO_CB_IM_ID aoCbImContextCreate (void)
  *-
  */
 
-AO_CB_CTRL_ID aoCbCtrlContextCreate (void)
+AO_CB_AO_CTRL_ID aoCbAoCtrlContextCreate (void)
 {
-   AO_CB_CTRL_ID   aoCbCtrlId;
+   AO_CB_AO_CTRL_ID   aoCbAoCtrlId;
 
    /* Allocate memory for the aO control circular buffer context structure, 
     * initialising its contents to zero.
     */
 
 #ifdef DEBUG
-   printf ( "aoCbCtrlContextCreate: Allocating %d bytes for AO_CB_CTRL_ID\n",
-            sizeof (AO_CB_CTRL_ID_STRUCT) );
+   printf ( 
+     "aoCbAoCtrlContextCreate: Allocating %d bytes for AO_CB_AO_CTRL_ID\n",
+     sizeof (AO_CB_AO_CTRL_ID_STRUCT) );
 #endif /* DEBUG */
 
-   if ((aoCbCtrlId = (AO_CB_CTRL_ID) calloc ((size_t) 1, 
-                                             sizeof (AO_CB_CTRL_ID_STRUCT))) 
+   if ((aoCbAoCtrlId = (AO_CB_AO_CTRL_ID) calloc ((size_t) 1, 
+                                          sizeof (AO_CB_AO_CTRL_ID_STRUCT))) 
        == NULL)
    {
       ERROR_SET ( 0, 
@@ -365,7 +371,7 @@ AO_CB_CTRL_ID aoCbCtrlContextCreate (void)
       return (NULL);
    }
 
-   return (aoCbCtrlId);
+   return (aoCbAoCtrlId);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -381,8 +387,8 @@ AO_CB_CTRL_ID aoCbCtrlContextCreate (void)
  *   None
  *
  *   FUNCTION VALUE:
- *   (AO_CB_CTRL_ID) Pointer to FG control circular buffer context structure,
- *                   or NULL if unsuccessful.
+ *   (AO_CB_FG_CTRL_ID) Pointer to FG control circular buffer context structure,
+ *                      or NULL if unsuccessful.
  *
  *   PURPOSE:
  *   Create a FG control circular buffer context structure
@@ -1233,13 +1239,13 @@ STATUS aoMatRead (
    )
 {
 
-   int      type;                 /* Type of the matrix         */
-   int      row, col;             /* Dimension of the matrix    */
-   int      i, j;                 /* Index                      */
-   float    value;                /* Element of the matrix      */
-   MATRIX   mat;                  /* Matrix read                */
-   char     comment[STRING_SIZE]; /* First line of comments     */
-   FILE *   pFile;                /* File Id                    */
+   int        type;                 /* Type of the matrix         */
+   int        row, col;             /* Dimension of the matrix    */
+   int        i, j;                 /* Index                      */
+   float      value;                /* Element of the matrix      */
+   AO_MATRIX  mat;                  /* Matrix read                */
+   char       comment[STRING_SIZE]; /* First line of comments     */
+   FILE *     pFile;                /* File Id                    */
 
    /* Open the file in read mode */
 
@@ -1326,9 +1332,9 @@ STATUS aoMatRead (
                    ERROR_LOG_SAVE, pMatFileName );
       fclose (pFile);
       if (type == AO_INT_MAT_TYPE)
-         aoCtrlId->intMatInitFlag = FALSE;
+         aoCtrlId->aoIntMatInitFlag = FALSE;
       else
-         aoCtrlId->contMatInitFlag = FALSE;
+         aoCtrlId->aoContMatInitFlag = FALSE;
       return (ERROR);
    }
 
@@ -1339,7 +1345,7 @@ STATUS aoMatRead (
          ERROR_SET4 ( 0,
             "Dimension of the matrix (%d,%d) are not the ones expected %d,%d)",
             ERROR_LOG_SAVE, row, col, aoCcdId->centroidsNb, aoCtrlId->aoModeNb);
-         aoCtrlId->intMatInitFlag = FALSE;
+         aoCtrlId->aoIntMatInitFlag = FALSE;
          fclose (pFile);
          return (ERROR);
       }
@@ -1351,7 +1357,7 @@ STATUS aoMatRead (
          ERROR_SET4 ( 0,
             "Dimension of the matrix (%d,%d) are not the ones expected %d,%d)",
             ERROR_LOG_SAVE, row, col, aoCtrlId->aoModeNb, aoCcdId->centroidsNb);
-         aoCtrlId->contMatInitFlag = FALSE;
+         aoCtrlId->aoContMatInitFlag = FALSE;
          fclose (pFile);
          return (ERROR);
       }
@@ -1369,9 +1375,9 @@ STATUS aoMatRead (
                    "Failed to read line of comments from the matrix file %s",
                    ERROR_LOG_SAVE, pMatFileName );
       if (type == AO_INT_MAT_TYPE)
-         aoCtrlId->intMatInitFlag = FALSE;
+         aoCtrlId->aoIntMatInitFlag = FALSE;
       else
-         aoCtrlId->contMatInitFlag = FALSE;
+         aoCtrlId->aoContMatInitFlag = FALSE;
       fclose (pFile);
       return (ERROR);
    }
@@ -1395,9 +1401,9 @@ STATUS aoMatRead (
               ERROR_SET1 ( 0, "Failed to read matrix from file %s",
                            ERROR_LOG_SAVE, pMatFileName );
               if (type == AO_INT_MAT_TYPE)
-                 aoCtrlId->intMatInitFlag = FALSE;
+                 aoCtrlId->aoIntMatInitFlag = FALSE;
               else
-                 aoCtrlId->contMatInitFlag = FALSE;
+                 aoCtrlId->aoContMatInitFlag = FALSE;
               fclose (pFile);
               return (ERROR);
            }
@@ -1412,16 +1418,16 @@ STATUS aoMatRead (
 
    if ( type == AO_INT_MAT_TYPE )
    {
-      strcpy ( aoCtrlId->intMatFileName, pMatFileName );
-      aoCtrlId->intMatInitFlag = TRUE;
-      (void) copyMat ( mat, aoCtrlId->intMat, row, col);
-      aoCtrlId->contMatInitFlag = FALSE;
+      strcpy ( aoCtrlId->aoIntMatFileName, pMatFileName );
+      aoCtrlId->aoIntMatInitFlag = TRUE;
+      (void) copyMat ( mat, aoCtrlId->aoIntMat, row, col);
+      aoCtrlId->aoContMatInitFlag = FALSE;
    }
    else
    {
-      strcpy ( aoCtrlId->contMatFileName, pMatFileName );
-      aoCtrlId->contMatInitFlag = TRUE;
-      (void) copyMat ( mat, aoCtrlId->contMat, row, col);
+      strcpy ( aoCtrlId->aoContMatFileName, pMatFileName );
+      aoCtrlId->aoContMatInitFlag = TRUE;
+      (void) copyMat ( mat, aoCtrlId->aoContMat, row, col);
    }
 
 #ifdef DEBUG
@@ -1592,13 +1598,13 @@ STATUS aoFgContMatRead (
    )
 {
 
-   int      type;                 /* Type of the matrix         */
-   int      row, col;             /* Dimension of the matrix    */
-   int      i, j;                 /* Index                      */
-   float    value;                /* Element of the matrix      */
-   MATRIX   mat;                  /* Matrix read                */
-   char     comment[STRING_SIZE]; /* First line of comments     */
-   FILE *   pFile;                /* File Id                    */
+   int        type;                 /* Type of the matrix         */
+   int        row, col;             /* Dimension of the matrix    */
+   int        i, j;                 /* Index                      */
+   float      value;                /* Element of the matrix      */
+   FG_MATRIX  mat;                  /* Matrix read                */
+   char       comment[STRING_SIZE]; /* First line of comments     */
+   FILE *     pFile;                /* File Id                    */
 
    /* Open the file in read mode */
 
@@ -2152,7 +2158,7 @@ STATUS aoCtrlContextInit (
    if ( mode > AO_MODE_NB )
    {
       ERROR_SET2 ( 0, 
-                   "modeNb %d is greater than max mode %d",
+                   "aoModeNb %d is greater than max mode %d",
                    ERROR_LOG_SAVE, mode, (int)(AO_MODE_NB) );
       aoCtrlId->initFlag = FALSE;
       /*fclose (pFile);
@@ -2196,7 +2202,7 @@ STATUS aoCtrlContextInit (
    if ( mode > FG_MODE_NB )
    {
       ERROR_SET2 ( 0, 
-                   "modeNb %d is greater than max mode %d",
+                   "fgModeNb %d is greater than max mode %d",
                    ERROR_LOG_SAVE, mode, (int)(FG_MODE_NB) );
       aoCtrlId->initFlag = FALSE;
       /*fclose (pFile);
@@ -2510,6 +2516,45 @@ STATUS aoCtrlContextInit (
    printf ( "aoCtrlContextInit(): %s\n", comment );
 #endif
 
+   /* Read RMS value for threshold computation */
+
+   if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read rms from the AO init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+   aoCtrlId->rms = value;
+
+   if ( aoCcdId->binningFlag == FALSE )
+      aoCtrlId->rmsDarkFull = value;
+   else
+      aoCtrlId->rmsDarkBin = value;
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): rms = %f\n", aoCtrlId->rms );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the AO init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): %s\n", comment );
+#endif
+
    /* Read threshold value for centroid computation */
 
    if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
@@ -2523,7 +2568,12 @@ STATUS aoCtrlContextInit (
    }
 
    aoCtrlId->threshold = value;
-   aoCtrlId->thresholdDark = value;
+   if ( aoCcdId->binningFlag == FALSE )
+      aoCtrlId->thresholdDarkFull = value;
+   else
+      aoCtrlId->thresholdDarkBin = value;
+   for ( i = 0 ; i < aoCcdId->subapUsedNb ; i ++ )
+       aoCtrlId->thresholdVect[i] = value;
    aoCtrlId->thresholdMethod = AO_THRESH_VALUE;
    aoCtrlId->thresholdMultCoeff = 0.0;
    aoCtrlId->thresholdRate = 0.0;
@@ -2563,8 +2613,8 @@ STATUS aoCtrlContextInit (
    }
 
    aoCtrlId->totalThreshold = value;
-   aoCtrlId->thresholdMethod = AO_TOTAL_VALUE;
-   aoCtrlId->thresholdMultCoeff = 0.0;
+   aoCtrlId->totalMethod = AO_TOTAL_VALUE;
+   aoCtrlId->multCoeffTotal = 0.0;
    aoCtrlId->averageTotal = 0.0;
 
 #ifdef DEBUG
@@ -2658,16 +2708,18 @@ STATUS aoCtrlContextInit (
 
    /* End - close and return */
 
-   aoCtrlId->allowedSubapOff = 1;
+   aoCtrlId->initFlag = TRUE;
    aoCtrlId->coaddCounter = 0;
    aoCtrlId->focusCounter = 0;
    aoCtrlId->previousFocus = 0.0;
+   aoCtrlId->allowedSubapOff = 1;
 
    for ( i = 0 ; i < CCD_SIZE ; i ++ )
        aoCtrlId->sumVect[i] = 0.0;
 
-   aoCtrlId->initFlag = TRUE;
-   
+   for ( i = 0 ; i < (2 * SUBAP_NB) ; i ++ )
+       aoCtrlId->averageThreshVect[i] = 0.0;
+
    fclose (pFile);
 
    return ( OK );
@@ -2681,17 +2733,18 @@ STATUS aoCtrlContextInit (
  *
  *   INVOCATION:
  *   aoCtrlContextUpdate (pDarkFileName, pFlatFileName, pRefFileName, 
- *                        pIntMatFileName, pContMatFileName, pFgContMatFileName,
- *                        xCenter, yCenter, angleWithM2, angleWithM1, 
- *                        aoCcdId, aoCtrlId)
+ *                        pAoIntMatFileName, pAoContMatFileName, 
+ *                        pFgContMatFileName, xCenter, yCenter, 
+ *                        angleWithM2, angleWithM1, aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pDarkFileName      (char *)     Pointer to the dark file name
  *   (>) pFlatFileName      (char *)     Pointer to the flat file name
  *   (>) pRefFileName       (char *)     Pointer to the reference file name
- *   (>) pIntMatFileName    (char *)     Pointer to the interaction matrix file 
+ *   (>) pAoIntMatFileName  (char *)     Pointer to the aO interaction matrix  
+ *                                       file name
+ *   (>) pAoContMatFileName (char *)     Pointer to the aO control matrix file 
  *                                       name
- *   (>) pContMatFileName   (char *)     Pointer to the control matrix file name
  *   (>) pFgContMatFileName (char *)     Pointer to the FG control matrix file 
  *                                       name
  *   (>) xCenter            (double)     New xCenter value for whole CCD
@@ -2719,8 +2772,8 @@ STATUS aoCtrlContextInit (
  *   The pDarkFileName is the full name of the file including the path.
  *   The pFlatFileName is the full name of the file including the path.
  *   The pRefFileName is the full name of the file including the path.
- *   The pIntMatFileName is the full name of the file including the path.
- *   The pContMatFileName is the full name of the file including the path.
+ *   The pAoIntMatFileName is the full name of the file including the path.
+ *   The pAoContMatFileName is the full name of the file including the path.
  *   The pFgContMatFileName is the full name of the file including the path.
  *
  *   INCLUDE FILES:
@@ -2736,8 +2789,8 @@ STATUS aoCtrlContextUpdate (
    char *     pDarkFileName,
    char *     pFlatFileName,
    char *     pRefFileName,
-   char *     pIntMatFileName,
-   char *     pContMatFileName,
+   char *     pAoIntMatFileName,
+   char *     pAoContMatFileName,
    char *     pFgContMatFileName,
    double     xCenter,
    double     yCenter,
@@ -2763,16 +2816,6 @@ STATUS aoCtrlContextUpdate (
       ERROR_SET1 ( 0,
       "Failed to read the dark image from the dark fits file %s",
       ERROR_LOG_SAVE, pDarkFileName );
-      /*for ( i = 0 ; i < aoCcdId->xPixels*aoCcdId->yPixels ; i ++ )
-          image[i] = 0.0;
-      if ( aoFitsImageFloatWrite (pDarkFileName, image, aoCcdId->xPixels,
-                                  aoCcdId->yPixels) == ERROR )
-      {
-         ERROR_SET1 ( 0, "Failed to write %s\n" , ERROR_LOG_SAVE, 
-                      pDarkFileName );
-         aoCtrlId->initFlag = FALSE;
-         return ( ERROR );
-      };*/
       aoCtrlId->initFlag = FALSE;
       aoCtrlId->darkInitFlag = FALSE;
       return (ERROR);
@@ -2797,16 +2840,6 @@ STATUS aoCtrlContextUpdate (
       ERROR_SET1 ( 0,
       "Failed to read the flat image from the flat fits file %s",
       ERROR_LOG_SAVE, pFlatFileName );
-      /*for ( i = 0 ; i < aoCcdId->xPixels*aoCcdId->yPixels ; i ++ )
-          image[i] = 1.0;
-      if ( aoFitsImageFloatWrite (pFlatFileName, image, aoCcdId->xPixels,
-                                  aoCcdId->yPixels) == ERROR )
-      {
-         ERROR_SET1 ( 0, "Failed to write %s\n" , ERROR_LOG_SAVE, 
-                      pFlatFileName );
-         aoCtrlId->initFlag = FALSE;
-         return ( ERROR );
-      };*/
       aoCtrlId->initFlag = FALSE;
       aoCtrlId->flatInitFlag = FALSE;
       return (ERROR);
@@ -2842,12 +2875,12 @@ STATUS aoCtrlContextUpdate (
             pIntMatFileName );
 #endif
 
-   if ( aoMatRead ( pIntMatFileName, AO_INT_MAT_TYPE, aoCcdId, aoCtrlId ) 
+   if ( aoMatRead ( pAoIntMatFileName, AO_INT_MAT_TYPE, aoCcdId, aoCtrlId ) 
         == ERROR )
    {
       ERROR_SET1 ( 0, 
                    "Failed when reading the interaction matrix file %s" , 
-                   ERROR_LOG_SAVE, pIntMatFileName );
+                   ERROR_LOG_SAVE, pAoIntMatFileName );
       aoCtrlId->initFlag = FALSE;
       return (ERROR);
    }
@@ -2856,15 +2889,15 @@ STATUS aoCtrlContextUpdate (
 
 #ifdef DEBUG
    printf ( "aoCtrlContextUpdate(): control matrix file name: %s\n", 
-            pContMatFileName );
+            pAoContMatFileName );
 #endif
 
-   if ( aoMatRead ( pContMatFileName, AO_CONT_MAT_TYPE, aoCcdId, aoCtrlId ) 
+   if ( aoMatRead ( pAoContMatFileName, AO_CONT_MAT_TYPE, aoCcdId, aoCtrlId ) 
         == ERROR )
    {
       ERROR_SET1 ( 0, 
                    "Failed when reading the control matrix file %s" , 
-                   ERROR_LOG_SAVE, pContMatFileName );
+                   ERROR_LOG_SAVE, pAoContMatFileName );
       aoCtrlId->initFlag = FALSE;
       return (ERROR);
    }
@@ -3035,22 +3068,21 @@ STATUS aoCtrlContextShow (
             (aoCtrlId->refInitFlag ? "TRUE" : "FALSE") );
    printf ( "aO scale factor init flag: %s\n" ,
             (aoCtrlId->aoScaleInitFlag ? "TRUE" : "FALSE") );
-   printf ( "Interaction matrix init flag: %s\n" ,
-            (aoCtrlId->intMatInitFlag ? "TRUE" : "FALSE") );
+   printf ( "aO interaction matrix init flag: %s\n" ,
+            (aoCtrlId->aoIntMatInitFlag ? "TRUE" : "FALSE") );
    printf ( "aO Control matrix init flag: %s\n" ,
-            (aoCtrlId->contMatInitFlag ? "TRUE" : "FALSE") );
+            (aoCtrlId->aoContMatInitFlag ? "TRUE" : "FALSE") );
    printf ( "FG Control matrix init flag: %s\n" ,
             (aoCtrlId->fgContMatInitFlag ? "TRUE" : "FALSE") );
 
-   printf ( "Allowed subapertures to be off: %d\n", aoCtrlId->allowedSubapOff);
-   printf ( "Focus counter : %d\n", aoCtrlId->focusCounter);
 
    printf ( "Dark file name: %s\n" , aoCtrlId->darkFileName );
    printf ( "Flat file name: %s\n" , aoCtrlId->flatFileName );
    printf ( "Reference file name: %s\n" , aoCtrlId->refVectFileName );
    printf ( "aO scale factor file name: %s\n" , aoCtrlId->aoScaleFileName );
-   printf ( "Interaction matrix file name: %s\n" , aoCtrlId->intMatFileName );
-   printf ( "aO Control matrix file name: %s\n" , aoCtrlId->contMatFileName );
+   printf ( "ao Interaction matrix file name: %s\n" , 
+            aoCtrlId->aoIntMatFileName );
+   printf ( "aO Control matrix file name: %s\n" , aoCtrlId->aoContMatFileName );
    printf ( "FG Control matrix file name: %s\n" , aoCtrlId->fgContMatFileName );
 
    if ( verbose == TRUE )
@@ -3113,13 +3145,13 @@ STATUS aoCtrlContextShow (
 
    if ( verbose == TRUE )
    {
-      (void) aoColImStructShow (aoCcdId, aoCtrlId);
+      (void) aoIntMatStructShow (aoCcdId, aoCtrlId);
 
       printf ( "Interaction matrix: \n" );
       for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
       {
           for ( j = 0 ; j < aoCtrlId->aoModeNb ; j ++ )
-              printf ( "%f " , aoCtrlId->intMat[i*aoCtrlId->aoModeNb + j] );
+              printf ( "%f " , aoCtrlId->aoIntMat[i*aoCtrlId->aoModeNb + j] );
           printf ( "\n" );
       }
 
@@ -3127,7 +3159,7 @@ STATUS aoCtrlContextShow (
       for ( i = 0 ; i < aoCtrlId->aoModeNb ; i ++ )
       {
           for ( j = 0 ; j < aoCcdId->centroidsNb ; j ++ )
-              printf ( "%f " , aoCtrlId->contMat[i*aoCcdId->centroidsNb + j] );
+              printf ( "%f ", aoCtrlId->aoContMat[i*aoCcdId->centroidsNb + j] );
           printf ( "\n" );
       }
 
@@ -3141,9 +3173,15 @@ STATUS aoCtrlContextShow (
       }
    }
 
+   printf ( "RMS: %f\n" , aoCtrlId->rms );
+   printf ( "RMS dark (no bin): %f\n" , aoCtrlId->rmsDarkFull );
+   printf ( "RMS dark (bin): %f\n" , aoCtrlId->rmsDarkBin );
    printf ( "Threshold method: %d\n" , aoCtrlId->thresholdMethod );
    printf ( "Threshold: %f\n" , aoCtrlId->threshold );
-   printf ( "Threshold dark: %f\n" , aoCtrlId->thresholdDark );
+   printf ( "Threshold dark (no bin): %f\n" , aoCtrlId->thresholdDarkFull );
+   printf ( "Threshold dark (bin): %f\n" , aoCtrlId->thresholdDarkBin );
+   for ( i = 0 ; i < aoCcdId->subapUsedNb ; i ++ )
+       printf ( "ThresholdVect[%d] = %f\n" , i , aoCtrlId->thresholdVect[i]);
    printf ( "Threshold rate: %f\n" , aoCtrlId->thresholdRate );
    printf ( "Threshold mult coeff: %f\n" , aoCtrlId->thresholdMultCoeff );
    printf ( "Average total counts method: %d\n" , aoCtrlId->totalMethod );
@@ -3156,9 +3194,11 @@ STATUS aoCtrlContextShow (
    printf ( "Angle with M1 (rad): %f\n" , aoCtrlId->angleWithM1 );
    printf ( "Cos Angle with M1: %f\n" , aoCtrlId->cosAngleWithM1 );
    printf ( "Sin Angle with M1: %f\n" , aoCtrlId->sinAngleWithM1 );
-   printf ( "coaddCounter: %d\n" , aoCtrlId->coaddCounter );
    printf ( "Sliding focus gain: %f\n" , aoCtrlId->slidingFocusGain );
    printf ( "One - Sliding focus gain: %f\n" , aoCtrlId->one_slidingFocusGain );
+   printf ( "coaddCounter: %d\n" , aoCtrlId->coaddCounter );
+   printf ( "Focus counter : %d\n", aoCtrlId->focusCounter);
+   printf ( "Allowed subapertures to be off: %d\n", aoCtrlId->allowedSubapOff);
 
    return (OK);
 }
@@ -3306,10 +3346,6 @@ STATUS aoGlobalGuide (
    double       pixelVal;
    double       xCenter;
    double       yCenter;
-#ifdef GAIN
-   double       tipScale;
-   double       tiltScale;
-#endif
    double       *pTotal;
 
    /* Some initialisations */
@@ -3324,11 +3360,6 @@ STATUS aoGlobalGuide (
 #ifdef DEBUG
    printf ( "aoGlobalGuide(): xCenter = %f, yCenter= %f\n" ,
             xCenter, yCenter );
-#endif
-
-#ifdef GAIN
-   tipScale = aoCtrlId->fgScaleFactorVect[0];
-   tiltScale = aoCtrlId->fgScaleFactorVect[1];
 #endif
 
    pTotal = pTotalCountsVect + aoCcdId->subapUsedNb;
@@ -3376,26 +3407,21 @@ STATUS aoGlobalGuide (
 
       *pWfsStatus = OK;
 
-      *(pGuidesVect) = (x / total) - xCenter;
-      *(pGuidesVect + 1) = (y / total) - yCenter;
+      *(pGuidesVect) = xCenter - (x / total);
+      *(pGuidesVect + 1) = yCenter - (y / total);
 
-#ifdef GAIN
-      *(pFgVect) = tipScale *
-      ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
-        aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
-
-      *(pFgVect + 1) = tiltScale *
-      ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
-        aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
-#else
-      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
-                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
-
-      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
-                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
-#endif
-
-      *(pFgVect + 2) = 0.0;
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         *(pFgVect) = 2.0 * (*pGuidesVect);
+         *(pFgVect + 1) = 2.0 * (*(pGuidesVect+1));
+         *(pFgVect + 2) = 0.0;
+      }
+      else
+      {
+         *(pFgVect) = (*pGuidesVect);
+         *(pFgVect + 1) = *(pGuidesVect+1);
+         *(pFgVect + 2) = 0.0;
+      }
 
       *(pFgErrorsVect) = 0.0;
       *(pFgErrorsVect + 1) = 0.0;
@@ -3424,8 +3450,10 @@ STATUS aoGlobalGuide (
 
    if ( timeNow (pTime) != OK )
    {
+#ifdef DEBUG
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
-      return (ERROR);
+#endif
+      *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
@@ -3446,8 +3474,8 @@ STATUS aoGlobalGuide (
  *
  *   INVOCATION:
  *   aoGlobalGuideAndError (pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
- *                          pGuidesVect, pFgVect, pFgErrorsVect,
- *                          pTime, pWfsStatus, writeToRm)
+ *                          pGuidesVect, pFgVect, pFgVectAfterRot, 
+ *                          pFgErrorsVect, pTime, pWfsStatus, writeToRm)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage           (float *)    Pointer to the image from which to
@@ -3528,12 +3556,6 @@ STATUS aoGlobalGuideAndError (
    double       pixelVal;
    double       xCenter;
    double       yCenter;
-#ifdef GAIN
-   double       tipScale;
-   double       tipScale2;
-   double       tiltScale;
-   double       tiltScale2;
-#endif
    double       *pTotal;
 
    /* Some initialisations */
@@ -3548,13 +3570,6 @@ STATUS aoGlobalGuideAndError (
 #ifdef DEBUG
    printf ( "aoGlobalGuideAndError(): xCenter = %f, yCenter= %f\n" ,
             xCenter, yCenter );
-#endif
-
-#ifdef GAIN
-   tipScale = aoCtrlId->fgScaleFactorVect[0];
-   tipScale2 = tipScale * tipScale;
-   tiltScale = aoCtrlId->fgScaleFactorVect[1];
-   tiltScale2 = tiltScale * tiltScale;
 #endif
 
    cos2 = aoCtrlId->cosAngleWithM2 * aoCtrlId->cosAngleWithM2;
@@ -3614,26 +3629,21 @@ STATUS aoGlobalGuideAndError (
       xTemp = (x / total);
       yTemp = (y / total);
 
-      *(pGuidesVect) = xTemp - xCenter;
-      *(pGuidesVect + 1) = yTemp - yCenter;
+      *(pGuidesVect) = xCenter - xTemp;
+      *(pGuidesVect + 1) = yCenter - yTemp;
 
-#ifdef GAIN
-      *(pFgVect) = tipScale *
-      ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
-        aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
-
-      *(pFgVect + 1) = tiltScale *
-      ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
-        aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
-#else
-      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) +
-                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
-
-      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
-                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) );
-#endif
-
-      *(pFgVect + 2) = 0.0;
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         *(pFgVect) = 2.0 * (*(pGuidesVect));
+         *(pFgVect + 1) = 2.0 * (*(pGuidesVect +1));
+         *(pFgVect + 2) = 0.0;
+      }
+      else
+      {
+         *(pFgVect) = *(pGuidesVect);
+         *(pFgVect + 1) = *(pGuidesVect +1);
+         *(pFgVect + 2) = 0.0;
+      }
 
       xSigma = (((xErr / total) - (xTemp * xTemp))/total);
       ySigma = (((yErr / total) - (yTemp * yTemp))/total);
@@ -3643,14 +3653,8 @@ STATUS aoGlobalGuideAndError (
       if ( ySigma < AO_MIN_DOUBLE )
          ySigma = 0.0;
 
-#ifdef GAIN
-      *(pFgErrorsVect) = sqrt(tipScale2 * (cos2*xSigma + sin2*ySigma));
-      *(pFgErrorsVect + 1) = sqrt(tiltScale2 * (sin2*xSigma + cos2*ySigma));
-#else
       *(pFgErrorsVect) = sqrt(cos2*xSigma + sin2*ySigma);
       *(pFgErrorsVect + 1) = sqrt(sin2*xSigma + cos2*ySigma);
-#endif
-
       *(pFgErrorsVect + 2) = 0.0;
 
 #ifdef DEBUG
@@ -3676,8 +3680,10 @@ STATUS aoGlobalGuideAndError (
 
    if ( timeNow (pTime) != OK )
    {
+#ifdef DEBUG
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
-      return (ERROR);
+#endif
+      *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
@@ -3791,7 +3797,7 @@ STATUS aoImageFloatAverage (
  *   aoRmsNoiseImageCompute
  *
  *   INVOCATION:
- *   aoRmsNoiseImageCompute (pImage, aoCcdId, pRmsNoise)
+ *   aoRmsNoiseImageCompute (pImage, aoCcdId, pRmsNoise, pMeanNoise)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage         (float *)    Pointer to the image from which to compute
@@ -3799,15 +3805,16 @@ STATUS aoImageFloatAverage (
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *                                   structure
  *   (<) pRmsNoise      (double *)   Pointer to the rms of the noise
+ *   (<) pMeanNoise      (double *)  Pointer to the Mean of the noise
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   To compute the rms of the noise
+ *   To compute the mean and rms of the noise
  *
  *   DESCRIPTION:
- *   This routine computes for a dedicated image pImage the rms of the
+ *   This routine computes for a dedicated image pImage the mean and rms of the
  *   noise.
  *
  *   EXTERNAL VARIABLES:
@@ -3827,7 +3834,8 @@ STATUS aoImageFloatAverage (
 STATUS aoRmsNoiseImageCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
-   double *     pRmsNoise
+   double *     pRmsNoise,
+   double *     pMeanNoise
    )
 {
    int          imageSize;
@@ -3861,6 +3869,8 @@ STATUS aoRmsNoiseImageCompute (
 
    meanPixel = meanPixel / (double)(aoCcdId->pixelsNb);
 
+   *pMeanNoise = meanPixel;
+
    variance = variance / (double)(aoCcdId->pixelsNb);
 
    rmsrms = variance - (meanPixel*meanPixel);
@@ -3876,6 +3886,10 @@ STATUS aoRmsNoiseImageCompute (
 
    *pRmsNoise = sqrt ( rmsrms );
 
+#ifdef DEBUG
+   printf ( "Mean=%f, rms=%f\n", (float)*pMeanNoise, (float)*pRmsNoise );
+#endif
+
    return (OK);
 }
 
@@ -3886,12 +3900,14 @@ STATUS aoRmsNoiseImageCompute (
  *   aoThresholdCompute
  *
  *   INVOCATION:
- *   aoThresholdCompute (pImage, aoCcdId, ratePixel, pThreshold)
+ *   aoThresholdCompute (pImage, aoCcdId, aoCtrlId, ratePixel, pThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage         (float *)    Pointer to the image from which to compute
  *                                   the centroids
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                                   structure
+ *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control context
  *                                   structure
  *   (>) ratePixel      (double)     Rate of the brightest pixels to determine
  *                                   the threshold should between 0 and 1
@@ -3925,11 +3941,13 @@ STATUS aoRmsNoiseImageCompute (
 STATUS aoThresholdCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId,
    double       ratePixel,
    double *     pThreshold
    )
 {
-   int          index;
+   int          index1;
+   int          index2;
    int          imageSize;
    int          gap;
    int          i, j;
@@ -3938,11 +3956,12 @@ STATUS aoThresholdCompute (
    float *      pi;
    float *      pn;
    float *      pMax;
+   double       averageThresh;
    IMAGE_VECT   newImageVect;
 
    /* Check range of ratePixel: should be between 0 and 1 */
 
-   if ( (ratePixel < 0.0) || (ratePixel > 1.0) )
+   if ( (ratePixel < 0.0) || (ratePixel >= 1.0) )
    {
       ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
                    ERROR_LOG_SAVE, ratePixel );
@@ -3977,10 +3996,22 @@ STATUS aoThresholdCompute (
 
    /* Determine the threshold: corresponds to ratePixel% of brightest pixels */
 
-   index = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
-   printf ( "index = %d\n" ,index);
+   index2 = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
 
-   *pThreshold = *(pn + index);
+   if ( ratePixel < 0.5 )
+      index1 = (int) ceil ((double)(aoCcdId->pixelsNb) * ratePixel);
+   else
+      index1 = 0;
+
+   printf ( "index1=%d, index2 = %d\n", index1, index2);
+
+   pn = newImageVect;
+   averageThresh = 0.0;
+   for ( i = index1 ; i < index2 ; i ++ )
+       averageThresh += (double)(*(pn + i));
+
+   *pThreshold = (averageThresh / (double)(index2-index1)) +
+                 (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
 
    return (OK);
 }
@@ -3992,14 +4023,16 @@ STATUS aoThresholdCompute (
  *   aoCentroidsCompute
  *
  *   INVOCATION:
- *   aoCentroidsCompute (pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
- *                       pCentroidsVect, pErrorCentroidsVect, pWfsStatus)
+ *   aoCentroidsCompute (pImage, aoCcdId, aoCtrlId, pThreshVect,
+ *                       pTotalCountsVect, pCentroidsVect, pErrorCentroidsVect, 
+ *                       pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the image from which to
  *                                        compute the centroids
  *   (>) aoCcdId             (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *   (!) aoCtrlId            (AO_CTRL_ID) Pointer to the AO control structure
+ *   (!) pThreshVect         (double *)   Pointer to the threshold vector
  *   (!) pTotalCountsVect    (double *)   Pointer to the total counts vector
  *   (!) pCentroidsVect      (double *)   Pointer to the centroids vector
  *   (!) pErrorCentroidsVect (double *)   Pointer to the error centroids vector
@@ -4036,6 +4069,7 @@ STATUS aoCentroidsCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId,
+   double *     pThreshVect,
    double *     pTotalCountsVect,
    double *     pCentroidsVect,
    double *     pErrorCentroidsVect,
@@ -4050,6 +4084,7 @@ STATUS aoCentroidsCompute (
    float *      pi;
    float *      pMin;
    float *      pMax;
+   double       thresh;
    double       totalSubap;
    double       total;
    double       xSubap;
@@ -4060,7 +4095,7 @@ STATUS aoCentroidsCompute (
 
    m = 0;
    subapOffNb = 0;
-   total = 0;
+   total = (double)0.0;
    *pWfsStatus = OK;
    for ( k = 0 ; k < 2 * aoCcdId->ySubapNb ; k ++ )
    {
@@ -4077,6 +4112,7 @@ STATUS aoCentroidsCompute (
               xSubap = (double)(0.0);
               ySubap = (double)(0.0);
               totalSubap = (double)(0.0);
+              thresh = *(pThreshVect + m);
 
               xSubapCenter = aoCtrlId->refWfsVect[2*m] - aoCcdId->xRaster*l;
               ySubapCenter = aoCtrlId->refWfsVect[2*m+1] -
@@ -4096,7 +4132,8 @@ STATUS aoCentroidsCompute (
 
                   for ( pi = pMin ; pi < pMax ; pi ++)
                   {
-                      pixelVal = (double)(*pi) - aoCtrlId->threshold;
+                      /*pixelVal = (double)(*pi) - aoCtrlId->threshold;*/
+                      pixelVal = (double)(*pi) - thresh;
                       if ( pixelVal > (double)(0.0) )
                       {
                          xSubap += pixelVal*j;
@@ -4185,7 +4222,8 @@ STATUS aoCentroidsCompute (
  *   aoModeCompute
  *
  *   INVOCATION:
- *   aoModeCompute (pImage, aoCcdId, aoCtrlId, imageNb, aoCbCtrlId)
+ *   aoModeCompute (pImage, aoCcdId, aoCtrlId, imageNb, pThreshVect, 
+ *                  aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage    (float *)    Pointer to the float buffer which contains the
@@ -4193,7 +4231,10 @@ STATUS aoCentroidsCompute (
  *   (>) aoCcdId   (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *   (!) aoCtrlId  (AO_CTRL_ID) Pointer to the AO control structure
  *   (>) imageNb   (int)        Number of images to average
- *   (!) aoCbCtrlId (AO_CB_CTRL_ID) Pointer to the control circular buffer
+ *   (>) pThreshVect  (int)              Vector of the image current threshold
+ *                                       vector
+ *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the aO control circular
+ *                                       buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -4206,7 +4247,7 @@ STATUS aoCentroidsCompute (
  *   images coadded reaches imageNb, the sumVect buffer is averaged. Then the 
  *   centroids of this average image are computed and multiplied by the control 
  *   matrix and by the scale factors to give the aO modes and all these data are
- *   saved into the aoCbCtrlId circular buffer.
+ *   saved into the aoCbAoCtrlId circular buffer.
  *
  *   EXTERNAL VARIABLES:
  *   None.
@@ -4227,9 +4268,11 @@ STATUS aoModeCompute (
    AO_CCD_ID     aoCcdId,
    AO_CTRL_ID    aoCtrlId,
    int           imageNb,
-   AO_CB_CTRL_ID aoCbCtrlId
+   double *         pThreshVect,
+   AO_CB_AO_CTRL_ID aoCbAoCtrlId
    )
 {
+   int          k;
    int          imageSize;
    int          indexCtrl;
    int *        pWfsStatus;
@@ -4249,10 +4292,8 @@ STATUS aoModeCompute (
    double *     pMaxAo;
    double *     pMaxCent;
    double *     pMat;
-#ifdef GAIN
-   double *     pScale;
-#endif
    double *     pTime;
+   double *     pThresh;
 
    /* Some initialisations */
 
@@ -4272,6 +4313,9 @@ STATUS aoModeCompute (
          {
              *(p++) = *(pi++);
          }
+
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+             *(aoCtrlId->averageThreshVect + k) = *(pThreshVect + k);
       }
       else
       {
@@ -4279,6 +4323,9 @@ STATUS aoModeCompute (
          {
              *p = ( *(p) + *(pi++) );
          }
+
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+             *(aoCtrlId->averageThreshVect + k) += *(pThreshVect + k);
       }
       aoCtrlId->coaddCounter ++;
 
@@ -4292,31 +4339,33 @@ STATUS aoModeCompute (
 
          /* Compute the centroids */
 
-         indexCtrl = aoCbCtrlId->position;
-         pTotalCountsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].totalCountsVect;
-         pCentroidsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].centroidsVect;
+         indexCtrl = aoCbAoCtrlId->position;
+         pTotalCountsVect = 
+         aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].totalCountsVect;
+         pThresh = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].thresholdVect;
+         pCentroidsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].centroidsVect;
          pErrorCentroidsVect = 
-         aoCbCtrlId->cbCtrlRecord[indexCtrl].errorCentroidsVect;
-         pAoVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVect;
-         pAoVectAfterRot = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVectAfterRot;
-         pAoErrorsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoErrorsVect; 
-         pWfsStatus = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus); 
-         pTime = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].time); 
+         aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].errorCentroidsVect;
+         pAoVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].aoVect;
+         pAoVectAfterRot = 
+         aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].aoVectAfterRot;
+         pAoErrorsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].aoErrorsVect; 
+         pWfsStatus = &(aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].wfsStatus); 
+         pTime = &(aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].time); 
 
          pErrorAo = pAoErrorsVect;
          pMaxAo = pAoVect + aoCtrlId->aoModeNb;
          pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
-         pMat = aoCtrlId->contMat;
+         pMat = aoCtrlId->aoContMat;
+
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+              *(pThresh + k) = *(aoCtrlId->averageThreshVect + k) / imageNb;
 
          for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
              *pAo = 0.0;
 
-#ifdef GAIN
-         pScale = aoCtrlId->aoScaleFactorVect;
-#endif
-
          if ( aoCentroidsCompute ( aoCtrlId->sumVect, aoCcdId, aoCtrlId, 
-                                   pTotalCountsVect,
+                                   pThresh, pTotalCountsVect,
                                    pCentroidsVect, pErrorCentroidsVect,
                                    pWfsStatus) == ERROR )
          {
@@ -4336,11 +4385,7 @@ STATUS aoModeCompute (
 	    {
                for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
                {
-#ifdef GAIN
-                   *pAo *= (2.0)*(*(pScale ++));
-#else
                    *pAo *= (2.0);
-#endif
                    *(pErrorAo ++) = 0.0;
                }
 	    }
@@ -4348,9 +4393,6 @@ STATUS aoModeCompute (
 	    {
                for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
                {
-#ifdef GAIN
-                   *pAo *= (*(pScale ++));
-#endif
                    *(pErrorAo ++) = 0.0;
                }
 	    }
@@ -4368,8 +4410,10 @@ STATUS aoModeCompute (
 
          if ( timeNow (pTime) != OK )
          {
+#ifdef DEBUG
             ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
-            return (ERROR);
+#endif
+            *pTime = (double)AO_TIME_NOW_ERROR;
          };
 
          if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect, 
@@ -4379,12 +4423,12 @@ STATUS aoModeCompute (
             return (ERROR);
          };
 
-         /* Update the aoCbCtrlId circular buffer */
+         /* Update the aoCbAoCtrlId circular buffer */
 
-         if ( ++ aoCbCtrlId->position == CB_CTRL_RECORD_NB )
+         if ( ++ aoCbAoCtrlId->position == CB_AO_CTRL_RECORD_NB )
          {
-            aoCbCtrlId->position = 0;
-            aoCbCtrlId->counter ++;
+            aoCbAoCtrlId->position = 0;
+            aoCbAoCtrlId->counter ++;
          }
       }
    }
@@ -4757,22 +4801,23 @@ STATUS aoCbImZero
 
 /*+
  *   FUNCTION NAME:
- *   aoCbCtrlZero
+ *   aoCbAoCtrlZero
  *
  *   INVOCATION:
- *   aoCbCtrlZero (aoCbCtrlId)
+ *   aoCbAoCtrlZero (aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (!) aoCbCtrlId (AO_CB_CTRL_ID)  Pointer to the control circular buffer
+ *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID)  Pointer to the aO control circular 
+ *                                        buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Set to zero the control circular buffer.
+ *   Set to zero the aO control circular buffer.
  *
  *   DESCRIPTION:
- *   This routine set to zero all the records of the control circular buffer.
+ *   This routine set to zero all the records of the aO control circular buffer.
  *
  *   EXTERNAL VARIABLES:
  *   None.
@@ -4788,38 +4833,39 @@ STATUS aoCbImZero
  *-
  */
 
-STATUS aoCbCtrlZero
+STATUS aoCbAoCtrlZero
    (
-   AO_CB_CTRL_ID   aoCbCtrlId     /* Pointer to the control circular buffer */
+   AO_CB_AO_CTRL_ID aoCbAoCtrlId /* Pointer to the aO control circular buffer */
    )
 {
    int             index;
    int             i;
 
-   for ( index = 0 ; index < CB_CTRL_RECORD_NB ; index ++ )
+   for ( index = 0 ; index < CB_AO_CTRL_RECORD_NB ; index ++ )
    {
-       aoCbCtrlId->cbCtrlRecord[index].time = 0.0;
-       aoCbCtrlId->cbCtrlRecord[index].wfsStatus = 0;
+       aoCbAoCtrlId->cbAoCtrlRecord[index].time = 0.0;
+       aoCbAoCtrlId->cbAoCtrlRecord[index].wfsStatus = 0;
        for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
        {
-           aoCbCtrlId->cbCtrlRecord[index].totalCountsVect[i] = 0.0;
-           aoCbCtrlId->cbCtrlRecord[index].centroidsVect[i] = 0.0;
-           aoCbCtrlId->cbCtrlRecord[index].errorCentroidsVect[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].thresholdVect[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].totalCountsVect[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].centroidsVect[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].errorCentroidsVect[i] = 0.0;
        }
-       for ( i = 0 ; i < MODE_NB ; i ++ )
+       for ( i = 0 ; i < AO_MODE_NB ; i ++ )
        {
-           aoCbCtrlId->cbCtrlRecord[index].aoVect[i] = 0.0;
-           aoCbCtrlId->cbCtrlRecord[index].aoVectAfterRot[i] = 0.0;
-           aoCbCtrlId->cbCtrlRecord[index].aoErrorsVect[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].aoVect[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].aoVectAfterRot[i] = 0.0;
+           aoCbAoCtrlId->cbAoCtrlRecord[index].aoErrorsVect[i] = 0.0;
        }
    }
 
-   aoCbCtrlId->exposureTime = 0.0;
-   aoCbCtrlId->processingMode = 0;
-   aoCbCtrlId->averageImageNb = 0;
-   aoCbCtrlId->position = 0;
-   aoCbCtrlId->offset = 0;
-   aoCbCtrlId->counter = 0;
+   aoCbAoCtrlId->exposureTime = 0.0;
+   aoCbAoCtrlId->processingMode = 0;
+   aoCbAoCtrlId->averageImageNb = 0;
+   aoCbAoCtrlId->position = 0;
+   aoCbAoCtrlId->offset = 0;
+   aoCbAoCtrlId->counter = 0;
 
    return (OK);
 }
@@ -4874,6 +4920,7 @@ STATUS aoCbFgCtrlZero
        aoCbFgCtrlId->cbFgCtrlRecord[index].wfsStatus = 0;
        for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
        {
+           aoCbFgCtrlId->cbFgCtrlRecord[index].thresholdVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].totalCountsVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].centroidsVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].errorCentroidsVect[i] = 0.0;
@@ -4904,24 +4951,26 @@ STATUS aoCbFgCtrlZero
 
 /*+
  *   FUNCTION NAME:
- *   aoCbCtrlSave
+ *   aoCbAoCtrlSave
  *
  *   INVOCATION:
- *   aoCbCtrlSave (pCbCtrlFilePath, aoCcdId, aoCtrlId, aoCbCtrlId)
+ *   aoCbAoCtrlSave (pCbAoCtrlFilePath, aoCcdId, aoCtrlId, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pCbCtrlFilePath (char *)        Directory where to save the circular 
- *                                       buffer control
- *   (>) aoCcdId         (AO_CCD_ID)     Pointer to the CCD geometry structure
- *   (>) aoCtrlId        (AO_CTRL_ID)    Pointer to the control context 
- *                                       structure
- *   (>) aoCbCtrlId      (AO_CB_CTRL_ID) Pointer to the control circular buffer
+ *   (>) pCbAoCtrlFilePath (char *)           Directory where to save the aO 
+ *                                            circular buffer control
+ *   (>) aoCcdId           (AO_CCD_ID)        Pointer to the CCD geometry 
+ *                                            structure
+ *   (>) aoCtrlId          (AO_CTRL_ID)       Pointer to the control context 
+ *                                            structure
+ *   (>) aoCbAoCtrlId      (AO_CB_AO_CTRL_ID) Pointer to the aO control 
+ *                                            circular buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Save the control circular buffer.
+ *   Save the aO control circular buffer.
  *
  *   DESCRIPTION:
  *   This routine save the contents of the control circular buffer into a file
@@ -4943,12 +4992,15 @@ STATUS aoCbFgCtrlZero
  *-
  */
 
-STATUS aoCbCtrlSave
+STATUS aoCbAoCtrlSave
    (
-   char *          pCbCtrlFilePath, /* Control circular buffer directory      */
-   AO_CCD_ID       aoCcdId,         /* Pointer to the CCD geometry structure  */
-   AO_CTRL_ID      aoCtrlId,        /* Pointer to the control structure       */
-   AO_CB_CTRL_ID   aoCbCtrlId       /* Pointer to the control circular buffer */
+
+   char *           pCbAoCtrlFilePath, /* aO control circular buffer directory*/
+   AO_CCD_ID        aoCcdId,           /* Pointer to the CCD geometry         */
+                                       /* structure                           */
+   AO_CTRL_ID       aoCtrlId,          /* Pointer to the control structure    */
+   AO_CB_AO_CTRL_ID aoCbAoCtrlId       /* Pointer to the aO control circular  */
+                                       /* buffer                              */
    )
 {
    int                         i;
@@ -4958,7 +5010,7 @@ STATUS aoCbCtrlSave
    int                         timeArray[7];
    double                      timeSave;
 
-   AO_HEADER_CB_CTRL_ID_STRUCT aoHeaderCbCtrl;
+   AO_HEADER_CB_AO_CTRL_ID_STRUCT aoHeaderCbAoCtrl;
 
    FILE *                      pFile;
 
@@ -4985,78 +5037,83 @@ STATUS aoCbCtrlSave
 
    if ( defNameFlag != TRUE )
    {
-      if ( ( strcmp (pCbCtrlFilePath, "") == 0 ) ||
-           ( strcmp (pCbCtrlFilePath, "NONE") == 0 ) )
+      if ( ( strcmp (pCbAoCtrlFilePath, "") == 0 ) ||
+           ( strcmp (pCbAoCtrlFilePath, "NONE") == 0 ) )
       {
-         sprintf ( aoHeaderCbCtrl.cbCtrlFileName,
-                   "./D%04d%02d%02dT%02d%02d%02dP1.cbc",
+         sprintf ( aoHeaderCbAoCtrl.cbAoCtrlFileName,
+                   "./D%04d%02d%02dT%02d%02d%02dP1.cbcao",
                    timeArray[0], timeArray[1], timeArray[2], timeArray[3],
                    timeArray[4], timeArray[5]);
       }
       else
       {
-         sprintf ( aoHeaderCbCtrl.cbCtrlFileName,
-                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbc",
-                   pCbCtrlFilePath, timeArray[0], timeArray[1], timeArray[2], 
+         sprintf ( aoHeaderCbAoCtrl.cbAoCtrlFileName,
+                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbcao",
+                   pCbAoCtrlFilePath, timeArray[0], timeArray[1], timeArray[2], 
                    timeArray[3], timeArray[4], timeArray[5]);
       }
    }
    else
    {
-      if ( ( strcmp (pCbCtrlFilePath, "") == 0 ) ||
-           ( strcmp (pCbCtrlFilePath, "NONE") == 0 ) )
+      if ( ( strcmp (pCbAoCtrlFilePath, "") == 0 ) ||
+           ( strcmp (pCbAoCtrlFilePath, "NONE") == 0 ) )
       {
-         strcpy ( aoHeaderCbCtrl.cbCtrlFileName, "./defaultP1.cbc" );
+         strcpy ( aoHeaderCbAoCtrl.cbAoCtrlFileName, "./defaultP1.cbcao" );
       }
       else
       {
-         sprintf ( aoHeaderCbCtrl.cbCtrlFileName, "%s/defaultP1.cbc",
-                   pCbCtrlFilePath );
+         sprintf ( aoHeaderCbAoCtrl.cbAoCtrlFileName, "%s/defaultP1.cbcao",
+                   pCbAoCtrlFilePath );
       }
    }
 
 #ifdef DEBUG
-   printf ( "File name: %s\n" , aoHeaderCbCtrl.cbCtrlFileName );
+   printf ( "File name: %s\n" , aoHeaderCbAoCtrl.cbAoCtrlFileName );
 #endif
 
    /*
     * Init the header of the file
     */
 
-   index = aoCbCtrlId->position;
+   index = aoCbAoCtrlId->position;
 
-   if ( aoCbCtrlId->counter == 0 )
+   if ( aoCbAoCtrlId->counter == 0 )
    {
-      aoHeaderCbCtrl.recordNb = index;
+      aoHeaderCbAoCtrl.recordNb = index;
    }
    else
    {
-      aoHeaderCbCtrl.recordNb = CB_CTRL_RECORD_NB;
+      aoHeaderCbAoCtrl.recordNb = CB_AO_CTRL_RECORD_NB;
    }
 
-   aoHeaderCbCtrl.processingMode = aoCbCtrlId->processingMode;
-   aoHeaderCbCtrl.centroidsNb = aoCcdId->centroidsNb;
-   aoHeaderCbCtrl.aoModeNb = aoCtrlId->aoModeNb;
-   aoHeaderCbCtrl.averageImageNb = aoCbCtrlId->averageImageNb;
-   aoHeaderCbCtrl.exposureTime = aoCbCtrlId->exposureTime;
+   aoHeaderCbAoCtrl.processingMode = aoCbAoCtrlId->processingMode;
+   aoHeaderCbAoCtrl.centroidsNb = aoCcdId->centroidsNb;
+   aoHeaderCbAoCtrl.aoModeNb = aoCtrlId->aoModeNb;
+   aoHeaderCbAoCtrl.averageImageNb = aoCbAoCtrlId->averageImageNb;
+   aoHeaderCbAoCtrl.exposureTime = aoCbAoCtrlId->exposureTime;
    for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
-       aoHeaderCbCtrl.refWfsVect[i] = aoCtrlId->refWfsVect[i];
+       aoHeaderCbAoCtrl.thresholdVect[i] = aoCtrlId->thresholdVect[i];
+   for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
+       aoHeaderCbAoCtrl.refWfsVect[i] = aoCtrlId->refWfsVect[i];
    for ( i = 0 ; i < aoCtrlId->aoModeNb ; i ++ )
-       aoHeaderCbCtrl.aoScaleFactorVect[i] = aoCtrlId->aoScaleFactorVect[i];
-   aoHeaderCbCtrl.threshold = aoCtrlId->threshold;
-   aoHeaderCbCtrl.totalThreshold = aoCtrlId->totalThreshold;
-   aoHeaderCbCtrl.angleWithM1 = aoCtrlId->angleWithM1;
+       aoHeaderCbAoCtrl.aoScaleFactorVect[i] = aoCtrlId->aoScaleFactorVect[i];
+   aoHeaderCbAoCtrl.rms = aoCtrlId->rms;
+   aoHeaderCbAoCtrl.threshold = aoCtrlId->threshold;
+   aoHeaderCbAoCtrl.totalThreshold = aoCtrlId->totalThreshold;
+   aoHeaderCbAoCtrl.angleWithM1 = aoCtrlId->angleWithM1;
+   aoHeaderCbAoCtrl.flipXWithM1 = 0.0;
+   aoHeaderCbAoCtrl.flipYWithM1 = 0.0;
 
    /*
-    * Open the image circular buffer
+    * Open the aO control circular buffer
     */
 
-   pFile = fopen ( aoHeaderCbCtrl.cbCtrlFileName, "w" );
+   pFile = fopen ( aoHeaderCbAoCtrl.cbAoCtrlFileName, "w" );
 
    if ( pFile == (FILE *)(NULL) )
    {
       ERROR_SET1 (0, "Failed to open in write mode file %s",
-                 ERROR_LOG_NOW, aoHeaderCbCtrl.cbCtrlFileName);
+                 ERROR_LOG_NOW, aoHeaderCbAoCtrl.cbAoCtrlFileName);
    }
    else
    {
@@ -5064,15 +5121,15 @@ STATUS aoCbCtrlSave
        * First save the header of the file
        */
 
-      itemNb = fwrite ( (char *)&aoHeaderCbCtrl,
+      itemNb = fwrite ( (char *)&aoHeaderCbAoCtrl,
                         sizeof (char),
-                        sizeof (AO_HEADER_CB_CTRL_ID_STRUCT),
+                        sizeof (AO_HEADER_CB_AO_CTRL_ID_STRUCT),
                         pFile);
 
       if ( itemNb == NULL )
       {
          ERROR_SET1 (0, "Failed to write header in file %s",
-                     ERROR_LOG_NOW, aoHeaderCbCtrl.cbCtrlFileName);
+                     ERROR_LOG_NOW, aoHeaderCbAoCtrl.cbAoCtrlFileName);
          (void)fclose (pFile);
          return (ERROR);
       }
@@ -5085,24 +5142,24 @@ STATUS aoCbCtrlSave
        */
 
 #ifdef DEBUG
-      printf ( "index: %d, counter: %d\n", index, aoCbCtrlId->counter);
+      printf ( "index: %d, counter: %d\n", index, aoCbAoCtrlId->counter);
 #endif
-      if ( aoCbCtrlId->counter == 0 )
+      if ( aoCbAoCtrlId->counter == 0 )
       {
 #ifdef DEBUG
          printf ( "Counter= 0 -> save records from 0 to %d\n", index - 1);
 #endif
          for ( i = 0 ; i < index ; i ++ )
          {
-             itemNb = fwrite ( (char *)&(aoCbCtrlId->cbCtrlRecord[i]),
+             itemNb = fwrite ( (char *)&(aoCbAoCtrlId->cbAoCtrlRecord[i]),
                                sizeof (char),
-                               sizeof (CB_CTRL_RECORD_STRUCT),
+                               sizeof (CB_AO_CTRL_RECORD_STRUCT),
                                pFile);
 
              if ( itemNb == NULL )
              {
                 ERROR_SET1 (0, "Failed to write record in file %s",
-                            ERROR_LOG_NOW, aoHeaderCbCtrl.cbCtrlFileName);
+                            ERROR_LOG_NOW, aoHeaderCbAoCtrl.cbAoCtrlFileName);
                 (void)fclose (pFile);
                 return (ERROR);
              }
@@ -5114,19 +5171,20 @@ STATUS aoCbCtrlSave
          {
 #ifdef DEBUG
             printf ( "Counter# 0, index # 0 -> save records from %d to %d\n",
-                     index , CB_CTRL_RECORD_NB - 1 );
+                     index , CB_AO_CTRL_RECORD_NB - 1 );
 #endif
-            for ( i = index ; i < CB_CTRL_RECORD_NB ; i ++ )
+            for ( i = index ; i < CB_AO_CTRL_RECORD_NB ; i ++ )
             {
-                itemNb = fwrite ( (char *)&(aoCbCtrlId->cbCtrlRecord[i]),
+                itemNb = fwrite ( (char *)&(aoCbAoCtrlId->cbAoCtrlRecord[i]),
                                   sizeof (char),
-                                  sizeof (CB_CTRL_RECORD_STRUCT),
+                                  sizeof (CB_AO_CTRL_RECORD_STRUCT),
                                   pFile);
 
                 if ( itemNb == NULL )
                 {
                    ERROR_SET1 (0, "Failed to write record in file %s",
-                               ERROR_LOG_NOW, aoHeaderCbCtrl.cbCtrlFileName);
+                               ERROR_LOG_NOW, 
+                               aoHeaderCbAoCtrl.cbAoCtrlFileName);
                    (void)fclose (pFile);
                    return (ERROR);
                 }
@@ -5137,15 +5195,16 @@ STATUS aoCbCtrlSave
 #endif
             for ( i = 0 ; i < index ; i ++ )
             {
-                itemNb = fwrite ( (char *)&(aoCbCtrlId->cbCtrlRecord[i]),
+                itemNb = fwrite ( (char *)&(aoCbAoCtrlId->cbAoCtrlRecord[i]),
                                   sizeof (char),
-                                  sizeof (CB_CTRL_RECORD_STRUCT),
+                                  sizeof (CB_AO_CTRL_RECORD_STRUCT),
                                   pFile);
 
                 if ( itemNb == NULL )
                 {
                    ERROR_SET1 (0, "Failed to write record in file %s",
-                               ERROR_LOG_NOW, aoHeaderCbCtrl.cbCtrlFileName);
+                               ERROR_LOG_NOW, 
+                               aoHeaderCbAoCtrl.cbAoCtrlFileName);
                    (void)fclose (pFile);
                    return (ERROR);
                 }
@@ -5155,19 +5214,20 @@ STATUS aoCbCtrlSave
          {
 #ifdef DEBUG
             printf ( "Counter# 0, index = 0 -> save records from 0 to %d\n",
-                     CB_CTRL_RECORD_NB - 1 );
+                     CB_AO_CTRL_RECORD_NB - 1 );
 #endif
-            for ( i = 0 ; i < CB_CTRL_RECORD_NB ; i ++ )
+            for ( i = 0 ; i < CB_AO_CTRL_RECORD_NB ; i ++ )
             {
-                itemNb = fwrite ( (char *)&(aoCbCtrlId->cbCtrlRecord[i]),
+                itemNb = fwrite ( (char *)&(aoCbAoCtrlId->cbAoCtrlRecord[i]),
                                   sizeof (char),
-                                  sizeof (CB_CTRL_RECORD_STRUCT),
+                                  sizeof (CB_AO_CTRL_RECORD_STRUCT),
                                   pFile);
 
                 if ( itemNb == NULL )
                 {
                    ERROR_SET1 (0, "Failed to write record in file %s",
-                               ERROR_LOG_NOW, aoHeaderCbCtrl.cbCtrlFileName);
+                               ERROR_LOG_NOW, 
+                               aoHeaderCbAoCtrl.cbAoCtrlFileName);
                    (void)fclose (pFile);
                    return (ERROR);
                 }
@@ -5179,7 +5239,7 @@ STATUS aoCbCtrlSave
    }
 
 #ifdef DEBUG
-   printf ( "Save image cb done\n" );
+   printf ( "Save ao ctrl cb done\n" );
 #endif
    return (OK);
 }
@@ -5191,15 +5251,16 @@ STATUS aoCbCtrlSave
  *   aoCbFgCtrlSave
  *
  *   INVOCATION:
- *   aoCbFgCtrlSave (pCbFgCtrlFilePath, aoCcdId, aoCtrlId, aoCbCtrlId)
+ *   aoCbFgCtrlSave (pCbFgCtrlFilePath, aoCcdId, aoCtrlId, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pCbFgCtrlFilePath (char *)     Directory where to save the circular 
- *                                      buffer FG control
- *   (>) aoCcdId      (AO_CCD_ID)       Pointer to the CCD geometry structure
- *   (>) aoCtrlId     (AO_CTRL_ID)      Pointer to the control context structure
- *   (>) aoCbFgCtrlId (AO_CB_FGCTRL_ID) Pointer to the FG control circular 
- *                                      buffer
+ *   (>) pCbFgCtrlFilePath (char *)      Directory where to save the circular 
+ *                                       buffer FG control
+ *   (>) aoCcdId      (AO_CCD_ID)        Pointer to the CCD geometry structure
+ *   (>) aoCtrlId     (AO_CTRL_ID)       Pointer to the control context 
+ *                                       structure
+ *   (>) aoCbFgCtrlId (AO_CB_FG_CTRL_ID) Pointer to the FG control circular 
+ *                                       buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -5273,14 +5334,14 @@ STATUS aoCbFgCtrlSave
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "./D%04d%02d%02dT%02d%02d%02dP1.cbfgc",
+                   "./D%04d%02d%02dT%02d%02d%02dP1.cbcfg",
                    timeArray[0], timeArray[1], timeArray[2], timeArray[3],
                    timeArray[4], timeArray[5]);
       }
       else
       {
          sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName,
-                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbfgc",
+                   "%s/D%04d%02d%02dT%02d%02d%02dP1.cbcfg",
                    pCbFgCtrlFilePath, timeArray[0], timeArray[1], timeArray[2], 
                    timeArray[3], timeArray[4], timeArray[5]);
       }
@@ -5290,11 +5351,11 @@ STATUS aoCbFgCtrlSave
       if ( ( strcmp (pCbFgCtrlFilePath, "") == 0 ) ||
            ( strcmp (pCbFgCtrlFilePath, "NONE") == 0 ) )
       {
-         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP1.cbfgc" );
+         strcpy ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "./defaultP1.cbcfg" );
       }
       else
       {
-         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP1.cbfgc",
+         sprintf ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "%s/defaultP1.cbcfg",
                    pCbFgCtrlFilePath );
       }
    }
@@ -5328,18 +5389,24 @@ STATUS aoCbFgCtrlSave
        aoHeaderCbFgCtrl.refGuideVect[i] = aoCtrlId->refGuideVect[i];
 
    for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
+       aoHeaderCbFgCtrl.thresholdVect[i] = aoCtrlId->thresholdVect[i];
+
+   for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
        aoHeaderCbFgCtrl.refWfsVect[i] = aoCtrlId->refWfsVect[i];
 
    for ( i = 0 ; i < aoCtrlId->fgModeNb ; i ++ )
        aoHeaderCbFgCtrl.fgScaleFactorVect[i] = aoCtrlId->fgScaleFactorVect[i];
 
    aoHeaderCbFgCtrl.threshold = aoCtrlId->threshold;
+   aoHeaderCbFgCtrl.rms = aoCtrlId->rms;
    aoHeaderCbFgCtrl.totalThreshold = aoCtrlId->totalThreshold;
    aoHeaderCbFgCtrl.angleWithM2 = aoCtrlId->angleWithM2;
+   aoHeaderCbFgCtrl.flipXWithM2 = 0.0;
+   aoHeaderCbFgCtrl.flipYWithM2 = 0.0;
    aoHeaderCbFgCtrl.slidingFocusGain = aoCtrlId->slidingFocusGain;
 
    /*
-    * Open the image circular buffer
+    * Open the FG control circular buffer
     */
 
    pFile = fopen ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "w" );
@@ -5484,16 +5551,17 @@ STATUS aoCbFgCtrlSave
  *   aoGuideAndFocus
  *
  *   INVOCATION:
- *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pTotalCountsVect, 
- *                    pCentroidsVect, *pErrorCentroidsVect,
- *                    pFgVect, pFgVectAfterRot, pFgErrorsVect, pTime, 
- *                    pWfsStatus, writeToRm)
+ *   aoGuideAndFocus (pImage, aoCcdId, aoCtrlId, pThreshVect, pTotalCountsVect, 
+ *                    pCentroidsVect, *pErrorCentroidsVect, pFgVect, 
+ *                    pFgVectAfterRot, pFgErrorsVect, pTime, pWfsStatus, 
+ *                    writeToRm)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the float buffer which 
  *                                        contains the image to be coadded
  *   (>) aoCcdId             (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *   (!) aoCtrlId            (AO_CTRL_ID) Pointer to the AO control structure
+ *   (<) pThreshVect         (double *)   Pointer to the threshold vector
  *   (<) pTotalCountsVect    (double *)   Pointer to the vector of total counts
  *   (<) pCentroidsVect      (double *)   Pointer to the guides vector
  *   (<) pErrorCentroidsVect (double *)   Pointer to the guides vector
@@ -5544,6 +5612,7 @@ STATUS aoGuideAndFocus (
    float *       pImage,
    AO_CCD_ID     aoCcdId,
    AO_CTRL_ID    aoCtrlId,
+   double *      pThreshVect,
    double        *pTotalCountsVect,
    double        *pCentroidsVect,
    double        *pErrorCentroidsVect,
@@ -5565,12 +5634,6 @@ STATUS aoGuideAndFocus (
    double *     pCent;
    double *     pMat;
    double *     pErrorFg;
-#ifdef GAIN
-   double       tipScale;
-   double       tiltScale;
-   double       focusScale;
-#endif
-   /*double       averageFocus;*/
    FG_VECT      fg;
 
    /* Some initialisations */
@@ -5588,12 +5651,6 @@ STATUS aoGuideAndFocus (
    for ( pFg = fg ; pFg < pMaxFg ; pFg ++ )
        *pFg = 0.0;
 
-#ifdef GAIN
-   tipScale = aoCtrlId->fgScaleFactorVect[0];
-   tiltScale = aoCtrlId->fgScaleFactorVect[1];
-   focusScale = aoCtrlId->fgScaleFactorVect[2];
-#endif
-
    /* Dark subtraction */
 
    for ( pi = pImage ; pi < pMax ; pi ++ )
@@ -5601,9 +5658,9 @@ STATUS aoGuideAndFocus (
 
    /* First compute the centroids of the image */
 
-   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
-                             pCentroidsVect, pErrorCentroidsVect,
-                             pWfsStatus) == ERROR )
+   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pThreshVect,
+                             pTotalCountsVect, pCentroidsVect, 
+                             pErrorCentroidsVect, pWfsStatus) == ERROR )
    {
       ERROR_SET (0, "Error when computing centroids" , ERROR_LOG_SAVE);
       return (ERROR);
@@ -5617,43 +5674,16 @@ STATUS aoGuideAndFocus (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
-#ifdef GAIN
-      *(pFgVect) = tipScale * 
-                   ( aoCtrlId->cosAngleWithM2 * (*fg) +
-                   aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
-      *(pFgVect + 1) = tiltScale * 
-                       ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
-                       aoCtrlId->sinAngleWithM2 * (*fg) );
-#else
-      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*fg) +
-                   aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
-      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
-                       aoCtrlId->sinAngleWithM2 * (*fg) );
-#endif
-
       if ( aoCcdId->binningFlag == TRUE )
-	 *(fg+2) *= 2.0;
-
-#ifdef GAIN
-      if ( aoCtrlId->focusCounter == 0 )
       {
-         aoCtrlId->previousFocus = *(fg + 2);
-         aoCtrlId->focusCounter ++;
+         *(fg) *= 2.0;
+         *(fg+1) *= 2.0;
+	 *(fg+2) *= 2.0;
       }
-     
-      averageFocus = (aoCtrlId->slidingFocusGain * (*(fg+2))) +
-         (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus);
-#endif
 
-#ifdef GAIN
-      *(pFgVect + 2) = focusScale * averageFocus;
-#else
+      *(pFgVect) = *(fg);
+      *(pFgVect + 1) = *(fg + 1);
       *(pFgVect + 2) = *(fg+2);
-#endif
-
-#ifdef GAIN
-      aoCtrlId->previousFocus = averageFocus; /* Bug fixed 11 June 2000 - cb */
-#endif
 
       *(pErrorFg + 0) = 0.0;
       *(pErrorFg + 1) = 0.0;
@@ -5674,12 +5704,14 @@ STATUS aoGuideAndFocus (
 
    if ( timeNow (pTime) != OK )
    {
+#ifdef DEBUG
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
-      return (ERROR);
+#endif
+      *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
-   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
-                          pTime, writeToRm) != OK )
+   if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, 
+                          pFgErrorsVect, pTime, writeToRm) != OK )
    {
       ERROR_SET ( 0, "Failed to write data to the synchro bus", ERROR_LOG_SAVE);
       return (ERROR);
@@ -5695,14 +5727,17 @@ STATUS aoGuideAndFocus (
  *   aoModeAnalyze
  *
  *   INVOCATION:
- *   aoModeAnalyze (pImage, aoCcdId, aoCtrlId, aoCbCtrlId)
+ *   aoModeAnalyze (pImage, aoCcdId, aoCtrlId, pThreshVect, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage    (float *)    Pointer to the float buffer which contains the
- *                              image coadded
- *   (>) aoCcdId   (AO_CCD_ID)  Pointer to the AO CCD geometry context
- *   (!) aoCtrlId  (AO_CTRL_ID) Pointer to the AO control structure
- *   (!) aoCbCtrlId (AO_CB_CTRL_ID) Pointer to the control circular buffer
+ *   (>) pImage       (float *)    Pointer to the float buffer which contains 
+ *                                 the image coadded
+ *   (>) aoCcdId      (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *   (!) aoCtrlId     (AO_CTRL_ID) Pointer to the AO control structure
+ *   (>) pThreshVect  (double *)   Threshold vector to use for centroids
+ *                                 computation
+ *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the aO control circular 
+ *                                       buffer
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -5714,7 +5749,7 @@ STATUS aoGuideAndFocus (
  *   DESCRIPTION:
  *   First, this routine computes the centroids of this average image and then 
  *   multiplies this vector by the control matrix and by scale factors to obtain
- *   the aO modes and centroids and modes are saved into the aoCbCtrlId 
+ *   the aO modes and centroids and modes are saved into the aoCbAoCtrlId 
  *   circular buffer.
  *
  *   EXTERNAL VARIABLES:
@@ -5735,9 +5770,11 @@ STATUS aoModeAnalyze (
    float *       pImage,
    AO_CCD_ID     aoCcdId,
    AO_CTRL_ID    aoCtrlId,
-   AO_CB_CTRL_ID aoCbCtrlId
+   double *      pThreshVect,
+   AO_CB_AO_CTRL_ID aoCbAoCtrlId
    )
 {
+   int          k;
    int          indexCtrl;
    int *        pWfsStatus;
    double *     pTotalCountsVect;
@@ -5752,39 +5789,38 @@ STATUS aoModeAnalyze (
    double *     pMaxAo;
    double *     pMaxCent;
    double *     pMat;
-#ifdef GAIN
-   double *     pScale;
-#endif
    double *     pTime;
+   double *     pThresh;
 
    /* Some initialisations */
 
-   indexCtrl = aoCbCtrlId->position;
-   pTotalCountsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].totalCountsVect;
-   pCentroidsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].centroidsVect;
-   pErrorCentroidsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].errorCentroidsVect;
-   pAoVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVect;
-   pAoVectAfterRot = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoVectAfterRot;
-   pAoErrorsVect = aoCbCtrlId->cbCtrlRecord[indexCtrl].aoErrorsVect; 
-   pWfsStatus = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].wfsStatus); 
-   pTime = &(aoCbCtrlId->cbCtrlRecord[indexCtrl].time); 
+   indexCtrl = aoCbAoCtrlId->position;
+   pTotalCountsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].totalCountsVect;
+   pThresh = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].thresholdVect;
+   pCentroidsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].centroidsVect;
+   pErrorCentroidsVect = 
+   aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].errorCentroidsVect;
+   pAoVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].aoVect;
+   pAoVectAfterRot = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].aoVectAfterRot;
+   pAoErrorsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].aoErrorsVect; 
+   pWfsStatus = &(aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].wfsStatus); 
+   pTime = &(aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].time); 
 
    pErrorAo = pAoErrorsVect;
    pMaxAo = pAoVect + aoCtrlId->aoModeNb;
    pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
-   pMat = aoCtrlId->contMat;
+   pMat = aoCtrlId->aoContMat;
 
    for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
        *pAo = 0.0;
 
-#ifdef GAIN
-   pScale = aoCtrlId->aoScaleFactorVect;
-#endif
+   for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+       *(pThresh + k) = *(pThreshVect + k);
 
    /* Compute the centroids */
 
-
-   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
+   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pThresh,
+                             pTotalCountsVect,
                              pCentroidsVect, pErrorCentroidsVect,
                              pWfsStatus) == ERROR )
    {
@@ -5804,11 +5840,7 @@ STATUS aoModeAnalyze (
       {
          for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
          {
-#ifdef GAIN
-             *pAo *= (2.0)*(*(pScale ++));
-#else
              *pAo *= (2.0);
-#endif
              *(pErrorAo ++) = 0.0;
          }
       }
@@ -5816,9 +5848,6 @@ STATUS aoModeAnalyze (
       {
          for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
          {
-#ifdef GAIN
-             *pAo *= (*(pScale ++));
-#endif
              *(pErrorAo ++) = 0.0;
          }
       }
@@ -5836,8 +5865,10 @@ STATUS aoModeAnalyze (
 
    if ( timeNow (pTime) != OK )
    {
+#ifdef DEBUG
       ERROR_SET ( 0, "Failed to take the time" , ERROR_LOG_SAVE );
-      return (ERROR);
+#endif
+      *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
    if ( writeWfsToTcs(aoCtrlId, pAoVect, pAoVectAfterRot, pAoErrorsVect, 
@@ -5847,12 +5878,12 @@ STATUS aoModeAnalyze (
       return (ERROR);
    };
 
-   /* Update the aoCbCtrlId circular buffer */
+   /* Update the aoCbAoCtrlId circular buffer */
 
-   if ( ++ aoCbCtrlId->position == CB_CTRL_RECORD_NB )
+   if ( ++ aoCbAoCtrlId->position == CB_AO_CTRL_RECORD_NB )
    {
-      aoCbCtrlId->position = 0;
-      aoCbCtrlId->counter ++;
+      aoCbAoCtrlId->position = 0;
+      aoCbAoCtrlId->counter ++;
    }
 
    return (OK);
@@ -5965,10 +5996,10 @@ STATUS aoCentroidsWrite (
 
 /*+
  *   FUNCTION NAME:
- *   aoColImStructZero
+ *   aoIntMatStructZero
  *
  *   INVOCATION:
- *   aoColImStructZero (aoCtrlId)
+ *   aoIntMatStructZero (aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (!) aoCtrlId  (AO_CTRL_ID) Pointer to the AO control structure
@@ -5996,7 +6027,7 @@ STATUS aoCentroidsWrite (
  *-
  */
 
-STATUS aoColImStructZero (
+STATUS aoIntMatStructZero (
    AO_CTRL_ID     aoCtrlId
    )
 {
@@ -6006,13 +6037,13 @@ STATUS aoColImStructZero (
 
    for ( i = 0 ; i < AO_MODE_NB ; i ++ )
    {
-       aoCtrlId->intMatStruct[i].posAmplitude = 0.0;
-       aoCtrlId->intMatStruct[i].negAmplitude = 0.0;
+       aoCtrlId->aoIntMatStruct[i].posAmplitude = 0.0;
+       aoCtrlId->aoIntMatStruct[i].negAmplitude = 0.0;
 
        for ( j = 0 ; j < 2*SUBAP_NB ; j ++ )
        {
-           aoCtrlId->intMatStruct[i].posCentroidsVect[j] = 0.0;
-           aoCtrlId->intMatStruct[i].negCentroidsVect[j] = 0.0;
+           aoCtrlId->aoIntMatStruct[i].posCentroidsVect[j] = 0.0;
+           aoCtrlId->aoIntMatStruct[i].negCentroidsVect[j] = 0.0;
        }
    }
 
@@ -6023,10 +6054,10 @@ STATUS aoColImStructZero (
 
 /*+
  *   FUNCTION NAME:
- *   aoColImStructShow
+ *   aoIntMatStructShow
  *
  *   INVOCATION:
- *   aoColImStructShow (aoCcdId, aoCtrlId)
+ *   aoIntMatStructShow (aoCcdId, aoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) aoCcdId  (AO_CCD_ID)  Pointer to the AO CCD geometry structure
@@ -6055,7 +6086,7 @@ STATUS aoColImStructZero (
  *-
  */
 
-STATUS aoColImStructShow (
+STATUS aoIntMatStructShow (
    AO_CCD_ID     aoCcdId,
    AO_CTRL_ID    aoCtrlId
    )
@@ -6068,18 +6099,18 @@ STATUS aoColImStructShow (
    {
        printf ( "Mode : %d\n" , i + 1 );
        printf ( "Amplitude positive in microns: %f\n" , 
-                (float)(aoCtrlId->intMatStruct[i].posAmplitude) );
+                (float)(aoCtrlId->aoIntMatStruct[i].posAmplitude) );
 
        for ( j = 0 ; j < aoCcdId->centroidsNb ; j ++ )
-           printf ( "%f " , aoCtrlId->intMatStruct[i].posCentroidsVect[j]);
+           printf ( "%f " , aoCtrlId->aoIntMatStruct[i].posCentroidsVect[j]);
 
        printf ( "\n" );
 
        printf ( "Amplitude negative in microns: %f\n" , 
-                (float)(aoCtrlId->intMatStruct[i].negAmplitude) );
+                (float)(aoCtrlId->aoIntMatStruct[i].negAmplitude) );
 
        for ( j = 0 ; j < aoCcdId->centroidsNb ; j ++ )
-           printf ( "%f " , aoCtrlId->intMatStruct[i].negCentroidsVect[j] );
+           printf ( "%f " , aoCtrlId->aoIntMatStruct[i].negCentroidsVect[j] );
 
        printf ( "\n" );
    }
@@ -6131,16 +6162,16 @@ STATUS aoMatZero (
 
    /* Set to the zero the interaction matrix */
 
-   aoCtrlId->intMatInitFlag = FALSE;
-   aoCtrlId->contMatInitFlag = FALSE;
+   aoCtrlId->aoIntMatInitFlag = FALSE;
+   aoCtrlId->aoContMatInitFlag = FALSE;
 
-   strcpy ( aoCtrlId->intMatFileName, "");
-   strcpy ( aoCtrlId->contMatFileName, "");
+   strcpy ( aoCtrlId->aoIntMatFileName, "");
+   strcpy ( aoCtrlId->aoContMatFileName, "");
 
    for ( i = 0 ; i < 2*AO_MODE_NB*SUBAP_NB ; i ++ )
    {
-       aoCtrlId->intMat[i] = 0.0;
-       aoCtrlId->contMat[i] = 0.0;
+       aoCtrlId->aoIntMat[i] = 0.0;
+       aoCtrlId->aoContMat[i] = 0.0;
    }
 
    return (OK);
@@ -6195,33 +6226,34 @@ STATUS aoMatCompute (
    AO_CTRL_ID    aoCtrlId
    )
 {
-   int      row, col, k;  /* Index                                           */
-   int      redColNb;     /* Column number of the reduced interaction matrix */
+   int         row, col, k;  /* Index                                         */
+   int         redColNb;     /* Column number of the reduced interaction      */
+                             /* matrix                                        */
 
-   double   tip, tilt;    /* Tip and tilt values to filter from the          */
-                          /* interaction matrix                              */
+   double      tip, tilt;    /* Tip and tilt values to filter from the        */
+                             /* interaction matrix                            */
 
-   MATRIX   redIntMat;    /* Reduced interaction matrix                      */
-   MATRIX   invRedIntMat; /* Inverse of the reduced interaction matrix       */
+   AO_MATRIX   redIntMat;    /* Reduced interaction matrix                    */
+   AO_MATRIX   invRedIntMat; /* Inverse of the reduced interaction matrix     */
 
    /* Compute each column of the interaction matrix */
 
    k = 0;
    for ( col = 0 ; col < aoCtrlId->aoModeNb ; col ++ )
    {
-       if ( (aoCtrlId->intMatStruct[col].posAmplitude != 0.0) &&
-            (aoCtrlId->intMatStruct[col].negAmplitude != 0.0) )
+       if ( (aoCtrlId->aoIntMatStruct[col].posAmplitude != 0.0) &&
+            (aoCtrlId->aoIntMatStruct[col].negAmplitude != 0.0) )
        {
           for ( row = 0 ; row < aoCcdId->centroidsNb ; row ++ )
           {
-            aoCtrlId->intMat[row*aoCtrlId->aoModeNb + col] =
-            (aoCtrlId->intMatStruct[col].posCentroidsVect[row] -
-             aoCtrlId->intMatStruct[col].negCentroidsVect[row])/
-            (aoCtrlId->intMatStruct[col].posAmplitude - 
-             aoCtrlId->intMatStruct[col].negAmplitude);
+            aoCtrlId->aoIntMat[row*aoCtrlId->aoModeNb + col] =
+            (aoCtrlId->aoIntMatStruct[col].posCentroidsVect[row] -
+             aoCtrlId->aoIntMatStruct[col].negCentroidsVect[row])/
+            (aoCtrlId->aoIntMatStruct[col].posAmplitude - 
+             aoCtrlId->aoIntMatStruct[col].negAmplitude);
             
             *(redIntMat + row*aoCtrlId->aoModeNb + k) = 
-            aoCtrlId->intMat[row*aoCtrlId->aoModeNb + col];
+            aoCtrlId->aoIntMat[row*aoCtrlId->aoModeNb + col];
           }
 
           k ++;
@@ -6229,7 +6261,7 @@ STATUS aoMatCompute (
        else
        {
           for ( row = 0 ; row < aoCcdId->centroidsNb ; row ++ )
-              aoCtrlId->intMat[row*aoCtrlId->aoModeNb + col] = 0.0;
+              aoCtrlId->aoIntMat[row*aoCtrlId->aoModeNb + col] = 0.0;
        }
    }
 
@@ -6279,12 +6311,12 @@ STATUS aoMatCompute (
    k = 0;
    for ( row = 0 ; row < aoCtrlId->aoModeNb ; row ++ )
    {
-       if ( (aoCtrlId->intMatStruct[row].posAmplitude != 0.0) &&
-            (aoCtrlId->intMatStruct[row].negAmplitude != 0.0) )
+       if ( (aoCtrlId->aoIntMatStruct[row].posAmplitude != 0.0) &&
+            (aoCtrlId->aoIntMatStruct[row].negAmplitude != 0.0) )
        {
           for ( col = 0 ; col < aoCcdId->centroidsNb ; col ++)
           {
-              aoCtrlId->contMat[row*aoCcdId->centroidsNb + col] =
+              aoCtrlId->aoContMat[row*aoCcdId->centroidsNb + col] =
               (-1.0) * (*(invRedIntMat + k*aoCcdId->centroidsNb + col));
           }
  
@@ -6293,7 +6325,7 @@ STATUS aoMatCompute (
        else
        {
           for ( col = 0 ; col < aoCcdId->centroidsNb ; col ++)
-              aoCtrlId->contMat[row*aoCcdId->centroidsNb + col] = 0.0;
+              aoCtrlId->aoContMat[row*aoCcdId->centroidsNb + col] = 0.0;
        }
    }
           
@@ -6387,8 +6419,9 @@ STATUS aoDarkUpdate (
  *
  *   INVOCATION:
  *   aoCtrlFileRead (pInitFileName, pPath, pDarkFileName, pFlatFileName, 
- *                   pRefFileName, pRefX, pRefY, pImFileName, pCmFileName, 
- *                   pFgCmFileName, pThresh, pTotalThresh, pAngleM2, pAngleM1)
+ *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName, 
+ *                   pFgCmFileName, pRms, pThresh, pTotalThresh, pAngleM2, 
+ *                   pAngleM1)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName (char *)   Pointer to the AO init file name 
@@ -6398,9 +6431,10 @@ STATUS aoDarkUpdate (
  *   (<) pRefFileName  (char *)   Pointer to the SH reference file name
  *   (<) pRefX         (double *) Pointer to the X center for the whole CCD
  *   (<) pRefY         (double *) Pointer to the X center for the whole CCD
- *   (<) pImFileName   (char *)   Pointer to the interaction matrix file name
- *   (<) pCmFileName   (char *)   Pointer to the control matrix file name
+ *   (<) pAoImFileName (char *)   Pointer to the aO interaction matrix file name
+ *   (<) pAoCmFileName (char *)   Pointer to the aO control matrix file name
  *   (<) pFgCmFileName (char *)   Pointer to the FG control matrix file name
+ *   (<) pRms          (double *) Pointer to the RMS
  *   (<) pThresh       (double *) Pointer to the threshold
  *   (<) pTotalThresh  (double *) Pointer to the total flux threshold
  *   (<) pAngleM2      (double *) Pointer to the angle with M2
@@ -6437,9 +6471,10 @@ STATUS aoCtrlFileRead (
    char *   pRefFileName,
    double * pRefX,
    double * pRefY,
-   char *   pImFileName,
-   char *   pCmFileName,
+   char *   pAoImFileName,
+   char *   pAoCmFileName,
    char *   pFgCmFileName,
+   double * pRms,
    double * pThresh,
    double * pTotalThresh,
    double * pAngleM2,
@@ -6691,28 +6726,28 @@ STATUS aoCtrlFileRead (
    printf ( "aoCtrlFileRead(): %s\n", comment );
 #endif
 
-   /* Read the name of the interaction matrix file */
+   /* Read the name of the aO interaction matrix file */
 
-   if ( fgets (pImFileName, STRING_SIZE, pFile) == (char *)NULL )
+   if ( fgets (pAoImFileName, STRING_SIZE, pFile) == (char *)NULL )
    {
       printf (  
-      "Failed to read the name of the IM from the AO init file %s\n",
+      "Failed to read the name of the aO IM from the AO init file %s\n",
       pInitFileName );
       fclose (pFile);
       return (ERROR);
    }
 
-   if ( pImFileName[strlen(pImFileName) - 1] == '\n' )
+   if ( pAoImFileName[strlen(pAoImFileName) - 1] == '\n' )
    {
-      pImFileName[strlen(pImFileName) - 1] = '\0';
+      pAoImFileName[strlen(pAoImFileName) - 1] = '\0';
 #ifdef DEBUG
       printf ( "aoCtrlFileRead(): last character of %s was return\n", 
-               pImFileName );
+               pAoImFileName );
 #endif
    }
 
 #ifdef DEBUG
-   printf ( "aoCtrlFileRead(): IM file name: %s\n", pImFileName );
+   printf ( "aoCtrlFileRead(): aO IM file name: %s\n", pAoImFileName );
 #endif
 
    /* Skip the next line of comment */
@@ -6730,28 +6765,28 @@ STATUS aoCtrlFileRead (
    printf ( "aoCtrlFileRead(): %s\n", comment );
 #endif
 
-   /* Read the name of the control matrix file */
+   /* Read the name of the ao control matrix file */
 
-   if ( fgets (pCmFileName, STRING_SIZE, pFile) == (char *)NULL )
+   if ( fgets (pAoCmFileName, STRING_SIZE, pFile) == (char *)NULL )
    {
       printf (  
-      "Failed to read the name of the CM from the AO init file %s\n",
+      "Failed to read the name of the aO CM from the AO init file %s\n",
       pInitFileName );
       fclose (pFile);
       return (ERROR);
    }
 
-   if ( pCmFileName[strlen(pCmFileName) - 1] == '\n' )
+   if ( pAoCmFileName[strlen(pAoCmFileName) - 1] == '\n' )
    {
-      pCmFileName[strlen(pCmFileName) - 1] = '\0';
+      pAoCmFileName[strlen(pAoCmFileName) - 1] = '\0';
 #ifdef DEBUG
       printf ( "aoCtrlFileRead(): last character of %s was return\n", 
-               pCmFileName );
+               pAoCmFileName );
 #endif
    }
 
 #ifdef DEBUG
-   printf ( "aoCtrlFileRead(): CM file name: %s\n", pCmFileName );
+   printf ( "aoCtrlFileRead(): aO CM file name: %s\n", pAoCmFileName );
 #endif
 
    /* Skip the next line of comment */
@@ -6811,6 +6846,31 @@ STATUS aoCtrlFileRead (
 #endif
 
    }
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /* Read rms */
+
+   if ( (fscanf (pFile, "%lf\n", pRms)) == EOF )
+   {
+      printf ( "Failed to read rms from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): rms = %f\n", *pRms );
+#endif
 
    /* Skip the next line of comment */
 
@@ -8327,3 +8387,284 @@ STATUS aoModFocFileRead (
 
    return ( OK );
 }
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoThresholdPerSubapCompute
+ *
+ *   INVOCATION:
+ *   aoThresholdPerSubapCompute (pImage, aoCcdId, aoCtrlId, ratePixel, 
+ *                               pThreshold)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pImage         (float *)    Pointer to the image from which to compute
+ *                                   the centroids
+ *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                                   structure
+ *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control context
+ *                                   structure
+ *   (>) ratePixel      (double)     Rate of the brightest pixels to determine
+ *                                   the thresholds - should be between 0 and 1
+ *   (<) pThreshold     (double *)   Pointer to the threshold vector 
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS) OK if successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   To compute the threshold per subaperture
+ *
+ *   DESCRIPTION:
+ *   This routine allows to compute the optimized threshold per subaperture 
+ *   from a PWFS1 spots image pImage according to the following criteria: 
+ *   ratePixel % of the brightest pixels of the subaperture.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP1Lib.h
+ *   fitsio.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS aoThresholdPerSubapCompute (
+   float *      pImage,
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId,
+   double       ratePixel,
+   double *     pThreshold
+   )
+{
+   int          index1;
+   int          index2;
+   int          gap;
+   int          pixelsNb;
+   int          subapNb;
+   int          i, j;
+   int          l, k;
+   int          m;
+   float        temp;
+   float *      pn;
+   float *      pi;
+   float *      pMin;
+   float *      pMax;
+   double       averageThresh;
+   IMAGE_VECT   newImageVect;
+
+   /* Check range of ratePixel: should be between 0 and 1 */
+
+   if ( (ratePixel < 0.0) || (ratePixel >= 1.0) )
+   {
+      ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
+                   ERROR_LOG_SAVE, ratePixel );
+      return (ERROR);
+   }
+
+   /* Store the pixels of the subaperture into newImageVect */
+
+   m=0;
+   for ( k = 0 ; k < 2 * aoCcdId->ySubapNb ; k ++ )
+   {
+       for ( l = 0 ; l < 2 * aoCcdId->xSubapNb ; l ++ )
+       {
+           subapNb = 2*k*aoCcdId->xSubapNb + l;
+           pn = newImageVect;
+
+           if ( aoCcdId->subapUsedVect[subapNb] == TRUE)
+           {
+              pixelsNb = aoCcdId->xRaster * aoCcdId->yRaster; 
+
+#ifdef DEBUG
+              printf ( "subaperture NB = %d is used\n" , subapNb );
+#endif
+
+              for ( i = 1 ; i <= aoCcdId->yRaster ; i ++ )
+              {
+                  pMin = pImage + ((i-1)*aoCcdId->xPixels) +
+                         (l*aoCcdId->xRaster) +
+                         (k * aoCcdId->xPixels * aoCcdId->yRaster);
+                  pMax = pMin + aoCcdId->xRaster;
+
+                  for ( pi = pMin ; pi < pMax ; pi ++)
+                      *(pn ++) = *pi;
+              }
+
+#ifdef DEBUG
+              pn = newImageVect;
+              printf ( "Pixels = " );
+              for ( i = 0; i < pixelsNb ; i ++ )
+                  printf ( "%f " , *(pn + i));
+              printf ( "\n" );
+#endif
+
+              /* Now sort newImageVector */
+
+              pn = newImageVect;
+
+              for ( gap = pixelsNb/2 ; gap > 0 ; gap /= 2 )
+              {
+                  for ( i = gap ; i < pixelsNb ; i ++ )
+                  {
+                      for ( j = i - gap ; j >= 0 && (*(pn+j)>*(pn+j+gap)) ; 
+                            j -= gap)
+                      {
+                          temp = *(pn+j);
+                          *(pn+j) = *(pn+j+gap);
+                          *(pn+j+gap) = temp;
+                      }
+                  }
+              }
+
+#ifdef DEBUG
+              pn = newImageVect;
+              printf ( "Pixels = " );
+              for ( i = 0; i < pixelsNb ; i ++ )
+                  printf ( "%f " , *(pn + i));
+              printf ( "\n" );
+#endif
+
+              /* Now compute the threshold for this subaperture */
+
+              index2 = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
+
+              if ( ratePixel < 0.5 )
+                 index1 = (int) ceil ((double)(pixelsNb) * ratePixel);
+              else
+                 index1 = 0;
+
+              pn = newImageVect;
+              averageThresh = 0.0;
+              for ( i = index1 ; i < index2 ; i ++ )
+                  averageThresh += (double)(*(pn + i));
+
+              *(pThreshold + m) = (averageThresh / (double)(index2-index1)) + 
+              (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
+
+#ifdef DEBUG
+              printf ( "index1 = %d, index2 =%d\n", index1, index2);
+              printf ( "threshold[%d] = %f\n" , m , *(pThreshold + m));
+#endif
+              m ++;
+           }
+       }
+   }
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoTotalThresholdCompute
+ *
+ *   INVOCATION:
+ *   aoTotalThresholdCompute (aoCcdId, aoCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                               structure
+ *   (>) aoCtrlId   (AO_CTRL_ID) Pointer to the control context structure
+ *
+ *   FUNCTION VALUE:
+ *   (double) totalThreshold
+ *
+ *   PURPOSE:
+ *   To compute the threshold for the total count
+ *
+ *   DESCRIPTION:
+ *   This routine computes for the threshold for the total count according to
+ *   complex formula :
+ *   totalThreshold = [ ( F(N)/Npix^0.65 ) + G(N) ] * Npix * rms
+ *   with F(N) = 6.0 * exp (0.8*N^1.5) * exp ( -1.5 * N^1.32)
+ *   with G(N) = 0.38 * exp ( -1.5 * N^1.32)
+ *   with N < 2.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP1Lib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+double aoTotalThresholdCompute (
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId
+   )
+{
+   double a, b, c, d, e, f, g;
+   double N;
+   double Npix;
+   double exp_e_Npowerf;
+   double exp_c_Npowerd;
+   double FN;
+   double GN;
+   double totalThreshold;
+
+   /* Some init */
+
+   a = 0.65;
+   b = 6.0;
+   c = 0.8;
+   d = 1.5;
+   e = -1.5;
+   f = 1.32;
+   g = 0.38;
+
+   N = aoCtrlId->thresholdMultCoeff;
+   Npix = aoCcdId->pixelsNb;
+
+   /* Check range of N */
+
+   if ( N > 2.0 )
+   {
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+      N = 2;
+   };
+
+   if ( N < 0.0 )
+   {
+#ifdef DEBUG
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+#endif
+      N = 0;
+   };
+
+   /* Compute the total threshold */
+
+   exp_c_Npowerd = exp (c * pow (N, d));
+   exp_e_Npowerf = exp (e * pow (N, f));
+
+   FN = b * exp_c_Npowerd * exp_e_Npowerf;
+   GN = g * exp_e_Npowerf;
+
+   totalThreshold = ( (FN/pow(Npix,a)) + GN ) * Npix * aoCtrlId->rms;
+
+/*#ifdef DEBUG */
+   printf ( "exp_c_Npowerd = %f\n" , exp_c_Npowerd);
+   printf ( "exp_e_Npowerf = %f\n" , exp_e_Npowerf);
+   printf ( "FN = %f\n" , FN );
+   printf ( "GN = %f\n" , GN );
+   printf ( "totalThreshold = %f\n" , totalThreshold );
+/*#endif */
+
+   /* Return it */
+
+   return ( totalThreshold );
+}
+

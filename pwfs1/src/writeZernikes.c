@@ -23,10 +23,17 @@
  * dfilter           - low pass filter
  * ttfZero           - Receive ttfZero array from TCS
  * aoZero            - Receive aoZero array from TCS
- * showAoDiags       - Write diagnostic data from ao structure to gensub
+ * showAoDiag1P1 ... showAoDiag7P1 
+ *                   - Write diagnostic data from ao structure to gensub
  *                     outputs for display
- * showFgDiags       - Write diagnostic data from fg structure to gensub
+ * showFgDiag1P1 ... showFgDiag8P1
+ *                   - Write diagnostic data from fg structure to gensub
  *                     outputs for display
+ * showCbDiag        - Write diagnostic data from cb structure to gensub
+ *                     outputs for display
+ * showThreshDiag1P1 and showThreshDiag2P1
+ *                   - Write diagnostic data from ao control structure to
+ *                     gensub outputs for display
  * gensubFanDouble   - receive array of doubles on port A, write elements to
  *                     individual output ports
  * 
@@ -80,12 +87,15 @@
  * 06-Jun-2001: cb - add zero point model for focus off axis and now sliding
  *                   average in writeZernikes.c
  * 30-Nov-2001: cb - add writeToRm to writeWfsToSynchro
+ * 23-May-2002: cb - implement butterworth filter to focus
  *
  */
 /* INDENT ON */
 /* ===================================================================== */
 
 /* specify constant definitions */
+
+#define RUNNING_AVERAGE
 
 #ifndef PI
 #define PI 3.14159265358979
@@ -197,16 +207,24 @@ WFS_VECT localCentroidsVect;
 WFS_VECT localTotalCountsVect;
 WFS_VECT localFgCentroidsVect;
 WFS_VECT localFgTotalCountsVect;
+WFS_VECT localThresholdVect;
+WFS_VECT localRealTimeFgThresholdVect;
+WFS_VECT localRealTimeAoThresholdVect;
+double   localAoTime;
+double   localFgTime;
 SEM_ID   accessAoData;
 SEM_ID   accessFgData;
 
-AO_CCD_ID aoCcdIdP1;
-AO_CB_CTRL_ID aoCbCtrlIdP1;
+AO_CCD_ID        aoCcdIdP1;
+AO_CB_AO_CTRL_ID aoCbAoCtrlIdP1;
 AO_CB_FG_CTRL_ID aoCbFgCtrlIdP1;
-AO_CB_IM_ID   aoCbImIdP1;
+AO_CB_IM_ID      aoCbImIdP1;
+AO_CTRL_ID       aoCtrlIdP1;
+double           angleWithM1=0.0;
+double           angleWithM2=0.0;
 
 double sampleData[5][3];
-double coeffData[5];
+double coeffData[5][3];
 
 AST_ZP_MODEL_ID_STRUCT astigModel;
 SEM_ID  accessAstigModel;
@@ -377,7 +395,7 @@ double newDfilter
    /* multiply samples by coefficients and accumulate */
 
    for(i=0; i < 5; i++)
-      sum += sampleData[i][Id]*coeffData[i];
+      sum += sampleData[i][Id]*coeffData[i][Id];
 
    /* ripple samples ready for next call */
 
@@ -950,23 +968,14 @@ STATUS writeWfsToTcs
          /* first rotate the tip and tilt values to the tcs frame of reference*/
          /* tip and tilt: r * cos(t) and r * sin(t) */
 
-#ifdef GAIN
-         result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))); 
-         result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz));
-#else
          result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
                      * aoCtrlId->aoScaleFactorVect[0];
          result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz))
                      * aoCtrlId->aoScaleFactorVect[1];
-#endif
 
          /* focus : 2*r^2 -1 */
 
-#ifdef GAIN
-         result.z4 = *(pz+2);
-#else
          result.z4 = (*(pz+2)) * aoCtrlId->aoScaleFactorVect[2];
-#endif
 
          /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
 
@@ -975,63 +984,29 @@ STATUS writeWfsToTcs
          g0 = astigModel.gain0;
          g45 = astigModel.gain45;
 
-#ifdef GAIN
-         result.z5 = (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
-                     - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3])
-                     - (astigModel.astig0)*(aoCtrlId->aoScaleFactorVect[3]);
-         result.z6 = (g45*f->cos2Theta*(astig45) - g45*f->sin2Theta*(astig0)) 
-                     - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4])
-                     - (astigModel.astig45)*(aoCtrlId->aoScaleFactorVect[4]);
-#else
          result.z5 = ( (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45)) 
                      - ((f->null[8])*1000.0)
                      - (astigModel.astig0) ) * (aoCtrlId->aoScaleFactorVect[3]);
          result.z6 = ( (g45*f->cos2Theta*(astig45) - g45*f->sin2Theta*(astig0)) 
                      - ((f->null[9])*1000.0)
-                     - (astigModel.astig45) ) * (aoCtrlId->aoScaleFactorVect[4]);
-#endif
-
-         /*result.z5 = (f->cos2Theta*(*(pz+3)) + f->sin2Theta*(*(pz+4))) 
-                     - (f->null[8])*1000.0*(aoCtrlId->aoScaleFactorVect[3])
-                     - (astigModel.astig0)*(aoCtrlId->aoScaleFactorVect[3]);
-         result.z6 = (f->cos2Theta*(*(pz+4)) - f->sin2Theta*(*(pz+3))) 
-                     - (f->null[9])*1000.0*(aoCtrlId->aoScaleFactorVect[4])
-                     - (astigModel.astig45)*(aoCtrlId->aoScaleFactorVect[4]);*/
+                     - (astigModel.astig45) ) * 
+                     (aoCtrlId->aoScaleFactorVect[4]);
 
          /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and 
             (3*r^2 - 2) * r * sin(t) */
 
-#ifdef GAIN
-         result.z7 = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
-                     - (comaModel.comaX)*(aoCtrlId->aoScaleFactorVect[5]);
-
-         result.z8 = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
-                     - (comaModel.comaY)*(aoCtrlId->aoScaleFactorVect[6]);
-#else
          result.z7 = ( (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
                      - (comaModel.comaX) ) * (aoCtrlId->aoScaleFactorVect[5]);
 
          result.z8 = ( (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
                      - (comaModel.comaY) ) * (aoCtrlId->aoScaleFactorVect[6]);
-#endif
 
          /* spherical: 6*r^4 - 6*r^2 + 1 */
    
-#ifdef GAIN
-         result.z9 = (*(pz+7));
-#else
          result.z9 = (*(pz+7)) * (aoCtrlId->aoScaleFactorVect[7]);
-#endif
 
          /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
 
-#ifdef GAIN
-         result.z10 = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
-                      - (trefoilModel.costref)*(aoCtrlId->aoScaleFactorVect[8]);
-
-         result.z11 = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
-                      - (trefoilModel.sintref)*(aoCtrlId->aoScaleFactorVect[9]);
-#else
          result.z10 = ( (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
                       - (trefoilModel.costref) ) * 
                       (aoCtrlId->aoScaleFactorVect[8]);
@@ -1039,64 +1014,39 @@ STATUS writeWfsToTcs
          result.z11 = ( (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
                       - (trefoilModel.sintref) ) * 
                       (aoCtrlId->aoScaleFactorVect[9]);
-#endif
 
          /* (4*r^2-3) * r^2 * cos(2t) and (4*r^2-3) * r^2 * sin(2t) */
 
-#ifdef GAIN
-         result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11)));
-         result.z13 = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)));
-#else
          result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11))) 
                       * (aoCtrlId->aoScaleFactorVect[10]);
          result.z13 = (f->cos2Theta*(*(pz+11)) - f->sin2Theta*(*(pz+10)))
                       * (aoCtrlId->aoScaleFactorVect[11]);
-#endif
 
          /* (10*r^4 -12*r^3 + 3) * r * cos(t) and 
             (10*r^4 -12*r^3 + 3) * r * sin(t) */
 
-#ifdef GAIN
-         result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)));
-         result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)));
-#else
          result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)))
                       * (aoCtrlId->aoScaleFactorVect[12]);
          result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12)))
                       * (aoCtrlId->aoScaleFactorVect[13]);
-#endif
 
          /* 20*r^6 - 30*r^4 + 12*r^2 - 1 */
 
-#ifdef GAIN
-         result.z16 = (*(pz+14));
-#else
          result.z16 = (*(pz+14)) * (aoCtrlId->aoScaleFactorVect[14]);
-#endif
 
          /* r^4 * cos(4t) and r^4 * sin(4t) */
 
-#ifdef GAIN
-         result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)));
-         result.z18 = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)));
-#else
          result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)))
                       * (aoCtrlId->aoScaleFactorVect[15]);
          result.z18 = (f->cos4Theta*(*(pz+16)) - f->sin4Theta*(*(pz+15)))
                       * (aoCtrlId->aoScaleFactorVect[16]);
-#endif
 
          /* (5*r^2 - 4) * r^3 * cos(3t) and (5*r^2 - 4) * r^3 * cos(3t) */
 
-#ifdef GAIN
-         result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)));
-         result.z20 = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)));
-#else
          result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)))
                       * (aoCtrlId->aoScaleFactorVect[17]);
          result.z20 = (f->cos3Theta*(*(pz+18)) - f->sin3Theta*(*(pz+17)))
                       * (aoCtrlId->aoScaleFactorVect[18]);
-#endif
       }
       else
       {
@@ -1207,12 +1157,6 @@ STATUS writeWfsToTcs
  * writeWfsToSynchro
  *
  * INVOCATION:
- * AO_CTRL_ID aoCtrlId
- * double     *pFgVect
- * double     *pFgErrorsVect
- * double     *pTime
- * long       STATUS;
- *
  * STATUS writeWfsToSynchro(AO_CTRL_ID aoCtrlId, double *pFgVect,
  *                          double *pFgVectAfterRot, double *pFgErrorsVect, 
  *                          double *pTime, int writeToRm)
@@ -1291,11 +1235,6 @@ STATUS writeWfsToSynchro
    {
       /* first rotate the tip and tilt values to the m2 frame of reference */
 
-#ifdef GAIN
-      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) - f->null[5];
-      result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) - f->null[6];
-      result.z4 = *(pz+2) ;
-#else
       result.z2 = 
       ( (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
         - f->null[5] ) * aoCtrlId->fgScaleFactorVect[0];
@@ -1306,6 +1245,7 @@ STATUS writeWfsToSynchro
 
       focus = *(pz+2) - focusModel.focus;
 
+#ifdef RUNNING_AVERAGE
       if ( aoCtrlId->focusCounter == 0 )
       {
          aoCtrlId->previousFocus = focus;
@@ -1315,13 +1255,15 @@ STATUS writeWfsToSynchro
       averageFocus = 
       (aoCtrlId->slidingFocusGain * focus) +
       (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus) ;
+#else
+      averageFocus = newDfilter (focus,2);
+#endif
 
       result.z4 = averageFocus * aoCtrlId->fgScaleFactorVect[2];
 
+#ifdef RUNNING_AVERAGE
       aoCtrlId->previousFocus = averageFocus;
 #endif
-
-      /*result.z4 = (*(pz+2)) - (pWfs->focusscale * f->null[7]);*/
 
       /* store the vector after rotation into pFgVectAfterRot */
 
@@ -1505,14 +1447,10 @@ long ttfZero
       }
 
       /* calculate composite correction angle */
+      /* null[3] corresponds to the cass rotator angle */
 
-
-      /*compositeAngle = 
-      (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;   */
-                             /* null[3] corresponds to the cass rotator angle */
-
-      compositeAngle = (-1.0) *
-      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec00*/
+      compositeAngle = angleWithM2 -
+      ((tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS); /*11dec00*/
 
       f->theta       = compositeAngle;
       f->sinTheta    = sin(f->theta);
@@ -1708,8 +1646,8 @@ long aoZero
       /* calculate composite correction angle */
 
 
-      compositeAngle = (-1.0) *
-      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS;
+      compositeAngle = angleWithM1 -
+      ((tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS);
 
       f->theta       = compositeAngle;
       f->sinTheta    = sin(f->theta);
@@ -1848,13 +1786,13 @@ long aoZero
 /*
  *+
  * FUNCTION NAME:
- * showAoDiag1
+ * showAoDiag1P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiag1 (struct genSubRecord * pgsub)
+ * long showAoDiag1P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -1882,7 +1820,7 @@ long aoZero
  *-
  */
 
-STATUS showAoDiag1
+STATUS showAoDiag1P1
    (
    struct genSubRecord * pgsub
    )
@@ -1893,8 +1831,10 @@ STATUS showAoDiag1
    int wfsStatus;
    double   *pCentroids;
    double   *pTotal;
+   double   *pThresh;
+   double   time;
 
-   if (aoCbCtrlIdP1 == NULL)
+   if (aoCbAoCtrlIdP1 == NULL)
    {
       /* context structure not yet initialised */
       return(OK);
@@ -1909,25 +1849,27 @@ STATUS showAoDiag1
    {
       /* grab data from the circular buffer */
 
-      indexCb = aoCbCtrlIdP1->position;
+      indexCb = aoCbAoCtrlIdP1->position;
 
-      if (( indexCb == 0 ) && ( aoCbCtrlIdP1->counter == 0))
+      if (( indexCb == 0 ) && ( aoCbAoCtrlIdP1->counter == 0))
          return (OK);
 
-      if ( (indexCb < 0) && (indexCb > (CB_CTRL_RECORD_NB - 1)) )
+      if ( (indexCb < 0) && (indexCb > (CB_AO_CTRL_RECORD_NB - 1)) )
       {
-         printf ( "showAoDiag1(): position in CB out of range\n" ) ;
+         printf ( "showAoDiag1P1(): position in CB out of range\n" ) ;
          return (OK);
       }
 
       if ( indexCb != 0 )
          indexCb -= 1;
       else
-         indexCb = CB_CTRL_RECORD_NB - 1;
+         indexCb = CB_AO_CTRL_RECORD_NB - 1;
 
-      pCentroids = aoCbCtrlIdP1->cbCtrlRecord[indexCb].centroidsVect;
-      pTotal = aoCbCtrlIdP1->cbCtrlRecord[indexCb].totalCountsVect;
-      wfsStatus = aoCbCtrlIdP1->cbCtrlRecord[indexCb].wfsStatus;
+      pThresh = aoCbAoCtrlIdP1->cbAoCtrlRecord[indexCb].thresholdVect;
+      pCentroids = aoCbAoCtrlIdP1->cbAoCtrlRecord[indexCb].centroidsVect;
+      pTotal = aoCbAoCtrlIdP1->cbAoCtrlRecord[indexCb].totalCountsVect;
+      wfsStatus = aoCbAoCtrlIdP1->cbAoCtrlRecord[indexCb].wfsStatus;
+      time = aoCbAoCtrlIdP1->cbAoCtrlRecord[indexCb].time;
 
       j = 0;
       for ( i = 0 ; i < aoCcdIdP1->subapNb ; i ++ )
@@ -1937,6 +1879,7 @@ STATUS showAoDiag1
              *(localCentroidsVect + 2*i) = *(pCentroids + 2*j);
              *(localCentroidsVect + 2*i+1) = *(pCentroids + 2*j+1);
              *(localTotalCountsVect + i) = *(pTotal + j);
+             *(localRealTimeAoThresholdVect + i) = *(pThresh + j);
              j ++ ;
           }
           else
@@ -1944,10 +1887,13 @@ STATUS showAoDiag1
              *(localCentroidsVect + 2*i) = -99.99;
              *(localCentroidsVect + 2*i+1) = -99.99;
              *(localTotalCountsVect + i) = -99.99;
+             *(localRealTimeAoThresholdVect + i) = -99.99;
           }
       }
 
       *(localTotalCountsVect + i) = *(pTotal + j);
+
+      localAoTime = time;
 
       /* data intact, write to genSub outputs */
 
@@ -1983,13 +1929,13 @@ STATUS showAoDiag1
 /*
  *+
  * FUNCTION NAME:
- * showAoDiag2
+ * showAoDiag2P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiag2 (struct genSubRecord * pgsub)
+ * long showAoDiag2P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2017,7 +1963,7 @@ STATUS showAoDiag1
  *-
  */
 
-STATUS showAoDiag2
+STATUS showAoDiag2P1
    (
    struct genSubRecord * pgsub
    )
@@ -2064,13 +2010,13 @@ STATUS showAoDiag2
 /*
  *+
  * FUNCTION NAME:
- * showAoDiag3
+ * showAoDiag3P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiag3 (struct genSubRecord * pgsub)
+ * long showAoDiag3P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2097,7 +2043,7 @@ STATUS showAoDiag2
  *-
  */
 
-STATUS showAoDiag3
+STATUS showAoDiag3P1
    (
    struct genSubRecord * pgsub
    )
@@ -2144,13 +2090,13 @@ STATUS showAoDiag3
 /*
  *+
  * FUNCTION NAME:
- * showAoDiag4
+ * showAoDiag4P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiag4 (struct genSubRecord * pgsub)
+ * long showAoDiag4P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2177,7 +2123,7 @@ STATUS showAoDiag3
  *-
  */
 
-STATUS showAoDiag4
+STATUS showAoDiag4P1
    (
    struct genSubRecord * pgsub
    )
@@ -2224,13 +2170,13 @@ STATUS showAoDiag4
 /*
  *+
  * FUNCTION NAME:
- * showAoDiag5
+ * showAoDiag5P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiag5 (struct genSubRecord * pgsub)
+ * long showAoDiag5P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2257,7 +2203,7 @@ STATUS showAoDiag4
  *-
  */
 
-STATUS showAoDiag5
+STATUS showAoDiag5P1
    (
    struct genSubRecord * pgsub
    )
@@ -2303,13 +2249,13 @@ STATUS showAoDiag5
 /*
  *+
  * FUNCTION NAME:
- * showAoDiag6
+ * showAoDiag6P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiag6 (struct genSubRecord * pgsub)
+ * long showAoDiag6P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2336,7 +2282,7 @@ STATUS showAoDiag5
  *-
  */
 
-STATUS showAoDiag6
+STATUS showAoDiag6P1
    (
    struct genSubRecord * pgsub
    )
@@ -2357,6 +2303,23 @@ STATUS showAoDiag6
       *(double *)pgsub->vale = *(localTotalCountsVect + 35);  
       *(double *)pgsub->valf = *(localTotalCountsVect + 36);  
 
+      *(double *)pgsub->valg = localAoTime;
+
+      *(double *)pgsub->valh = *(localRealTimeAoThresholdVect + 0);
+      *(double *)pgsub->vali = *(localRealTimeAoThresholdVect + 1);
+      *(double *)pgsub->valj = *(localRealTimeAoThresholdVect + 2);
+      *(double *)pgsub->valk = *(localRealTimeAoThresholdVect + 3);
+      *(double *)pgsub->vall = *(localRealTimeAoThresholdVect + 4);
+      *(double *)pgsub->valm = *(localRealTimeAoThresholdVect + 5);
+      *(double *)pgsub->valn = *(localRealTimeAoThresholdVect + 6);
+      *(double *)pgsub->valo = *(localRealTimeAoThresholdVect + 7);
+      *(double *)pgsub->valp = *(localRealTimeAoThresholdVect + 8);
+      *(double *)pgsub->valq = *(localRealTimeAoThresholdVect + 9);
+      *(double *)pgsub->valr = *(localRealTimeAoThresholdVect + 10);
+      *(double *)pgsub->vals = *(localRealTimeAoThresholdVect + 11);
+      *(double *)pgsub->valt = *(localRealTimeAoThresholdVect + 12);
+      *(double *)pgsub->valu = *(localRealTimeAoThresholdVect + 13);
+
       semGive (accessAoData);
    }
 
@@ -2367,13 +2330,151 @@ STATUS showAoDiag6
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag1
+ * showAoDiag7P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long    showFgDiag1(struct genSubRecord * pgsub)
+ * long showAoDiag7P1 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from ao circular buffer to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  added by cb to display 6x6 centroids data
+ *-
+ */
+
+STATUS showAoDiag7P1
+   (
+   struct genSubRecord * pgsub
+   )
+{
+   if(semTake(accessAoData, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access accessAoData\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      /* data intact, write to genSub outputs */
+
+      *(double *)pgsub->vala = *(localRealTimeAoThresholdVect + 14);
+      *(double *)pgsub->valb = *(localRealTimeAoThresholdVect + 15);
+      *(double *)pgsub->valc = *(localRealTimeAoThresholdVect + 16);
+      *(double *)pgsub->vald = *(localRealTimeAoThresholdVect + 17);
+      *(double *)pgsub->vale = *(localRealTimeAoThresholdVect + 18);
+      *(double *)pgsub->valf = *(localRealTimeAoThresholdVect + 19);
+      *(double *)pgsub->valg = *(localRealTimeAoThresholdVect + 20);
+      *(double *)pgsub->valh = *(localRealTimeAoThresholdVect + 21);
+      *(double *)pgsub->vali = *(localRealTimeAoThresholdVect + 22);
+      *(double *)pgsub->valj = *(localRealTimeAoThresholdVect + 23);
+      *(double *)pgsub->valk = *(localRealTimeAoThresholdVect + 24);
+      *(double *)pgsub->vall = *(localRealTimeAoThresholdVect + 25);
+      *(double *)pgsub->valm = *(localRealTimeAoThresholdVect + 26);
+      *(double *)pgsub->valn = *(localRealTimeAoThresholdVect + 27);
+      *(double *)pgsub->valo = *(localRealTimeAoThresholdVect + 28);
+      *(double *)pgsub->valp = *(localRealTimeAoThresholdVect + 29);
+      *(double *)pgsub->valq = *(localRealTimeAoThresholdVect + 30);
+      *(double *)pgsub->valr = *(localRealTimeAoThresholdVect + 31);
+      *(double *)pgsub->vals = *(localRealTimeAoThresholdVect + 32);
+      *(double *)pgsub->valt = *(localRealTimeAoThresholdVect + 33);
+      *(double *)pgsub->valu = *(localRealTimeAoThresholdVect + 34);
+
+      semGive (accessAoData);
+   }
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showAoDiag8P1
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long showAoDiag8P1 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from ao circular buffer to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  added by cb to display 6x6 centroids data
+ *-
+ */
+
+STATUS showAoDiag8P1
+   (
+   struct genSubRecord * pgsub
+   )
+{
+   if(semTake(accessAoData, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access accessAoData\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      /* data intact, write to genSub outputs */
+
+      *(double *)pgsub->vala = *(localRealTimeAoThresholdVect + 35); 
+
+      semGive (accessAoData);
+   }
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showFgDiag1P1
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long    showFgDiag1P1(struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2401,7 +2502,7 @@ STATUS showAoDiag6
  *-
  */
 
-STATUS showFgDiag1(struct genSubRecord * pgsub)
+STATUS showFgDiag1P1(struct genSubRecord * pgsub)
 {
    int i=0;
    int j=0;
@@ -2410,6 +2511,8 @@ STATUS showFgDiag1(struct genSubRecord * pgsub)
    double *pGuide;
    double *pTotal;
    double *pCentroids;
+   double *pThresh;
+   double time;
 
    if (aoCbFgCtrlIdP1 == NULL )
    {
@@ -2444,9 +2547,11 @@ STATUS showFgDiag1(struct genSubRecord * pgsub)
          indexCb = CB_FG_CTRL_RECORD_NB - 1;
 
       wfsStatus = aoCbFgCtrlIdP1->cbFgCtrlRecord[indexCb].wfsStatus;
+      time = aoCbFgCtrlIdP1->cbFgCtrlRecord[indexCb].time;
       pGuide = aoCbFgCtrlIdP1->cbFgCtrlRecord[indexCb].guidesVect;
       pTotal = aoCbFgCtrlIdP1->cbFgCtrlRecord[indexCb].totalCountsVect;
       pCentroids = aoCbFgCtrlIdP1->cbFgCtrlRecord[indexCb].centroidsVect;
+      pThresh = aoCbFgCtrlIdP1->cbFgCtrlRecord[indexCb].thresholdVect;
 
       j = 0;
       for ( i = 0 ; i < aoCcdIdP1->subapNb ; i ++ )
@@ -2456,6 +2561,7 @@ STATUS showFgDiag1(struct genSubRecord * pgsub)
              *(localFgCentroidsVect + 2*i) = *(pCentroids + 2*j);
              *(localFgCentroidsVect + 2*i+1) = *(pCentroids + 2*j+1);
              *(localFgTotalCountsVect + i) = *(pTotal + j);
+             *(localRealTimeFgThresholdVect + i) = *(pThresh + j);
              j ++ ;
           }
           else
@@ -2463,10 +2569,13 @@ STATUS showFgDiag1(struct genSubRecord * pgsub)
              *(localFgCentroidsVect + 2*i) = -99.99;
              *(localFgCentroidsVect + 2*i+1) = -99.99;
              *(localFgTotalCountsVect + i) = -99.99;
+             *(localRealTimeFgThresholdVect + i) = -99.99;
           }
       }
 
       *(localFgTotalCountsVect + i) = *(pTotal + j);
+
+      localFgTime = time;
 
       /* data intact, write to genSub outputs */
 
@@ -2502,13 +2611,13 @@ STATUS showFgDiag1(struct genSubRecord * pgsub)
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag2
+ * showFgDiag2P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showFgDiag2 (struct genSubRecord * pgsub)
+ * long showFgDiag2P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2536,7 +2645,7 @@ STATUS showFgDiag1(struct genSubRecord * pgsub)
  *-
  */
 
-STATUS showFgDiag2
+STATUS showFgDiag2P1
    (
    struct genSubRecord * pgsub
    )
@@ -2583,13 +2692,13 @@ STATUS showFgDiag2
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag3
+ * showFgDiag3P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showFgDiag3 (struct genSubRecord * pgsub)
+ * long showFgDiag3P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2617,7 +2726,7 @@ STATUS showFgDiag2
  *-
  */
 
-STATUS showFgDiag3
+STATUS showFgDiag3P1
    (
    struct genSubRecord * pgsub
    )
@@ -2664,13 +2773,13 @@ STATUS showFgDiag3
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag4
+ * showFgDiag4P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showFgDiag4 (struct genSubRecord * pgsub)
+ * long showFgDiag4P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2698,7 +2807,7 @@ STATUS showFgDiag3
  *-
  */
 
-STATUS showFgDiag4
+STATUS showFgDiag4P1
    (
    struct genSubRecord * pgsub
    )
@@ -2746,13 +2855,13 @@ STATUS showFgDiag4
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag5
+ * showFgDiag5P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showFgDiag5 (struct genSubRecord * pgsub)
+ * long showFgDiag5P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2780,7 +2889,7 @@ STATUS showFgDiag4
  *-
  */
 
-STATUS showFgDiag5
+STATUS showFgDiag5P1
    (
    struct genSubRecord * pgsub
    )
@@ -2827,13 +2936,13 @@ STATUS showFgDiag5
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag6
+ * showFgDiag6P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showFgDiag6 (struct genSubRecord * pgsub)
+ * long showFgDiag6P1 (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2861,7 +2970,7 @@ STATUS showFgDiag5
  *-
  */
 
-STATUS showFgDiag6
+STATUS showFgDiag6P1
    (
    struct genSubRecord * pgsub
    )
@@ -2885,6 +2994,21 @@ STATUS showFgDiag6
       *(double *)pgsub->valg = *(localFgTotalCountsVect+35);
       *(double *)pgsub->valh = *(localFgTotalCountsVect+36);
 
+      *(double *)pgsub->vali = localFgTime;
+
+      *(double *)pgsub->valj = *(localRealTimeFgThresholdVect+0);
+      *(double *)pgsub->valk = *(localRealTimeFgThresholdVect+1);
+      *(double *)pgsub->vall = *(localRealTimeFgThresholdVect+2);
+      *(double *)pgsub->valm = *(localRealTimeFgThresholdVect+3);
+      *(double *)pgsub->valn = *(localRealTimeFgThresholdVect+4);
+      *(double *)pgsub->valo = *(localRealTimeFgThresholdVect+5);
+      *(double *)pgsub->valp = *(localRealTimeFgThresholdVect+6);
+      *(double *)pgsub->valq = *(localRealTimeFgThresholdVect+7);
+      *(double *)pgsub->valr = *(localRealTimeFgThresholdVect+8);
+      *(double *)pgsub->vals = *(localRealTimeFgThresholdVect+9);
+      *(double *)pgsub->valt = *(localRealTimeFgThresholdVect+10);
+      *(double *)pgsub->valu = *(localRealTimeFgThresholdVect+11);
+
       semGive (accessFgData);
    }
 
@@ -2895,13 +3019,157 @@ STATUS showFgDiag6
 /*
  *+
  * FUNCTION NAME:
- * showCbDiags
+ * showFgDiag7P1
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showCbDiags(struct genSubRecord * pgsub)
+ * long showFgDiag7P1 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from FG circular buffer to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  Original version   cb
+ * 26-Apr-1999  Modified to display 6x6 centroids data
+ *-
+ */
+
+STATUS showFgDiag7P1
+   (
+   struct genSubRecord * pgsub
+   )
+{
+
+   if(semTake(accessFgData, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access accessFgData\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      /* data intact, write to genSub outputs */
+
+      *(double *)pgsub->vala = *(localRealTimeFgThresholdVect+12);
+      *(double *)pgsub->valb = *(localRealTimeFgThresholdVect+13);
+      *(double *)pgsub->valc = *(localRealTimeFgThresholdVect+14);
+      *(double *)pgsub->vald = *(localRealTimeFgThresholdVect+15);
+      *(double *)pgsub->vale = *(localRealTimeFgThresholdVect+16);
+      *(double *)pgsub->valf = *(localRealTimeFgThresholdVect+17);
+      *(double *)pgsub->valg = *(localRealTimeFgThresholdVect+18);
+      *(double *)pgsub->valh = *(localRealTimeFgThresholdVect+19);
+      *(double *)pgsub->vali = *(localRealTimeFgThresholdVect+20);
+      *(double *)pgsub->valj = *(localRealTimeFgThresholdVect+21);
+      *(double *)pgsub->valk = *(localRealTimeFgThresholdVect+22);
+      *(double *)pgsub->vall = *(localRealTimeFgThresholdVect+23);
+      *(double *)pgsub->valm = *(localRealTimeFgThresholdVect+24);
+      *(double *)pgsub->valn = *(localRealTimeFgThresholdVect+25);
+      *(double *)pgsub->valo = *(localRealTimeFgThresholdVect+26);
+      *(double *)pgsub->valp = *(localRealTimeFgThresholdVect+27);
+      *(double *)pgsub->valq = *(localRealTimeFgThresholdVect+28);
+      *(double *)pgsub->valr = *(localRealTimeFgThresholdVect+29);
+      *(double *)pgsub->vals = *(localRealTimeFgThresholdVect+30);
+      *(double *)pgsub->valt = *(localRealTimeFgThresholdVect+31);
+      *(double *)pgsub->valu = *(localRealTimeFgThresholdVect+32);
+
+      semGive (accessFgData);
+   }
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showFgDiag8P1
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long showFgDiag8P1 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from FG circular buffer to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 26-Apr-1999  Original version   cb
+ * 26-Apr-1999  Modified to display 6x6 centroids data
+ *-
+ */
+
+STATUS showFgDiag8P1
+   (
+   struct genSubRecord * pgsub
+   )
+{
+
+   if(semTake(accessFgData, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access accessFgData\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      /* data intact, write to genSub outputs */
+
+      *(double *)pgsub->vala = *(localRealTimeFgThresholdVect+33);
+      *(double *)pgsub->valb = *(localRealTimeFgThresholdVect+34);
+      *(double *)pgsub->valc = *(localRealTimeFgThresholdVect+35);
+
+      semGive (accessFgData);
+   }
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showCbDiag
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long showCbDiag(struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2928,18 +3196,18 @@ STATUS showFgDiag6
  *-
  */
 
-STATUS showCbDiags(struct genSubRecord * pgsub)
+STATUS showCbDiag(struct genSubRecord * pgsub)
 {
    int           indexCbIm;
-   int           indexCbCtrl;
+   int           indexCbAoCtrl;
    int           indexCbFgCtrl;
    int           counterCbIm;
-   int           counterCbCtrl;
+   int           counterCbAoCtrl;
    int           counterCbFgCtrl;
 
    /* Check the circular buffer structures are initialised */
 
-   if (aoCbCtrlIdP1 == NULL )
+   if (aoCbAoCtrlIdP1 == NULL )
    {
        /* context structure not yet initialised */
        return(OK);
@@ -2959,8 +3227,8 @@ STATUS showCbDiags(struct genSubRecord * pgsub)
 
    /* Grab data from the circular buffers */
 
-   indexCbCtrl = aoCbCtrlIdP1->position;
-   counterCbCtrl = aoCbCtrlIdP1->counter;
+   indexCbAoCtrl = aoCbAoCtrlIdP1->position;
+   counterCbAoCtrl = aoCbAoCtrlIdP1->counter;
 
    indexCbFgCtrl = aoCbFgCtrlIdP1->position;
    counterCbFgCtrl = aoCbFgCtrlIdP1->counter;
@@ -2970,8 +3238,8 @@ STATUS showCbDiags(struct genSubRecord * pgsub)
 
    *(int *)pgsub->vala = indexCbIm;
    *(int *)pgsub->valb = counterCbIm;
-   *(int *)pgsub->valc = indexCbCtrl;
-   *(int *)pgsub->vald = counterCbCtrl;
+   *(int *)pgsub->valc = indexCbAoCtrl;
+   *(int *)pgsub->vald = counterCbAoCtrl;
    *(int *)pgsub->vale = indexCbFgCtrl;
    *(int *)pgsub->valf = counterCbFgCtrl;
 
@@ -3056,6 +3324,166 @@ long gensubFanDoubles
    *(double *)pgsub->valq = localArray[16];
    *(double *)pgsub->valr = localArray[17];
    *(double *)pgsub->vals = localArray[18];   /* Z20 or E20 */
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showThreshDiag1P1
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long showThreshDiag1P1 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from aoCtrlId structure to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 14-Sep-2001  Original creation
+ *-
+ */
+
+STATUS showThreshDiag1P1
+   (
+   struct genSubRecord * pgsub
+   )
+{
+   int i = 0;
+   int j = 0;
+   double   *pThreshold;
+
+   if (aoCtrlIdP1 == NULL)
+   {
+      /* context structure not yet initialised */
+      return(OK);
+   }
+
+   /* grab data from the ao control structure */
+
+   pThreshold = aoCtrlIdP1->thresholdVect;
+
+   j = 0;
+   for ( i = 0 ; i < aoCcdIdP1->subapNb ; i ++ )
+   {
+       if ( aoCcdIdP1->subapUsedVect[i] == TRUE )
+       {
+          *(localThresholdVect + i) = *(pThreshold + j);
+          j ++ ;
+       }
+       else
+       {
+          *(localThresholdVect + i) = -99.99;
+       }
+   }
+
+   /* write to genSub outputs */
+
+   *(double *)pgsub->vala = *(localThresholdVect+0);
+   *(double *)pgsub->valb = *(localThresholdVect+1);
+   *(double *)pgsub->valc = *(localThresholdVect+2);
+   *(double *)pgsub->vald = *(localThresholdVect+3);
+   *(double *)pgsub->vale = *(localThresholdVect+4);
+   *(double *)pgsub->valf = *(localThresholdVect+5);
+   *(double *)pgsub->valg = *(localThresholdVect+6);
+   *(double *)pgsub->valh = *(localThresholdVect+7);
+   *(double *)pgsub->vali = *(localThresholdVect+8);
+   *(double *)pgsub->valj = *(localThresholdVect+9);
+   *(double *)pgsub->valk = *(localThresholdVect+10);
+   *(double *)pgsub->vall = *(localThresholdVect+11);
+   *(double *)pgsub->valm = *(localThresholdVect+12);
+   *(double *)pgsub->valn = *(localThresholdVect+13);
+   *(double *)pgsub->valo = *(localThresholdVect+14);
+   *(double *)pgsub->valp = *(localThresholdVect+15);
+   *(double *)pgsub->valq = *(localThresholdVect+16);
+   *(double *)pgsub->valr = *(localThresholdVect+17);
+   *(double *)pgsub->vals = *(localThresholdVect+18);
+   *(double *)pgsub->valt = *(localThresholdVect+19);
+   *(double *)pgsub->valu = *(localThresholdVect+20);
+
+   return (OK);
+}
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * showThreshDiag2P1
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long showThreshDiag2P1 (struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ * Copy diagnostic data from aoCtrlId structure to gensub outputs for display
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ * 14-Sep-2001  Original creation
+ *-
+ */
+
+STATUS showThreshDiag2P1
+   (
+   struct genSubRecord * pgsub
+   )
+{
+   /* write to genSub outputs */
+
+   *(double *)pgsub->vala = *(localThresholdVect+21);
+   *(double *)pgsub->valb = *(localThresholdVect+22);
+   *(double *)pgsub->valc = *(localThresholdVect+23);
+   *(double *)pgsub->vald = *(localThresholdVect+24);
+   *(double *)pgsub->vale = *(localThresholdVect+25);
+   *(double *)pgsub->valf = *(localThresholdVect+26);
+   *(double *)pgsub->valg = *(localThresholdVect+27);
+   *(double *)pgsub->valh = *(localThresholdVect+28);
+   *(double *)pgsub->vali = *(localThresholdVect+29);
+   *(double *)pgsub->valj = *(localThresholdVect+30);
+   *(double *)pgsub->valk = *(localThresholdVect+31);
+   *(double *)pgsub->vall = *(localThresholdVect+32);
+   *(double *)pgsub->valm = *(localThresholdVect+33);
+   *(double *)pgsub->valn = *(localThresholdVect+34);
+   *(double *)pgsub->valo = *(localThresholdVect+35);
 
    return (OK);
 }

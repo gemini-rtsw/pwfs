@@ -17,6 +17,7 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 08 Feb 2002: CB - Implement threshold per sub-aperture and in real time
  * 21 Dec 2001: CB - add automatic init of zero point models from par file
  * 06 June 2001: CB - add FOCUS_ZP_MODEL_ID structure 
  * 29 May 2001: CB - add COMA_ZP_MODEL_ID structure 
@@ -50,13 +51,13 @@
 #define MODE_NB              (FG_MODE_NB + AO_MODE_NB)
                                        /* Total number of modes to correct    */
 
-#define CB_IM_RECORD_NB      100       /* Number of records of the image      */
+#define CB_IM_RECORD_NB      500       /* Number of records of the image      */
                                        /* circular buffer                     */
 
-#define CB_CTRL_RECORD_NB    500       /* Number of records of the aO control */
+#define CB_AO_CTRL_RECORD_NB 800       /* Number of records of the aO control */
                                        /* circular buffer                     */
 
-#define CB_FG_CTRL_RECORD_NB 2000      /* Number of records of the FG control */
+#define CB_FG_CTRL_RECORD_NB 8192      /* Number of records of the FG control */
                                        /* circular buffer                     */
 
 #define AO_SUBAP_OFF         32767     /* Indicates there is no light on at   */
@@ -67,6 +68,9 @@
 
 #define AO_MIN_DOUBLE        1.0e-10   /* Mininum double used when comparing  */
                                        /* total counts to threshold           */
+
+#define AO_TIME_NOW_ERROR    -5.55e9   /* If time Now returns an error, time  */
+                                       /* is set to this value                */
 
 #define ZP_MODEL_SEM_TIMEOUT 100       /* Timeout for zero point model        */
                                        /* semaphore                           */
@@ -106,7 +110,8 @@ enum
 enum
 {
    AO_TOTAL_SPOTS = 0,  /* Computation of average flux when spots */
-   AO_TOTAL_VALUE       /* No computation, used given value       */
+   AO_TOTAL_VALUE,      /* No computation, used given value       */
+   AO_TOTAL_FORMULA     /* No image, use a function(rms,N)        */
 };
 
 enum
@@ -128,7 +133,9 @@ typedef double FG_VECT [ FG_MODE_NB ];
 
 typedef double AO_VECT [ AO_MODE_NB ];
 
-typedef double MATRIX [ 2 * SUBAP_NB * AO_MODE_NB ];
+typedef double AO_MATRIX [ 2 * SUBAP_NB * AO_MODE_NB ];
+
+typedef double FG_MATRIX [ 2 * SUBAP_NB * FG_MODE_NB ];
 
 typedef struct                         /* Structure needed to measure a column*/
                                        /* of the interaction matrixes         */
@@ -271,19 +278,14 @@ typedef struct
    int          aoScaleInitFlag;       /* TRUE or FALSE, if a aO scale factor */
                                        /* vector is init or not               */
 
-   int          intMatInitFlag;        /* TRUE or FALSE, if an interaction    */
+   int          aoIntMatInitFlag;      /* TRUE or FALSE, if an aO interaction */
                                        /* matrix is init or not               */
 
-   int          contMatInitFlag;       /* TRUE or FALSE, if aO control matrix */
+   int          aoContMatInitFlag;     /* TRUE or FALSE, if aO control matrix */
                                        /* is init or not                      */
 
    int          fgContMatInitFlag;     /* TRUE or FALSE, if FG control matrix */
                                        /* is init or not                      */
-
-   int          allowedSubapOff;       /* Number of subapertures allowed to   */
-                                       /* be off when computing the centroids */
-
-   int          focusCounter;          /* Counter used for computing the focus*/
 
    char         darkFileName [ STRING_SIZE ]; 
                                        /* Name of the file which contains the */
@@ -301,10 +303,11 @@ typedef struct
                                        /* Name of the ao scale factor vector  */
                                        /* file                                */
    
-   char         intMatFileName [ STRING_SIZE ]; 
-                                       /* Name of the interaction matrix file */
+   char         aoIntMatFileName [ STRING_SIZE ]; 
+                                       /* Name of the aO interaction matrix   */
+                                       /* file                                */
 
-   char         contMatFileName [ STRING_SIZE ]; 
+   char         aoContMatFileName [ STRING_SIZE ]; 
                                        /* Name of the aO control matrix file  */
 
    char         fgContMatFileName [ STRING_SIZE ]; 
@@ -321,8 +324,8 @@ typedef struct
    WFS_VECT     refWfsVect;            /* Vector containing the center of each*/
                                        /* subapertures                        */
 
-   GUIDE_VECT   refGuideVect;          /* Vector containing the center of each*/
-                                       /* subapertures                        */
+   GUIDE_VECT   refGuideVect;          /* Vector containing the center of the */
+                                       /* whole CCD                           */
 
    AO_VECT      aoScaleFactorVect;     /* Vector containing the scale factor  */
                                        /* for each ao modes                   */
@@ -330,15 +333,15 @@ typedef struct
    FG_VECT      fgScaleFactorVect;     /* Vector containing the scale factor  */
                                        /* for each ao modes                   */
 
-   CIM_STRUCT   intMatStruct[AO_MODE_NB]; 
+   CIM_STRUCT   aoIntMatStruct[AO_MODE_NB]; 
                                        /* Structure needed to compute the     */
-                                       /* interaction matrix                  */
+                                       /* aO interaction matrix               */
  
-   MATRIX       intMat;                /* Interaction matrix                  */
+   AO_MATRIX    aoIntMat;              /* aO interaction matrix               */
 
-   MATRIX       contMat;               /* Control matrix                      */
+   AO_MATRIX    aoContMat;             /* ao control matrix                   */
 
-   MATRIX       fgContMat;             /* FG theoretical control matrix       */
+   FG_MATRIX    fgContMat;             /* FG control matrix                   */
 
    int          thresholdMethod;       /* Method to compute threshold         */
                                        /* AO_THRESH_SPOTS, AO_THRESH_NOSPOTS, */
@@ -347,17 +350,34 @@ typedef struct
    int          totalMethod;           /* Method to compute average flux      */
                                        /* AO_TOTAL_SPOTS, AO_TOTAL_VALUE      */
 
+   double       rms;                   /* RMS used for the threshold          */
+                                       /* computation                         */
+
    double       threshold;             /* Threshold used for the centroids    */
                                        /* computation                         */ 
-
    double       thresholdRate;         /* Rate of brighter pixels used to     */
                                        /* compute the threshold               */
 
    double       thresholdMultCoeff;    /* Multiplicative coefficient for      */
                                        /* threshold computation               */
 
-   double       thresholdDark;         /* Threshold computed during sequence  */
-                                       /* dark - save                         */
+   double       thresholdDarkFull;     /* Threshold computed during sequence  */
+                                       /* dark when no binning - save         */
+
+   double       thresholdDarkBin;      /* Threshold computed during sequence  */
+                                       /* dark when binning - save            */
+
+   double       rmsDarkFull;           /* RMS computed during sequence dark   */
+                                       /* when no binning - save              */
+
+   double       rmsDarkBin;            /* RMS computed during sequence dark   */
+                                       /* when binning - save                 */
+
+   WFS_VECT     thresholdVect;         /* Threshold computed for each         */
+                                       /* subaperture                         */
+
+   WFS_VECT     averageThreshVect;     /* Avreage threshold computed for each */
+                                       /* subaperture used when aO            */
 
    double       averageTotal;          /* Average of the total counts for the */
                                        /* whole CCD                           */
@@ -386,6 +406,12 @@ typedef struct
    double       one_slidingFocusGain;  /* 1 - slidingFocusGain                */
 
    double       previousFocus;         /* Previous focus mode value           */
+
+   int          allowedSubapOff;       /* Number of subapertures allowed to   */
+                                       /* be off when computing the centroids */
+
+   int          focusCounter;          /* Counter used for computing the focus*/
+
 
    int          coaddCounter;          /* Counter used for coadd images       */
 
@@ -441,9 +467,11 @@ typedef struct                         /* Definition of the aO control        */
 
    WFS_VECT     totalCountsVect;       /* Vector which contains the total of  */
                                        /* counts for each subaperture         */
-                                       /* (subapUsedNb values) + 1 value      */
-                                       /* equivalent to the sum of the        */
-                                       /* subapUsedNb values                  */
+                                       /* (subapUsedNb values) + the total of */
+                                       /* counts for the whole CCD (1 value)  */
+
+   WFS_VECT     thresholdVect;         /* Threshold computed in real time for */
+                                       /* each subaperture                    */
 
    WFS_VECT     centroidsVect;         /* Vector which contains the centroids */
 
@@ -469,34 +497,35 @@ typedef struct                         /* Definition of the aO control        */
    int          unused;                /* The structure size must be equal to */
                                        /* a number multiple of a double       */
 
-} CB_CTRL_RECORD_STRUCT;
+} CB_AO_CTRL_RECORD_STRUCT;
 
-typedef struct                         /* Control circular buffer             */
+typedef struct                         /* aO control circular buffer          */
 {
 
-   CB_CTRL_RECORD_STRUCT cbCtrlRecord [ CB_CTRL_RECORD_NB ];
+   CB_AO_CTRL_RECORD_STRUCT cbAoCtrlRecord [ CB_AO_CTRL_RECORD_NB ];
 
-   double                exposureTime; /* Exposure time in second             */
+   double                   exposureTime; 
+                                       /* Exposure time in second             */
  
-   int                   processingMode;
+   int                      processingMode;
                                        /* Processing mode used: AO_MODE_NODE  */
                                        /* ... to AO_MODE_FG_AO                */
 
-   int                   averageImageNb;
+   int                      averageImageNb;
                                        /* Number of images averaging before   */
                                        /* computing the aO modes              */
 
-   int                   position;     /* From 0 to CB_AO_CTRL_RECORD_NB - 1  */
+   int                      position;  /* From 0 to CB_AO_CTRL_RECORD_NB - 1  */
 
-   int                   offset;       /* Offset of a record from the         */
+   int                      offset;    /* Offset of a record from the         */
                                        /* beginning of the circular buffer    */
  
-   int                   counter;      
+   int                      counter;      
 
-   int                   unused;       /* The structure size must be equal to */
+   int                      unused;    /* The structure size must be equal to */
                                        /* a number multiple of a double       */
 
-} AO_CB_CTRL_ID_STRUCT , * AO_CB_CTRL_ID;
+} AO_CB_AO_CTRL_ID_STRUCT , * AO_CB_AO_CTRL_ID;
 
 /***************************** Definition of the FG control circular buffer ***/
 
@@ -521,6 +550,9 @@ typedef struct                         /* Definition of the FG control        */
    WFS_VECT     errorCentroidsVect;    /* Vector which contains the errors of */
                                        /* the centroids computation           */
 
+   WFS_VECT     thresholdVect;         /* Threshold computed in real time for */
+                                       /* each subaperture                    */
+
    FG_VECT      fgVect;                /* Vector which contains the zernikes  */
                                        /* modes to send to M2 before a&G and  */
                                        /* cass rotator rotation               */
@@ -542,23 +574,24 @@ typedef struct                         /* Definition of the FG control        */
 
 } CB_FG_CTRL_RECORD_STRUCT;
 
-typedef struct                         /* Control circular buffer             */
+typedef struct                         /* FG control circular buffer          */
 {
 
    CB_FG_CTRL_RECORD_STRUCT cbFgCtrlRecord [ CB_FG_CTRL_RECORD_NB ];
 
-   double                exposureTime; /* Exposure time in second             */
+   double                   exposureTime; 
+                                       /* Exposure time in second             */
 
-   int                   processingMode;
+   int                      processingMode;
                                        /* Processing mode used: AO_MODE_NODE  */
                                        /* ... to AO_MODE_FG_AO                */
 
-   int                   position;     /* From 0 to CB_AO_CTRL_RECORD_NB - 1  */
+   int                      position;  /* From 0 to CB_FG_CTRL_RECORD_NB - 1  */
 
-   int                   offset;       /* Offset of a record from the         */
+   int                      offset;    /* Offset of a record from the         */
                                        /* beginning of the circular buffer    */
 
-   int                   counter;
+   int                      counter;
 
 } AO_CB_FG_CTRL_ID_STRUCT , * AO_CB_FG_CTRL_ID;
 
@@ -586,9 +619,9 @@ typedef struct
 
 typedef struct
 {
-   char         cbCtrlFileName [ STRING_SIZE ];
-                                       /* Name of the control circular buffer */
-                                       /* save file                           */
+   char         cbAoCtrlFileName [ STRING_SIZE ];
+                                       /* Name of the aO control circular     */
+                                       /* buffer save file                    */
 
    int          recordNb;              /* Saved record number                 */
 
@@ -606,6 +639,9 @@ typedef struct
 
    double       exposureTime;          /* Exposure time in second             */
 
+   double       rms;                   /* RMS used for the threshold          */
+                                       /* computation                         */
+
    double       threshold;             /* Threshold used for the centroids    */
                                        /* computation                         */
 
@@ -614,13 +650,24 @@ typedef struct
 
    double       angleWithM1;           /* Angle between M1 and P1 coordinates */
 
+   double       flipXWithM1;           /* Flip in X of PWFS2 tip measurements */
+                                       /* according to M1 referential         */
+                                       /* Not used always = 0                 */
+
+   double       flipYWithM1;           /* Flip in Y of PWFS2 Tilt measurements*/
+                                       /* according to M1 referential         */
+                                       /* Not used always = 0                 */
+
+   WFS_VECT     thresholdVect;         /* Threshold computed for each         */
+                                       /* subaperture                         */
+
    WFS_VECT     refWfsVect;            /* Vector containing the center of each*/
                                        /* subapertures                        */
 
    AO_VECT      aoScaleFactorVect;     /* Vector containing the scale factor  */
                                        /* for each modes                      */
 
-} AO_HEADER_CB_CTRL_ID_STRUCT, * AO_HEADER_CB_CTRL_ID;
+} AO_HEADER_CB_AO_CTRL_ID_STRUCT, * AO_HEADER_CB_AO_CTRL_ID;
 
 typedef struct
 {
@@ -643,6 +690,9 @@ typedef struct
 
    double       exposureTime;          /* Exposure time in second             */
 
+   double       rms;                   /* RMS used for the threshold          */
+                                       /* computation                         */
+
    double       threshold;             /* Threshold used for the centroids    */
                                        /* computation                         */
 
@@ -651,7 +701,18 @@ typedef struct
 
    double       angleWithM2;           /* Angle between M1 and P1 coordinates */
 
+   double       flipXWithM2;           /* Flip in X of PWFS2 tip measurements */
+                                       /* according to M2 referential         */
+                                       /* Not used always = 0                 */
+
+   double       flipYWithM2;           /* Flip in Y of PWFS2 Tilt measurements*/
+                                       /* according to M2 referential         */
+                                       /* Not used always = 0                 */
+
    double       slidingFocusGain;      /* Gain for sliding average for focus  */
+
+   WFS_VECT     thresholdVect;         /* Threshold computed for each         */
+                                       /* subaperture                         */
 
    WFS_VECT     refWfsVect;            /* Vector containing the center of each*/
 
@@ -751,7 +812,7 @@ typedef struct
 AO_CCD_ID aoCcdContextCreate (void);
 AO_CTRL_ID aoCtrlContextCreate (void);
 AO_CB_IM_ID aoCbImContextCreate (void);
-AO_CB_CTRL_ID aoCbCtrlContextCreate (void);
+AO_CB_AO_CTRL_ID aoCbAoCtrlContextCreate (void);
 AO_CB_FG_CTRL_ID aoCbFgCtrlContextCreate (void);
 STATUS aoCcdContextShow (AO_CCD_ID aoCcdId);
 STATUS aoRefRead (char * pRefFileName, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
@@ -770,9 +831,10 @@ STATUS aoFgContMatRead (char * pFgContMatFileName, AO_CCD_ID aoCcdId,
 STATUS aoCtrlContextInit (char * pInitFileName, AO_CCD_ID aoCcdId, 
                           AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextUpdate (char * pDarkFileName, char * pFlatFileName, 
-                            char * pRefFileName, char * pIntMatFileName, 
-                            char * pContMatFileName, char * pFgContMatFileName,
-                            double xCenter, double yCenter, double angleWithM2, 
+                            char * pRefFileName, char * pAoIntMatFileName, 
+                            char * pAoContMatFileName, 
+                            char * pFgContMatFileName, double xCenter, 
+                            double yCenter, double angleWithM2, 
                             double angleWithM1, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlContextShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, int verbose);
@@ -790,44 +852,47 @@ STATUS aoGlobalGuideAndError (float * pImage, AO_CCD_ID aoCcdId,
 STATUS aoImageFloatAverage (float * pImage, AO_CCD_ID aoCcdId, 
                             AO_CTRL_ID aoCtrlId, int imageNb);
 STATUS aoRmsNoiseImageCompute (float * pImage, AO_CCD_ID aoCcdId, 
-                               double * pRmsNoise);
-STATUS aoThresholdCompute (float * pImage, AO_CCD_ID aoCcdId, double ratePixel, 
+                               double * pRmsNoise, double * pMeanNoise);
+STATUS aoThresholdCompute (float * pImage, AO_CCD_ID aoCcdId, 
+                           AO_CTRL_ID aoCtrlId, double ratePixel, 
                            double * pThreshold);
 STATUS aoCentroidsCompute (float * pImage, AO_CCD_ID aoCcdId, 
-                           AO_CTRL_ID aoCtrlId, double * pTotalCountsVect, 
-                           double * pCentroidsVect, 
+                           AO_CTRL_ID aoCtrlId, double * pThreshVect,
+                           double * pTotalCountsVect, double * pCentroidsVect, 
                            double * pErrorCentroidsVect, int * pWfsStatus);
 STATUS aoModeCompute (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
-                      int imageNb, AO_CB_CTRL_ID aoCbCtrlId);
+                      int imageNb, double * pThreshVect,
+                      AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbImSave (char * pCbImFilePath, AO_CCD_ID aoCcdId, 
                    AO_CTRL_ID aoCtrlId, AO_CB_IM_ID aoCbImId);
 STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
-STATUS aoCbCtrlZero (AO_CB_CTRL_ID aoCbCtrlId);
+STATUS aoCbAoCtrlZero (AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbFgCtrlZero (AO_CB_FG_CTRL_ID aoCbFgCtrlId);
-STATUS aoCbCtrlSave (char * pCbCtrlFilePath, AO_CCD_ID aoCcdId, 
-                     AO_CTRL_ID aoCtrlId, AO_CB_CTRL_ID aoCbCtrlId );
+STATUS aoCbAoCtrlSave (char * pCbAoCtrlFilePath, AO_CCD_ID aoCcdId, 
+                     AO_CTRL_ID aoCtrlId, AO_CB_AO_CTRL_ID aoCbAoCtrlId );
 STATUS aoCbFgCtrlSave (char * pCbFgCtrlSave, AO_CCD_ID aoCcdId, 
                        AO_CTRL_ID aoCtrlId, AO_CB_FG_CTRL_ID aoCbFgCtrlId );
 STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId,
-                        double *pTotalCountsVect, double *pCentroidsVect,
-                        double *pErrorCentroidsVect, double *pFgVect,
-                        double *pFgVectAfterRot, double *pFgErrorsVect, 
-                        double *pTime, int *pWfsStatus, int writeToRm);
+                        double *pThreshVect, double *pTotalCountsVect, 
+                        double *pCentroidsVect, double *pErrorCentroidsVect, 
+                        double *pFgVect, double *pFgVectAfterRot, 
+                        double *pFgErrorsVect, double *pTime, 
+                        int *pWfsStatus, int writeToRm);
 STATUS aoModeAnalyze (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                      AO_CB_CTRL_ID aoCbCtrlId);
+                      double * pThreshVect, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCentroidsWrite (char * pCentroidsFileName, double * pCentroids, 
                          int centNb, char * pComment);
-STATUS aoColImStructZero (AO_CTRL_ID aoCtrlId);
-STATUS aoColImStructShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
+STATUS aoIntMatStructZero (AO_CTRL_ID aoCtrlId);
+STATUS aoIntMatStructShow (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoMatZero (AO_CTRL_ID aoCtrlId);
 STATUS aoMatCompute (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoDarkUpdate (char * pDarkFileName, AO_CCD_ID aoCcdId, 
                      AO_CTRL_ID aoCtrlId);
 STATUS aoCtrlFileRead (char * pInitFileName, char * pPath, char * pDarkFileName,
                        char * pFlatFileName, char * pRefFileName, 
-                       double * pRefX, double * pRefY, char * pImFileName,
-                       char * pCmFileName, char * pFgCmFileName,
-                       double * pThresh, double * pTotalThresh,
+                       double * pRefX, double * pRefY, char * pAoImFileName,
+                       char * pAoCmFileName, char * pFgCmFileName,
+                       double * pRms, double * pThresh, double * pTotalThresh,
                        double * pAngleM2, double * pAngleM1);
 STATUS aoModInit (char * pInitFileName, AST_ZP_MODEL_ID astModelId,
                   TREF_ZP_MODEL_ID trefModelId, COMA_ZP_MODEL_ID comaModelId,
@@ -848,6 +913,10 @@ STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
 STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1,
                          double * pA2, double * pP2, double * pC,
                          int * pApply);
+STATUS aoThresholdPerSubapCompute (float * pImage, AO_CCD_ID aoCcdId,
+                                   AO_CTRL_ID aoCtrlId, double ratePixel,
+                                   double * pThreshold);
+double aoTotalThresholdCompute (AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 #endif
 
 #endif /* __INCaoP1Libh */

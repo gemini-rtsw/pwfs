@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: epToVxLib.c,v 1.5 2002-01-18 01:27:28 cboyer Exp $"};
+	"$Id: epToVxLib.c,v 1.6 2002-06-05 04:11:37 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -7093,7 +7093,7 @@ STATUS   epToVxPipeWrite
             valueLong = * (long *) (int) pValue;
 
             if ((! pContext->firstWriteDone) ||
-                (fabs ((double) valueLong - pContext->lastWriteValue) >
+                (fabs ((double) valueLong - pContext->lastWriteValue) >=
                  pContext->hysteresisOnWrite))
             {
                hysteresisExceeded = TRUE;
@@ -7113,7 +7113,7 @@ STATUS   epToVxPipeWrite
             valueDouble = * (double *) (int) pValue;
 
             if ((! pContext->firstWriteDone) ||
-                (fabs (valueDouble - pContext->lastWriteValue) > 
+                (fabs (valueDouble - pContext->lastWriteValue) >= 
                 pContext->hysteresisOnWrite))
             {
                hysteresisExceeded = TRUE;

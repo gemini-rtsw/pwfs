@@ -119,10 +119,11 @@ p 896 1888 100 0 0 FTVA:STRING
 p 864 1488 100 0 1 INAM:epToVxCadInit
 p 864 1424 100 0 1 PV:$(top)$(wfs)
 p 864 1456 100 0 1 SNAM:epToVxCadExecute
-use ecad2 32 1575 100 0 detSigInitBW
+use ecad2 32 1575 100 0 detSigInitBw
 xform 0 192 1888
 p 96 1520 100 0 1 DESC:Set butterworth cutoff frequency
 p 128 1888 100 0 1 FTVA:DOUBLE
+p 128 1856 100 0 1 FTVB:DOUBLE
 p 96 1488 100 0 1 INAM:epToVxCadInit
 p 96 1424 100 0 1 PV:$(top)$(wfs)
 p 96 1456 100 0 1 SNAM:epToVxCadExecute
@@ -166,10 +167,13 @@ use ecad8 -736 -57 100 0 detSigModeFgCoadd
 xform 0 -576 448
 p -640 -128 100 0 1 DESC:Set FG and Focus and Coadd mode
 p -624 688 100 0 1 FTVA:LONG
-p -624 640 100 0 1 FTVB:LONG
-p -624 592 100 0 1 FTVC:STRING
-p -624 544 100 0 1 FTVD:STRING
-p -624 496 100 0 1 FTVE:LONG
+p -624 656 100 0 1 FTVB:LONG
+p -624 624 100 0 1 FTVC:STRING
+p -624 592 100 0 1 FTVD:STRING
+p -624 560 100 0 1 FTVE:LONG
+p -624 528 100 0 1 FTVF:LONG
+p -624 496 100 0 1 FTVG:DOUBLE
+p -624 464 100 0 1 FTVH:DOUBLE
 p -640 -160 100 0 1 INAM:epToVxCadInit
 p -640 -96 100 0 1 PREC:0
 p -640 -224 100 0 1 PV:$(top)$(wfs)
@@ -179,10 +183,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2001-12-22 00:00:17 $
+p 3120 -784 200 0 -1 date:$Date: 2002-06-05 04:11:34 $
 p 1888 -432 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.8 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.9 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]

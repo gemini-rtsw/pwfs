@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.29 2002-03-28 01:00:58 cboyer Exp $"};
+   "$Id: detControl.c,v 1.30 2002-06-05 04:11:37 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,12 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   23 May 2002: CB - Modify detSigInitFgGain to reinit defFocusScale100Hz
+ *                     when changing the focus gain
+ *                     Add fgFocusGain100, fgTipGain, fgTiltGain, fgFocusGain, 
+ *                     cfFocusBw, cfTipTiltBw SIR records
+ *   28 Mar 2002: CB - detInit: init geometry SIR records
+ *   28 Mar 2002: CB - Add threshold in real time and per sub-aperture
  *   20 Mar 2002: CB - Major modifications to download the timing and utility
  *                     code from EEPROMS
  *   07 Feb 2002: CB - Reset signal processing when detInit and detReset and 
@@ -218,7 +224,8 @@ extern wfs *ptrPwfs1;              /* Pointer to the reflective memory page   */
 extern AO_CCD_ID aoCcdIdP1;        /* Pointer to the ccd geometry structure   */
                                    /* defined in writeZernikes.c              */
 
-extern AO_CB_CTRL_ID aoCbCtrlIdP1; /* Pointer to the aO control circular      */
+extern AO_CB_AO_CTRL_ID aoCbAoCtrlIdP1; 
+                                   /* Pointer to the aO control circular      */
                                    /* buffer defined in writeZernikes.c       */
 
 extern AO_CB_FG_CTRL_ID aoCbFgCtrlIdP1; /* Pointer to the FG control circular */
@@ -227,10 +234,13 @@ extern AO_CB_FG_CTRL_ID aoCbFgCtrlIdP1; /* Pointer to the FG control circular */
 extern AO_CB_IM_ID aoCbImIdP1;     /* Pointer to the image circular buffer    */
                                    /* defined in writeZernikes.c              */
 
+extern AO_CTRL_ID aoCtrlIdP1 ;     /* Pointer to the aO control context       */
+                                   /* structure defined in writeZernikes.c    */
+
 extern double sampleData[5][3];    /* Samples for butterworth filter          */
                                    /* defined in writeZernikes.c              */
 
-extern double coeffData[5];        /* Coefficients for butterworth filter     */
+extern double coeffData[5][3];     /* Coefficients for butterworth filter     */
                                    /* defined in writeZernikes.c              */
 
 extern AST_ZP_MODEL_ID_STRUCT astigModel;
@@ -257,6 +267,14 @@ extern FOCUS_ZP_MODEL_ID_STRUCT focusModel;
 extern SEM_ID accessFocusModel;    /* Semaphore Focus model defined in        */
                                    /* writeZernikes.c                         */
 
+extern double angleWithM1;         /* Angle with M1 (equivalent to the one    */
+                                   /* contained in aoCtrlIdP2) defined in     */
+                                   /* writeZernikes.c                         */
+
+extern double angleWithM2;         /* Angle with M2 (equivalent to the one    */
+                                   /* contained in aoCtrlIdP2) defined in     */
+                                   /* writeZernikes.c                         */
+
 /******************************************************* External functions ***/
 
 extern void ImpMaster ();
@@ -281,10 +299,7 @@ LOCAL uint32   detSetWcs (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 
 LOCAL uint32   detObserveStart (CAD_CMD_CONTEXT cadCmdContext,
                                 int commandNumber, SDSU_ID sdsuId, 
-                                OBS_ID obsId, AO_CCD_ID aoCcdId,
-                                AO_CTRL_ID aoCtrlId, AO_CB_IM_ID aoCbImId,
-                                AO_CB_CTRL_ID aoCbCtrlId,
-                                AO_CB_FG_CTRL_ID aoCbFgCtrlId);
+                                OBS_ID obsId); 
 
 LOCAL uint32   detStop (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                         SDSU_ID sdsuId, OBS_ID obsId);
@@ -295,7 +310,7 @@ LOCAL uint32   detAbort (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 LOCAL uint32   detInit (const char * pWfsName, const char * pRecordPrefix, 
                         CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                         SDSU_ID * pSdsuId, OBS_ID obsId, uint32 * pVmeAddress, 
-                        int * pMaxFrames, AO_CCD_ID aoCcdId);
+                        int * pMaxFrames);
 
 LOCAL uint32   detReset (const char * pWfsName, const char * pRecordPrefix, 
                          CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
@@ -308,9 +323,8 @@ LOCAL uint32   detSave (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                         SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detGeometry (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                            SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
-                            AO_CTRL_ID aoCtrlId, long * pOffsetFullVect,
-                            long * pOffsetBinVect);
+                            SDSU_ID sdsuId, OBS_ID obsId, 
+                            long * pOffsetFullVect, long * pOffsetBinVect);
 
 LOCAL uint32   detPrimitive (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
@@ -328,9 +342,8 @@ LOCAL uint32   detTemp   (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                           SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detFrameSize (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                             SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
-                             AO_CTRL_ID aoCtrlId, long *pOffsetFullVect,
-                             long *pOffsetBinVect);
+                             SDSU_ID sdsuId, OBS_ID obsId, 
+                             long *pOffsetFullVect, long *pOffsetBinVect);
 
 LOCAL uint32   detDhsReconnect (CAD_CMD_CONTEXT cadCmdContext,
                                 int commandNumber, SDSU_ID sdsuId, 
@@ -340,20 +353,18 @@ LOCAL uint32   detDhsDisplay (CAD_CMD_CONTEXT cadCmdContext,
                               int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detSigInit (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                           SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
-                           AO_CTRL_ID aoCtrlId);
+                           SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigInitGain (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                               SDSU_ID sdsuId, OBS_ID obsId, 
-                               AO_CTRL_ID aoCtrlId);
+LOCAL uint32   detSigInitAoGain (CAD_CMD_CONTEXT cadCmdContext, 
+                                 int commandNumber, SDSU_ID sdsuId, 
+                                 OBS_ID obsId);
 
-LOCAL uint32   detSigInitBW (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                             SDSU_ID sdsuId, OBS_ID obsId,
-                             AO_CTRL_ID aoCtrlId);
+LOCAL uint32   detSigInitBw (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                             SDSU_ID sdsuId, OBS_ID obsId);
 
 LOCAL uint32   detSigInitFgGain (CAD_CMD_CONTEXT cadCmdContext, 
                                  int commandNumber, SDSU_ID sdsuId, 
-                                 OBS_ID obsId, AO_CTRL_ID aoCtrlId);
+                                 OBS_ID obsId);
 
 LOCAL uint32   detSigModeNone (const char * pRecordPrefix,
                                CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
@@ -420,15 +431,16 @@ LOCAL uint32   detSigModeFgFocusAo (const char * pRecordPrefix,
                                     int commandNumber, SDSU_ID sdsuId,
                                     OBS_ID obsId);
 
-LOCAL uint32   detSigInitCB (CAD_CMD_CONTEXT cadCmdContext,
+LOCAL uint32   detSigSaveCb (CAD_CMD_CONTEXT cadCmdContext,
                              int commandNumber, SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigMeasIm (const char * pRecordPrefix,
-                             CAD_CMD_CONTEXT cadCmdContext, int commandNumber, 
-                             SDSU_ID sdsuId, OBS_ID obsId);
+LOCAL uint32   detSigMeasAoIm (const char * pRecordPrefix,
+                               CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                               SDSU_ID sdsuId, OBS_ID obsId);
 
-LOCAL uint32   detSigCompMat (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
-                              SDSU_ID sdsuId, OBS_ID obsId); 
+LOCAL uint32   detSigCompAoMat (CAD_CMD_CONTEXT cadCmdContext, 
+                                int commandNumber, SDSU_ID sdsuId, 
+                                OBS_ID obsId); 
 
 LOCAL uint32   detSigModeSeqDark (const char * pRecordPrefix,
                                   CAD_CMD_CONTEXT cadCmdContext, 
@@ -502,8 +514,8 @@ STATUS detWriteFits (char * filename, OBS_ID obsId, int xPixels, int yPixels,
 
 uint32 detSimulateImage (int xPixels, int yPixels, float * pImage);
 
-uint32 detComputeCoeffButterworth (double expTime, double cutoffFreq,
-                                   double * pCoeffData);
+uint32 detComputeCoeffButterworth (double expTime, double *pCutoffFreqTT,
+                                   double *pCutoffFreqFoc);
 
 uint32 detContInit (char * pInitFileName, uint32 * pTempCode,
                     uint32 * pTempCoeff, long *pOffsetFullVect, 
@@ -513,6 +525,8 @@ uint32 detGetSirContext (const char * pRecordPrefix, OBS_ID obsId);
 
 uint32 detWriteDefSirContext (OBS_ID obsId);
 
+uint32 detInitBwDef (char * pInitFileName, double * pCfTipTiltBw,
+                     double * pCfFocusBw);
 
 /* -------------------------------------------------------------------------- */
 
@@ -582,7 +596,8 @@ STATUS   detControl
    AO_CTRL_ID   aoCtrlId = NULL;    /* AO control context structure           */
    AO_CB_IM_ID  aoCbImId = NULL;    /* AO image circular buffer context       */
                                     /* structure                              */
-   AO_CB_CTRL_ID aoCbCtrlId = NULL; /* aO control circular buffer context     */
+   AO_CB_AO_CTRL_ID aoCbAoCtrlId = NULL; 
+                                    /* aO control circular buffer context     */
                                     /* structure                              */
    AO_CB_FG_CTRL_ID aoCbFgCtrlId = NULL; 
                                     /* FG control circular buffer context     */
@@ -615,19 +630,20 @@ STATUS   detControl
 
    char         pStatusString [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                                     /* Status string.                         */
+   char         detBwInitFileName [ STRING_SIZE ] ;
+                                    /* Full Name of the BW init file          */
 
    long         nExp;               /* Number of exposure                     */
    long         outOption;          /* Output option                          */
    double       expTime;            /* Exposure time                          */
-   double       cutoffFreq;         /* Cutoff frequency                       */
-   double       rateSampFreq;       /* Cutoff frequency                       */
-
+   double       cutoffFreqTT;       /* Cutoff frequency for fast TT           */
+   double       cutoffFreqFoc;      /* Cutoff frequency for fast Focus        */
 
    /* Create and initialise an error context structure for this task */
 
    if (errorInit () == ERROR)
    {
-      printErr ("detControl: Failed to initialise error context structure.\n");
+      printErr ("detControl: Failed to init error context structure.\n");
       return (ERROR);
    }
 
@@ -675,7 +691,7 @@ STATUS   detControl
 
    if ( timeoutAlarmInit( &timeId ) == ERROR )
    {
-      ERROR_SET (0, "Failed to initialise alarm timer", ERROR_LOG_NOW);
+      ERROR_SET (0, "Failed to init alarm timer", ERROR_LOG_NOW);
       return (ERROR);
    }
 
@@ -729,7 +745,7 @@ STATUS   detControl
    obsId = detObsContextCreate();
    if ( obsId == NULL )
    {
-      ERROR_LOG ("Failed to initialise observation context on startup");
+      ERROR_LOG ("Failed to init observation context on startup");
       return (ERROR);
    }
 
@@ -743,10 +759,11 @@ STATUS   detControl
    obsId->observing = FALSE;
    obsId->totalFrames = 1;
    obsId->saveCbIm = FALSE;
-   obsId->saveCbCtrl = FALSE;
+   obsId->saveCbAoCtrl = FALSE;
    obsId->saveCbFgCtrl = FALSE;
    obsId->sigMode = AO_MODE_NONE;
    obsId->dhsQlRate = 100;
+   obsId->writeToRm = 1;
 
    /*
     * Get the context structures for the SIR records. 
@@ -810,6 +827,7 @@ STATUS   detControl
    };
 
    obsId->aoCtrlId = aoCtrlId;
+   aoCtrlIdP1 = aoCtrlId;
 
    aoCbImId = aoCbImContextCreate();
 
@@ -822,16 +840,16 @@ STATUS   detControl
    obsId->aoCbImId = aoCbImId;
    aoCbImIdP1 = aoCbImId;
 
-   aoCbCtrlId = aoCbCtrlContextCreate();
+   aoCbAoCtrlId = aoCbAoCtrlContextCreate();
 
-   if ( aoCbCtrlId == NULL )
+   if ( aoCbAoCtrlId == NULL )
    {
       ERROR_LOG ("Failed to create AO control circular buffer on startup");
       return (ERROR);
    };
 
-   obsId->aoCbCtrlId = aoCbCtrlId;
-   aoCbCtrlIdP1 = aoCbCtrlId;
+   obsId->aoCbAoCtrlId = aoCbAoCtrlId;
+   aoCbAoCtrlIdP1 = aoCbAoCtrlId;
 
    aoCbFgCtrlId = aoCbFgCtrlContextCreate();
 
@@ -882,7 +900,7 @@ STATUS   detControl
        * record.
        */
 
-      ERROR_LOG ("Failed to initialise SDSU controller");
+      ERROR_LOG ("Failed to init SDSU controller");
       initFailed = TRUE;
 
       /*
@@ -1297,11 +1315,16 @@ STATUS   detControl
 
       if ( aoCtrlId->initFlag == TRUE )
       {
+
+         angleWithM1 = aoCtrlId->angleWithM1;
+         angleWithM2 = aoCtrlId->angleWithM2;
+         obsId->defFocusScale100Hz = aoCtrlId->fgScaleFactorVect[2];
+
          if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext) 
              == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
          }
       }
 
@@ -1311,7 +1334,7 @@ STATUS   detControl
                               obsId->pAoDarkInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
          }
       }
 
@@ -1321,52 +1344,91 @@ STATUS   detControl
                               obsId->pAoFlatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->intMatInitFlag == TRUE )
+      if ( aoCtrlId->aoIntMatInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->intMatFileName, 
+         if (epToVxPipeWrite (NULL, aoCtrlId->aoIntMatFileName, 
                               obsId->pAoIntMatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->contMatInitFlag == TRUE )
+      if ( aoCtrlId->aoContMatInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->contMatFileName, 
+         if (epToVxPipeWrite (NULL, aoCtrlId->aoContMatFileName, 
                               obsId->pAoContMatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
          }
       }
 
       if ( aoCtrlId->fgContMatInitFlag == TRUE )
       {
          if (epToVxPipeWrite (NULL, aoCtrlId->fgContMatFileName, 
-                              obsId->pAoFgContMatInitContext) == ERROR)
+                              obsId->pFgContMatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
          }
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (aoCtrlId->rms),
+                           obsId->pAoRmsContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_AO_RMS_SIR_NAME record");
       }
 
       if (epToVxPipeWrite (NULL, (char *)(int)& (aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
       }
 
       if (epToVxPipeWrite (NULL, (char *)(int)& (aoCtrlId->totalThreshold),
                            obsId->pAoTotalContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (aoCtrlId->fgScaleFactorVect[0]),
+                           obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (aoCtrlId->fgScaleFactorVect[1]),
+                           obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (aoCtrlId->fgScaleFactorVect[2]),
+                           obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
       }
 
 #ifdef DEBUG
@@ -1378,6 +1440,46 @@ STATUS   detControl
       MESSAGE_LOG (MSG_LOG, "PWFS1 - AO control context not initialised");
    }
 #endif
+
+   /*
+    * Read the default settings from the BW init file
+    */
+
+#if (MK)
+   strcpy ( defFileName, DET_CONTROL_PWFS1_BW_MK_INIT_FILE);
+#else
+   strcpy ( defFileName, DET_CONTROL_PWFS1_BW_CP_INIT_FILE);
+#endif
+
+   printf ( "defFileName =%s\n", defFileName);
+
+   if ( strcmp (defFileName, "NONE") != 0 )
+   {
+      strcpy ( detBwInitFileName , DET_CONTROL_PAR_FILE_PATH ) ;
+      strcat ( detBwInitFileName , "/" ) ;
+      strcat ( detBwInitFileName , defFileName ) ;
+
+      if ( detInitBwDef ( detBwInitFileName, &cutoffFreqTT, &cutoffFreqFoc)
+           == ERROR )
+      {
+         MESSAGE_LOG ( MSG_LOG,
+           "Failed to read BW default settings from file");
+
+         /* Set the focus cutoff frequency to 0.0167Hz anyway (1mn convergence
+            time) and cutoff TT frequency to 10Hz */
+
+         cutoffFreqFoc = 0.0167; /* in Hz */
+         cutoffFreqTT = 10.0;    /* in Hz */
+      }
+   }
+   else
+   {
+      /* Set the focus cutoff frequency to 0.0167Hz anyway (1mn convergence
+         time) and cutoff TT frequency to 10Hz */
+
+      cutoffFreqFoc = 0.0167; /* in Hz */
+      cutoffFreqTT = 10.0;    /* in Hz */
+   }
 
    /*
     * Mode is no processing, init the fields of the observe CAD record
@@ -1394,15 +1496,32 @@ STATUS   detControl
       expTime = 0.005 ; /* 5ms */
 
    obsId->exposureTime = expTime;
-   rateSampFreq = 6.0 / 100.0 ;                  /* 6% of sampling frequency */
-   obsId->rateSamplingFrequency = rateSampFreq;
-   cutoffFreq = rateSampFreq / expTime ;
-   obsId->cutoffFrequency = cutoffFreq;
+   obsId->cutoffFrequencyTipTilt = cutoffFreqTT;
+   obsId->cutoffFrequencyFocus = cutoffFreqFoc;
 
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
+   }
+
+   if ( detComputeCoeffButterworth ( obsId->exposureTime,
+                                     &(obsId->cutoffFrequencyTipTilt),
+                                     &(obsId->cutoffFrequencyFocus)) == ERROR )
+   {
+      ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus),
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
    }
 
    /*
@@ -1547,7 +1666,7 @@ STATUS   detControl
              == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+            "Failed to init DET_CONTROL_DHS_CON_SIR_NAME record");
             errorNumber = ERROR;
          }
       };
@@ -1558,7 +1677,7 @@ STATUS   detControl
              == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+            "Failed to init DET_CONTROL_DHS_CON_SIR_NAME record");
             errorNumber = ERROR;
          }
       };
@@ -1571,7 +1690,7 @@ STATUS   detControl
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+         "Failed to init DET_CONTROL_DHS_CON_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
@@ -1586,7 +1705,7 @@ STATUS   detControl
    {
       if ( epToVxSetHealth (pRecordPrefix, "BAD") == ERROR )
       {
-         ERROR_LOG ("Failed to initialise detector controller health to BAD");
+         ERROR_LOG ("Failed to init detector controller health to BAD");
       }
    }
    else if ( initWarning )
@@ -1594,14 +1713,14 @@ STATUS   detControl
       if ( epToVxSetHealth (pRecordPrefix, "WARNING") == ERROR )
       {
          ERROR_LOG (
-         "Failed to initialise detector controller health to WARNING");
+         "Failed to init detector controller health to WARNING");
       }
    }
    else
    {
       if ( epToVxSetHealth (pRecordPrefix, "GOOD") == ERROR )
       {
-         ERROR_LOG ("Failed to initialise detector controller health to GOOD");
+         ERROR_LOG ("Failed to init detector controller health to GOOD");
       }
    }
 
@@ -1721,8 +1840,8 @@ STATUS   detControl
             /* Specify frame size. */
 
             errorNumber =
-            detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId,
-                          aoCtrlId, offsetFullVect, offsetBinVect);
+            detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, 
+                          offsetFullVect, offsetBinVect);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_DHS_RECONNECT)
@@ -1750,7 +1869,7 @@ STATUS   detControl
             detExposure (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_OBSTYPE)
+         else if (commandNumber == DET_CONTROL_CMD_OBS_TYPE)
          {
 
             /* Define observation type. */
@@ -1759,7 +1878,7 @@ STATUS   detControl
             detObstype(cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SETWCS)
+         else if (commandNumber == DET_CONTROL_CMD_SET_WCS)
          {
 
             /* Define World Coordinate System parameters. */
@@ -1782,9 +1901,7 @@ STATUS   detControl
             obsId->timeId = timeId;
 
             errorNumber = 
-            detObserveStart (cadCmdContext, commandNumber, sdsuId, obsId,
-                             aoCcdId, aoCtrlId, aoCbImId, aoCbCtrlId,
-                             aoCbFgCtrlId);
+            detObserveStart (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_PAUSE)
@@ -1834,7 +1951,7 @@ STATUS   detControl
 
             errorNumber = 
             detInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber,
-                     &sdsuId, obsId, &vmeAddress, &maxFrames, aoCcdId);
+                     &sdsuId, obsId, &vmeAddress, &maxFrames);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_RESET)
@@ -1872,7 +1989,7 @@ STATUS   detControl
 
             errorNumber = 
             detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, 
-                         aoCcdId, aoCtrlId, offsetFullVect, offsetBinVect);
+                         offsetFullVect, offsetBinVect);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_PRIMITIVE)
@@ -1920,46 +2037,43 @@ STATUS   detControl
             detTemp (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT)
          {
 
             /* Initialise AO control structure. */
 
             errorNumber =
-            detSigInit (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId,
-                        aoCtrlId); 
+            detSigInit (cadCmdContext, commandNumber, sdsuId, obsId);
          }
-         else if (commandNumber == DET_CONTROL_CMD_SIGINITGAIN)
+
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_AO_GAIN)
          {
 
             /* Update open/closed loop aO scale factors */
 
             errorNumber =
-            detSigInitGain (cadCmdContext, commandNumber, sdsuId, obsId, 
-                            aoCtrlId);
+            detSigInitAoGain (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINITFGGAIN)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_FG_GAIN)
          {
 
             /* Update open/closed loop FG scale factors */
 
             errorNumber =
-            detSigInitFgGain (cadCmdContext, commandNumber, sdsuId, obsId,
-                              aoCtrlId);
+            detSigInitFgGain (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINITBW)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_BW)
          {
 
             /* Update butterworth filter coefficients */
 
             errorNumber =
-            detSigInitBW (cadCmdContext, commandNumber, sdsuId, obsId,
-                          aoCtrlId);
+            detSigInitBw (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGRESET)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_RESET)
          {
 
             /* Reset the signal processing */
@@ -1969,7 +2083,7 @@ STATUS   detControl
                          cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_NONE)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_NONE)
          {
 
             /* Set to no processing the processig mode */
@@ -1979,7 +2093,7 @@ STATUS   detControl
                             cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_DARK)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_DARK)
          {
 
             /* Set to dark subtraction the signal processing */
@@ -1989,7 +2103,7 @@ STATUS   detControl
                             sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_GG)
          {
 
             /* Set to global guide the signal processing */
@@ -1999,7 +2113,7 @@ STATUS   detControl
                           sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG_AO)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_GG_AO)
          {
 
             /* Set to global guide and aO correction the signal processing */
@@ -2009,7 +2123,7 @@ STATUS   detControl
                             sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_AO)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_AO)
          {
 
             /* Set to aO correction the signal processing */
@@ -2019,7 +2133,7 @@ STATUS   detControl
                           obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_COADD)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_COADD)
          {
 
             /* Set to coadd the signal processing */
@@ -2029,7 +2143,7 @@ STATUS   detControl
                              sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_THRESH)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_THRESH)
          {
 
             /* Set to threshold computation the signal processing */
@@ -2039,7 +2153,7 @@ STATUS   detControl
                               sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_GG_COADD)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_GG_COADD)
          {
 
             /* Set to global guide and coadd the signal processing */
@@ -2049,7 +2163,7 @@ STATUS   detControl
                                sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_SEQ)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_SEQ)
          {
 
             /* Set to sequence closed loop the signal processing */
@@ -2059,7 +2173,7 @@ STATUS   detControl
                            cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_TOTAL)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_TOTAL)
          {
 
             /* Set to average flux computation the signal processing */
@@ -2069,7 +2183,7 @@ STATUS   detControl
                              sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_FG_FOCUS)
          {
 
             /* Set to FG and focus the signal processing */
@@ -2079,7 +2193,7 @@ STATUS   detControl
                                sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS_AO)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_FG_FOCUS_AO)
          {
 
             /* Set to FG and focus and aO the signal processing */
@@ -2089,7 +2203,7 @@ STATUS   detControl
                                  cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_FG_FOCUS_COADD)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_FG_FOCUS_COADD)
          {
 
             /* Set to FG and focus and coadd the signal processing */
@@ -2099,34 +2213,34 @@ STATUS   detControl
                                cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_CB)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_SAVE_CB)
          {
 
             /* Init parameters for saving circular buffers */
 
             errorNumber =
-            detSigInitCB (cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigSaveCb (cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMEAS_IM)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MEAS_AO_IM)
          {
 
             /* Set parameters to measure a column of the interaction matrix */
 
             errorNumber = 
-            detSigMeasIm (pRecordPrefix,
-                          cadCmdContext, commandNumber, sdsuId, obsId);
+            detSigMeasAoIm (pRecordPrefix,
+                            cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGCOMP_MAT)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_COMP_AO_MAT)
          {
 
             /* Compute and save the interaction and control matrixes */
             errorNumber =
-            detSigCompMat (cadCmdContext, commandNumber, sdsuId, obsId); 
+            detSigCompAoMat (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGMODE_SEQ_DARK)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_MODE_SEQ_DARK)
          {
 
             /* Sequence dark mode */
@@ -2135,7 +2249,7 @@ STATUS   detControl
                                cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_AST_MODEL)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_AST_MODEL)
          {
 
             /* Init zero point model for astig off axis */
@@ -2143,7 +2257,7 @@ STATUS   detControl
             detSigInitModAst (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_TREF_MODEL)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_TREF_MODEL)
          {
 
             /* Init zero point model for trefoil off axis */
@@ -2151,7 +2265,7 @@ STATUS   detControl
             detSigInitModTref (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_COMA_MODEL)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_COMA_MODEL)
          {
 
             /* Init zero point model for coma off axis */
@@ -2159,7 +2273,7 @@ STATUS   detControl
             detSigInitModComa (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_FOCUS_MODEL)
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_FOCUS_MODEL)
          {
 
             /* Init zero point model for focus off axis */
@@ -2503,13 +2617,13 @@ STATUS detDownloadDefault
 #ifdef TIM_EEPROM_PROGRAM
    if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
    {
-      ERROR_LOG ("Failed to initialise UTILITY DSP with INI command");
+      ERROR_LOG ("Failed to init UTILITY DSP with INI command");
       epToVxSetHealth( pRecordPrefix, "BAD" );
       return (ERROR);
    }
    if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
    {
-      ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
+      ERROR_LOG ("Failed to init TIMING DSP with LDP command");
       epToVxSetHealth( pRecordPrefix, "BAD" );
       return (ERROR);
    }
@@ -3410,16 +3524,41 @@ uint32 detExposure
    }
 
    /*
+    * Update scale factor for the focus according to exposure time
+    */
+
+   obsId->aoCtrlId->fgScaleFactorVect[2] = obsId->defFocusScale100Hz *
+                                           (100.0 * obsId->exposureTime);
+
+   if (epToVxPipeWrite (NULL,
+                        (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                        obsId->pFgFocusGainContext) == ERROR)
+   {
+      ERROR_LOG (
+      "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+   }
+
+   /*
     * Init the butterworth filter for probe arm guiding
     */
 
-   obsId->cutoffFrequency = obsId->rateSamplingFrequency / obsId->exposureTime;
-
    if ( detComputeCoeffButterworth ( obsId->exposureTime,
-                                     obsId->cutoffFrequency,
-                                     coeffData ) == ERROR )
+                                     &(obsId->cutoffFrequencyTipTilt),
+                                     &(obsId->cutoffFrequencyFocus)) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise coefficients of butterworth filter");
+      ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus),
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
    }
 
    /*
@@ -3913,7 +4052,7 @@ STATUS detDhsInit
    if (dhsErrno != DHS_S_SUCCESS)
    {
       ERROR_SET1 (S_detControl_DHS_ERROR, 
-                  "Failed to initialise DHS (dhsErrno=%d)",
+                  "Failed to init DHS (dhsErrno=%d)",
                   ERROR_LOG_SAVE, dhsErrno);
       return (ERROR);
    }
@@ -4738,19 +4877,13 @@ void detDhsTask
  *   detObserveStart
  *
  *   INVOCATION:
- *   detObserveStart (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
- *                    aoCtrlId, aoCbImId, aoCbCtrlId, aoCbFgCtrlId)
+ *   detObserveStart (cadCmdContext, commandNumber, sdsuId, obsId) 
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT)  CAD command context structure
  *   (>) commandNumber (int)              Command number
  *   (>) sdsuId        (SDSU_ID)          Current SDSU context structure
  *   (!) obsId         (OBS_ID)           Observation context structure
- *   (>) aoCcdId       (AO_CCD_ID)        AO CCD geometry context structure
- *   (>) aoCtrlId      (AO_CTRL_ID)       AO control context structure
- *   (!) aoCbImId      (AO_CB_IM_ID)      AO image circular buffer 
- *   (!) aoCbCtrlId    (AO_CB_CTRL_ID)    AO control circular buffer 
- *   (!) aoCbFgCtrlId  (AO_CB_FG_CTRL_ID) AO FG control circular buffer 
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -4781,28 +4914,24 @@ uint32 detObserveStart
    CAD_CMD_CONTEXT    cadCmdContext, /* CAD command context structure.        */
    int                commandNumber, /* Command number.                       */
    SDSU_ID            sdsuId,        /* SDSU context structure.               */
-   OBS_ID             obsId,         /* Observation context data structure.   */
-   AO_CCD_ID          aoCcdId,       /* AO CCD geometry context structure.    */
-   AO_CTRL_ID         aoCtrlId,      /* AO control context structure.         */
-   AO_CB_IM_ID        aoCbImId,      /* AO image circular buffer.             */
-   AO_CB_CTRL_ID      aoCbCtrlId,    /* AO control circular buffer.           */
-   AO_CB_FG_CTRL_ID   aoCbFgCtrlId   /* AO FG control circular buffer.        */
+   OBS_ID             obsId          /* Observation context data structure.   */
    )
 {
 
-   uint32          errorNumber;   /* Error number reported by task.           */
-   int             i, j;
+   uint32       errorNumber;  /* Error number reported by task.               */
+
+   int          i, j, k;
 
    /* Variables describing the observation. */
 
-   int             defOutputs;    /* Default number of outputs.               */
+   int          defOutputs;   /* Default number of outputs.                   */
 
    /* Variables used to specify data label and file names. */
 
-   long            outOptions;    /* Output options (0=none, 1=DHS, 2=file).  */
-   long            dhsOutOptions; /* DHS output options (0=PERM, 1=TEMP, 2=QL)*/
+   long         outOptions;   /* Output options (0=none, 1=DHS, 2=file).      */
+   long         dhsOutOptions;/* DHS output options (0=PERM, 1=TEMP, 2=QL)    */
 
-   char *          pLabelFromDhs; /* Data label provided by DHS server.       */
+   char *       pLabelFromDhs;/* Data label provided by DHS server.           */
 
    char         pDataLabel [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* DHS data label.                              */
@@ -4914,7 +5043,7 @@ uint32 detObserveStart
       return (errorNumber);
    }
 
-   if ( aoCcdId == NULL )
+   if ( obsId->aoCcdId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "AO CCD geometry context not initialised", 
@@ -4923,7 +5052,7 @@ uint32 detObserveStart
       return (errorNumber);
    }
    
-   if ( aoCbImId == NULL )
+   if ( obsId->aoCbImId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "AO image circular buffer context not initialised", 
@@ -4932,7 +5061,7 @@ uint32 detObserveStart
       return (errorNumber);
    }
    
-   if ( aoCbCtrlId == NULL )
+   if ( obsId->aoCbAoCtrlId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "AO control circular buffer context not initialised", 
@@ -4941,7 +5070,7 @@ uint32 detObserveStart
       return (errorNumber);
    }
    
-   if ( aoCbFgCtrlId == NULL )
+   if ( obsId->aoCbFgCtrlId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL, 
                  "AO FG control circular buffer context not initialised", 
@@ -4958,7 +5087,9 @@ uint32 detObserveStart
        * observation. 
        */
 
+#ifdef DEBUG
       printf ( "ptrPwfs1->interval=%f\n" , ptrPwfs1->interval ) ;
+#endif
       errorNumber = detStop (cadCmdContext, commandNumber, sdsuId, obsId);
    }
    else
@@ -4980,46 +5111,50 @@ uint32 detObserveStart
 
       obsId->coaddCounter = 0;
       obsId->dhsCounter = 0;
-      obsId->saveCbCounter = 0;
+      obsId->saveAoCbCounter = 0;
       obsId->saveFgCbCounter = 0;
       obsId->averageRms = 0.0;
+      obsId->averageMean = 0.0;
       obsId->averageFlux = 0.0;
       obsId->updateFgScale = FALSE;
       obsId->updateAoScale = FALSE;
-      /*printf ( "detControl : updateScale = %d\n" , 
-                 obsId->updateScale );*/
+#ifdef DEBUG
+      printf ( "detControl : updateFgScale = %d\n" , obsId->updateFgScale );
+      printf ( "detControl : updateAoScale = %d\n" , obsId->updateAoScale );
+#endif
 
       ptrPwfs1->interval = 0.0 ;
+#ifdef DEBUG
       printf ( "ptrPwfs1->interval=%f\n" , ptrPwfs1->interval ) ;
+#endif
 
       for ( i = 0 ; i < 5 ; i ++ )   /* reset the butterworth filter */
           for ( j = 0 ; j < 3 ; j ++ )
               sampleData[i][j] = 0.0;
 
-      if ( aoCtrlId != NULL )
+      if ( obsId->aoCtrlId != NULL )
       {
-         aoCtrlId->coaddCounter = 0;
-         aoCtrlId->focusCounter = 0;
-         aoCtrlId->previousFocus = 0.0;
+         obsId->aoCtrlId->coaddCounter = 0;
+         obsId->aoCtrlId->focusCounter = 0;
+         obsId->aoCtrlId->previousFocus = 0.0;
       }
 
       /* Init the position of the circular buffers */
 
-      (void) aoCbImZero ( aoCbImId );
-      aoCbImId->position = 0 ;
-      aoCbImId->counter = 0 ;
-      aoCbImId->processingMode = obsId->sigMode ;
+      (void) aoCbImZero ( obsId->aoCbImId );
+      obsId->aoCbImId->position = 0 ;
+      obsId->aoCbImId->counter = 0 ;
+      obsId->aoCbImId->processingMode = obsId->sigMode ;
 
-      (void) aoCbCtrlZero ( aoCbCtrlId );
-      aoCbCtrlId->position = 0 ;
-      aoCbCtrlId->counter = 0 ;
-      aoCbCtrlId->processingMode = obsId->sigMode ;
-      aoCbCtrlId->averageImageNb = obsId->nCoaddFrames ;
+      (void) aoCbAoCtrlZero ( obsId->aoCbAoCtrlId );
+      obsId->aoCbAoCtrlId->position = 0 ;
+      obsId->aoCbAoCtrlId->counter = 0 ;
+      obsId->aoCbAoCtrlId->processingMode = obsId->sigMode ;
 
-      (void) aoCbFgCtrlZero ( aoCbFgCtrlId );
-      aoCbFgCtrlId->position = 0 ;
-      aoCbFgCtrlId->counter = 0 ;
-      aoCbFgCtrlId->processingMode = obsId->sigMode ;
+      (void) aoCbFgCtrlZero ( obsId->aoCbFgCtrlId );
+      obsId->aoCbFgCtrlId->position = 0 ;
+      obsId->aoCbFgCtrlId->counter = 0 ;
+      obsId->aoCbFgCtrlId->processingMode = obsId->sigMode ;
 
       /* Obtain the attributes */
 
@@ -5063,7 +5198,7 @@ uint32 detObserveStart
          return (errorNumber);
       }
 
-      if ( (exposure < 0.01 ) && (aoCcdId->binningFlag == FALSE ) )
+      if ( (exposure < 0.01 ) && (obsId->aoCcdId->binningFlag == FALSE ) )
       {
          ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
                      "Invalid exposure time %f seconds if no binning",
@@ -5073,9 +5208,9 @@ uint32 detObserveStart
       } 
 
       obsId->exposureTime = exposure;
-      aoCbImId->exposureTime = exposure;
-      aoCbCtrlId->exposureTime = exposure;
-      aoCbFgCtrlId->exposureTime = exposure;
+      obsId->aoCbImId->exposureTime = exposure;
+      obsId->aoCbAoCtrlId->exposureTime = exposure;
+      obsId->aoCbFgCtrlId->exposureTime = exposure;
 
       if (epToVxPipeWrite( NULL, (char *)(int)&exposure, 
                            obsId->pIntTimeContext ) == ERROR)
@@ -5097,70 +5232,176 @@ uint32 detObserveStart
          errorNumber = S_detControl_BAD_ATTRIBUTE;
          return (errorNumber);
       }
-      
 
       /* 
        * Init some parameters in the case of the sequence closed loop
        */
 
+      if ( (obsId->sigMode == AO_MODE_AO) ||
+           (obsId->sigMode == AO_MODE_GG_AO ) ||
+           (obsId->sigMode == AO_MODE_FG_FOCUS_AO ) ||
+           (obsId->sigMode == AO_MODE_CLOSED_LOOP ) )
+      {
+         obsId->nCoaddFrames = (int)ceil(obsId->aoTime/exposure);
+         MESSAGE_LOG1 ( MSG_LOG,
+                        "For aO: nCoaddFrames=%d",
+                        (int)(obsId->nCoaddFrames));
+         obsId->aoCbAoCtrlId->averageImageNb = obsId->nCoaddFrames;
+      }
+
       if ( obsId->sigMode == AO_MODE_TOTAL )
       {
          obsId->aoCtrlId->totalThreshold = 0.0;
+         if (epToVxPipeWrite (NULL,
+                              (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                              obsId->pAoTotalContext) == ERROR)
+         {
+            ERROR_LOG ( "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
+         }
       }
 
       if ( obsId->sigMode == AO_MODE_CLOSED_LOOP )
       {
-         if ( obsId->averageFluxFlag == TRUE )
-         {
-            obsId->aoCtrlId->totalThreshold = 0.0;
-            if (epToVxPipeWrite (NULL,
-                              (char *)(int)& (obsId->aoCtrlId->totalThreshold),
-                              obsId->pAoTotalContext) == ERROR)
-            {
-               ERROR_LOG ("Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
-            }
-         }
-
-         if ( obsId->threshFlag == FALSE )
-            obsId->nAverageDataThreshComp = 0;
+         if ( obsId->ggTime == 0.0 )
+            obsId->ggFrame = 0;
          else
+            obsId->ggFrame = (int)ceil(obsId->ggTime/exposure);
+
+#ifdef DEBUG
+         printf ( "MODE CLOSED LOOP: FG during %d frames\n" ,
+                  (int)obsId->ggFrame);
+#endif
+      }
+
+      if ( ( obsId->sigMode == AO_MODE_FG_FOCUS ) ||
+           ( obsId->sigMode == AO_MODE_FG_FOCUS_AO ) ||
+           ( obsId->sigMode == AO_MODE_FG_FOCUS_COADD ) ||
+           ( obsId->sigMode == AO_MODE_CLOSED_LOOP ) )
+      {
+         if ( obsId->threshRealTimeFlag == TRUE )
          {
-            obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+            /* Init first threshold vector */
+
+            if ( obsId->aoCcdId->binningFlag == FALSE )
+               obsId->aoCtrlId->threshold =
+               obsId->aoCtrlId->thresholdDarkFull;
+            else
+               obsId->aoCtrlId->threshold =
+               obsId->aoCtrlId->thresholdDarkBin;
+
+            for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                obsId->aoCtrlId->thresholdVect[k] =
+                obsId->aoCtrlId->threshold;
 
             if (epToVxPipeWrite (NULL,
                 (char *)(int)& (obsId->aoCtrlId->threshold),
                 obsId->pAoThreshContext) == ERROR)
             {
                ERROR_LOG (
-               "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+               "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
+            }
+
+            if ( obsId->sigMode != AO_MODE_CLOSED_LOOP )
+            {
+               for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                   obsId->aoCbFgCtrlId->cbFgCtrlRecord[0].thresholdVect[k] =
+                   obsId->aoCtrlId->threshold;
+            }
+            else
+            {
+               if ( obsId->ggFrame != 0 )
+               {
+                  for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                      obsId->aoCbFgCtrlId->cbFgCtrlRecord[obsId->ggFrame-1].thresholdVect[k] =
+                      obsId->aoCtrlId->threshold;
+               }
+               else
+               {
+                  for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                      obsId->aoCbFgCtrlId->cbFgCtrlRecord[0].thresholdVect[k] =
+                      obsId->aoCtrlId->threshold;
+               }
+            }
+
+            /* Compute the total */
+
+            obsId->aoCtrlId->totalThreshold =
+            aoTotalThresholdCompute ( obsId->aoCcdId, obsId->aoCtrlId);
+
+            obsId->methodFluxComp = AO_TOTAL_FORMULA;
+            obsId->aoCtrlId->totalMethod = AO_TOTAL_FORMULA;
+
+            if (epToVxPipeWrite (NULL,
+                    (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                    obsId->pAoTotalContext) == ERROR)
+            {
+               ERROR_LOG (
+                     "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
             }
          }
+      }
 
-         if ( obsId->fgTime == 0.0 )
-            obsId->fgFrame = 0;
-         else
-            obsId->fgFrame = (int)ceil(obsId->fgTime/exposure);
+      if ( obsId->sigMode == AO_MODE_CLOSED_LOOP )
+      {
+         if ( obsId->threshRealTimeFlag == FALSE )
+         {
 
-         printf ( "MODE CLOSED LOOP: FG during %d frames\n" , 
-                  (int)obsId->fgFrame);
+            if ( obsId->averageFluxFlag == TRUE )
+            {
+               obsId->aoCtrlId->totalThreshold = 0.0;
+               if (epToVxPipeWrite (NULL,
+                             (char *)(int)& (obsId->aoCtrlId->totalThreshold),
+                             obsId->pAoTotalContext) == ERROR)
+               {
+                  ERROR_LOG (
+                  "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
+               }
+            }
+
+            if ( obsId->threshFlag == FALSE )
+               obsId->nAverageDataThreshComp = 0;
+            else
+            {
+               if ( obsId->aoCcdId->binningFlag == FALSE )
+                  obsId->aoCtrlId->threshold =
+                  obsId->aoCtrlId->thresholdDarkFull;
+               else
+                  obsId->aoCtrlId->threshold =
+                  obsId->aoCtrlId->thresholdDarkBin;
+
+               for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                   obsId->aoCtrlId->thresholdVect[k] =
+                   obsId->aoCtrlId->threshold;
+
+               if (epToVxPipeWrite (NULL,
+                   (char *)(int)& (obsId->aoCtrlId->threshold),
+                   obsId->pAoThreshContext) == ERROR)
+               {
+                  ERROR_LOG (
+                  "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
+               }
+            }
+         }
 
          if ( obsId->saveCbFgCtrlClosedLoopTime == 0.0 )
             obsId->saveCbFgCtrlClosedLoop = FALSE;
          else
-            obsId->saveCbFgCtrlClosedLoopFrame = 
+            obsId->saveCbFgCtrlClosedLoopFrame =
             (int)ceil((obsId->saveCbFgCtrlClosedLoopTime*60.0)/exposure);
 
-         printf ( "MODE CLOSED LOOP: Save FG CB every %d frames\n" , 
+#ifdef DEBUG
+         printf ( "MODE CLOSED LOOP: Save FG CB every %d frames\n" ,
                   (int)obsId->saveCbFgCtrlClosedLoopFrame);
+#endif
 
-         if ( obsId->saveCbCtrlClosedLoopTime == 0.0 )
-            obsId->saveCbCtrlClosedLoop = FALSE;
+         if ( obsId->saveCbAoCtrlClosedLoopTime == 0.0 )
+            obsId->saveCbAoCtrlClosedLoop = FALSE;
          else
-            obsId->saveCbCtrlClosedLoopFrame = 
-            (int)ceil((obsId->saveCbCtrlClosedLoopTime*60.0)/exposure);
+            obsId->saveCbAoCtrlClosedLoopFrame =
+            (int)ceil((obsId->saveCbAoCtrlClosedLoopTime*60.0)/exposure);
 
          printf ( "MODE CLOSED LOOP: Save aO CB every %d frames\n" , 
-                  (int)obsId->saveCbCtrlClosedLoopFrame);
+                  (int)obsId->saveCbAoCtrlClosedLoopFrame);
       }
 
       /* Check if the dhs is connected in case of outOptions = dhs */
@@ -5246,15 +5487,15 @@ uint32 detObserveStart
        * Init ccdSec, dataSec, origSec. 
        */
 
-      obsId->xPixelsDhs = aoCcdId->xPixels;
-      obsId->yPixelsDhs = aoCcdId->yPixels;
+      obsId->xPixelsDhs = obsId->aoCcdId->xPixels;
+      obsId->yPixelsDhs = obsId->aoCcdId->yPixels;
 
       sprintf ( obsId->dataSec , "[1:%d,1:%d]" ,
-                aoCcdId->xPixels , aoCcdId->yPixels ) ;
+                obsId->aoCcdId->xPixels , obsId->aoCcdId->yPixels ) ;
       sprintf ( obsId->ccdSec , "[1:%d,1:%d]" ,
-                aoCcdId->xPixels , aoCcdId->yPixels ) ;
+                obsId->aoCcdId->xPixels , obsId->aoCcdId->yPixels ) ;
       sprintf ( obsId->origSec , "[1:%d,1:%d]" ,
-                aoCcdId->xPixels , aoCcdId->yPixels ) ;
+                obsId->aoCcdId->xPixels , obsId->aoCcdId->yPixels ) ;
 
       /*
        * If a request has been made to send data to the DHS, check that the 
@@ -5521,17 +5762,44 @@ uint32 detObserveStart
          }
 
          /*
+          * Update scale factor for the focus according to exposure time
+          */
+
+         obsId->aoCtrlId->fgScaleFactorVect[2] = obsId->defFocusScale100Hz *
+         (100.0 * obsId->exposureTime);
+
+         if (epToVxPipeWrite (NULL,
+                   (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                   obsId->pFgFocusGainContext) == ERROR)
+         {
+            ERROR_LOG (
+            "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+         }
+
+         /*
           * Init the butterworth filter for probe arm guiding
           */
 
-         obsId->cutoffFrequency =
-         obsId->rateSamplingFrequency / obsId->exposureTime;
-
          if ( detComputeCoeffButterworth ( obsId->exposureTime,
-                                           obsId->cutoffFrequency,
-                                           coeffData ) == ERROR )
+                                           &(obsId->cutoffFrequencyTipTilt),
+                                           &(obsId->cutoffFrequencyFocus))
+              == ERROR )
          {
             ERROR_LOG ( "Failed to init coefficients of butterworth filter");
+         }
+
+         if (epToVxPipeWrite( NULL,
+                              (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                              obsId->pCfTipTiltBwContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+         }
+
+         if (epToVxPipeWrite( NULL,
+                              (char *)(int)&(obsId->cutoffFrequencyFocus),
+                              obsId->pCfFocusBwContext ) == ERROR)
+         {
+            ERROR_LOG ("Failed to set the BW Foc cutoff frequency SIR record");
          }
 
          /*
@@ -5845,11 +6113,11 @@ uint32 detObserveStart
           * detector has been defined.
           */
 
-         if ( ( aoCcdId != NULL ) &&
-              ( ( aoCcdId->xStart != 0 ) ||
-                ( aoCcdId->yStart != 0 ) ||
-                ( aoCcdId->xBin != 1 ) ||
-                ( aoCcdId->yBin != 1 )
+         if ( ( obsId->aoCcdId != NULL ) &&
+              ( ( obsId->aoCcdId->xStart != 0 ) ||
+                ( obsId->aoCcdId->yStart != 0 ) ||
+                ( obsId->aoCcdId->xBin != 1 ) ||
+                ( obsId->aoCcdId->yBin != 1 )
               )
             )
          {
@@ -5864,13 +6132,13 @@ uint32 detObserveStart
             {
                obsId->detij[p][0] =
                ((obsId->pixij[p][0] - 0.5 - 
-                 (double) aoCcdId->xStart) /
-                (double) aoCcdId->xBin) + 0.5;
+                 (double) obsId->aoCcdId->xStart) /
+                (double) obsId->aoCcdId->xBin) + 0.5;
 
                obsId->detij[p][1] =
                ((obsId->pixij[p][1] - 0.5 - 
-                (double) aoCcdId->yStart) /
-                (double) aoCcdId->yBin) + 0.5;
+                (double) obsId->aoCcdId->yStart) /
+                (double) obsId->aoCcdId->yBin) + 0.5;
             }
 
             /*
@@ -6257,10 +6525,10 @@ uint32 detObserveStart
                             0, NULL, &(obsId->mjdobs), &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "xbin", DHS_DT_INT32,
-                            0, NULL, aoCcdId->xBin, &dhsErrno);
+                            0, NULL, obsId->aoCcdId->xBin, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "ybin", DHS_DT_INT32,
-                            0, NULL, aoCcdId->yBin, &dhsErrno);
+                            0, NULL, obsId->aoCcdId->yBin, &dhsErrno);
             CHECK_DHS (dhsErrno);
             dhsBdAttribAdd (obsId->dhsDataFrame, "datasec", DHS_DT_STRING,
                             0, NULL, obsId->dataSec, &dhsErrno);
@@ -6711,7 +6979,7 @@ uint32 detAbort(
  *
  *   INVOCATION:
  *   detInit (pWfsName, pRecordPrefix, cadCmdContext, commandNumber, pSdsuId, 
- *            obsId, pVmeAddress, pmaxFrames, aoCcdId)
+ *            obsId, pVmeAddress, pmaxFrames)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pWfsName      (const char *)    Name of wavefront sensor p1
@@ -6724,7 +6992,6 @@ uint32 detAbort(
  *   (!) pVmeAddress   (uint32 *)        Pointer to VME address of SDSU 
  *                                       controller
  *   (!) pMaxFrames    (int *)           Pointer to max frames in data buffer
- *   (!) aoCcdId (AO_CCD_ID)            AO CCD geometry context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -6764,8 +7031,7 @@ uint32 detInit
    OBS_ID          obsId,            /* Observation context structure.        */
    uint32 *        pVmeAddress,      /* Pointer to VME address of SDSU        */
                                      /* controller.                           */
-   int *           pMaxFrames,       /* Pointer to max frames in data buffer  */
-   AO_CCD_ID       aoCcdId           /* AO CCD geonmetry context structure    */
+   int *           pMaxFrames        /* Pointer to max frames in data buffer  */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
@@ -6895,42 +7161,42 @@ uint32 detInit
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
    }
    obsId->aoCtrlId->darkInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
    }
    obsId->aoCtrlId->flatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
    }
-   obsId->aoCtrlId->intMatInitFlag = FALSE;
+   obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
    }
-   obsId->aoCtrlId->contMatInitFlag = FALSE;
+   obsId->aoCtrlId->aoContMatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized",
                         obsId->pAoContMatInitContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
    }
    obsId->aoCtrlId->fgContMatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized",
-                        obsId->pAoFgContMatInitContext) == ERROR)
+                        obsId->pFgContMatInitContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
    }
 
    /*
@@ -7188,7 +7454,6 @@ uint32 detInit
              * a state where it can only obey a subset of the commands and can't
              * make observations, so set the health to WARNING.
              */
-
             epToVxSetHealth( pRecordPrefix, "WARNING" );
          }
       }
@@ -7257,13 +7522,13 @@ uint32 detInit
    {
       if (sdsuPrimitive (*pSdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
       {
-         ERROR_LOG ("Failed to initialise UTILITY DSP with INI command");
+         ERROR_LOG ("Failed to init UTILITY DSP with INI command");
          errorNumber = S_detControl_SDSU_ERROR;
          epToVxSetHealth( pRecordPrefix, "WARNING" );
       }
       if (sdsuPrimitive (*pSdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
       {
-         ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
+         ERROR_LOG ("Failed to init TIMING DSP with LDP command");
          errorNumber = S_detControl_SDSU_ERROR;
          epToVxSetHealth( pRecordPrefix, "WARNING" );
       }
@@ -7281,7 +7546,7 @@ uint32 detInit
     * Initialize aoCcdId with the default detector geometry.
     */
 
-   if (detReadDefaultDspCcdGeometry (*pSdsuId, aoCcdId) == ERROR)
+   if (detReadDefaultDspCcdGeometry (*pSdsuId, obsId->aoCcdId) == ERROR)
    {
       ERROR_LOG ( "Error while init default detector geometry ");
    }
@@ -7290,7 +7555,7 @@ uint32 detInit
     * Set aoCcdId with the default detector geometry.
     */
 
-   if (detSetDefaultDspCcdGeometry (*pSdsuId, aoCcdId) == ERROR)
+   if (detSetDefaultDspCcdGeometry (*pSdsuId, obsId->aoCcdId) == ERROR)
    {
       ERROR_LOG ( "Error while setting default detector geometry ");
    }
@@ -7305,10 +7570,10 @@ uint32 detInit
 #ifdef DEBUG
    printf (
    "detInit: Creating new data buffer to hold %d frames of (%d x %d) pixels.\n",
-   *pMaxFrames, aoCcdId->xMax, aoCcdId->yMax);
+   *pMaxFrames, obsId->aoCcdId->xMax, obsId->aoCcdId->yMax);
 #endif /* DEBUG */
 
-   nPixels = (aoCcdId->xMax) * (aoCcdId->yMax);
+   nPixels = (obsId->aoCcdId->xMax) * (obsId->aoCcdId->yMax);
    if (sdsuBufferCreate (*pSdsuId, nPixels, *pMaxFrames) == ERROR)
    {
       ERROR_LOG ("Failed to create frame data buffers on initialisation");
@@ -7471,6 +7736,101 @@ uint32 detInit
                         obsId->pAdc3Context ) == ERROR)
    {
       ERROR_LOG ("Failed to init adc3 sad record");
+      return (ERROR);
+   }
+
+   /*
+    * Now init all geometry SIR records
+    */
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->outputsNb) ,
+                        obsId->pOutputsContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init outputs sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xSize) ,
+                        obsId->pDetXsizeContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init x size sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->ySize) ,
+                        obsId->pDetYsizeContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ysize sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xStart) ,
+                        obsId->pXstartContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xstart sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yStart) ,
+                        obsId->pYstartContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ystart sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xSubapNb) ,
+                        obsId->pXsubapContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xsubap sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->ySubapNb) ,
+                        obsId->pYsubapContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init Ysubap sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xRaster) ,
+                        obsId->pXrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yRaster) ,
+                        obsId->pYrasterContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yraster sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xSpace) ,
+                        obsId->pXspaceContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xspace sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->ySpace) ,
+                        obsId->pYspaceContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init yspace sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xBin) ,
+                        obsId->pXbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init xbin sad record");
+      return (ERROR);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yBin) ,
+                        obsId->pYbinContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to init ybin sad record");
       return (ERROR);
    }
 
@@ -7667,42 +8027,42 @@ uint32 detReset
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
    }
    obsId->aoCtrlId->darkInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
    }
    obsId->aoCtrlId->flatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
    }
-   obsId->aoCtrlId->intMatInitFlag = FALSE;
+   obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
    }
-   obsId->aoCtrlId->contMatInitFlag = FALSE;
+   obsId->aoCtrlId->aoContMatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized",
                         obsId->pAoContMatInitContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
    }
    obsId->aoCtrlId->fgContMatInitFlag = FALSE;
    if (epToVxPipeWrite (NULL, "Not initialized",
-                        obsId->pAoFgContMatInitContext) == ERROR)
+                        obsId->pFgContMatInitContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
    }
 
    /*
@@ -7842,12 +8202,12 @@ uint32 detReset
    {
       if (sdsuPrimitive (sdsuId, "INI", SDSU_IDENT_UTL, NULL, NULL) == ERROR)
       {
-         ERROR_LOG ("Failed to initialise UTILITY DSP with INI command");
+         ERROR_LOG ("Failed to init UTILITY DSP with INI command");
          errorNumber = S_detControl_SDSU_ERROR;
       }
       if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
       {
-         ERROR_LOG ("Failed to initialise TIMING DSP with LDP command");
+         ERROR_LOG ("Failed to init TIMING DSP with LDP command");
          errorNumber = S_detControl_SDSU_ERROR;
       }
    }
@@ -8377,16 +8737,14 @@ uint32 detSave
  *   detGeometry
  *
  *   INVOCATION:
- *   detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
- *                aoCtrlId, pOffsetFullVect, pOffsetBinVect)
+ *   detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, 
+ *                pOffsetFullVect, pOffsetBinVect)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext   (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber   (int)             Command number
  *   (>) sdsuId          (SDSU_ID)         Current SDSU context structure
  *   (!) obsId           (OBS_ID)          Observation context structure
- *   (<) aoCcdId         (AO_CCD_ID)       AO CCD geometry context structure
- *   (<) aoCtrlId        (AO_CTRL_ID)      AO control context structure
  *   (>) pOffsetFullVect (long *)          ADC offset vector - no binning
  *   (>) pOffsetBinVect  (long *)          ADC offset vector - binning
  *
@@ -8418,8 +8776,6 @@ uint32 detGeometry
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
    OBS_ID          obsId,           /* Observation context structure.         */
-   AO_CCD_ID       aoCcdId,         /* AO CCD geometry context structure      */
-   AO_CTRL_ID      aoCtrlId,        /* AO control context structure           */
    long *          pOffsetFullVect, /* ADC offset vector - no binning         */
    long *          pOffsetBinVect   /* ADC offset vector - binning            */
 
@@ -8583,8 +8939,9 @@ uint32 detGeometry
     * discarded during a readout.
     */
 
-   xReqTail = aoCcdId->xSize - (((xReqRas * xReqBin) + xReqSpace) * xReqSubap)
-              + xReqSpace - xReqStart - aoCcdId->uscanNb;
+   xReqTail = obsId->aoCcdId->xSize - 
+              (((xReqRas * xReqBin) + xReqSpace) * xReqSubap)
+              + xReqSpace - xReqStart - obsId->aoCcdId->uscanNb;
    if ( xReqTail < 0 )
    {
       ERROR_SET1 (S_detControl_BAD_ATTRIBUTE,
@@ -8593,13 +8950,13 @@ uint32 detGeometry
       return (errorNumber);
    }
 
-   if ( (!sdsuId->simulate) && (aoCcdId->packetSize > 0) )
+   if ( (!sdsuId->simulate) && (obsId->aoCcdId->packetSize > 0) )
    {
-      aoCcdId->packetSize = 
-      xReqRas * xReqSubap * (aoCcdId->outputsNb/2) * 2;
+      obsId->aoCcdId->packetSize = 
+      xReqRas * xReqSubap * (obsId->aoCcdId->outputsNb/2) * 2;
 
       nPackets = (int) ceil ( (double) (reqPixelsNb) / 
-                 (double) aoCcdId->packetSize );
+                 (double) obsId->aoCcdId->packetSize );
    }
    else
    {
@@ -8610,33 +8967,33 @@ uint32 detGeometry
 
    if ( (xReqBin == 2) || ( yReqBin == 2) )
    {
-      if ( aoCcdId->binningFlag == TRUE )
+      if ( obsId->aoCcdId->binningFlag == TRUE )
       {
-         aoCcdId->binningFlag = TRUE ; /* no change */
+         obsId->aoCcdId->binningFlag = TRUE ; /* no change */
       }
       else
       {
-         aoCcdId->binningFlag = TRUE ;
-         aoCtrlId->initFlag = FALSE;
+         obsId->aoCcdId->binningFlag = TRUE ;
+         obsId->aoCtrlId->initFlag = FALSE;
          if (epToVxPipeWrite (NULL, "Not initialized", 
                               obsId->pAoCtrlInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
          }
-         aoCtrlId->darkInitFlag = FALSE;
+         obsId->aoCtrlId->darkInitFlag = FALSE;
          if (epToVxPipeWrite (NULL, "Not initialized", 
                               obsId->pAoDarkInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
          }
-         aoCtrlId->flatInitFlag = FALSE;
+         obsId->aoCtrlId->flatInitFlag = FALSE;
          if (epToVxPipeWrite (NULL, "Not initialized", 
                               obsId->pAoFlatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
          }
 
          /* Init the ADC offset vector */
@@ -8649,29 +9006,29 @@ uint32 detGeometry
    }
    else
    {
-      if ( aoCcdId->binningFlag == TRUE )
+      if ( obsId->aoCcdId->binningFlag == TRUE )
       {
-         aoCcdId->binningFlag = FALSE ;
-         aoCtrlId->initFlag = FALSE;
+         obsId->aoCcdId->binningFlag = FALSE ;
+         obsId->aoCtrlId->initFlag = FALSE;
          if (epToVxPipeWrite (NULL, "Not initialized", 
                               obsId->pAoCtrlInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
          }
-         aoCtrlId->darkInitFlag = FALSE;
+         obsId->aoCtrlId->darkInitFlag = FALSE;
          if (epToVxPipeWrite (NULL, "Not initialized", 
                               obsId->pAoDarkInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
          }
-         aoCtrlId->flatInitFlag = FALSE;
+         obsId->aoCtrlId->flatInitFlag = FALSE;
          if (epToVxPipeWrite (NULL, "Not initialized", 
                               obsId->pAoFlatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
          }
 
          /* Init the ADC offset vector */
@@ -8683,7 +9040,7 @@ uint32 detGeometry
       }
       else
       {
-         aoCcdId->binningFlag = FALSE ; /* no change */
+         obsId->aoCcdId->binningFlag = FALSE ; /* no change */
       }
    }
 
@@ -8694,38 +9051,42 @@ uint32 detGeometry
     * output and the subapertures fill the detector surface without any gaps.
     */
 
-   aoCcdId->xStart = xReqStart;
-   aoCcdId->yStart = yReqStart;
-   aoCcdId->xBin = xReqBin;
-   aoCcdId->yBin = yReqBin;
-   aoCcdId->xRaster = xReqRas;
-   aoCcdId->yRaster = yReqRas;
-   aoCcdId->xSpace = xReqSpace;
-   aoCcdId->ySpace = yReqSpace;
-   aoCcdId->xSubapNb = xReqSubap;
-   aoCcdId->ySubapNb = yReqSubap;
-   aoCcdId->xPixels = xReqPixels;
-   aoCcdId->yPixels = yReqPixels;
-   aoCcdId->pixelsNb = reqPixelsNb;
-   aoCcdId->xTail = xReqTail;
-   aoCcdId->packetNb = nPackets;
+   obsId->aoCcdId->xStart = xReqStart;
+   obsId->aoCcdId->yStart = yReqStart;
+   obsId->aoCcdId->xBin = xReqBin;
+   obsId->aoCcdId->yBin = yReqBin;
+   obsId->aoCcdId->xRaster = xReqRas;
+   obsId->aoCcdId->yRaster = yReqRas;
+   obsId->aoCcdId->xSpace = xReqSpace;
+   obsId->aoCcdId->ySpace = yReqSpace;
+   obsId->aoCcdId->xSubapNb = xReqSubap;
+   obsId->aoCcdId->ySubapNb = yReqSubap;
+   obsId->aoCcdId->xPixels = xReqPixels;
+   obsId->aoCcdId->yPixels = yReqPixels;
+   obsId->aoCcdId->pixelsNb = reqPixelsNb;
+   obsId->aoCcdId->xTail = xReqTail;
+   obsId->aoCcdId->packetNb = nPackets;
 
-   aoCcdContextShow (aoCcdId);
+   aoCcdContextShow (obsId->aoCcdId);
 
    MESSAGE_LOG1 (MSG_LOG, "Setting new detector geometry (%s frame mode)",
-      (aoCcdId->binningFlag ? "binned":"full"));
+      (obsId->aoCcdId->binningFlag ? "binned":"full"));
    MESSAGE_LOG4 (MSG_MINDEBUG, "XSIZE=%d, YSIZE=%d, XPIXELS=%d, YPIXELS=%d",
-      aoCcdId->xSize, aoCcdId->ySize, aoCcdId->xPixels, aoCcdId->yPixels);
+      obsId->aoCcdId->xSize, obsId->aoCcdId->ySize, 
+      obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels);
    MESSAGE_LOG4 (MSG_MINDEBUG, "XSUBAP=%d, YSUBAP=%d, XBIN=%d, YBIN=%d",
-      aoCcdId->xSubapNb, aoCcdId->ySubapNb, aoCcdId->xBin, aoCcdId->yBin);
+      obsId->aoCcdId->xSubapNb, obsId->aoCcdId->ySubapNb, 
+      obsId->aoCcdId->xBin, obsId->aoCcdId->yBin);
    MESSAGE_LOG4 (MSG_MINDEBUG, "XRAS=%d, YRAS=%d, XSPACE=%d, YSPACE=%d",
-      aoCcdId->xRaster, aoCcdId->yRaster, aoCcdId->xSpace, aoCcdId->ySpace);
+      obsId->aoCcdId->xRaster, obsId->aoCcdId->yRaster, 
+      obsId->aoCcdId->xSpace, obsId->aoCcdId->ySpace);
    MESSAGE_LOG4 (MSG_MINDEBUG, "XSTART=%d, YSTART=%d, XTAIL=%d, NPIXELS=%d",
-      aoCcdId->xStart, aoCcdId->yStart, aoCcdId->xTail, aoCcdId->pixelsNb);
+      obsId->aoCcdId->xStart, obsId->aoCcdId->yStart, 
+      obsId->aoCcdId->xTail, obsId->aoCcdId->pixelsNb);
 
    MESSAGE_LOG2 (MSG_FULLDEBUG,
       "Each frame will consist of %d packets of %d pixels each",
-      nPackets, aoCcdId->packetSize);
+      nPackets, obsId->aoCcdId->packetSize);
 
    /*
     * Update the geometry parameters in the SDSU timing DSP. These are all
@@ -8733,7 +9094,7 @@ uint32 detGeometry
     * and activated by sending a "LDP" command.
     */
    if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE", 
-                       aoCcdId->packetSize) == ERROR)
+                       obsId->aoCcdId->packetSize) == ERROR)
    {
       ERROR_LOG ("Failed to increase the PWFS packet size");
       errorNumber = S_detControl_SDSU_ERROR;
@@ -8855,70 +9216,70 @@ uint32 detGeometry
     * Init the SAD records 
     */
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xStart) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xStart) ,
                         obsId->pXstartContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xstart sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yStart) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yStart) ,
                         obsId->pYstartContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init ystart sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSubapNb) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xSubapNb) ,
                         obsId->pXsubapContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xsubap sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySubapNb) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->ySubapNb) ,
                         obsId->pYsubapContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init Ysubap sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xRaster) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xRaster) ,
                         obsId->pXrasterContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xraster sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yRaster) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yRaster) ,
                         obsId->pYrasterContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init yraster sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSpace) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xSpace) ,
                         obsId->pXspaceContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xspace sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySpace) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->ySpace) ,
                         obsId->pYspaceContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init yspace sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xBin) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xBin) ,
                         obsId->pXbinContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xbin sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yBin) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yBin) ,
                         obsId->pYbinContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init ybin sad record");
@@ -10077,8 +10438,10 @@ void detObserveEnd
 
    /* Signal processing variable. */
    
+   int            nCoadds=1;      /* Number of frames per coadd.              */
    int            i;
    int            j;
+   int            k;
    int            indexIm;
    int            indexFgCtrl;
    int            indexCtrl;
@@ -10095,11 +10458,17 @@ void detObserveEnd
    double *       pAoCentroids;
    double *       pCentroids;
    double *       pErrorCentroids;
+   double *       pPrevThresh;
+   double *       pThresh;
    double *       pFg;
    double *       pFgAfterRot;
    double *       pErrorsFg;
    double *       pTime;
    double         elapsed;
+   double         rms;
+   double         mean;
+
+   double         t1, t2;
 
    /* File names. */
 
@@ -10116,13 +10485,6 @@ void detObserveEnd
    double       readoutTimeout;    /* Readout timeout in seconds.             */
    double       waitTimeSecs;      /* Wait time in seconds.                   */
 
-   /*
-    * Signal processing parameters.
-    */
-
-   int           nCoadds=1;        /* Number of frames per coadd.             */
- 
-   double        rms;
    /* 
     * Variables associated with "observe" command.
     * (Label, datapath and filename use general filename parameters)
@@ -10199,8 +10561,11 @@ void detObserveEnd
 
    if ( timeNow (&(obsId->rawtEnd)) != OK )
    {
+#ifdef DEBUG
       ERROR_SET (0, "Failed to get time stamp at observation end", 
                  ERROR_LOG_NOW);
+#endif
+      obsId->rawtEnd = (double)AO_TIME_NOW_ERROR ;
    }
 
 #ifdef DEBUG
@@ -10373,6 +10738,29 @@ void detObserveEnd
       pTime = &(obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].time);
 
       pFlux = pTotal + obsId->aoCcdId->subapUsedNb;
+
+      if ( obsId->threshRealTimeFlag == FALSE )
+      {
+         pPrevThresh = obsId->aoCtrlId->thresholdVect;
+         pThresh = obsId->aoCtrlId->thresholdVect;
+      }
+      else
+      {
+         pThresh =
+         obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].thresholdVect;
+
+         if ( ( indexFgCtrl == 0 ) && ( obsId->aoCbFgCtrlId->counter == 0 ) )
+            pPrevThresh = pThresh;
+         else
+         {
+            if ( indexFgCtrl != 0 )
+               pPrevThresh =
+               obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl-1].thresholdVect;
+            else
+               pPrevThresh =
+               obsId->aoCbFgCtrlId->cbFgCtrlRecord[CB_FG_CTRL_RECORD_NB-1].thresholdVect;
+         }
+      }
 
       obsId->aoCbImId->cbImRecord[indexIm].imageStatus = 
       (int)(pRawFrame->header.status) ;
@@ -10645,8 +11033,8 @@ void detObserveEnd
                   nCoadds = (int) obsId->nAverageDataThreshComp;
 #ifdef DEBUG
                   printf (
-                  "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
-                  pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
+                  "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+                  pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal,
                   pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, 
                   pTime, pWfsStatus, (int)obsId->writeToRm);
 #endif
@@ -10664,9 +11052,10 @@ void detObserveEnd
                   };
 
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                        pTotal, pCentroids, pErrorCentroids,
-                                        pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                        pWfsStatus, (int)obsId->writeToRm) 
+                                        pPrevThresh, pTotal, pCentroids, 
+                                        pErrorCentroids, pFg, pFgAfterRot, 
+                                        pErrorsFg, pTime, pWfsStatus, 
+                                        (int)obsId->writeToRm) 
                        == ERROR )
                   {
                      ERROR_LOG (
@@ -10703,20 +11092,39 @@ void detObserveEnd
 #endif
                   if ( obsId->coaddCounter == nCoadds )
                   {
-                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
-                                              obsId->aoCcdId, 
+                     if ( timeNow (&t1) != OK )
+                     {
+#ifdef DEBUG
+                        ERROR_SET (0, "Failed to get time stamp",
+                                   ERROR_LOG_NOW);
+#endif
+                        t1 = (double)AO_TIME_NOW_ERROR ;
+                     }
+
+                     if ( aoThresholdPerSubapCompute (obsId->aoCtrlId->sumVect,
+                                              obsId->aoCcdId, obsId->aoCtrlId,
                                               obsId->rateBrightPixThreshComp,
-                                              &obsId->aoCtrlId->threshold) 
+                                              obsId->aoCtrlId->thresholdVect) 
                                               == ERROR )
                      {
-                       ERROR_LOG ("Failed to subtract DARK from current frame");
+                       ERROR_LOG ("Failed to compute threshsold");
                      }
+                     if ( timeNow (&t2) != OK )
+                     {
+#ifdef DEBUG
+                        ERROR_SET (0, "Failed to get time stamp",
+                                   ERROR_LOG_NOW);
+#endif
+                        t2 = (double)AO_TIME_NOW_ERROR ;
+                     }
+                     printf ( "t1=%f, t2=%f\n", t1, t2 );
+
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
                            obsId->pAoThreshContext) == ERROR)
                      {
                         ERROR_LOG (
-                        "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+                        "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
                      }
                   }
                }
@@ -10736,32 +11144,59 @@ void detObserveEnd
                   }
 
                   if ( aoRmsNoiseImageCompute (pImage,
-                                               obsId->aoCcdId, &rms) == ERROR )
+                                               obsId->aoCcdId, &rms, &mean) 
+                       == ERROR )
                   {
-                     ERROR_LOG ("Failed to compute rms of current frame");
+                     ERROR_LOG ("Failed to compute mean, rms of current frame");
                   }
 
-                  /*printf ( "image %d, rms = %f\n", obsId->coaddCounter, rms);*/
-
                   obsId->averageRms += rms;
+                  obsId->averageMean += mean;
                   obsId->coaddCounter ++;
                   
                   if ( obsId->coaddCounter == nCoadds )
                   {
                      obsId->averageRms /= nCoadds;
+                     obsId->averageMean /= nCoadds;
 
-                     obsId->aoCtrlId->threshold = 
+                     obsId->aoCtrlId->rms = obsId->averageRms;
+
+                     obsId->aoCtrlId->threshold = obsId->averageMean + 
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
 
-                     obsId->aoCtrlId->thresholdDark =
-                     obsId->aoCtrlId->threshold ;
+                     if ( obsId->aoCcdId->binningFlag == FALSE )
+                     {
+                        obsId->aoCtrlId->rmsDarkFull =
+                        obsId->aoCtrlId->rms ;
+                        obsId->aoCtrlId->thresholdDarkFull =
+                        obsId->aoCtrlId->threshold ;
+                     }
+                     else
+                     {
+                        obsId->aoCtrlId->rmsDarkBin =
+                        obsId->aoCtrlId->rms ;
+                        obsId->aoCtrlId->thresholdDarkBin =
+                        obsId->aoCtrlId->threshold ;
+                     }
+
+                     for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                         obsId->aoCtrlId->thresholdVect[k] =
+                         obsId->aoCtrlId->threshold;
+
+                     if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->aoCtrlId->rms),
+                           obsId->pAoRmsContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_AO_RMS_SIR_NAME record");
+                     }
 
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
                            obsId->pAoThreshContext) == ERROR)
                      {
                         ERROR_LOG (
-                        "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+                        "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
                      }
 
                   }
@@ -10800,9 +11235,9 @@ void detObserveEnd
                }
 
 #ifdef DEBUG
-               printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
+               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
-                       obsId->aoCbCtrlId);
+                       pThresh, obsId->aoCbAoCtrlId);
 #endif
                if ( obsId->updateAoScale == TRUE )
                {
@@ -10816,7 +11251,8 @@ void detObserveEnd
                } ;
 
                if ( aoModeCompute (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                   nCoadds, obsId->aoCbCtrlId) == ERROR )
+                                   nCoadds, pThresh, obsId->aoCbAoCtrlId) 
+                    == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
                }
@@ -10836,9 +11272,9 @@ void detObserveEnd
                 pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
                 pGuides, pFg, pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
                 (int)obsId->writeToRm);
-               printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
+               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
-                       obsId->aoCbCtrlId);
+                       pThresh, obsId->aoCbAoCtrlId);
 #endif
 
                if ( obsId->updateFgScale == TRUE )
@@ -10874,7 +11310,8 @@ void detObserveEnd
                }
                
                if ( aoModeCompute (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                   nCoadds, obsId->aoCbCtrlId) == ERROR )
+                                   nCoadds, pThresh, obsId->aoCbAoCtrlId) 
+                    == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
                }
@@ -10913,7 +11350,7 @@ void detObserveEnd
                      }*/
 
                      if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                           obsId->aoCtrlId,
+                                           obsId->aoCtrlId, pPrevThresh,
                                            pTotal, pCentroids, pErrorCentroids,
                                            pFg, pFgAfterRot, pErrorsFg, pTime, 
                                            pWfsStatus, (int)obsId->writeToRm) 
@@ -10937,8 +11374,8 @@ void detObserveEnd
                               (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
                               obsId->pAoTotalContext) == ERROR)
                         {
-                          ERROR_LOG (
-                          "Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+                         ERROR_LOG (
+                         "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
                         }
                      }
                   }
@@ -10953,8 +11390,8 @@ void detObserveEnd
                 */
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
-               pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
                pWfsStatus, (int)obsId->writeToRm);
 #endif
@@ -10972,13 +11409,24 @@ void detObserveEnd
                };
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId, 
-                                     pTotal, pCentroids, pErrorCentroids, 
-                                     pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pPrevThresh, pTotal, pCentroids, 
+                                     pErrorCentroids, pFg, pFgAfterRot, 
+                                     pErrorsFg, pTime, pWfsStatus, 
+                                     (int)obsId->writeToRm) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                };
+
+               if ( obsId->threshRealTimeFlag == TRUE )
+               {
+                  if ( aoThresholdPerSubapCompute (pImage, obsId->aoCcdId,
+                                           obsId->aoCtrlId,
+                                           obsId->rateBrightPixThreshComp,
+                                           pThresh) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to compute threshold per sub-aperture");
+                  }
+               }
 
             break;
 
@@ -10991,8 +11439,8 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
-               pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal,
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime,
                pWfsStatus, (int)obsId->writeToRm);
 
@@ -11011,12 +11459,23 @@ void detObserveEnd
                };
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                     pTotal, pCentroids, pErrorCentroids,
-                                     pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pPrevThresh, pTotal, pCentroids, 
+                                     pErrorCentroids, pFg, pFgAfterRot, 
+                                     pErrorsFg, pTime, pWfsStatus, 
+                                     (int)obsId->writeToRm) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
+               }
+
+               if ( obsId->threshRealTimeFlag == TRUE )
+               {
+                  if ( aoThresholdPerSubapCompute (pImage, obsId->aoCcdId,
+                                           obsId->aoCtrlId,
+                                           obsId->rateBrightPixThreshComp,
+                                           pThresh) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to compute threshold per sub-aperture");
+                  }
                }
 #ifdef DEBUG
                printf ("aoImageFloatAverage: %p %p %p %d\n", pImage,
@@ -11067,7 +11526,8 @@ void detObserveEnd
                   "Analyze centroids and ao modes of the coadded data");
 
                   if ( aoModeAnalyze (obsId->aoCtrlId->sumVect, obsId->aoCcdId, 
-                                      obsId->aoCtrlId, obsId->aoCbCtrlId) 
+                                      obsId->aoCtrlId, pThresh, 
+                                      obsId->aoCbAoCtrlId) 
                        == ERROR )
                   {
                      ERROR_LOG ("Failed to analyze coadded data");
@@ -11084,8 +11544,8 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p)\n",
-               pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal,
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal,
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime,
                pWfsStatus, (int)obsId->writeToRm);
 #endif
@@ -11103,10 +11563,10 @@ void detObserveEnd
                };
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                     pTotal, pCentroids, pErrorCentroids,
-                                     pFg, pFgAfterRot, pErrorsFg, pTime, 
-                                     pWfsStatus, (int)obsId->writeToRm) 
-                    == ERROR )
+                                     pPrevThresh, pTotal, pCentroids, 
+                                     pErrorCentroids, pFg, pFgAfterRot, 
+                                     pErrorsFg, pTime, pWfsStatus, 
+                                     (int)obsId->writeToRm) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
@@ -11159,7 +11619,8 @@ void detObserveEnd
                   "Analyze centroids and ao modes of the coadded data");
 
                   if ( aoModeAnalyze (obsId->aoCtrlId->sumVect, obsId->aoCcdId, 
-                                      obsId->aoCtrlId, obsId->aoCbCtrlId) 
+                                      obsId->aoCtrlId, pPrevThresh, 
+                                      obsId->aoCbAoCtrlId) 
                        == ERROR )
                   {
                      ERROR_LOG ("Failed to analyze coadded data");
@@ -11167,23 +11628,23 @@ void detObserveEnd
 
                   if ( obsId->saveCentroids == TRUE )
                   {
-                     indexCtrl = obsId->aoCbCtrlId->position;
+                     indexCtrl = obsId->aoCbAoCtrlId->position;
                      if ( indexCtrl == 1)
                      {
                         pAoCentroids = 
-                        obsId->aoCbCtrlId->cbCtrlRecord[0].centroidsVect;
+                        obsId->aoCbAoCtrlId->cbAoCtrlRecord[0].centroidsVect;
                         
                         i = obsId->nMode;
                         if ( obsId->amplitude > 0.0 )
                         {
                          for ( j = 0 ; j < obsId->aoCcdId->centroidsNb ; j ++)
-                           obsId->aoCtrlId->intMatStruct[i].posCentroidsVect[j]=
+                           obsId->aoCtrlId->aoIntMatStruct[i].posCentroidsVect[j]=
                            *(pAoCentroids + j);
                         }
                         else
                         {
                          for ( j = 0 ; j < obsId->aoCcdId->centroidsNb ; j ++)
-                           obsId->aoCtrlId->intMatStruct[i].negCentroidsVect[j]=
+                           obsId->aoCtrlId->aoIntMatStruct[i].negCentroidsVect[j]=
                            *(pAoCentroids + j);
                         }
 
@@ -11210,13 +11671,13 @@ void detObserveEnd
                nCoadds = (int) obsId->nCoaddFrames;
 #ifdef DEBUG
                printf (
-               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
-               pImage, obsId->aoCcdId, obsId->aoCtrlId, pTotal, 
+               "aoGuideAndFocus (%p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %p, %d)\n",
+               pImage, obsId->aoCcdId, obsId->aoCtrlId, pPrevThresh, pTotal, 
                pCentroids, pErrorCentroids, pFg, pFgAfterRot, pErrorsFg, pTime, 
                pWfsStatus, (int)obsId->writeToRm);
-               printf ("aoModeCompute (%p, %p, %p, %d, %p)\n",
+               printf ("aoModeCompute (%p, %p, %p, %d, %p, %p)\n",
                        pImage, obsId->aoCcdId, obsId->aoCtrlId, nCoadds, 
-                       obsId->aoCbCtrlId);
+                       pThresh, obsId->aoCbAoCtrlId);
 #endif
 
                if ( obsId->updateFgScale == TRUE )
@@ -11244,15 +11705,28 @@ void detObserveEnd
                } ;
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                     pTotal, pCentroids, pErrorCentroids, pFg, 
-                                     pFgAfterRot, pErrorsFg, pTime, pWfsStatus,
+                                     pPrevThresh, pTotal, pCentroids, 
+                                     pErrorCentroids, pFg, pFgAfterRot, 
+                                     pErrorsFg, pTime, pWfsStatus,
                                      (int)obsId->writeToRm) == ERROR )
                {
                   ERROR_LOG ("Failed to run fast guide and focus correction");
                }
                
+               if ( obsId->threshRealTimeFlag == TRUE )
+               {
+                  if ( aoThresholdPerSubapCompute (pImage, obsId->aoCcdId,
+                                           obsId->aoCtrlId,
+                                           obsId->rateBrightPixThreshComp,
+                                           pThresh) == ERROR )
+                  {
+                     ERROR_LOG ("Failed to compute threshold per sub-aperture");
+                  }
+               }
+
                if ( aoModeCompute (pImage, obsId->aoCcdId, obsId->aoCtrlId,
-                                   nCoadds, obsId->aoCbCtrlId) == ERROR )
+                                   nCoadds, pThresh, obsId->aoCbAoCtrlId) 
+                    == ERROR )
                {
                   ERROR_LOG ("Failed to aO correction");
                }
@@ -11327,7 +11801,7 @@ void detObserveEnd
                                            obsId->pAoDarkInitContext) == ERROR)
                       {
                          ERROR_LOG (
-                         "Failed to init DET_CONTROL_AODARKINIT_SIR_NAME rec");
+                         "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME rec");
                       }
                    }
                }
@@ -11343,34 +11817,59 @@ void detObserveEnd
                   }
 
                   if ( aoRmsNoiseImageCompute (pImage,
-                                               obsId->aoCcdId, &rms) == ERROR )
+                                               obsId->aoCcdId, &rms, &mean) 
+                       == ERROR )
                   {
                      ERROR_LOG ("Failed to compute rms of current frame");
                   }
 
-                  /*printf ( "image %d, rms = %f\n", obsId->coaddCounter, 
-                           rms);*/
-
                   obsId->averageRms += rms;
+                  obsId->averageMean += mean;
                   obsId->coaddCounter ++;
 
                   if ( obsId->coaddCounter == 
                        nCoadds + obsId->nAverageDataThreshComp)
                   {
                      obsId->averageRms /= obsId->nAverageDataThreshComp;
+                     obsId->averageMean /= obsId->nAverageDataThreshComp;
 
-                     obsId->aoCtrlId->threshold =
+                     obsId->aoCtrlId->rms = obsId->averageRms;
+
+                     obsId->aoCtrlId->threshold = obsId->averageMean +
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
 
-                     obsId->aoCtrlId->thresholdDark =
-                     obsId->aoCtrlId->threshold ;
+
+                     if ( obsId->aoCcdId->binningFlag == FALSE )
+                     {
+                        obsId->aoCtrlId->rmsDarkFull = obsId->aoCtrlId->rms ;
+                        obsId->aoCtrlId->thresholdDarkFull =
+                        obsId->aoCtrlId->threshold ;
+                     }
+                     else
+                     {
+                        obsId->aoCtrlId->rmsDarkBin = obsId->aoCtrlId->rms ;
+                        obsId->aoCtrlId->thresholdDarkBin =
+                        obsId->aoCtrlId->threshold ;
+                     }
+
+                     for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                         obsId->aoCtrlId->thresholdVect[k] =
+                         obsId->aoCtrlId->threshold;
+
+                     if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->aoCtrlId->rms),
+                           obsId->pAoRmsContext) == ERROR)
+                     {
+                        ERROR_LOG (
+                        "Failed to init DET_CONTROL_AO_RMS_SIR_NAME record");
+                     }
 
                      if (epToVxPipeWrite (NULL,
                            (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
                      {
                         ERROR_LOG (
-                        "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
+                        "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
                      }
                   }
                }
@@ -11405,8 +11904,8 @@ void detObserveEnd
                   obsId->updateAoScale = FALSE ;
                } ;
 
-               if ( (obsId->fgFrame != 0) && 
-                    (obsId->coaddCounter < obsId->fgFrame) )
+               if ( (obsId->ggFrame != 0) && 
+                    (obsId->coaddCounter < obsId->ggFrame) )
                {
                   /*printf ( "coaddCounter =%d fast guide only\n", 
                            obsId->coaddCounter );*/
@@ -11420,18 +11919,20 @@ void detObserveEnd
                   }
                   obsId->coaddCounter ++;
                }
-               else if ( (obsId->threshFlag == TRUE) &&
+               else if ( (obsId->threshRealTimeFlag == FALSE) &&
+                         (obsId->threshFlag == TRUE) &&
                          (obsId->coaddCounter < obsId->nAverageDataThreshComp +
-                                                obsId->fgFrame) )
+                                                obsId->ggFrame) )
                {
                   /* printf ( "coaddCounter =%d compute thresh \n",
                            obsId->coaddCounter );*/
 
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                        obsId->aoCtrlId, pTotal, pCentroids, 
-                                        pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int)obsId->writeToRm) == ERROR )
+                                        obsId->aoCtrlId, pPrevThresh, pTotal, 
+                                        pCentroids, pErrorCentroids, 
+                                        pFg, pFgAfterRot, pErrorsFg, pTime, 
+                                        pWfsStatus, (int)obsId->writeToRm) 
+                       == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -11446,12 +11947,13 @@ void detObserveEnd
                   obsId->coaddCounter ++;
 
                   if ( obsId->coaddCounter ==
-                       (obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                       (obsId->nAverageDataThreshComp + obsId->ggFrame) )
                   {
-                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
+                     if ( aoThresholdPerSubapCompute (obsId->aoCtrlId->sumVect,
                                               obsId->aoCcdId,
+                                              obsId->aoCtrlId,
                                               obsId->rateBrightPixThreshComp,
-                                              &obsId->aoCtrlId->threshold)
+                                              obsId->aoCtrlId->thresholdVect)
                           == ERROR )
                      {
                         ERROR_LOG ("Failed to compute threshold") ;
@@ -11461,21 +11963,23 @@ void detObserveEnd
                                   obsId->pAoThreshContext) == ERROR)
                      {
                         ERROR_LOG (
-                               "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME");
+                               "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME");
                      }
                   }
                }
-               else if ( (obsId->averageFluxFlag == TRUE) &&
+               else if ( (obsId->threshRealTimeFlag == FALSE ) &&
+                         (obsId->averageFluxFlag == TRUE) &&
                          (obsId->coaddCounter < obsId->nFramesAverageFlux +
-                          obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                          obsId->nAverageDataThreshComp + obsId->ggFrame) )
                {
                   /*printf ( "coaddCounter =%d compute total \n", 
                            obsId->coaddCounter );*/
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                        obsId->aoCtrlId, pTotal, pCentroids,
-                                        pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus,
-                                        (int)obsId->writeToRm) == ERROR )
+                                        obsId->aoCtrlId, pPrevThresh, pTotal, 
+                                        pCentroids, pErrorCentroids, pFg, 
+                                        pFgAfterRot, pErrorsFg, pTime, 
+                                        pWfsStatus, (int)obsId->writeToRm) 
+                       == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
                   }
@@ -11483,7 +11987,7 @@ void detObserveEnd
                   obsId->coaddCounter ++;
 
                   if ( obsId->coaddCounter == (obsId->nFramesAverageFlux+
-                       obsId->nAverageDataThreshComp + obsId->fgFrame) )
+                       obsId->nAverageDataThreshComp + obsId->ggFrame) )
                   {
                      obsId->averageFlux /= 
                      (double)obsId->nFramesAverageFlux;
@@ -11494,7 +11998,7 @@ void detObserveEnd
                               (char *)(int)& (obsId->aoCtrlId->totalThreshold), 
                               obsId->pAoTotalContext) == ERROR)
                      {
-                        ERROR_LOG ( "Failed to init AOTOTAL_SIR_NAME record");
+                        ERROR_LOG ( "Failed to init AO_TOTAL_SIR_NAME record");
                      }
                      /*printf ( "coaddCounter =%d total =%f \n", 
                      obsId->coaddCounter,obsId->averageFlux );*/
@@ -11506,19 +12010,33 @@ void detObserveEnd
                         obsId->coaddCounter );*/
 
                   if ( aoGuideAndFocus (pImage, obsId->aoCcdId, 
-                                        obsId->aoCtrlId, pTotal, pCentroids, 
-                                        pErrorCentroids, pFg, pFgAfterRot, 
-                                        pErrorsFg, pTime, pWfsStatus, 
-                                        (int)obsId->writeToRm) == ERROR )
+                                        obsId->aoCtrlId, pPrevThresh, pTotal, 
+                                        pCentroids, pErrorCentroids, pFg, 
+                                        pFgAfterRot, pErrorsFg, pTime, 
+                                        pWfsStatus, (int)obsId->writeToRm) 
+                       == ERROR )
                   {
                      ERROR_LOG ("Failed to run FG correction");
+                  }
+
+                  if ( obsId->threshRealTimeFlag == TRUE )
+                  {
+                     if ( aoThresholdPerSubapCompute (pImage, obsId->aoCcdId,
+                                              obsId->aoCtrlId,
+                                              obsId->rateBrightPixThreshComp,
+                                              pThresh) == ERROR )
+                     {
+                        ERROR_LOG (
+                             "Failed to compute threshold per sub-aperture");
+                     }
                   }
 
                   if ( obsId->aoFlag == TRUE )
                   {
                      if ( aoModeCompute (pImage, obsId->aoCcdId, 
                                          obsId->aoCtrlId,
-                                         nCoadds, obsId->aoCbCtrlId) == ERROR )
+                                         nCoadds, pThresh, obsId->aoCbAoCtrlId) 
+                          == ERROR )
                      {
                         ERROR_LOG ("Failed to aO correction");
                      }
@@ -11541,19 +12059,19 @@ void detObserveEnd
                   }
                }
 
-               if ( obsId->saveCbCtrlClosedLoop == TRUE )
+               if ( obsId->saveCbAoCtrlClosedLoop == TRUE )
                {
-                  obsId->saveCbCounter ++;
-                  if (obsId->saveCbCounter == 
-                      obsId->saveCbCtrlClosedLoopFrame)
+                  obsId->saveAoCbCounter ++;
+                  if (obsId->saveAoCbCounter == 
+                      obsId->saveCbAoCtrlClosedLoopFrame)
                   {
-                     if ( aoCbCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
-                                        obsId->aoCtrlId, obsId->aoCbCtrlId) 
+                     if ( aoCbAoCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
+                                          obsId->aoCtrlId, obsId->aoCbAoCtrlId) 
                           == ERROR )
                      {
                         ERROR_LOG ("Failed to save aO control CB\n" );
                      }
-                     obsId->saveCbCounter = 0;
+                     obsId->saveAoCbCounter = 0;
                   }
                }
                
@@ -11906,10 +12424,10 @@ void detObserveEnd
          }
       }
 
-      if ( obsId->saveCbCtrl == TRUE )
+      if ( obsId->saveCbAoCtrl == TRUE )
       {
-         if ( aoCbCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
-                            obsId->aoCbCtrlId) == ERROR )
+         if ( aoCbAoCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+                              obsId->aoCbAoCtrlId) == ERROR )
          {
             ERROR_LOG ("Failed to save control circular buffer\n" ) ;
          }
@@ -13046,16 +13564,14 @@ STATUS detWriteFits
  *   detFrameSize
  *
  *   INVOCATION:
- *   detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
- *                 aoCtrlId, pOffsetFullVect, pOffsetBinVect)
+ *   detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, 
+ *                 pOffsetFullVect, pOffsetBinVect)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (!) obsId         (OBS_ID)          Observation context structure
- *   (<) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
- *   (<) aoCtrlId      (AO_CTRL_ID)      AO control context structure
  *   (>) pOffsetFullVect (long *)          ADC offset vector - no binning
  *   (>) pOffsetBinVect  (long *)          ADC offset vector - binning
  *
@@ -13099,8 +13615,6 @@ uint32 detFrameSize
    int             commandNumber,   /* Command number.                        */
    SDSU_ID         sdsuId,          /* SDSU context structure.                */
    OBS_ID          obsId,           /* Observation context structure.         */
-   AO_CCD_ID       aoCcdId,         /* AO CCD geometry context structure      */
-   AO_CTRL_ID      aoCtrlId,        /* AO control context structure           */
    long *          pOffsetFullVect, /* ADC offset vector - no binning         */
    long *          pOffsetBinVect   /* ADC offset vector - binning            */
 
@@ -13139,6 +13653,7 @@ uint32 detFrameSize
     */
 
    int          updateAoCtrlFlag = FALSE;
+   int          k;
    char         path[STRING_SIZE];
    char         darkFileName[STRING_SIZE];
    char         fullDarkFileName[STRING_SIZE];
@@ -13146,10 +13661,10 @@ uint32 detFrameSize
    char         fullFlatFileName[STRING_SIZE];
    char         refFileName[STRING_SIZE];
    char         fullRefFileName[STRING_SIZE];
-   char         imFileName[STRING_SIZE];
-   char         fullImFileName[STRING_SIZE];
-   char         cmFileName[STRING_SIZE];
-   char         fullCmFileName[STRING_SIZE];
+   char         aoImFileName[STRING_SIZE];
+   char         fullAoImFileName[STRING_SIZE];
+   char         aoCmFileName[STRING_SIZE];
+   char         fullAoCmFileName[STRING_SIZE];
    char         fgCmFileName[STRING_SIZE];
    char         fullFgCmFileName[STRING_SIZE];
    char         defFileName[STRING_SIZE];
@@ -13158,6 +13673,7 @@ uint32 detFrameSize
    double       angleM1;
    double       refX;
    double       refY;
+   double       rms;
    double       thresh;
    double       totalThresh;
 
@@ -13168,7 +13684,6 @@ uint32 detFrameSize
    int          updateOffset = FALSE;
    long         i;                  /* index                                  */
    long         offsetVect[4];      /* ADC offset vector                      */
-
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -13228,22 +13743,22 @@ uint32 detFrameSize
 
    /* Init the others parameters */
 
-   if ( (binFlag == TRUE) && (aoCcdId->binningFlag == FALSE) ) 
+   if ( (binFlag == TRUE) && (obsId->aoCcdId->binningFlag == FALSE) ) 
    {
       /* First time binning */
     
       xReqRas = 6;
       yReqRas = 6;
-      xReqPixels = 2 * xReqRas * aoCcdId->xSubapNb ;
-      yReqPixels = 2 * yReqRas * aoCcdId->ySubapNb ;
+      xReqPixels = 2 * xReqRas * obsId->aoCcdId->xSubapNb ;
+      yReqPixels = 2 * yReqRas * obsId->aoCcdId->ySubapNb ;
       reqPixelsNb = xReqPixels * yReqPixels ;
       xReqStart = 1;
       yReqStart = 1;
       xReqSpace = 1;
       yReqSpace = 1;
-      xReqTail = aoCcdId->xSize - 
-                 (((xReqRas * xReqBin) + xReqSpace) * aoCcdId->xSubapNb) 
-                 + xReqSpace - xReqStart - aoCcdId->uscanNb;
+      xReqTail = obsId->aoCcdId->xSize - 
+                 (((xReqRas * xReqBin) + xReqSpace) * obsId->aoCcdId->xSubapNb) 
+                 + xReqSpace - xReqStart - obsId->aoCcdId->uscanNb;
 
       if ( xReqTail < 0 )
       {
@@ -13254,47 +13769,47 @@ uint32 detFrameSize
          return (errorNumber);
       }
       
-      aoCtrlId->initFlag = FALSE;
+      obsId->aoCtrlId->initFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoCtrlInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
       }
-      aoCtrlId->darkInitFlag = FALSE;
+      obsId->aoCtrlId->darkInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
       }
-      aoCtrlId->flatInitFlag = FALSE;
+      obsId->aoCtrlId->flatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
       }
-      aoCtrlId->intMatInitFlag = FALSE;
+      obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoIntMatInitContext)
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
       }
-      aoCtrlId->contMatInitFlag = FALSE;
+      obsId->aoCtrlId->aoContMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", 
                            obsId->pAoContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
       }
-      aoCtrlId->fgContMatInitFlag = FALSE;
+      obsId->aoCtrlId->fgContMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", 
-                           obsId->pAoFgContMatInitContext) == ERROR)
+                           obsId->pFgContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
       }
 
       /* Read default parameters from par file */
@@ -13312,8 +13827,8 @@ uint32 detFrameSize
          strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
-                               refFileName, &refX, &refY, imFileName, 
-                               cmFileName, fgCmFileName, &thresh,
+                               refFileName, &refX, &refY, aoImFileName, 
+                               aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
@@ -13322,8 +13837,8 @@ uint32 detFrameSize
          sprintf ( fullDarkFileName, "%s/%s", path, darkFileName );
          sprintf ( fullFlatFileName, "%s/%s", path, flatFileName );
          sprintf ( fullRefFileName, "%s/%s", path, refFileName );
-         sprintf ( fullImFileName, "%s/%s", path, imFileName );
-         sprintf ( fullCmFileName, "%s/%s", path, cmFileName );
+         sprintf ( fullAoImFileName, "%s/%s", path, aoImFileName );
+         sprintf ( fullAoCmFileName, "%s/%s", path, aoCmFileName );
          sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
          updateAoCtrlFlag = TRUE;
       }
@@ -13336,37 +13851,37 @@ uint32 detFrameSize
       updateOffset = TRUE;
 
    }
-   else if ( (binFlag == TRUE) && (aoCcdId->binningFlag == TRUE) )
+   else if ( (binFlag == TRUE) && (obsId->aoCcdId->binningFlag == TRUE) )
    {
       /* Already binning mode - do not change anything */
 
-      xReqRas = aoCcdId->xRaster ;
-      yReqRas = aoCcdId->yRaster ;
-      xReqStart = aoCcdId->xStart;
-      yReqStart = aoCcdId->yStart;
-      xReqSpace = aoCcdId->xSpace;
-      yReqSpace = aoCcdId->ySpace;
-      xReqPixels = aoCcdId->xPixels;
-      yReqPixels = aoCcdId->yPixels;
-      reqPixelsNb = aoCcdId->pixelsNb;
-      xReqTail = aoCcdId->xTail;
+      xReqRas = obsId->aoCcdId->xRaster ;
+      yReqRas = obsId->aoCcdId->yRaster ;
+      xReqStart = obsId->aoCcdId->xStart;
+      yReqStart = obsId->aoCcdId->yStart;
+      xReqSpace = obsId->aoCcdId->xSpace;
+      yReqSpace = obsId->aoCcdId->ySpace;
+      xReqPixels = obsId->aoCcdId->xPixels;
+      yReqPixels = obsId->aoCcdId->yPixels;
+      reqPixelsNb = obsId->aoCcdId->pixelsNb;
+      xReqTail = obsId->aoCcdId->xTail;
    }
-   else if ( (binFlag == FALSE) && (aoCcdId->binningFlag == FALSE) )
+   else if ( (binFlag == FALSE) && (obsId->aoCcdId->binningFlag == FALSE) )
    {
       /* Already not binning mode - do not change anything */
 
-      xReqRas = aoCcdId->xRaster ;
-      yReqRas = aoCcdId->yRaster ;
-      xReqStart = aoCcdId->xStart;
-      yReqStart = aoCcdId->yStart;
-      xReqSpace = aoCcdId->xSpace;
-      yReqSpace = aoCcdId->ySpace;
-      xReqPixels = aoCcdId->xPixels;
-      yReqPixels = aoCcdId->yPixels;
-      reqPixelsNb = aoCcdId->pixelsNb;
-      xReqTail = aoCcdId->xTail;
+      xReqRas = obsId->aoCcdId->xRaster ;
+      yReqRas = obsId->aoCcdId->yRaster ;
+      xReqStart = obsId->aoCcdId->xStart;
+      yReqStart = obsId->aoCcdId->yStart;
+      xReqSpace = obsId->aoCcdId->xSpace;
+      yReqSpace = obsId->aoCcdId->ySpace;
+      xReqPixels = obsId->aoCcdId->xPixels;
+      yReqPixels = obsId->aoCcdId->yPixels;
+      reqPixelsNb = obsId->aoCcdId->pixelsNb;
+      xReqTail = obsId->aoCcdId->xTail;
    }
-   else if ( (binFlag == FALSE) && (aoCcdId->binningFlag == TRUE) )
+   else if ( (binFlag == FALSE) && (obsId->aoCcdId->binningFlag == TRUE) )
    {
       /* cancel binning mode */
 
@@ -13376,12 +13891,12 @@ uint32 detFrameSize
       yReqStart = 1;
       xReqSpace = 0;
       yReqSpace = 0;
-      xReqPixels = 2 * xReqRas * aoCcdId->xSubapNb;
-      yReqPixels = 2 * yReqRas * aoCcdId->ySubapNb;
+      xReqPixels = 2 * xReqRas * obsId->aoCcdId->xSubapNb;
+      yReqPixels = 2 * yReqRas * obsId->aoCcdId->ySubapNb;
       reqPixelsNb = xReqPixels * yReqPixels;
-      xReqTail = aoCcdId->xSize - 
-                 (((xReqRas * xReqBin) + xReqSpace) * aoCcdId->xSubapNb) +
-                 xReqSpace - xReqStart - aoCcdId->uscanNb;
+      xReqTail = obsId->aoCcdId->xSize - 
+                 (((xReqRas * xReqBin) + xReqSpace) * obsId->aoCcdId->xSubapNb)
+                 + xReqSpace - xReqStart - obsId->aoCcdId->uscanNb;
 
       if ( xReqTail < 0 )
       {
@@ -13392,47 +13907,47 @@ uint32 detFrameSize
          return (errorNumber);
       }
       
-      aoCtrlId->initFlag = FALSE;
+      obsId->aoCtrlId->initFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoCtrlInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
       }
-      aoCtrlId->darkInitFlag = FALSE;
+      obsId->aoCtrlId->darkInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoDarkInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
       }
-      aoCtrlId->flatInitFlag = FALSE;
+      obsId->aoCtrlId->flatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFlatInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
       }
-      aoCtrlId->intMatInitFlag = FALSE;
+      obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", 
                            obsId->pAoIntMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
       }
-      aoCtrlId->contMatInitFlag = FALSE;
+      obsId->aoCtrlId->aoContMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", 
                            obsId->pAoContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
       }
-      aoCtrlId->fgContMatInitFlag = FALSE;
+      obsId->aoCtrlId->fgContMatInitFlag = FALSE;
       if (epToVxPipeWrite (NULL, "Not initialized", 
-                           obsId->pAoFgContMatInitContext) == ERROR)
+                           obsId->pFgContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
       }
 
       /* Read default parameters from par file */
@@ -13450,8 +13965,8 @@ uint32 detFrameSize
          strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
-                               refFileName, &refX, &refY, imFileName, 
-                               cmFileName, fgCmFileName, &thresh,
+                               refFileName, &refX, &refY, aoImFileName, 
+                               aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
@@ -13460,8 +13975,8 @@ uint32 detFrameSize
          sprintf ( fullDarkFileName, "%s/%s", path, darkFileName );
          sprintf ( fullFlatFileName, "%s/%s", path, flatFileName );
          sprintf ( fullRefFileName, "%s/%s", path, refFileName );
-         sprintf ( fullImFileName, "%s/%s", path, imFileName );
-         sprintf ( fullCmFileName, "%s/%s", path, cmFileName );
+         sprintf ( fullAoImFileName, "%s/%s", path, aoImFileName );
+         sprintf ( fullAoCmFileName, "%s/%s", path, aoCmFileName );
          sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
          updateAoCtrlFlag = TRUE;
       }
@@ -13478,25 +13993,25 @@ uint32 detFrameSize
    {
       /* do not change anything */
 
-      xReqRas = aoCcdId->xRaster ;
-      yReqRas = aoCcdId->yRaster ;
-      xReqStart = aoCcdId->xStart;
-      yReqStart = aoCcdId->xStart;
-      xReqSpace = aoCcdId->xSpace;
-      yReqSpace = aoCcdId->xSpace;
-      xReqPixels = aoCcdId->xPixels;
-      yReqPixels = aoCcdId->yPixels;
-      reqPixelsNb = aoCcdId->pixelsNb;
-      xReqTail = aoCcdId->xTail;
+      xReqRas = obsId->aoCcdId->xRaster ;
+      yReqRas = obsId->aoCcdId->yRaster ;
+      xReqStart = obsId->aoCcdId->xStart;
+      yReqStart = obsId->aoCcdId->xStart;
+      xReqSpace = obsId->aoCcdId->xSpace;
+      yReqSpace = obsId->aoCcdId->xSpace;
+      xReqPixels = obsId->aoCcdId->xPixels;
+      yReqPixels = obsId->aoCcdId->yPixels;
+      reqPixelsNb = obsId->aoCcdId->pixelsNb;
+      xReqTail = obsId->aoCcdId->xTail;
    }
 
-   if ( (!sdsuId->simulate) && (aoCcdId->packetSize > 0) )
+   if ( (!sdsuId->simulate) && (obsId->aoCcdId->packetSize > 0) )
    {
-      aoCcdId->packetSize =
-      xReqRas * aoCcdId->xSubapNb * (aoCcdId->outputsNb/2) * 2;
+      obsId->aoCcdId->packetSize =
+      xReqRas * obsId->aoCcdId->xSubapNb * (obsId->aoCcdId->outputsNb/2) * 2;
 
       nPackets = (int) ceil ( (double) (reqPixelsNb) / 
-                 (double) aoCcdId->packetSize );
+                 (double) obsId->aoCcdId->packetSize );
    }
    else
    {
@@ -13505,41 +14020,45 @@ uint32 detFrameSize
 
    /* Init aoCcdId now */
 
-   aoCcdId->xBin = xReqBin;
-   aoCcdId->yBin = yReqBin;
-   aoCcdId->xRaster = xReqRas;
-   aoCcdId->yRaster = yReqRas;
-   aoCcdId->xStart = xReqStart;
-   aoCcdId->yStart = yReqStart;
-   aoCcdId->xSpace = xReqSpace;
-   aoCcdId->ySpace = yReqSpace;
-   aoCcdId->xPixels = xReqPixels;
-   aoCcdId->yPixels = yReqPixels;
-   aoCcdId->pixelsNb = reqPixelsNb;
-   aoCcdId->xTail = xReqTail;
-   aoCcdId->packetNb = nPackets;
+   obsId->aoCcdId->xBin = xReqBin;
+   obsId->aoCcdId->yBin = yReqBin;
+   obsId->aoCcdId->xRaster = xReqRas;
+   obsId->aoCcdId->yRaster = yReqRas;
+   obsId->aoCcdId->xStart = xReqStart;
+   obsId->aoCcdId->yStart = yReqStart;
+   obsId->aoCcdId->xSpace = xReqSpace;
+   obsId->aoCcdId->ySpace = yReqSpace;
+   obsId->aoCcdId->xPixels = xReqPixels;
+   obsId->aoCcdId->yPixels = yReqPixels;
+   obsId->aoCcdId->pixelsNb = reqPixelsNb;
+   obsId->aoCcdId->xTail = xReqTail;
+   obsId->aoCcdId->packetNb = nPackets;
 
    if ( binFlag == TRUE )
-      aoCcdId->binningFlag = TRUE ;
+      obsId->aoCcdId->binningFlag = TRUE ;
    else
-      aoCcdId->binningFlag = FALSE ;
+      obsId->aoCcdId->binningFlag = FALSE ;
 
-   aoCcdContextShow (aoCcdId);
+   aoCcdContextShow (obsId->aoCcdId);
 
    MESSAGE_LOG1 (MSG_LOG, "Setting new detector geometry (%s frame mode)",
-      (aoCcdId->binningFlag ? "binned":"full"));
+      (obsId->aoCcdId->binningFlag ? "binned":"full"));
    MESSAGE_LOG4 (MSG_MINDEBUG, "XSIZE=%d, YSIZE=%d, XPIXELS=%d, YPIXELS=%d",
-      aoCcdId->xSize, aoCcdId->ySize, aoCcdId->xPixels, aoCcdId->yPixels);
+      obsId->aoCcdId->xSize, obsId->aoCcdId->ySize, 
+      obsId->aoCcdId->xPixels, obsId->aoCcdId->yPixels);
    MESSAGE_LOG4 (MSG_MINDEBUG, "XSUBAP=%d, YSUBAP=%d, XBIN=%d, YBIN=%d",
-      aoCcdId->xSubapNb, aoCcdId->ySubapNb, aoCcdId->xBin, aoCcdId->yBin);
+      obsId->aoCcdId->xSubapNb, obsId->aoCcdId->ySubapNb, 
+      obsId->aoCcdId->xBin, obsId->aoCcdId->yBin);
    MESSAGE_LOG4 (MSG_MINDEBUG, "XRAS=%d, YRAS=%d, XSPACE=%d, YSPACE=%d",
-      aoCcdId->xRaster, aoCcdId->yRaster, aoCcdId->xSpace, aoCcdId->ySpace);
+      obsId->aoCcdId->xRaster, obsId->aoCcdId->yRaster, 
+      obsId->aoCcdId->xSpace, obsId->aoCcdId->ySpace);
    MESSAGE_LOG4 (MSG_MINDEBUG, "XSTART=%d, YSTART=%d, XTAIL=%d, NPIXELS=%d",
-      aoCcdId->xStart, aoCcdId->yStart, aoCcdId->xTail, aoCcdId->pixelsNb);
+      obsId->aoCcdId->xStart, obsId->aoCcdId->yStart, 
+      obsId->aoCcdId->xTail, obsId->aoCcdId->pixelsNb);
 
    MESSAGE_LOG2 (MSG_FULLDEBUG,
       "Each frame will consist of %d packets of %d pixels each",
-      nPackets, aoCcdId->packetSize);
+      nPackets, obsId->aoCcdId->packetSize);
 
    /*
     * Update the geometry parameters in the SDSU timing DSP. These are all
@@ -13548,7 +14067,7 @@ uint32 detFrameSize
     */
 
    if (sdsuParamWrite (sdsuId, SDSU_IDENT_VME, "V_PSIZE",
-                       aoCcdId->packetSize) == ERROR)
+                       obsId->aoCcdId->packetSize) == ERROR)
    {
       ERROR_LOG ("Failed to increase the PWFS packet size");
       errorNumber = S_detControl_SDSU_ERROR;
@@ -13662,56 +14181,56 @@ uint32 detFrameSize
     * Now init the SAD geometry records
     */
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xRaster) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xRaster) ,
                         obsId->pXrasterContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xraster sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yRaster) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yRaster) ,
                         obsId->pYrasterContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init yraster sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xBin) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xBin) ,
                         obsId->pXbinContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xbin sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yBin) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yBin) ,
                         obsId->pYbinContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init ybin sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xSpace) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xSpace) ,
                         obsId->pXspaceContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xspace sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->ySpace) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->ySpace) ,
                         obsId->pYspaceContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init yspace sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->xStart) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->xStart) ,
                         obsId->pXstartContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init xstart sad record");
       return (ERROR);
    }
 
-   if (epToVxPipeWrite( NULL, (char *)(int)& (aoCcdId->yStart) ,
+   if (epToVxPipeWrite( NULL, (char *)(int)& (obsId->aoCcdId->yStart) ,
                         obsId->pYstartContext ) == ERROR)
    {
       ERROR_LOG ("Failed to init ystart sad record");
@@ -13721,83 +14240,115 @@ uint32 detFrameSize
    if ( updateAoCtrlFlag == TRUE )
    {
       if (aoCtrlContextUpdate ( fullDarkFileName, fullFlatFileName,
-                                fullRefFileName, fullImFileName, fullCmFileName,
-                                fullFgCmFileName, refX, refY, angleM2, angleM1,
-                                aoCcdId, aoCtrlId ) == ERROR )
+                                fullRefFileName, fullAoImFileName, 
+                                fullAoCmFileName, fullFgCmFileName, 
+                                refX, refY, angleM2, angleM1, obsId->aoCcdId, 
+                                obsId->aoCtrlId ) == ERROR )
       {
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       }
 
-      obsId->aoCtrlId->threshold = thresh;
+
+      if ( obsId->aoCcdId->binningFlag == FALSE )
+      {
+         obsId->aoCtrlId->rms = rms;
+         obsId->aoCtrlId->threshold = thresh;
+         if ( obsId->aoCtrlId->rmsDarkFull == 0.0 )
+            obsId->aoCtrlId->rmsDarkFull = rms;
+         if ( obsId->aoCtrlId->thresholdDarkFull == 0.0 )
+            obsId->aoCtrlId->thresholdDarkFull = thresh;
+      }
+      else
+      {
+         obsId->aoCtrlId->rms = rms;
+         obsId->aoCtrlId->threshold = thresh;
+
+         if ( obsId->aoCtrlId->thresholdDarkBin == 0.0 )
+            obsId->aoCtrlId->thresholdDarkBin = thresh;
+         if ( obsId->aoCtrlId->rmsDarkBin == 0.0 )
+            obsId->aoCtrlId->rmsDarkBin = rms;
+      }
+      for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+          obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
+
       obsId->aoCtrlId->totalThreshold = totalThresh;
+      angleWithM1 = obsId->aoCtrlId->angleWithM1;
+      angleWithM2 = obsId->aoCtrlId->angleWithM2;
 
-      aoCtrlContextShow (aoCcdId, aoCtrlId, FALSE);
+      aoCtrlContextShow (obsId->aoCcdId, obsId->aoCtrlId, FALSE);
 
-      if ( aoCtrlId->initFlag == TRUE )
+      if ( obsId->aoCtrlId->initFlag == TRUE )
       {
          if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext) 
              == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->darkInitFlag == TRUE )
+      if ( obsId->aoCtrlId->darkInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->darkFileName, 
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->darkFileName, 
                               obsId->pAoDarkInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->flatInitFlag == TRUE )
+      if ( obsId->aoCtrlId->flatInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->flatFileName, 
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->flatFileName, 
                               obsId->pAoFlatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->intMatInitFlag == TRUE )
+      if ( obsId->aoCtrlId->aoIntMatInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->intMatFileName, 
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->aoIntMatFileName, 
                               obsId->pAoIntMatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->contMatInitFlag == TRUE )
+      if ( obsId->aoCtrlId->aoContMatInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->contMatFileName, 
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->aoContMatFileName, 
                               obsId->pAoContMatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
          }
       }
 
-      if ( aoCtrlId->fgContMatInitFlag == TRUE )
+      if ( obsId->aoCtrlId->fgContMatInitFlag == TRUE )
       {
-         if (epToVxPipeWrite (NULL, aoCtrlId->fgContMatFileName, 
-                              obsId->pAoFgContMatInitContext) == ERROR)
+         if (epToVxPipeWrite (NULL, obsId->aoCtrlId->fgContMatFileName, 
+                              obsId->pFgContMatInitContext) == ERROR)
          {
             ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
          }
+      }
+
+      if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->rms),
+                           obsId->pAoRmsContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_AO_RMS_SIR_NAME record");
       }
 
       if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
       }
 
       if (epToVxPipeWrite (NULL,
@@ -13805,7 +14356,7 @@ uint32 detFrameSize
                            obsId->pAoTotalContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
       }
 
    }
@@ -14011,7 +14562,7 @@ uint32 detDhsReconnect
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+         "Failed to init DET_CONTROL_DHS_CON_SIR_NAME record");
          errorNumber = ERROR;
       }
    };
@@ -14022,7 +14573,7 @@ uint32 detDhsReconnect
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_DHSCON_SIR_NAME record");
+         "Failed to init DET_CONTROL_DHS_CON_SIR_NAME record");
          errorNumber = ERROR;
        }
    };
@@ -14557,20 +15108,20 @@ STATUS detObsShow
 
    printf ("AO CCD geometry context          : %p\n", obsId->aoCcdId);
    printf ("AO control context               : %p\n", obsId->aoCtrlId);
-   printf ("AO control CB context            : %p\n", obsId->aoCbCtrlId);
+   printf ("AO control CB context            : %p\n", obsId->aoCbAoCtrlId);
    printf ("AO FG control CB context         : %p\n", obsId->aoCbFgCtrlId);
    printf ("AO image CB context              : %p\n", obsId->aoCbImId);
    printf ("save image CB                    : %s\n",
            (obsId->saveCbIm ? "TRUE" : "FALSE") );
    printf ("save control CB                  : %s\n",
-           (obsId->saveCbCtrl ? "TRUE" : "FALSE") );
+           (obsId->saveCbAoCtrl ? "TRUE" : "FALSE") );
    printf ("save FG control CB               : %s\n",
            (obsId->saveCbFgCtrl ? "TRUE" : "FALSE") );
    printf ("Signal processing mode           : %d\n", (int)obsId->sigMode);
    printf ("Number of frames to coadd        : %d\n", (int)obsId->nCoaddFrames);
    printf ("Coadd counter                    : %d\n", (int)obsId->coaddCounter);
-   printf ("saveCbCounter                    : %d\n", 
-           (int)(obsId->saveCbCounter) );
+   printf ("saveAoCbCounter                  : %d\n", 
+           (int)(obsId->saveAoCbCounter) );
    printf ("saveFgCbCounter                  : %d\n", 
            (int)(obsId->saveFgCbCounter) );
    printf ("UpdateFgScale                    : %s\n",
@@ -14589,12 +15140,12 @@ STATUS detObsShow
            (obsId->saveCbFgCtrlClosedLoop ? "TRUE" : "FALSE") );
    printf ("saveCbFgCtrlClosedLoopFrame      : %d\n",
            (int)obsId->saveCbFgCtrlClosedLoopFrame);
-   printf ("saveCbCtrlClosedLoop             : %s\n",
-           (obsId->saveCbCtrlClosedLoop ? "TRUE" : "FALSE") );
-   printf ("saveCbCtrlClosedLoopFrame        : %d\n",
-           (int)obsId->saveCbCtrlClosedLoopFrame);
-   printf ("Number of frames with FG only    : %d\n", 
-           (int)(obsId->fgFrame) );
+   printf ("saveCbAoCtrlClosedLoop           : %s\n",
+           (obsId->saveCbAoCtrlClosedLoop ? "TRUE" : "FALSE") );
+   printf ("saveCbAoCtrlClosedLoopFrame      : %d\n",
+           (int)obsId->saveCbAoCtrlClosedLoopFrame);
+   printf ("Number of frames with GG only    : %d\n", 
+           (int)(obsId->ggFrame) );
    printf ("methodFluxComp                   : %d\n", 
            (int)obsId->methodFluxComp);
    printf ("Average flux flag                : %s\n", 
@@ -14603,22 +15154,30 @@ STATUS detObsShow
            (obsId->threshFlag ? "TRUE" : "FALSE") );
    printf ("nFramesAverageFlux               : %d\n", 
            (int)(obsId->nFramesAverageFlux) );
-   printf ("Time with FG only                : %f sec\n", (obsId->fgTime) );
+   printf ("thresholdin real time flag       : %s\n",
+           (obsId->threshRealTimeFlag ? "TRUE" : "FALSE") );
+   printf ("writeToRm flag                   : %s\n",
+           (obsId->writeToRm ? "TRUE" : "FALSE") );
+   printf ("Time with GG only                : %f sec\n", (obsId->ggTime) );
+   printf ("Time to average aO data          : %f sec\n", (obsId->aoTime) );
    printf ("saveCbFgCtrlClosedLoopTime       : %f sec\n",
            obsId->saveCbFgCtrlClosedLoopTime);
-   printf ("saveCbCtrlClosedLoopTime         : %f sec\n",
-           obsId->saveCbCtrlClosedLoopTime);
+   printf ("saveCbAoCtrlClosedLoopTime       : %f sec\n",
+           obsId->saveCbAoCtrlClosedLoopTime);
    printf ("rateBrightPixThreshComp          : %f\n",
            obsId->rateBrightPixThreshComp);
    printf ("multCoeffRmsThreshComp           : %f\n",
            obsId->multCoeffRmsThreshComp);
    printf ("averageRms                       : %f\n", obsId->averageRms);
+   printf ("averageMean                      : %f\n", obsId->averageMean);
    printf ("multCoeffAverageFlux             : %f\n",
            obsId->multCoeffAverageFlux);
    printf ("averageFlux                      : %f\n", obsId->averageFlux);
    printf ("Tip scale                        : %f\n", obsId->tipScale);
    printf ("Tilt scale                       : %f\n", obsId->tiltScale);
    printf ("Focus scale                      : %f\n", obsId->focusScale);
+   printf ("Default focus scale 100Hz        : %f\n",
+           obsId->defFocusScale100Hz);
    printf ("Sliding Focus gain               : %f\n", obsId->slidingFocusGain);
    printf ("aoScaleVect                      : %p\n", obsId->aoScaleVect);
    printf ("Coadd file name                  : %s\n", obsId->pCoaddFileName);
@@ -14638,9 +15197,10 @@ STATUS detObsShow
    printf ("Time at observation start/end    : %f %f\n", obsId->rawtStart,
            obsId->rawtEnd);
    printf ("Exposure time in seconds         : %f\n", obsId->exposureTime);
-   printf ("Cutoff frequency in Hz           : %f\n", obsId->cutoffFrequency);
-   printf ("Rate sampling frequency          : %f\n",
-           obsId->rateSamplingFrequency);
+   printf ("Tip tilt cutoff frequency in Hz  : %f\n",
+           obsId->cutoffFrequencyTipTilt);
+   printf ("Focus cutoff frequency in Hz     : %f\n",
+           obsId->cutoffFrequencyFocus);
    printf ("Exposure in seconds reqst/actual : %f %f\n", obsId->exposedRQ,
            obsId->exposed);
 
@@ -14677,15 +15237,13 @@ STATUS detObsShow
  *   detSigInit
  *
  *   INVOCATION:
- *   detSigInit (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, aoCtrlId)
+ *   detSigInit (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
- *   (>) aoCcdId       (AO_CCD_ID)       CCD geometry context structure
- *   (!) aoCtrlId      (AO_CTRL_ID)      control context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -14715,9 +15273,7 @@ uint32 detSigInit
    CAD_CMD_CONTEXT cadCmdContext,         /* CAD command context structure    */
    int             commandNumber,         /* Command number                   */
    SDSU_ID         sdsuId,                /* SDSU context structure           */
-   OBS_ID          obsId,                 /* Observation context structure    */
-   AO_CCD_ID       aoCcdId,               /* AO CCD geometry context structure*/
-   AO_CTRL_ID      aoCtrlId               /* AO control context structure     */
+   OBS_ID          obsId                  /* Observation context structure    */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
@@ -14727,14 +15283,14 @@ uint32 detSigInit
    char         pDarkFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
    char         pFlatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
    char         pRefFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char         pIntMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char         pContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pAoIntMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pAoContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
    char         pFgContMatFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
    char         pFullDarkFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullFlatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullRefFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char         pFullIntMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char         pFullContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char         pFullAoIntMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char         pFullAoContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    char         pFullFgContMatFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
    double       refX, refY;
    double       angleWithM2;
@@ -14756,8 +15312,8 @@ uint32 detSigInit
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, 
                           (char *)&angleWithM1);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, pRefFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, pIntMatFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, pContMatFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, pAoIntMatFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, pAoContMatFileName);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, pFgContMatFileName);
 
    /*
@@ -14780,7 +15336,7 @@ uint32 detSigInit
       return (errorNumber);
    }
 
-   if ( aoCcdId == NULL )
+   if ( obsId->aoCcdId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL,
                  "AO CCD geometry context not initialised",
@@ -14789,7 +15345,7 @@ uint32 detSigInit
       return (errorNumber);
    }
 
-   if ( aoCtrlId == NULL )
+   if ( obsId->aoCtrlId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL, "AO control context not initialised",
                  ERROR_LOG_NOW);
@@ -14820,9 +15376,9 @@ uint32 detSigInit
       strncpy (pFullDarkFileName, pDarkFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
       strncpy (pFullFlatFileName, pFlatFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
       strncpy (pFullRefFileName, pRefFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
-      strncpy (pFullIntMatFileName, pIntMatFileName, 
+      strncpy (pFullAoIntMatFileName, pAoIntMatFileName, 
                EPICS_MAX_BYTES_STRING_ATTRIB);
-      strncpy (pFullContMatFileName, pContMatFileName, 
+      strncpy (pFullAoContMatFileName, pAoContMatFileName, 
                EPICS_MAX_BYTES_STRING_ATTRIB);
       strncpy (pFullFgContMatFileName, pFgContMatFileName, 
                EPICS_MAX_BYTES_STRING_ATTRIB);
@@ -14832,8 +15388,8 @@ uint32 detSigInit
       sprintf (pFullDarkFileName, "%s/%s", pFilePath, pDarkFileName);
       sprintf (pFullFlatFileName, "%s/%s", pFilePath, pFlatFileName);
       sprintf (pFullRefFileName, "%s/%s", pFilePath, pRefFileName);
-      sprintf (pFullIntMatFileName, "%s/%s", pFilePath, pIntMatFileName);
-      sprintf (pFullContMatFileName, "%s/%s", pFilePath, pContMatFileName);
+      sprintf (pFullAoIntMatFileName, "%s/%s", pFilePath, pAoIntMatFileName);
+      sprintf (pFullAoContMatFileName, "%s/%s", pFilePath, pAoContMatFileName);
       sprintf (pFullFgContMatFileName, "%s/%s", pFilePath, pFgContMatFileName);
    }
 
@@ -14844,25 +15400,28 @@ uint32 detSigInit
     */
 
    if (aoCtrlContextUpdate ( pFullDarkFileName, pFullFlatFileName,
-                             pFullRefFileName, pFullIntMatFileName,
-                             pFullContMatFileName, pFullFgContMatFileName,
-                             refX, refY, angleWithM2, angleWithM1, aoCcdId, 
-                             aoCtrlId ) == ERROR )
+                             pFullRefFileName, pFullAoIntMatFileName,
+                             pFullAoContMatFileName, pFullFgContMatFileName,
+                             refX, refY, angleWithM2, angleWithM1, 
+                             obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
    {
       ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
    }
 
-   aoCtrlContextShow (aoCcdId, aoCtrlId, FALSE);
+   angleWithM1 = obsId->aoCtrlId->angleWithM1;
+   angleWithM2 = obsId->aoCtrlId->angleWithM2;
 
-   if ( aoCtrlId->initFlag == TRUE )
+   aoCtrlContextShow (obsId->aoCcdId, obsId->aoCtrlId, FALSE);
+
+   if ( obsId->aoCtrlId->initFlag == TRUE )
    {
       if (epToVxPipeWrite (NULL, "Initialized", obsId->pAoCtrlInitContext) 
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
       }
    }
    else
@@ -14871,17 +15430,17 @@ uint32 detSigInit
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
       }
    }
 
-   if ( aoCtrlId->darkInitFlag == TRUE )
+   if ( obsId->aoCtrlId->darkInitFlag == TRUE )
    {
-      if (epToVxPipeWrite (NULL, aoCtrlId->darkFileName, 
+      if (epToVxPipeWrite (NULL, obsId->aoCtrlId->darkFileName, 
                            obsId->pAoDarkInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
       }
    }
    else
@@ -14890,17 +15449,17 @@ uint32 detSigInit
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
       }
    }
 
-   if ( aoCtrlId->flatInitFlag == TRUE )
+   if ( obsId->aoCtrlId->flatInitFlag == TRUE )
    {
-      if (epToVxPipeWrite (NULL, aoCtrlId->flatFileName, 
+      if (epToVxPipeWrite (NULL, obsId->aoCtrlId->flatFileName, 
                            obsId->pAoFlatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
       }
    }
    else
@@ -14909,17 +15468,17 @@ uint32 detSigInit
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
       }
    }
 
-   if ( aoCtrlId->intMatInitFlag == TRUE )
+   if ( obsId->aoCtrlId->aoIntMatInitFlag == TRUE )
    {
-      if (epToVxPipeWrite (NULL, aoCtrlId->intMatFileName, 
+      if (epToVxPipeWrite (NULL, obsId->aoCtrlId->aoIntMatFileName, 
                            obsId->pAoIntMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
       }
    }
    else
@@ -14928,17 +15487,17 @@ uint32 detSigInit
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
       }
    }
 
-   if ( aoCtrlId->contMatInitFlag == TRUE )
+   if ( obsId->aoCtrlId->aoContMatInitFlag == TRUE )
    {
-      if (epToVxPipeWrite (NULL, aoCtrlId->contMatFileName, 
+      if (epToVxPipeWrite (NULL, obsId->aoCtrlId->aoContMatFileName, 
                            obsId->pAoContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
       }
    }
    else
@@ -14947,26 +15506,26 @@ uint32 detSigInit
                            obsId->pAoContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
       }
    }
 
-   if ( aoCtrlId->fgContMatInitFlag == TRUE )
+   if ( obsId->aoCtrlId->fgContMatInitFlag == TRUE )
    {
-      if (epToVxPipeWrite (NULL, aoCtrlId->fgContMatFileName, 
-                           obsId->pAoFgContMatInitContext) == ERROR)
+      if (epToVxPipeWrite (NULL, obsId->aoCtrlId->fgContMatFileName, 
+                           obsId->pFgContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
       }
    }
    else
    {
       if (epToVxPipeWrite (NULL, "Not initialized", 
-                           obsId->pAoFgContMatInitContext) == ERROR)
+                           obsId->pFgContMatInitContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+         "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
       }
    }
 
@@ -14977,23 +15536,22 @@ uint32 detSigInit
 
 /*+
  *   FUNCTION NAME:
- *   detSigInitGain
+ *   detSigInitAoGain
  *
  *   INVOCATION:
- *   detSigInitGain (cadCmdContext, commandNumber, sdsuId, obsId, aoCtrlId)
+ *   detSigInitAoGain (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
- *   (!) aoCtrlId      (AO_CTRL_ID)      AO control context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigInitGain command
+ *   Execute detSigInitAoGain command
  *
  *   DESCRIPTION:
  *   This function updates aO gains in open and closed loop
@@ -15012,13 +15570,12 @@ uint32 detSigInit
  *-
  */
 
-uint32 detSigInitGain
+uint32 detSigInitAoGain
    (
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId,         /* Observation context structure.           */
-   AO_CTRL_ID      aoCtrlId       /* AO control context structure.            */
+   OBS_ID          obsId          /* Observation context structure.           */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
@@ -15051,7 +15608,7 @@ uint32 detSigInitGain
       return (errorNumber);
    }
 
-   if ( aoCtrlId == NULL )
+   if ( obsId->aoCtrlId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL,
                  "AO control context not initialised",
@@ -15162,7 +15719,7 @@ uint32 detSigInitGain
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18, 
                              (char *)&(aoScaleVect[18]));
 
-      if ( aoScaleUpdate (aoScaleVect, aoCtrlId) == ERROR )
+      if ( aoScaleUpdate (aoScaleVect, obsId->aoCtrlId) == ERROR )
       {
          ERROR_SET (0, "Failed to update aO scale factors",
                     ERROR_LOG_NOW);
@@ -15181,20 +15738,19 @@ uint32 detSigInitGain
  *   detSigInitFgGain
  *
  *   INVOCATION:
- *   detSigInitFgGain (cadCmdContext, commandNumber, sdsuId, obsId, aoCtrlId)
+ *   detSigInitFgGain (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
- *   (!) aoCtrlId      (AO_CTRL_ID)      AO control context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigInitFGGain command
+ *   Execute detSigInitFgGain command
  *
  *   DESCRIPTION:
  *   This function updates the gains of FG Zernikes mode in open and closed loop
@@ -15218,8 +15774,7 @@ uint32 detSigInitFgGain
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId,         /* Observation context structure.           */
-   AO_CTRL_ID      aoCtrlId       /* AO control context structure.            */
+   OBS_ID          obsId          /* Observation context structure.           */
    )
 {
    uint32         errorNumber;    /* Error number reported by task.           */
@@ -15260,7 +15815,7 @@ uint32 detSigInitFgGain
       return (errorNumber);
    }
 
-   if ( aoCtrlId == NULL )
+   if ( obsId->aoCtrlId == NULL )
    {
       ERROR_SET (S_detControl_INTERNAL,
                  "AO control context not initialised",
@@ -15281,9 +15836,44 @@ uint32 detSigInitFgGain
 
       obsId->tipScale = tipScale ;
       obsId->tiltScale = tiltScale ;
-      obsId->focusScale = focusScale ;
+      obsId->focusScale = focusScale *
+                          (100.0 * obsId->exposureTime);
       obsId->slidingFocusGain = slidingFocusGain ;
       obsId->updateFgScale = TRUE ;
+      obsId->defFocusScale100Hz = focusScale ;
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->tipScale),
+                           obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->tiltScale),
+                           obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->focusScale),
+                           obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
+      }
+
    }
    else
    {
@@ -15293,11 +15883,45 @@ uint32 detSigInitFgGain
 
       MESSAGE_LOG (MSG_LOG, "Update FG scale factors during open loop..." ) ;
 
-      aoCtrlId->fgScaleFactorVect[0] = tipScale ;
-      aoCtrlId->fgScaleFactorVect[1] = tiltScale ;
-      aoCtrlId->fgScaleFactorVect[2] = focusScale ;
-      aoCtrlId->slidingFocusGain = slidingFocusGain;
-      aoCtrlId->one_slidingFocusGain = 1.0 - slidingFocusGain ;
+      obsId->aoCtrlId->fgScaleFactorVect[0] = tipScale ;
+      obsId->aoCtrlId->fgScaleFactorVect[1] = tiltScale ;
+      obsId->aoCtrlId->fgScaleFactorVect[2] = focusScale *
+                                              (100.0 * obsId->exposureTime);
+      obsId->aoCtrlId->slidingFocusGain = slidingFocusGain;
+      obsId->aoCtrlId->one_slidingFocusGain = 1.0 - slidingFocusGain ;
+      obsId->defFocusScale100Hz = focusScale ;
+
+      if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[0]),
+                obsId->pFgTipGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TIP_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[1]),
+                obsId->pFgTiltGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
+                obsId->pFgFocusGainContext) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
+      }
    }
 
    return (errorNumber);
@@ -15404,7 +16028,7 @@ uint32 detSigModeNone
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -15429,7 +16053,7 @@ uint32 detSigModeNone
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -15438,10 +16062,12 @@ uint32 detSigModeNone
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -15548,7 +16174,7 @@ uint32 detSigModeDark
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -15573,7 +16199,7 @@ uint32 detSigModeDark
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -15582,10 +16208,12 @@ uint32 detSigModeDark
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -15695,7 +16323,7 @@ uint32 detSigModeGg
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -15719,7 +16347,7 @@ uint32 detSigModeGg
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -15728,10 +16356,12 @@ uint32 detSigModeGg
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -15787,11 +16417,11 @@ uint32 detSigModeGgAo
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
-   long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
    long         flag;           /* writeToRm flag                             */
+   double       aoTime;         /* Time used to average images for aO         */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15800,7 +16430,7 @@ uint32 detSigModeGgAo
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
 
@@ -15841,13 +16471,13 @@ uint32 detSigModeGgAo
 
    MESSAGE_LOG3 (MSG_LOG,
        "Signal processing switched to \"Global Guide and aO correction\" mode "
-       "imageNb=%d, allowedSubapOff=%d, flag=%d",
-       (int)imageNb, (int)subapOff, (int)flag);
+       "aoTime=%f s, allowedSubapOff=%d, flag=%d",
+       aoTime, (int)subapOff, (int)flag);
    if (epToVxPipeWrite (NULL, "Global guide and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -15856,9 +16486,8 @@ uint32 detSigModeGgAo
     */
 
    obsId->sigMode = sigMode;
-   obsId->nCoaddFrames = imageNb;
+   obsId->aoTime = aoTime;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
-
    obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
@@ -15873,7 +16502,7 @@ uint32 detSigModeGgAo
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -15882,10 +16511,12 @@ uint32 detSigModeGgAo
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -15940,10 +16571,10 @@ uint32 detSigModeAo
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
-   long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
+   double       aoTime;         /* Time used to average images for aO         */
    double       expTime;        /* Exposure time                              */
 
    /*
@@ -15952,7 +16583,7 @@ uint32 detSigModeAo
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
 
    sigMode = AO_MODE_AO;
@@ -15992,13 +16623,13 @@ uint32 detSigModeAo
 
    MESSAGE_LOG2 (MSG_LOG,
            "Signal processing switched to \"aO correction\" mode "
-           "imageNb=%d, allowedSubapOff=%d",
-           (int)imageNb, (int)subapOff);
+           "aoTime=%f s, allowedSubapOff=%d",
+           aoTime, (int)subapOff);
    if (epToVxPipeWrite (NULL, "aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -16007,7 +16638,7 @@ uint32 detSigModeAo
     */
 
    obsId->sigMode = sigMode;
-   obsId->nCoaddFrames = imageNb;
+   obsId->aoTime = aoTime;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    /* Init the fields of the observe CAD record */
@@ -16022,7 +16653,7 @@ uint32 detSigModeAo
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -16031,10 +16662,12 @@ uint32 detSigModeAo
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -16094,7 +16727,10 @@ uint32 detSigModeFgFocus
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
    long         flag;           /* writeToRm flag                             */
+   long         threshRT;       /* Flag to indicate if the thresholds are     */
    double       expTime;        /* Exposure time                              */
+   double       rateBright;     /* Rate of brightest pixels.                  */
+   double       multCoeff;      /* Multiplicative coefficients for rms value  */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -16104,7 +16740,11 @@ uint32 detSigModeFgFocus
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&subapOff);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&flag);
-
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&threshRT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3,
+                          (char *) & rateBright);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4,
+                          (char *) & multCoeff);
 
    sigMode = AO_MODE_FG_FOCUS;
 
@@ -16141,14 +16781,19 @@ uint32 detSigModeFgFocus
       return (errorNumber);
    }
 
-   MESSAGE_LOG2 (MSG_LOG,
+   rateBright = rateBright/100.0; /* in percent */
+
+   MESSAGE_LOG3 (MSG_LOG,
            "Signal processing switched to \"FG and Focus\" mode "
-           "allowedSubapOff=%d, flag=%d", (int)subapOff, (int)flag);
+           "allowedSubapOff=%d, threshRT=%d, flag=%d", 
+           (int)subapOff, (int)threshRT, (int)flag);
+   MESSAGE_LOG2 (MSG_LOG, "rate=%f, coeffRms=%f",
+           (float)rateBright, (float) multCoeff);
    if (epToVxPipeWrite (NULL, "Fast Guide and Focus",
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -16157,8 +16802,16 @@ uint32 detSigModeFgFocus
     */
 
    obsId->sigMode = sigMode;
+   obsId->threshRealTimeFlag = threshRT;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
    obsId->writeToRm = flag;
+   if ( threshRT == TRUE )
+   {
+      obsId->rateBrightPixThreshComp = rateBright;
+      obsId->aoCtrlId->thresholdRate = rateBright;
+      obsId->multCoeffRmsThreshComp = multCoeff;
+      obsId->aoCtrlId->thresholdMultCoeff = multCoeff;
+   }
 
    /* Init the fields of the observe CAD record */
 
@@ -16172,7 +16825,7 @@ uint32 detSigModeFgFocus
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -16181,9 +16834,10 @@ uint32 detSigModeFgFocus
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
 
    return (errorNumber);
@@ -16245,7 +16899,12 @@ uint32 detSigModeFgCoadd
    long         nCoaddFrames;   /* Number of frames to coadd.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
+   long         flag;           /* writeToRm flag                             */
+   long         threshRT;       /* Flag to indicate if the thresholds are     */
+                                /* computed in real time                      */
    double       expTime;        /* Exposure time                              */
+   double       rateBright;     /* Rate of brightest pixels.                  */
+   double       multCoeff;      /* Multiplicative coefficients for rms value  */
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files.                         */
@@ -16265,6 +16924,12 @@ uint32 detSigModeFgCoadd
                           (char *) & nCoaddFrames);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pCoaddFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&flag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&threshRT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6,
+                          (char *) & rateBright);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7,
+                          (char *) & multCoeff);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -16298,14 +16963,21 @@ uint32 detSigModeFgCoadd
       return (errorNumber);
    }
 
+   rateBright = rateBright/100.0; /* in percent */
+
    MESSAGE_LOG1 (MSG_LOG,
    "Signal processing switched to \"FG Focus + Coadd\" mode - nCoaddFrames=%ld",
    nCoaddFrames);
+   MESSAGE_LOG2 (MSG_LOG, "flag=%d, Compute thresholds in real time=%d",
+                 (int)flag, (int)threshRT );
+   MESSAGE_LOG2 (MSG_LOG, "rate=%f, coeffRms=%f",
+                (float)rateBright, (float) multCoeff);
+
    if (epToVxPipeWrite (NULL, "Fast Guide, Focus and Coadd",
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-        "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+        "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /* Combine file and path name for coadd file name */
@@ -16320,10 +16992,20 @@ uint32 detSigModeFgCoadd
     */
 
    obsId->sigMode = sigMode;
+   obsId->writeToRm = flag;
+   obsId->threshRealTimeFlag = threshRT;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
    obsId->nCoaddFrames = nCoaddFrames;
    strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
             (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
+
+   if ( threshRT == TRUE )
+   {
+      obsId->rateBrightPixThreshComp = rateBright;
+      obsId->aoCtrlId->thresholdRate = rateBright;
+      obsId->multCoeffRmsThreshComp = multCoeff;
+      obsId->aoCtrlId->thresholdMultCoeff = multCoeff;
+   }
 
    /* Init the fields of the observe CAD record */
 
@@ -16337,7 +17019,7 @@ uint32 detSigModeFgCoadd
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -16346,9 +17028,10 @@ uint32 detSigModeFgCoadd
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
 
    return (errorNumber);
@@ -16406,12 +17089,16 @@ uint32 detSigModeFgFocusAo
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
-   long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
    long         flag;           /* writeToRm flag                             */
+   long         threshRT;       /* Flag to indicate if the thresholds are     */
+                                /* computed in real time                      */
+   double       aoTime;         /* Time used to average images for aO         */
    double       expTime;        /* Exposure time                              */
+   double       rateBright;     /* Rate of brightest pixels.                  */
+   double       multCoeff;      /* Multiplicative coefficients for rms value  */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -16419,9 +17106,14 @@ uint32 detSigModeFgFocusAo
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&imageNb);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&subapOff);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&flag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&threshRT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4,
+                          (char *) & rateBright);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5,
+                          (char *) & multCoeff);
 
    sigMode = AO_MODE_FG_FOCUS_AO;
 
@@ -16458,15 +17150,20 @@ uint32 detSigModeFgFocusAo
       return (errorNumber);
    }
 
+   rateBright = rateBright/100.0; /* in percent */
+
    MESSAGE_LOG3 (MSG_LOG,
            "Signal processing switched to \"FG and Focus and aO\" mode "
-           "imageNb=%d, allowedSubapOff=%d, flag=%d",
-           (int)imageNb, (int)subapOff, (int)flag);
+           "aoTime=%f s, allowedSubapOff=%d, flag=%d",
+           aoTime, (int)subapOff, (int)flag);
+   MESSAGE_LOG2 (MSG_LOG, "rate=%f, coeffRms=%f",
+                (float)rateBright, (float) multCoeff);
+
    if (epToVxPipeWrite (NULL, "Fast Guide, Focus and aO",
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -16476,9 +17173,19 @@ uint32 detSigModeFgFocusAo
 
    obsId->writeToRm = flag;
 
+   obsId->threshRealTimeFlag = threshRT;
+
    obsId->sigMode = sigMode;
-   obsId->nCoaddFrames = imageNb;
+   obsId->aoTime = aoTime;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
+
+   if ( threshRT == TRUE )
+   {
+      obsId->rateBrightPixThreshComp = rateBright;
+      obsId->aoCtrlId->thresholdRate = rateBright;
+      obsId->multCoeffRmsThreshComp = multCoeff;
+      obsId->aoCtrlId->thresholdMultCoeff = multCoeff;
+   }
 
    nExp = -1 ;          /* mode continuous */
    outOption = 0 ;      /* NONE */
@@ -16490,7 +17197,7 @@ uint32 detSigModeFgFocusAo
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -16499,9 +17206,10 @@ uint32 detSigModeFgFocusAo
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
 
    return (errorNumber);
@@ -16622,7 +17330,7 @@ uint32 detSigModeCoadd
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /* Combine file and path name for coadd file name */
@@ -16653,7 +17361,7 @@ uint32 detSigModeCoadd
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -16662,10 +17370,12 @@ uint32 detSigModeCoadd
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -16722,6 +17432,7 @@ uint32 detSigModeThresh
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
    long         method;         /* Method for threshold computation.          */
+   long         i;              /* Index                                      */
    long         nAverageData;   /* Number of data to average.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
@@ -16797,6 +17508,7 @@ uint32 detSigModeThresh
     */
 
    obsId->writeToRm = flag;
+
    obsId->methodThreshComp = method;
    obsId->aoCtrlId->thresholdMethod = method;
    if ( obsId->methodThreshComp == AO_THRESH_VALUE )
@@ -16804,11 +17516,14 @@ uint32 detSigModeThresh
       /* no computation requested */
       obsId->aoCtrlId->threshold = threshold;
 
+      for ( i = 0 ; i < obsId->aoCcdId->subapUsedNb ; i ++ )
+          obsId->aoCtrlId->thresholdVect[i] = threshold;
+
       if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
       }
    }
    else
@@ -16823,7 +17538,7 @@ uint32 detSigModeThresh
                            obsId->pAoProcessModeContext) == ERROR)
       {
          ERROR_LOG (
-              "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+              "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
       }
 
       /* Init the fields of the observe CAD record */
@@ -16838,7 +17553,7 @@ uint32 detSigModeThresh
       if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
            ERROR )
       {
-         ERROR_LOG ( "Failed to initialise fields of observe record");
+         ERROR_LOG ( "Failed to init fields of observe record");
       }
    }
 
@@ -16848,10 +17563,12 @@ uint32 detSigModeThresh
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -16970,7 +17687,7 @@ uint32 detSigModeGgCoadd
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-        "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+        "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /* Combine file and path name for coadd file name */
@@ -16984,11 +17701,12 @@ uint32 detSigModeGgCoadd
     * These parameters will be used in detObserveEnd.
     */
 
+   obsId->writeToRm = flag;
+
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = nCoaddFrames;
    strncpy( obsId->pCoaddFileName, pFullCoaddFileName,
             (EPICS_MAX_BYTES_STRING_ATTRIB+1)*2 );
-   obsId->writeToRm = flag;
 
    /* Init the fields of the observe CAD record */
 
@@ -17002,7 +17720,7 @@ uint32 detSigModeGgCoadd
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -17011,10 +17729,12 @@ uint32 detSigModeGgCoadd
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -17068,12 +17788,12 @@ uint32 detSigModeSeq
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
-   double       fgTime;         /* Time when fg over the whole CCD in the     */
+   double       ggTime;         /* Time when fg over the whole CCD in the     */
                                 /* closed loop sequence                       */
    long         saveCbFgCtrlClosedLoopFlag;
                                 /* Save FG control circular buffer during     */
                                 /* closed loop flag.                          */
-   long         saveCbCtrlClosedLoopFlag;
+   long         saveCbAoCtrlClosedLoopFlag;
                                 /* Save aO control circular buffer during     */
                                 /* closed loop flag.                          */
    long         threshFlag;     /* Threshold after GG Flag                    */
@@ -17081,21 +17801,27 @@ uint32 detSigModeSeq
    long         fluxFlag;       /* Average flux after FG Flag                 */
    long         nFramesFlux;    /* Number of frames to average for computing  */
                                 /* the average flux                           */
-   long         imageNb;        /* Image number to average                    */
    long         subapOff;       /* Number of subapertures allowed to be off   */
    long         aoFlag;         /* aO flag (yes or no)                        */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
    long         flag;           /* writeToRm flag                             */
+   long         threshRT;       /* Flag to indicate if the thresholds are     */
+                                /* computed in real time                      */
+   double       aoTime;         /* Time used to average images for aO         */
    double       expTime;        /* Exposure time                              */
    double       rateBright;     /* Rate of brightest pixels.                  */
    double       multCoeffFlux;  /* Multiplicative coefficient for average flux*/
-   double       saveCbCtrlEveryTime;
+   double       saveCbAoCtrlEveryTime;
                                 /* Time when to save the aO control circular  */
                                 /* buffer in the closed loop sequence         */
    double       saveCbFgCtrlEveryTime;
                                 /* Time when to save the FG control circular  */
                                 /* buffer in the closed loop sequence         */
+   double       rateBrightThreshRT;
+                                /* Rate of brightest pixels.                  */
+   double       multCoeffThreshRT;
+                                /* Multiplicative coefficients for rms value  */
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                                 /* Path name for circular buffer.             */
 
@@ -17107,7 +17833,7 @@ uint32 detSigModeSeq
 
    errorNumber = 0;
    sigMode = AO_MODE_CLOSED_LOOP;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & fgTime);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & ggTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
                           (char *) & threshFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
@@ -17120,11 +17846,11 @@ uint32 detSigModeSeq
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6,
                           (char *) & multCoeffFlux);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&subapOff);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&imageNb);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&aoTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9,
-                          (char *) & saveCbCtrlClosedLoopFlag);
+                          (char *) & saveCbAoCtrlClosedLoopFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10,
-                          (char *) & saveCbCtrlEveryTime);
+                          (char *) & saveCbAoCtrlEveryTime);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 11,
                           (char *) & saveCbFgCtrlClosedLoopFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 12,
@@ -17132,6 +17858,11 @@ uint32 detSigModeSeq
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 13, pFilePath);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 14, (char *) & aoFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 15, (char *)&flag);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 16, (char *)&threshRT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 17,
+                          (char *) & rateBrightThreshRT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18,
+                          (char *) & multCoeffThreshRT);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -17169,27 +17900,33 @@ uint32 detSigModeSeq
    rateBright = rateBright / 100.0 ; /* in percent */
    multCoeffFlux = multCoeffFlux / 100.0 ; /* in percent */
 
+   rateBrightThreshRT = rateBrightThreshRT / 100.0 ; /* in percent */
+
    MESSAGE_LOG1 (MSG_LOG,
       "Signal processing switched to \"Sequence closed loop\" mode - "
-      "fgTime=%f", fgTime );
+      "ggTime=%f", ggTime );
+   MESSAGE_LOG1 (MSG_LOG, "Compute thresholds in real time=%d", (int)threshRT );
    MESSAGE_LOG3 (MSG_LOG, "threshFlag=%d, nFramesThresh=%d, rateBright=%f",
                  (int)threshFlag, (int)nFramesThresh, rateBright);
    MESSAGE_LOG3 (MSG_LOG, "fluxFlag=%d, nFramesFlux=%d, multCoeffFlux=%f",
                  (int)fluxFlag, (int)nFramesFlux, multCoeffFlux);
-   MESSAGE_LOG3 (MSG_LOG, "aoFlag=%d, imageNb=%d, allowedSubapOff=%d",
-                 (int)aoFlag, (int)imageNb, (int)subapOff);
+   MESSAGE_LOG3 (MSG_LOG, "aoFlag=%d, aoTime=%f s, allowedSubapOff=%d",
+                 (int)aoFlag, aoTime, (int)subapOff);
    MESSAGE_LOG2 (MSG_LOG, "saveCbFgCtrlFlag=%d, saveCbFgCtrlEveryTime=%f",
       (int)saveCbFgCtrlClosedLoopFlag, saveCbFgCtrlEveryTime);
-   MESSAGE_LOG2 (MSG_LOG, "saveCbCtrlFlag=%d, saveCbCtrlEveryTime=%f",
-      (int)saveCbCtrlClosedLoopFlag, saveCbCtrlEveryTime);
+   MESSAGE_LOG2 (MSG_LOG, "saveCbAoCtrlFlag=%d, saveCbAoCtrlEveryTime=%f",
+      (int)saveCbAoCtrlClosedLoopFlag, saveCbAoCtrlEveryTime);
    MESSAGE_LOG1 (MSG_LOG, "pFilePath=%s", pFilePath);
    MESSAGE_LOG1 (MSG_LOG, "flag=%d", (int)flag);
+   MESSAGE_LOG2 (MSG_LOG, "If threshold RT : rate=%f, coeffRms=%f",
+                (float)rateBrightThreshRT, (float) multCoeffThreshRT);
+
 
    if (epToVxPipeWrite (NULL, "Sequence closed loop",
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /*
@@ -17201,27 +17938,39 @@ uint32 detSigModeSeq
 
    obsId->writeToRm = flag;
 
-   obsId->fgTime = fgTime;
+   obsId->ggTime = ggTime;
    obsId->saveCbFgCtrlClosedLoop = saveCbFgCtrlClosedLoopFlag;
    obsId->saveCbFgCtrlClosedLoopTime = saveCbFgCtrlEveryTime;
-   obsId->saveCbCtrlClosedLoop = saveCbCtrlClosedLoopFlag;
-   obsId->saveCbCtrlClosedLoopTime = saveCbCtrlEveryTime;
+   obsId->saveCbAoCtrlClosedLoop = saveCbAoCtrlClosedLoopFlag;
+   obsId->saveCbAoCtrlClosedLoopTime = saveCbAoCtrlEveryTime;
 
    obsId->averageFluxFlag = fluxFlag;
    obsId->nFramesAverageFlux = nFramesFlux;
    obsId->multCoeffAverageFlux = multCoeffFlux;
 
+   obsId->threshRealTimeFlag = threshRT;
    obsId->threshFlag = threshFlag;
    obsId->methodThreshComp = AO_THRESH_SPOTS;
    obsId->aoCtrlId->thresholdMethod = AO_THRESH_SPOTS;
-   obsId->nAverageDataThreshComp = nFramesThresh;
-   obsId->rateBrightPixThreshComp = rateBright;
-   obsId->aoCtrlId->thresholdRate = rateBright;
+
+   if ( threshRT == TRUE )
+   {
+      obsId->rateBrightPixThreshComp = rateBrightThreshRT;
+      obsId->aoCtrlId->thresholdRate = rateBrightThreshRT;
+      obsId->multCoeffRmsThreshComp = multCoeffThreshRT;
+      obsId->aoCtrlId->thresholdMultCoeff = multCoeffThreshRT;
+   }
+   else
+   {
+      obsId->nAverageDataThreshComp = nFramesThresh;
+      obsId->rateBrightPixThreshComp = rateBright;
+      obsId->aoCtrlId->thresholdRate = rateBright;
+   }
 
    if ( fluxFlag == TRUE )
       obsId->aoCtrlId->multCoeffTotal= multCoeffFlux;
 
-   obsId->nCoaddFrames = imageNb;
+   obsId->aoTime = aoTime;
    obsId->aoCtrlId->allowedSubapOff = subapOff;
 
    obsId->aoFlag = aoFlag;
@@ -17240,7 +17989,7 @@ uint32 detSigModeSeq
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -17249,9 +17998,10 @@ uint32 detSigModeSeq
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
 
    return (errorNumber);
@@ -17387,16 +18137,25 @@ uint32 detSigModeTotal
 
    obsId->methodFluxComp = method;
    obsId->aoCtrlId->totalMethod = method;
-   if ( obsId->methodFluxComp == AO_TOTAL_VALUE )
+   if ( ( obsId->methodFluxComp == AO_TOTAL_VALUE ) ||
+        ( obsId->methodFluxComp == AO_TOTAL_FORMULA ) )
    {
       /* no computation requested */
-      obsId->aoCtrlId->totalThreshold = thresholdFlux;
+      if ( obsId->methodFluxComp == AO_TOTAL_VALUE )
+      {
+         obsId->aoCtrlId->totalThreshold = thresholdFlux;
+      }
+      else
+      {
+         obsId->aoCtrlId->totalThreshold =
+         aoTotalThresholdCompute (obsId->aoCcdId, obsId->aoCtrlId);
+      }
       if (epToVxPipeWrite (NULL,
                            (char *)(int)& (obsId->aoCtrlId->totalThreshold),
                            obsId->pAoTotalContext) == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOTOTAL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
       }
    }
    else
@@ -17409,7 +18168,7 @@ uint32 detSigModeTotal
                            obsId->pAoProcessModeContext) == ERROR)
       {
          ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
       }
 
       /* Init the fields of the observe CAD record */
@@ -17424,7 +18183,7 @@ uint32 detSigModeTotal
       if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
            ERROR )
       {
-         ERROR_LOG ( "Failed to initialise fields of observe record");
+         ERROR_LOG ( "Failed to init fields of observe record");
       }
    }
 
@@ -17434,10 +18193,12 @@ uint32 detSigModeTotal
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -17446,10 +18207,10 @@ uint32 detSigModeTotal
 
 /*+
  *   FUNCTION NAME:
- *   detSigInitCb
+ *   detSigSaveCb
  *
  *   INVOCATION:
- *   detSigInitCb (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigSaveCb (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
@@ -17461,7 +18222,7 @@ uint32 detSigModeTotal
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigInitCb command
+ *   Execute detSigSaveCb command
  *
  *   DESCRIPTION:
  *   This function sets the parameters to save the circular buffers.
@@ -17480,7 +18241,7 @@ uint32 detSigModeTotal
  *-
  */
 
-uint32 detSigInitCB
+uint32 detSigSaveCb
    (
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
    int             commandNumber,   /* Command number.                        */
@@ -17490,8 +18251,10 @@ uint32 detSigInitCB
 {
    uint32       errorNumber;    /* Error number reported by task.             */
    long         saveCbImFlag;   /* Save image circular buffer flag.           */
-   long         saveCbCtrlFlag; /* Save control circular buffer flag.         */
-   long         saveCbFgCtrlFlag; /* Save FG control circular buffer flag.    */
+   long         saveCbAoCtrlFlag; 
+                                /* Save control circular buffer flag.         */
+   long         saveCbFgCtrlFlag; 
+                                /* Save FG control circular buffer flag.      */
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                                 /* Path name for circular buffer.             */
 
@@ -17504,7 +18267,7 @@ uint32 detSigInitCB
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
                           (char *) & saveCbImFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
-                          (char *) & saveCbCtrlFlag);
+                          (char *) & saveCbAoCtrlFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2,
                           (char *) & saveCbFgCtrlFlag);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, pFilePath);
@@ -17549,7 +18312,7 @@ uint32 detSigInitCB
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBIM_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME record");
       }
    }
    else
@@ -17560,30 +18323,30 @@ uint32 detSigInitCB
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBIM_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME record");
       }
    }
 
-   if ( saveCbCtrlFlag == TRUE )
+   if ( saveCbAoCtrlFlag == TRUE )
    {
       /*MESSAGE_LOG (MSG_LOG, "Save aO control circular buffer set to TRUE");*/
 
-      if (epToVxPipeWrite (NULL, "TRUE", obsId->pAoSaveCbCtrlContext)
+      if (epToVxPipeWrite (NULL, "TRUE", obsId->pAoSaveCbAoCtrlContext)
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME record");
       }
    }
    else
    {
       /*MESSAGE_LOG (MSG_LOG, "Save aO control circular buffer set to FALSE");*/
 
-      if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbCtrlContext)
+      if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbAoCtrlContext)
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME record");
       }
    }
 
@@ -17595,7 +18358,7 @@ uint32 detSigInitCB
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME record");
       }
    }
    else
@@ -17606,7 +18369,7 @@ uint32 detSigInitCB
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME record");
       }
    }
 
@@ -17615,7 +18378,7 @@ uint32 detSigInitCB
     */
 
    obsId->saveCbIm = saveCbImFlag;
-   obsId->saveCbCtrl = saveCbCtrlFlag;
+   obsId->saveCbAoCtrl = saveCbAoCtrlFlag;
    obsId->saveCbFgCtrl = saveCbFgCtrlFlag;
    strcpy ( obsId->pCbPath , pFilePath );
 
@@ -17626,10 +18389,10 @@ uint32 detSigInitCB
 
 /*+
  *   FUNCTION NAME:
- *   detSigMeasIm
+ *   detSigMeasAoIm
  *
  *   INVOCATION:
- *   detSigMeasIm (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigMeasAoIm (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pRecordPrefix (const char *)    Record Name prefix
@@ -17642,7 +18405,7 @@ uint32 detSigInitCB
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigMeasIm command
+ *   Execute detSigMeasAoIm command
  *
  *   DESCRIPTION:
  *   This function sets the parameters to measure a column of the interaction 
@@ -17662,7 +18425,7 @@ uint32 detSigInitCB
  *-
  */
 
-uint32 detSigMeasIm
+uint32 detSigMeasAoIm
    (
    const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure          */
@@ -17747,7 +18510,7 @@ uint32 detSigMeasIm
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-        "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+        "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /* Combine file and path name for coadd and centroids file names */
@@ -17781,21 +18544,22 @@ uint32 detSigMeasIm
 
    if ( newMat == TRUE )
    {
-      aoColImStructZero (obsId->aoCtrlId);
+      aoIntMatStructZero (obsId->aoCtrlId);
    }
 
    if ( amplitude > 0.0 )
    {
-      obsId->aoCtrlId->intMatStruct[nMode - 1].posAmplitude = amplitude;
+      obsId->aoCtrlId->aoIntMatStruct[nMode - 1].posAmplitude = amplitude;
    }
    else
    {
-      obsId->aoCtrlId->intMatStruct[nMode - 1].negAmplitude = amplitude;
+      obsId->aoCtrlId->aoIntMatStruct[nMode - 1].negAmplitude = amplitude;
    }
 
    sigMode = AO_MODE_MEAS_IM;
    subapOff = 0;
 
+   obsId->writeToRm = TRUE;
    obsId->sigMode = sigMode;
    obsId->nMode = nMode - 1;
    obsId->amplitude = amplitude;
@@ -17821,7 +18585,7 @@ uint32 detSigMeasIm
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -17830,10 +18594,12 @@ uint32 detSigMeasIm
 
    obsId->saveCentroids = TRUE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -17842,10 +18608,10 @@ uint32 detSigMeasIm
 
 /*+
  *   FUNCTION NAME:
- *   detSigCompMat
+ *   detSigCompAoMat
  *
  *   INVOCATION:
- *   detSigCompMat (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigCompAoMat (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
@@ -17857,7 +18623,7 @@ uint32 detSigMeasIm
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigCompMat command
+ *   Execute detSigCompAoMat command
  *
  *   DESCRIPTION:
  *   This function computes the interaction matrix, then the control matrix and
@@ -17877,7 +18643,7 @@ uint32 detSigMeasIm
  *-
  */
 
-uint32 detSigCompMat
+uint32 detSigCompAoMat
    (
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure          */
    int             commandNumber,   /* Command number                         */
@@ -17889,10 +18655,10 @@ uint32 detSigCompMat
 
    char         pFilePath [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
                               /* Path name for files                          */
-   char         pImFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char         pFullImFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
-   char         pCmFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
-   char         pFullCmFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char         pAoImFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pFullAoImFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
+   char         pAoCmFileName [EPICS_MAX_BYTES_STRING_ATTRIB + 1];
+   char         pFullAoCmFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -17901,8 +18667,8 @@ uint32 detSigCompMat
 
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, pFilePath);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pImFileName);
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pCmFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, pAoImFileName);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, pAoCmFileName);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -17945,13 +18711,13 @@ uint32 detSigCompMat
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
    }
    if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoContMatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
    }
 
    if ( aoMatCompute ( obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
@@ -17966,58 +18732,58 @@ uint32 detSigCompMat
 
    if ( strcmp (pFilePath, "") == 0 )
    {
-      strncpy (pFullImFileName, pImFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
-      strncpy (pFullCmFileName, pCmFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
+      strncpy (pFullAoImFileName, pAoImFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
+      strncpy (pFullAoCmFileName, pAoCmFileName, EPICS_MAX_BYTES_STRING_ATTRIB);
    }
    else
    {
-      sprintf (pFullImFileName, "%s/%s", pFilePath, pImFileName );
-      sprintf (pFullCmFileName, "%s/%s", pFilePath, pCmFileName );
+      sprintf (pFullAoImFileName, "%s/%s", pFilePath, pAoImFileName );
+      sprintf (pFullAoCmFileName, "%s/%s", pFilePath, pAoCmFileName );
    }
 
    /* Save the matrixes */
 
-   obsId->aoCtrlId->intMatInitFlag = TRUE;
-   strcpy ( obsId->aoCtrlId->intMatFileName , pFullImFileName);
+   obsId->aoCtrlId->aoIntMatInitFlag = TRUE;
+   strcpy ( obsId->aoCtrlId->aoIntMatFileName , pFullAoImFileName);
    
-   if ( aoMatWrite (pFullImFileName, obsId->aoCtrlId->intMat, 
+   if ( aoMatWrite (pFullAoImFileName, obsId->aoCtrlId->aoIntMat, 
                     obsId->aoCcdId->centroidsNb, obsId->aoCtrlId->aoModeNb, 
                     AO_INT_MAT_TYPE) == ERROR )
    {
       ERROR_SET (S_detControl_INTERNAL, "Failed to save int matrix", 
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
-      obsId->aoCtrlId->intMatInitFlag = FALSE;
-      strcpy ( obsId->aoCtrlId->intMatFileName , "");
+      obsId->aoCtrlId->aoIntMatInitFlag = FALSE;
+      strcpy ( obsId->aoCtrlId->aoIntMatFileName , "");
       return (errorNumber);
    }
 
-   obsId->aoCtrlId->contMatInitFlag = TRUE;
-   strcpy ( obsId->aoCtrlId->contMatFileName , pFullCmFileName);
+   obsId->aoCtrlId->aoContMatInitFlag = TRUE;
+   strcpy ( obsId->aoCtrlId->aoContMatFileName , pFullAoCmFileName);
    
-   if ( aoMatWrite (pFullCmFileName, obsId->aoCtrlId->contMat, 
+   if ( aoMatWrite (pFullAoCmFileName, obsId->aoCtrlId->aoContMat, 
                     obsId->aoCtrlId->aoModeNb, obsId->aoCcdId->centroidsNb, 
                     AO_CONT_MAT_TYPE) == ERROR )
    {
       ERROR_SET (S_detControl_INTERNAL, "Failed to save cont matrix", 
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
-      obsId->aoCtrlId->contMatInitFlag = FALSE;
-      strcpy ( obsId->aoCtrlId->contMatFileName , "");
+      obsId->aoCtrlId->aoContMatInitFlag = FALSE;
+      strcpy ( obsId->aoCtrlId->aoContMatFileName , "");
       return (errorNumber);
    }
 
-   if (epToVxPipeWrite (NULL, pFullImFileName, obsId->pAoIntMatInitContext)
+   if (epToVxPipeWrite (NULL, pFullAoImFileName, obsId->pAoIntMatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
    }
-   if (epToVxPipeWrite (NULL, pFullCmFileName, obsId->pAoContMatInitContext)
+   if (epToVxPipeWrite (NULL, pFullAoCmFileName, obsId->pAoContMatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
    }
 
    MESSAGE_LOG (MSG_LOG, 
@@ -18146,7 +18912,7 @@ uint32 detSigModeSeqDark
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /* First set the dark to null values */
@@ -18173,7 +18939,7 @@ uint32 detSigModeSeqDark
        == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
    }
    
 
@@ -18209,7 +18975,7 @@ uint32 detSigModeSeqDark
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -18218,10 +18984,12 @@ uint32 detSigModeSeqDark
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -18371,7 +19139,7 @@ uint32 detInitObserveRecord
    /*printf ( "record name: %s\n" , pRecordName);*/
    if ( cicsDbPut (pRecordName, message, DBF_LONG, pNExp) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18383,7 +19151,7 @@ uint32 detInitObserveRecord
    /*if ( cicsDbPut (pRecordName, message, DBF_DOUBLE, pExpTime) == ERROR )*/
    if ( cicsDbPut (pRecordName, message, 8, pExpTime) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18394,7 +19162,7 @@ uint32 detInitObserveRecord
    /*printf ( "record name: %s\n" , pRecordName);*/
    if ( cicsDbPut (pRecordName, message, DBF_LONG, pOutOption) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18406,7 +19174,7 @@ uint32 detInitObserveRecord
    strcpy ( label, "NONE" );
    if ( cicsDbPut (pRecordName, message, DBF_STRING, label) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18418,7 +19186,7 @@ uint32 detInitObserveRecord
    value = 2;
    if ( cicsDbPut (pRecordName, message, DBF_LONG, &value) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18430,7 +19198,7 @@ uint32 detInitObserveRecord
    strcpy (path, "." );
    if ( cicsDbPut (pRecordName, message, DBF_STRING, path) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18442,7 +19210,7 @@ uint32 detInitObserveRecord
    strcpy (file, "pwfs1.fits");
    if ( cicsDbPut (pRecordName, message, DBF_STRING, file) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18454,7 +19222,7 @@ uint32 detInitObserveRecord
    strcpy (sim, "NONE");
    if ( cicsDbPut (pRecordName, message, DBF_STRING, sim) == ERROR )
    {
-      ERROR_LOG ( "Failed to initialise %s field");
+      ERROR_LOG ( "Failed to init %s field");
       errorNumber = S_detControl_INTERNAL;
    }
 
@@ -18508,8 +19276,8 @@ STATUS detInitSigInit
    char darkFileName[STRING_SIZE];
    char flatFileName[STRING_SIZE];
    char refFileName[STRING_SIZE];
-   char imFileName[STRING_SIZE];
-   char cmFileName[STRING_SIZE];
+   char aoImFileName[STRING_SIZE];
+   char aoCmFileName[STRING_SIZE];
    char fgCmFileName[STRING_SIZE];
    char defFileName[STRING_SIZE];
    char aoInitFileName[STRING_SIZE];
@@ -18518,6 +19286,7 @@ STATUS detInitSigInit
    double refX;
    double refY;
    double thresh;
+   double rms;
    double totalThresh;
 
    if ( detObsIdP1 == NULL )
@@ -18546,8 +19315,8 @@ STATUS detInitSigInit
          strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
-                               refFileName, &refX, &refY, imFileName, 
-                               cmFileName, fgCmFileName, &thresh,
+                               refFileName, &refX, &refY, aoImFileName, 
+                               aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1) == ERROR )
          {
             printf ("Failed to read ao control file parameters\n");
@@ -18562,21 +19331,9 @@ STATUS detInitSigInit
          *(double *)pgsub->valf = refY;
          *(double *)pgsub->valg = angleM1;
          strcpy ( (char *)pgsub->valh, refFileName );
-         strcpy ( (char *)pgsub->vali, imFileName );
-         strcpy ( (char *)pgsub->valj, cmFileName );
+         strcpy ( (char *)pgsub->vali, aoImFileName );
+         strcpy ( (char *)pgsub->valj, aoCmFileName );
          strcpy ( (char *)pgsub->valk, fgCmFileName );
-
-         /*strcpy ( (char *)pgsub->vala, "." );
-         strcpy ( (char *)pgsub->valb, "data/defFullP1DarkMK.fits" );
-         strcpy ( (char *)pgsub->valc, "data/defFullP1FlatMK.fits" );
-         *(double *)pgsub->vald = 0.0;
-         *(double *)pgsub->vale = 39.5;
-         *(double *)pgsub->valf = 39.5;
-         *(double *)pgsub->valg = 0.0;
-         strcpy ( (char *)pgsub->valh, "data/defFullRefP1.dat" );
-         strcpy ( (char *)pgsub->vali, "data/defIntMatP1MK.dat" );
-         strcpy ( (char *)pgsub->valj, "data/defContMatP1MK.dat" );
-         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1MK.dat" );*/
 
          *(long *)pgsub->valu = 0; /* no binning: 0 */
       }
@@ -18598,8 +19355,8 @@ STATUS detInitSigInit
          strcat ( aoInitFileName , defFileName ) ;
 
          if ( aoCtrlFileRead ( aoInitFileName, path, darkFileName, flatFileName,
-                               refFileName, &refX, &refY, imFileName, 
-                               cmFileName, fgCmFileName, &thresh,
+                               refFileName, &refX, &refY, aoImFileName, 
+                               aoCmFileName, fgCmFileName, &rms, &thresh,
                                &totalThresh, &angleM2, &angleM1) == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
@@ -18614,21 +19371,9 @@ STATUS detInitSigInit
          *(double *)pgsub->valf = refY;
          *(double *)pgsub->valg = angleM1;
          strcpy ( (char *)pgsub->valh, refFileName );
-         strcpy ( (char *)pgsub->vali, imFileName );
-         strcpy ( (char *)pgsub->valj, cmFileName );
+         strcpy ( (char *)pgsub->vali, aoImFileName );
+         strcpy ( (char *)pgsub->valj, aoCmFileName );
          strcpy ( (char *)pgsub->valk, fgCmFileName );
-
-         /*strcpy ( (char *)pgsub->vala, "." );
-         strcpy ( (char *)pgsub->valb, "data/defBinP1DarkMK.fits" );
-         strcpy ( (char *)pgsub->valc, "data/defBinP1FlatMK.fits" );
-         *(double *)pgsub->vald = 0.0;
-         *(double *)pgsub->vale = 18.5;
-         *(double *)pgsub->valf = 18.5;
-         *(double *)pgsub->valg = 0.0;
-         strcpy ( (char *)pgsub->valh, "data/defBinRefP1.dat" );
-         strcpy ( (char *)pgsub->vali, "data/defIntMatP1MK.dat" );
-         strcpy ( (char *)pgsub->valj, "data/defContMatP1MK.dat" );*/
-         strcpy ( (char *)pgsub->valk, "data/defFgContMatP1MK.dat" );
 
          *(long *)pgsub->valu = 1; /* binning: 1 */
       }
@@ -18647,23 +19392,22 @@ STATUS detInitSigInit
 
 /*+
  *   FUNCTION NAME:
- *   detSigInitBW
+ *   detSigInitBw
  *
  *   INVOCATION:
- *   detSigInitBW (cadCmdContext, commandNumber, sdsuId, obsId, aoCtrlId)
+ *   detSigInitBw (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
  *   (>) commandNumber (int)             Command number
  *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
  *   (>) obsId         (OBS_ID)          Observation context structure
- *   (!) aoCtrlId      (AO_CTRL_ID)      AO control context structure
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigInitBW command
+ *   Execute detSigInitBw command
  *
  *   DESCRIPTION:
  *   This function updates the butterworth filter cutoff frequency
@@ -18683,19 +19427,18 @@ STATUS detInitSigInit
  *-
  */
 
-uint32 detSigInitBW
+uint32 detSigInitBw
    (
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
    SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId,         /* Observation context structure.           */
-   AO_CTRL_ID      aoCtrlId       /* AO control context structure.            */
+   OBS_ID          obsId          /* Observation context structure.           */
    )
 {
    uint32       errorNumber;      /* Error number reported by task.           */
 
-   double       cutoffFreq;
-   double       rateSampFreq;
+   double       cutoffFreqTT;
+   double       cutoffFreqFoc;
 
    /*
     * Initialise the error number and get the attributes provided with this
@@ -18703,8 +19446,10 @@ uint32 detSigInitBW
     */
 
    errorNumber = 0;
-   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, 
-                          (char *)&rateSampFreq);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                          (char *)&cutoffFreqTT);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
+                          (char *)&cutoffFreqFoc);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -18728,32 +19473,33 @@ uint32 detSigInitBW
    }
 #endif
 
-   if ( aoCtrlId == NULL )
-   {
-      ERROR_SET (S_detControl_INTERNAL,
-                 "AO control context not initialised",
-                 ERROR_LOG_NOW);
-      errorNumber = S_detControl_INTERNAL;
-      return (errorNumber);
-   };
-
    /*
     * Compute the new coefficients for the Butterworth filter 
     */
 
-   rateSampFreq = rateSampFreq / 100.0;
-   obsId->rateSamplingFrequency = rateSampFreq;
-   cutoffFreq = rateSampFreq / obsId->exposureTime;
-   obsId->cutoffFrequency = cutoffFreq;
+   obsId->cutoffFrequencyTipTilt = cutoffFreqTT;
+   obsId->cutoffFrequencyFocus = cutoffFreqFoc;
 
-   if ( detComputeCoeffButterworth ( obsId->exposureTime, cutoffFreq, 
-                                     coeffData ) == ERROR )
+   if ( detComputeCoeffButterworth ( obsId->exposureTime, &cutoffFreqTT,
+                                     &cutoffFreqFoc ) == ERROR )
    {
       ERROR_SET (S_detControl_INTERNAL,
-                 "Failed to init butterworth coeff filter",
+                 "Failed to init butterworth coeff filters",
                  ERROR_LOG_NOW);
       errorNumber = S_detControl_INTERNAL;
       return (errorNumber);
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyTipTilt),
+                        obsId->pCfTipTiltBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW TT cutoff frequency SIR record");
+   }
+
+   if (epToVxPipeWrite( NULL, (char *)(int)&(obsId->cutoffFrequencyFocus),
+                        obsId->pCfFocusBwContext ) == ERROR)
+   {
+      ERROR_LOG ("Failed to set the BW focus cutoff frequency SIR record");
    }
 
    return (errorNumber);
@@ -18766,12 +19512,14 @@ uint32 detSigInitBW
  *   detComputeCoeffButterworth
  *
  *   INVOCATION:
- *   detComputeCoeffButterworth (expTime, cutoffFreq, pCoeffData)
+ *   detComputeCoeffButterworth (expTime, pCutoffFreqTT, pCutoffFreqFoc)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) expTime    (double)   Exposure time in sec
- *   (>) cutoffFreq (double)   Cutoff frequency of the butterworth filter in Hz
- *   (>) pCoeffData (double *) Coeffcients of the butterworth filter
+ *   (>) pCutoffFreqTT  (double *)  Cutoff frequency of the TT butterworth
+ *                                  filter in Hz
+ *   (>) pCutoffFreqFoc (double *)  Cutoff frequency of the focus butterworth
+ *                                  filter in Hz
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -18780,11 +19528,11 @@ uint32 detSigInitBW
  *   Execute detComputeCoeffButterworth command
  *
  *   DESCRIPTION:
- *   This function computes the coefficients of the butterworth filter used for 
- *   probe arm guiding
+ *   This function computes the coefficients of the butterworth filters used
+ *   for probe arm guiding and focus correction
  *
  *   EXTERNAL VARIABLES:
- *   None. (The function needs to be reentrant)
+ *   coeffData[5][3]
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -18800,39 +19548,51 @@ uint32 detSigInitBW
 uint32 detComputeCoeffButterworth
    (
    double     expTime,
-   double     cutoffFreq,
-   double   * pCoeffData
+   double   * pCutoffFreqTT,
+   double   * pCutoffFreqFoc
    )
 {
    int        i;
 
-   double     threshFreq;
+   double     threshFreqTT;
+   double     threshFreqFoc;
    double     dt;
    double     omega0;
    double     denom;
    double     coeff[5];
 
    /*
-    * The cutoff frequency should be maximum 1/10 of the sampling frequency.
-    * The sampling frequency = 1 / exposure time.
+    * Check the cutoff frequencies
     */
-   
-   threshFreq = 1.0 / (expTime * 10.0);
 
-   if ( cutoffFreq > threshFreq )
+   printf ( "detComputeCoeffButterworth: cutoff freq TT=%f, Foc=%f\n",
+            *pCutoffFreqTT, *pCutoffFreqFoc);
+
+   threshFreqTT = 20.0;      /* 20Hz */
+   threshFreqFoc = 0.1;      /* 0.1Hz -> 10s */
+
+   if ( *pCutoffFreqTT > threshFreqTT )
    {
-      cutoffFreq = threshFreq;
+      *pCutoffFreqTT = threshFreqTT;
 /*#ifdef DEBUG*/
-      printf ( "cutoffFreq = threshFreq = %f\n", threshFreq);
+      printf ( "*pCutoffFreqTT = threshFreqTT = %f\n", threshFreqTT);
+/*#endif*/
+   }
+
+   if ( *pCutoffFreqFoc > threshFreqFoc )
+   {
+      *pCutoffFreqFoc = threshFreqFoc;
+/*#ifdef DEBUG*/
+      printf ( "*pCutoffFreqFoc = threshFreqFoc = %f\n", threshFreqFoc);
 /*#endif*/
    }
 
    /*
-    * Now compute the coefficents 
+    * Now compute the coefficents for the TT filter
     */
 
    dt = expTime;
-   omega0 = 2 * PI * cutoffFreq;
+   omega0 = 2 * PI * *pCutoffFreqTT;
    denom = dt*dt*omega0*omega0 + sqrt(8.0)*dt*omega0 + 4.0;
 
    coeff[0] = (8.0 - 2.0*dt*dt*omega0*omega0)/denom;
@@ -18843,15 +19603,46 @@ uint32 detComputeCoeffButterworth
 
 /*#ifdef DEBUG*/
    for ( i = 0 ; i < 5 ; i ++ )
-      printf ( "coeff[%d]=%f\n", i, coeff[i] );
+      printf ( "coeff for TT [%d]=%f\n", i, coeff[i] );
 /*#endif*/
 
    /*
-    * Update the butterworth coefficients
+    * Update the TT butterworth coefficients
     */
 
    for ( i = 0 ; i < 5 ; i ++ )
-       *(pCoeffData + i) = coeff[i];
+   {
+       coeffData[i][0] = coeff[i];
+       coeffData[i][1] = coeff[i];
+   }
+
+   /*
+    * Now compute the coefficents for the Focus filter
+    */
+
+   dt = expTime;
+   omega0 = 2 * PI * *pCutoffFreqFoc;
+   denom = dt*dt*omega0*omega0 + sqrt(8.0)*dt*omega0 + 4.0;
+
+   coeff[0] = (8.0 - 2.0*dt*dt*omega0*omega0)/denom;
+   coeff[1] = (sqrt(8.0)*dt*omega0 - dt*dt*omega0*omega0 - 4.0)/denom;
+   coeff[2] = dt*dt*omega0*omega0/denom;
+   coeff[3] = 2.0 * coeff[2];
+   coeff[4] = coeff[2];
+
+/*#ifdef DEBUG*/
+   for ( i = 0 ; i < 5 ; i ++ )
+      printf ( "coeff for Focus [%d]=%f\n", i, coeff[i] );
+/*#endif*/
+
+   /*
+    * Update the focus butterworth coefficients
+    */
+
+   for ( i = 0 ; i < 5 ; i ++ )
+   {
+       coeffData[i][2] = coeff[i];
+   }
 
    return ( OK );
 }
@@ -18907,6 +19698,7 @@ uint32 detSigReset
    )
 {
    uint32       errorNumber;    /* Error number reported by task.             */
+   long         k;              /* Index                                      */
    long         sigMode;        /* Signal processing mode.                    */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
@@ -18968,7 +19760,7 @@ uint32 detSigReset
                         obsId->pAoProcessModeContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
    }
 
    /* Init the fields of the observe CAD record */
@@ -18983,20 +19775,26 @@ uint32 detSigReset
    if ( detInitObserveRecord (pRecordPrefix, &nExp, &expTime, &outOption) ==
         ERROR )
    {
-      ERROR_LOG ( "Failed to initialise fields of observe record");
+      ERROR_LOG ( "Failed to init fields of observe record");
    }
 
    /*
     * Reset the thresholds 
     */
 
-   obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
+   else
+      obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
+
+   for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+       obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
 
    if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                         obsId->pAoThreshContext) == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOTHRESH_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_THRESH_SIR_NAME record");
    }
 
    obsId->aoCtrlId->totalThreshold = 0.0;
@@ -19004,7 +19802,7 @@ uint32 detSigReset
    if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->totalThreshold),
                         obsId->pAoTotalContext) == ERROR)
    {
-      ERROR_LOG ("Failed to init DET_CONTROL_AOTOTAL_SIR_NAME record");
+      ERROR_LOG ("Failed to init DET_CONTROL_AO_TOTAL_SIR_NAME record");
    }
 
    /* 
@@ -19012,25 +19810,25 @@ uint32 detSigReset
     */
 
    obsId->saveCbIm = FALSE;
-   obsId->saveCbCtrl = FALSE;
+   obsId->saveCbAoCtrl = FALSE;
    obsId->saveCbFgCtrl = FALSE;
 
    if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbImContext) == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOSAVECBIM_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME record");
    }
 
-   if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbCtrlContext) == ERROR)
+   if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbAoCtrlContext) == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME record");
    }
 
    if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbFgCtrlContext) == ERROR)
    {
       ERROR_LOG (
-            "Failed to initialise DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME record");
+            "Failed to init DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME record");
    }
 
    /* Initialise the coadd counter used to decide when to save coadded data
@@ -19039,10 +19837,12 @@ uint32 detSigReset
 
    obsId->saveCentroids = FALSE;
    obsId->coaddCounter = 0;
-   obsId->saveCbCounter = 0;
+   obsId->saveAoCbCounter = 0;
    obsId->saveFgCbCounter = 0;
    obsId->averageRms = 0.0;
+   obsId->averageMean = 0.0;
    obsId->averageFlux = 0.0;
+   obsId->threshRealTimeFlag = FALSE;
 
    return (errorNumber);
 }
@@ -19514,6 +20314,7 @@ uint32 detContInit
    printf ( "detContInit(): CCD serial number: %s\n", pCcdSn );
 #endif
 
+   fclose (pFile);
    return (OK);
 }
 
@@ -19657,135 +20458,215 @@ uint32 detGetSirContext
    /* Get the context of the "aoCtrlInit" sir record */
    
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOCTRLINIT_SIR_NAME);
+            DET_CONTROL_AO_CTRL_INIT_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoCtrlInitContext), NULL) 
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOCTRLINIT_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_CTRL_INIT_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoDarkInit" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AODARKINIT_SIR_NAME);
+            DET_CONTROL_AO_DARK_INIT_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoDarkInitContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AODARKINIT_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_DARK_INIT_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoFlatInit" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOFLATINIT_SIR_NAME);
+            DET_CONTROL_AO_FLAT_INIT_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoFlatInitContext), NULL) 
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOFLATINIT_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_FLAT_INIT_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoIntMatInit" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOINTMATINIT_SIR_NAME);
+            DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoIntMatInitContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOINTMATINIT_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoContMatInit" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOCONTMATINIT_SIR_NAME);
+            DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoContMatInitContext), NULL)
        == ERROR)
    {
       ERROR_LOG (
-           "Failed to get DET_CONTROL_AOCONTMATINIT_SIR_NAME SIR context");
+           "Failed to get DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoFgContMatInit" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOFGCONTMATINIT_SIR_NAME);
-   if (epToVxRecContextGet (pRecordName, & (obsId->pAoFgContMatInitContext), 
+            DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgContMatInitContext), 
                             NULL) == ERROR)
    {
       ERROR_LOG (
-           "Failed to get DET_CONTROL_AOFGCONTMATINIT_SIR_NAME SIR context");
+           "Failed to get DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME SIR context");
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "aoRms" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_AO_RMS_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pAoRmsContext), NULL)
+       == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_RMS_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoThresh" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOTHRESH_SIR_NAME);
+            DET_CONTROL_AO_THRESH_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoThreshContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOTHRESH_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_THRESH_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoTotal" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOTOTAL_SIR_NAME);
+            DET_CONTROL_AO_TOTAL_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoTotalContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOTOTAL_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_TOTAL_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoSaveCbIm" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOSAVECBIM_SIR_NAME);
+            DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoSaveCbImContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOSAVECBIM_SIR_NAME SIR context");
+      ERROR_LOG (
+      "Failed to get DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
-   /* Get the context of the "aoSaveCbCtrl" sir record */
+   /* Get the context of the "aoSaveCbAoCtrl" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOSAVECBCTRL_SIR_NAME);
-   if (epToVxRecContextGet (pRecordName, & (obsId->pAoSaveCbCtrlContext), NULL)
+            DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pAoSaveCbAoCtrlContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOSAVECBCTRL_SIR_NAME SIR context");
+      ERROR_LOG (
+      "Failed to get DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoSaveCbFgCtrl" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME);
+            DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoSaveCbFgCtrlContext),
                             NULL) == ERROR)
    {
       ERROR_LOG (
-            "Failed to get DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME SIR context");
+      "Failed to get DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "aoProcessMode" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_AOPROCESSMODE_SIR_NAME);
+            DET_CONTROL_AO_PROCESS_MODE_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pAoProcessModeContext), 
                             NULL) == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_AOPROCESSMODE_SIR_NAME context") ;
+      ERROR_LOG ("Failed to get DET_CONTROL_AO_PROCESS_MODE_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgTipGain" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_TIP_GAIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgTipGainContext),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_FG_TIP_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgTiltGain" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_TILT_GAIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgTiltGainContext),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_FG_TILT_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgFocusGain" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgFocusGainContext),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgFocusGain100" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgFocusGain100Context),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to get DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "cfFocusBw" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_CF_FOCUS_BW_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pCfFocusBwContext),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_CF_FOCUS_BW_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "cfTipTiltBw" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_CF_TT_BW_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pCfTipTiltBwContext),
+                            NULL) == ERROR)
+   {
+      ERROR_LOG ("Failed to get DET_CONTROL_CF_TT_BW_SIR_NAME context") ;
       errorNumber = ERROR;
    }
 
@@ -19935,44 +20816,44 @@ uint32 detGetSirContext
    /* Get the context of the "detType" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_DETTYPE_SIR_NAME);
+            DET_CONTROL_DET_TYPE_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pDetTypeContext), NULL) == 
        ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_DETTYPE_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_DET_TYPE_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "detID" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_DETID_SIR_NAME);
+            DET_CONTROL_DET_ID_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pDetIdContext), NULL) == 
        ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_DETID_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_DET_ID_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "dataLabel" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_DATALABEL_SIR_NAME);
+            DET_CONTROL_DATA_LABEL_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pDataLabelContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_DATALABEL_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_DATA_LABEL_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
    /* Get the context of the "intTime" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_INTTIME_SIR_NAME);
+            DET_CONTROL_INT_TIME_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pIntTimeContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_INTTIME_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_INT_TIME_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
@@ -20078,11 +20959,11 @@ uint32 detGetSirContext
    /* Get the context of the "dhsCon" sir record */
 
    sprintf (pRecordName, "%s:%s", pRecordPrefix,
-            DET_CONTROL_DHSCON_SIR_NAME);
+            DET_CONTROL_DHS_CON_SIR_NAME);
    if (epToVxRecContextGet (pRecordName, & (obsId->pDhsConContext), NULL)
        == ERROR)
    {
-      ERROR_LOG ("Failed to get DET_CONTROL_DHSCON_SIR_NAME SIR context");
+      ERROR_LOG ("Failed to get DET_CONTROL_DHS_CON_SIR_NAME SIR context");
       errorNumber = ERROR;
    }
 
@@ -20185,7 +21066,7 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_TEST_RESULTS_SIR_NAME record");
+      "Failed to init DET_CONTROL_TEST_RESULTS_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -20195,7 +21076,7 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCTRLINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CTRL_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -20205,7 +21086,7 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AODARKINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_DARK_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -20215,7 +21096,7 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_FLAT_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -20225,7 +21106,7 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOINTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -20235,21 +21116,21 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
    /* Init the "aoFgContMatInit" sir record */
 
-   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pAoFgContMatInitContext)
+   if (epToVxPipeWrite (NULL, "Not initialized", obsId->pFgContMatInitContext)
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOFGCONTMATINIT_SIR_NAME record");
+      "Failed to init DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME record");
       errorNumber = ERROR;
    }
 
-   /* Init aoSaveCbIm, aoSaveCbCtrl and aoSaveCbFgCtrl sir records -
+   /* Init aoSaveCbIm, aoSaveCbAoCtrl and aoSaveCbFgCtrl sir records -
       all of them FALSE when booting*/
 
    if ( obsId->saveCbIm == TRUE )
@@ -20258,7 +21139,7 @@ uint32 detWriteDefSirContext
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBIM_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
@@ -20268,28 +21149,28 @@ uint32 detWriteDefSirContext
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBIM_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
 
-   if ( obsId->saveCbCtrl == TRUE )
+   if ( obsId->saveCbAoCtrl == TRUE )
    {
-      if (epToVxPipeWrite (NULL, "TRUE", obsId->pAoSaveCbCtrlContext)
+      if (epToVxPipeWrite (NULL, "TRUE", obsId->pAoSaveCbAoCtrlContext)
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
    else
    {
-      if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbCtrlContext)
+      if (epToVxPipeWrite (NULL, "FALSE", obsId->pAoSaveCbAoCtrlContext)
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
@@ -20300,7 +21181,7 @@ uint32 detWriteDefSirContext
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
@@ -20310,7 +21191,7 @@ uint32 detWriteDefSirContext
           == ERROR)
       {
          ERROR_LOG (
-         "Failed to initialise DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME record");
+         "Failed to init DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME record");
          errorNumber = ERROR;
       }
    }
@@ -20321,7 +21202,7 @@ uint32 detWriteDefSirContext
        == ERROR)
    {
       ERROR_LOG (
-      "Failed to initialise DET_CONTROL_AOPROCESSMODE_SIR_NAME record");
+      "Failed to init DET_CONTROL_AO_PROCESS_MODE_SIR_NAME record");
       errorNumber = ERROR;
    }
 
@@ -21486,5 +22367,174 @@ STATUS detInitSigInitModFoc
       *(long *)pgsub->valf = apply;
    }
 
+   return (OK) ;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitBwDef
+ *
+ *   INVOCATION:
+ *   detInitBwDef (pInitFileName, pCfTipTiltBw, pCfFocusBw)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) pInitFileName   (char *)   Init file Name
+ *   (>) pCfTipTiltBw    (double *) Tip tilt butterworth cutoff frequency
+ *   (>) pCfFocusBw      (double *) Focus butterworth cutoff frequency
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Init defaults values for the butterworth filters
+ *
+ *   DESCRIPTION:
+ *   Init default values for the cutoff frequencies for the butterworth filters
+ *   from a init file pInitFileName
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The pInitFileName is the full name of the file including the path.
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+
+uint32 detInitBwDef
+   (
+   char *   pInitFileName,         /* Init file Name                         */
+   double * pCfTipTiltBw,          /* Tip tilt butterworth cutoff frequency  */
+   double * pCfFocusBw             /* Focus butterworth cutoff frequency     */
+   )
+{
+   FILE *       pFile;
+   char         comment [STRING_SIZE];
+   float        freq;
+
+   /* Open the file in read mode */
+
+   pFile = fopen ( pInitFileName, "r" );
+
+   if ( pFile == (FILE *)NULL )
+   {
+      printf ( "Failed to open the Butterworth filter init file %s",
+               pInitFileName );
+      ERROR_SET1 ( 0, "Failed to open the Butterworth filter init file %s",
+                   ERROR_LOG_SAVE, pInitFileName );
+      return (ERROR);
+   }
+
+   /* Read the first line: should be a comment line */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read first line of comments from the BW init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): first line of comments:\n" );
+   printf ( "%s\n" , comment );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the BW init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): %s\n", comment );
+#endif
+
+   /* Read the default tip tilt cutoff frequency */
+
+   if ( (fscanf (pFile, "%f\n", &freq)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the tip-tilt cutoff frequency from the BW init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( freq > 20.0 )
+   {
+      ERROR_SET ( 0,
+                  "Focus cutoff frequency should be smaller than 20Hz",
+                  ERROR_LOG_SAVE);
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pCfTipTiltBw = (double)freq;
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): tip-tilt cutoff frequency = %f\n",
+            (float)*pCfTipTiltBw );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the BW init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): %s\n", comment );
+#endif
+
+   /* Read the default focus cutoff frequency */
+
+   if ( (fscanf (pFile, "%f\n", &freq)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the focus cutoff frequency from the BW init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   if ( freq > 0.1 )
+   {
+      ERROR_SET ( 0,
+                  "Focus cutoff frequency should be smaller than 0.1Hz",
+                  ERROR_LOG_SAVE);
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *pCfFocusBw = (double)freq;
+
+#ifdef DEBUG
+   printf ( "detInitBwDef(): focus cutoff frequency = %f\n",
+            (float)*pCfFocusBw );
+#endif
+
+   /* Close the file and return */
+
+   fclose (pFile);
    return (OK) ;
 }

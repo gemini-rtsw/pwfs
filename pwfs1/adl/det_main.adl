@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="7"
-	nstr="106"
+	nstr="105"
 	ndynamic="3"
 	nplot="0"
 	nrd="7"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3116"
+	nwords_dspy="3078"
 	nwords_sta="92"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1786"
-	osta="1694"
-	odynamic="1786"
-	oplot="1984"
-	ord="1984"
-	oes="3104"
-	okd="3104"
-	opd="3116"
-	opo="3116"
+	odyng="1748"
+	osta="1656"
+	odynamic="1748"
+	oplot="1946"
+	ord="1946"
+	oes="3066"
+	okd="3066"
+	opd="3078"
+	opo="3078"
 	opc="68"
 	ostr="158"
-	ocmap="1694"
-	ocrules="1694"
+	ocmap="1656"
+	ocrules="1656"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -429,17 +429,17 @@ display {
 	selfkill="off"
 	display[0] {
 		label="SET FRAME SIZE"
-		name="det_frameSize.dl"
+		name="detFrameSize.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detFrameSize,car=det"
 	}
 	display[1] {
 		label="SET OBSERVATION TYPE"
-		name="det_obstype.dl"
+		name="detObstype.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detObstype,car=det"
 	}
 	display[2] {
 		label="SET WCS CALIBRATION"
-		name="det_setwcs.dl"
+		name="detSetWcs.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detSetWcs,car=det"
 	}
 	display[3] {
@@ -697,27 +697,27 @@ display {
 	selfkill="off"
 	display[0] {
 		label="READOUT GEOMETRY"
-		name="det_setGeom.dl"
+		name="detGeometry.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detGeometry,car=det"
 	}
 	display[1] {
 		label="READOUT MODE"
-		name="det_setMode.dl"
+		name="detMode.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detMode,car=det"
 	}
 	display[2] {
 		label="ADC OFFSETS"
-		name="det_setOffsets.dl"
+		name="detOffset.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detOffset,car=det"
 	}
 	display[3] {
 		label="PRIMITIVE COMMAND"
-		name="det_primitive.dl"
+		name="detPrim.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detPrim,car=det"
 	}
 	display[4] {
 		label="SAVE PARAMETERS"
-		name="det_save.dl"
+		name="detSave.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detSave,car=det"
 	}
 	display[5] {
@@ -965,7 +965,7 @@ display {
 	selfkill="off"
 	display[0] {
 		label="SET TEMPERATURE"
-		name="det_setTemp.dl"
+		name="detTemp.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detTemp,car=det"
 	}
 	display[1] {
@@ -1099,12 +1099,12 @@ display {
 	selfkill="off"
 	display[0] {
 		label="CONNECT DHS"
-		name="det_DhsReconnect.dl"
+		name="detDhsReconnect.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detDhsReconnect,car=det"
 	}
 	display[1] {
 		label="DISPLAY DHS"
-		name="det_DhsDisplay.dl"
+		name="detDhsDisplay.dl"
 		args="top=$(top)$(wfs),sensor=$(sensor),cad=detDhsDisplay,car=det"
 	}
 	display[2] {

@@ -1,0 +1,520 @@
+file {
+	name="showGain.dl"
+}
+display {
+	magic="305419896"
+	majv="2"
+	mnrv="4"
+	ndyng="0"
+	npc="7"
+	nstr="38"
+	ndynamic="6"
+	nplot="0"
+	nrd="0"
+	nes="0"
+	nkd="1"
+	npd="0"
+	npo="0"
+	object {
+		x="328"
+		y="298"
+		width="771"
+		height="273"
+	}
+	clr="1"
+	bclr="13"
+	nwords_dspy="1244"
+	nwords_sta="364"
+	nwords_cmap="0"
+	nwords_crules="0"
+	odyng="836"
+	osta="472"
+	odynamic="836"
+	oplot="1232"
+	ord="1232"
+	oes="1232"
+	okd="1232"
+	opd="1244"
+	opo="1244"
+	opc="68"
+	ostr="146"
+	ocmap="472"
+	ocrules="472"
+	style="solid"
+	fill="outline"
+	width="0"
+	clrmod="static"
+	vismod="static"
+	precision="-1"
+	clrrule="alarm"
+	pv=""
+	cmap="colors.dl"
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
+}
+"<<basic attribute>>" {
+	attr {
+		clr="12"
+		style="solid"
+		fill="outline"
+		width="0"
+	}
+}
+"text" {
+	object {
+		x="11"
+		y="10"
+		width="720"
+		height="25"
+		groupid="0"
+	}
+	textix="$(sensor) - GAINS and BUTTERWORTH FILTERS"
+	align="horiz. left"
+}
+"rectangle" {
+	object {
+		x="11"
+		y="46"
+		width="753"
+		height="216"
+		groupid="0"
+	}
+}
+"text" {
+	object {
+		x="19"
+		y="101"
+		width="105"
+		height="14"
+		groupid="0"
+	}
+	textix="Tip gain .:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="19"
+		y="133"
+		width="106"
+		height="16"
+		groupid="0"
+	}
+	textix="Tilt gain:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="83"
+		y="170"
+		width="112"
+		height="15"
+		groupid="0"
+	}
+	textix="Focus gain:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="319"
+		y="102"
+		width="239"
+		height="13"
+		groupid="0"
+	}
+	textix="Tip tilt cutoff frequency:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="319"
+		y="136"
+		width="237"
+		height="13"
+		groupid="0"
+	}
+	textix="Focus cutoff frequency ..:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="721"
+		y="101"
+		width="34"
+		height="14"
+		groupid="0"
+	}
+	textix="Hz"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="303"
+		y="46"
+		width="0"
+		height="215"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="303"
+		y="46"
+	}
+	point[1] {
+		x="303"
+		y="261"
+	}
+	orgpoint[0] {
+		x="-1"
+		y="0"
+	}
+	orgpoint[1] {
+		x="-1"
+		y="1000"
+	}
+}
+"text" {
+	object {
+		x="20"
+		y="54"
+		width="172"
+		height="23"
+		groupid="0"
+	}
+	textix="FG GAINS"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="319"
+		y="51"
+		width="260"
+		height="23"
+		groupid="0"
+	}
+	textix="BUTTERWORTH FILTERS"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="720"
+		y="135"
+		width="34"
+		height="14"
+		groupid="0"
+	}
+	textix="Hz"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="19"
+		y="233"
+		width="112"
+		height="15"
+		groupid="0"
+	}
+	textix="at 100Hz:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="19"
+		y="203"
+		width="112"
+		height="15"
+		groupid="0"
+	}
+	textix="current:"
+	align="horiz. left"
+}
+"text update" {
+	object {
+		x="126"
+		y="98"
+		width="150"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)fgTipGain"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="5"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="126"
+		y="131"
+		width="150"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)fgTiltGain"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="5"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="126"
+		y="199"
+		width="150"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)fgFocusGain"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="5"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="558"
+		y="98"
+		width="150"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)cfTipTiltBw"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="5"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="557"
+		y="131"
+		width="150"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)cfFocusBw"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="5"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="126"
+		y="230"
+		width="150"
+		height="21"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)fgFocusGain100"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="alarm"
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="5"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"kill display" {
+	object {
+		x="692"
+		y="10"
+		width="70"
+		height="23"
+		groupid="0"
+	}
+	label="EXIT"
+	clr="1"
+	bclr="9"
+	decorate="none"
+}

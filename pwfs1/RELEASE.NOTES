@@ -207,4 +207,20 @@ V4-0 27 March 2002 CB:
     EEPROMs
   - remove from the user interface the detReset command
 
-dev-eeprom equivalent to V4-0
+V4-1 04 June 2002 CB:
+---------------------
+  - implement threshold in real time and per sub-aperture
+  - detInit: init geometry SIR records
+  - aoP1Lib.c: aoTotalThresholdCompute(): comment out ERROR_SET if N>2
+  - add bancom card status in main screen
+  - aoThresholdCompute() and aoThresholdPerSubapCompute(): background now
+    computed between index1 and index2
+  - if writeWfsToSynchro(): replace the running average for the focus by a
+    second order butterworth filter if RUNNING_AVERAGE is not defined
+  - add fgTipGain, fgTiltGain, fgFocusGain, cfTipTiltBw, cfFocusBw SIR records
+  - split butterwoth filter in two one for probe arme guiding (TT only) and the
+    second one for focus M2 guiding
+  - adjust focus scale factor according to the exposure time, detSigInitFgGain
+    and updates the default focus gain at 100Hz when no observing
+
+dev equivalent to V4-1

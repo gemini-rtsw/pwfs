@@ -13,8 +13,11 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   23 May 2002: CB - Add fgFocusGain100, fgTipGain, fgTiltGain, fgFocusGain, 
+ *                     cfFocusBw, cfTipTiltBw sir records
+ *   28 Mar 2002: CB - Implement threshold in real time and per sub-aperture
  *   20 Mar 2002: CB - Major modification to download the code from EEPROMS
- *   09 Jan 2001: CB - Add detPowerOn
+ *   09 Jan 2002: CB - Add detPowerOn
  *   21 Dec 2001: CB - add automatic init of zero point models from par file
  *   06 Jun 2001: CB - add detSigInitModFoc
  *   29 May 2001: CB - add detSigInitModComa
@@ -104,55 +107,85 @@
                                     /* Name of SIR record containing          */
                                     /* measuring state                        */
 
-#define   DET_CONTROL_AOCTRLINIT_SIR_NAME     "aoCtrlInit"
+#define   DET_CONTROL_AO_CTRL_INIT_SIR_NAME   "aoCtrlInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the AO control context        */
                                     /* structure                              */
 
-#define   DET_CONTROL_AODARKINIT_SIR_NAME     "aoDarkInit"
+#define   DET_CONTROL_AO_DARK_INIT_SIR_NAME   "aoDarkInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the dark buffer               */
 
-#define   DET_CONTROL_AOFLATINIT_SIR_NAME     "aoFlatInit"
+#define   DET_CONTROL_AO_FLAT_INIT_SIR_NAME   "aoFlatInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the flat buffer               */
 
-#define   DET_CONTROL_AOINTMATINIT_SIR_NAME   "aoIntMatInit"
+#define   DET_CONTROL_AO_INT_MAT_INIT_SIR_NAME   "aoIntMatInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the interaction matrix        */
 
-#define   DET_CONTROL_AOCONTMATINIT_SIR_NAME  "aoContMatInit"
+#define   DET_CONTROL_AO_CONT_MAT_INIT_SIR_NAME  "aoContMatInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the control matrix            */
 
-#define   DET_CONTROL_AOFGCONTMATINIT_SIR_NAME "aoFgContMatInit"
+#define   DET_CONTROL_FG_CONT_MAT_INIT_SIR_NAME  "fgContMatInit"
                                     /* Name of SIR record containing the init */
                                     /* state of the theoretical FG control    */
                                     /* matrix                                 */
 
-#define   DET_CONTROL_AOTHRESH_SIR_NAME       "aoThresh"
+#define   DET_CONTROL_AO_RMS_SIR_NAME         "aoRms"
+                                    /* Name of SIR record containing the RMS  */
+                                    /* for threshold computation              */
+
+#define   DET_CONTROL_AO_THRESH_SIR_NAME      "aoThresh"
                                     /* Name of SIR record containing the      */
                                     /* threshold for centroids computation    */
 
-#define   DET_CONTROL_AOTOTAL_SIR_NAME        "aoTotal"
+#define   DET_CONTROL_AO_TOTAL_SIR_NAME       "aoTotal"
                                     /* Name of SIR record containing the      */
                                     /* flux threshold for centroids comp.     */
 
-#define   DET_CONTROL_AOSAVECBIM_SIR_NAME     "aoSaveCbIm"
+#define   DET_CONTROL_AO_SAVE_CB_IM_SIR_NAME  "aoSaveCbIm"
                                     /* Name of SIR record containing the      */
                                     /* ao Save Image CB Flag                  */
 
-#define   DET_CONTROL_AOSAVECBCTRL_SIR_NAME   "aoSaveCbCtrl"
+#define   DET_CONTROL_AO_SAVE_CB_AO_CTRL_SIR_NAME   "aoSaveCbAoCtrl"
                                     /* Name of SIR record containing the      */
                                     /* ao Save Control CB Flag                */
 
-#define   DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME "aoSaveCbFgCtrl"
+#define   DET_CONTROL_AO_SAVE_CB_FG_CTRL_SIR_NAME   "aoSaveCbFgCtrl"
                                     /* Name of SIR record containing the      */
                                     /* ao Save FG Control CB Flag             */
 
-#define   DET_CONTROL_AOPROCESSMODE_SIR_NAME  "aoProcessMode"
+#define   DET_CONTROL_AO_PROCESS_MODE_SIR_NAME      "aoProcessMode"
                                     /* Name of SIR record containing the      */
                                     /* processing mode                        */
+
+#define   DET_CONTROL_FG_TIP_GAIN_SIR_NAME    "fgTipGain"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Tip gain                            */
+
+#define   DET_CONTROL_FG_TILT_GAIN_SIR_NAME    "fgTiltGain"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Tilt gain                           */
+
+#define   DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME   "fgFocusGain"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Focus gain                          */
+
+#define   DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME   "fgFocusGain100"
+                                    /* Name of SIR record containing the      */
+                                    /* FG Focus gain at 100Hz                 */
+
+#define   DET_CONTROL_CF_FOCUS_BW_SIR_NAME    "cfFocusBw"
+                                    /* Name of SIR record containing the      */
+                                    /* cutoff frequency of the Focus          */
+                                    /* butterworth filter                     */
+
+#define   DET_CONTROL_CF_TT_BW_SIR_NAME       "cfTipTiltBw"
+                                    /* Name of SIR record containing the      */
+                                    /* cutoff frequency of the tip tilt       */
+                                    /* butterworth filter                     */
 
 #define   DET_CONTROL_OUTPUTS_SIR_NAME        "outputs"
                                     /* Name of SIR record containing the      */
@@ -206,19 +239,19 @@
                                     /* Name of SIR record containing the Y    */
                                     /* binning factor                         */
 
-#define   DET_CONTROL_DETTYPE_SIR_NAME        "detType"
+#define   DET_CONTROL_DET_TYPE_SIR_NAME       "detType"
                                     /* Name of SIR record containing the type */
                                     /* of detector controller                 */
 
-#define   DET_CONTROL_DETID_SIR_NAME          "detID"
+#define   DET_CONTROL_DET_ID_SIR_NAME         "detID"
                                     /* Name of SIR record containing the SN of*/
                                     /* the CCD                                */
 
-#define   DET_CONTROL_DATALABEL_SIR_NAME      "dataLabel"
+#define   DET_CONTROL_DATA_LABEL_SIR_NAME     "dataLabel"
                                     /* Name of SIR record containing the most */
                                     /* recent DHS data label                  */
 
-#define   DET_CONTROL_INTTIME_SIR_NAME        "intTime"
+#define   DET_CONTROL_INT_TIME_SIR_NAME       "intTime"
                                     /* Name of SIR record containing the      */
                                     /* integration time                       */
 
@@ -258,7 +291,7 @@
                                     /* Name of SIR record containing the      */
                                     /* elapsed time                           */
 
-#define   DET_CONTROL_DHSCON_SIR_NAME         "dhsCon"
+#define   DET_CONTROL_DHS_CON_SIR_NAME        "dhsCon"
                                     /* Name of SIR record containing the      */
                                     /* status of the dhs connection           */
 
@@ -352,6 +385,17 @@
                                     /* for PWFS1. Set to "NONE" if no default */
                                     /* zero point models required             */
 
+#define DET_CONTROL_PWFS1_BW_MK_INIT_FILE             "defBwP1MK.dat"
+                                    /* Define the MK butterworth filter init  */
+                                    /* file for PWFS1. Set to "NONE" if no    */
+                                    /* butterworth filter required            */
+
+#define DET_CONTROL_PWFS1_BW_CP_INIT_FILE             "defBwP1CP.dat"
+                                    /* Define the CP butterworth filter init  */
+                                    /* file for PWFS1. Set to "NONE" if no    */
+                                    /* butterworth filter required            */
+
+
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
                                     /* Directory containing OMF files for the */
                                     /* DSP code                               */
@@ -443,13 +487,13 @@ typedef   struct      /* Context structure used to describe an observation.   */
    AO_CCD_ID    aoCcdId;   /* AO CCD geometry context structure               */
    AO_CTRL_ID   aoCtrlId;  /* AO control context structure                    */
    AO_CB_IM_ID  aoCbImId;  /* AO image circular buffer context structure      */
-   AO_CB_CTRL_ID aoCbCtrlId;
+   AO_CB_AO_CTRL_ID aoCbAoCtrlId;
                            /* aO control circular buffer context structure    */
    AO_CB_FG_CTRL_ID aoCbFgCtrlId;
                            /* FG control circular buffer context structure    */
    int          coaddCounter;
                            /* Counter of coadding images                      */
-   int          saveCbCounter;
+   int          saveAoCbCounter;
                            /* Counter of used in closed loop sequence to save */
                            /* the aO control circular buffer                  */
    int          saveFgCbCounter;
@@ -467,7 +511,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         nMode;     /* Mode number when computing a column of the      */
                            /* interaction matrix                              */
    long         saveCbIm;  /* Save the image circular buffer flag TRUE/FALSE. */
-   long         saveCbCtrl;/* Save the control circular buffer flag TRUE/FALSE*/
+   long         saveCbAoCtrl;
+                           /* Save the aO control CB flag TRUE/FALSE          */
    long         saveCbFgCtrl;
                            /* Save the FG control CB flag TRUE/FALSE          */
    long         sigMode;   /* Signal processing mode.                         */
@@ -484,30 +529,34 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         saveCbFgCtrlClosedLoopFrame;
                            /* Save FG control circular buffer during closed   */
                            /* loop sequence every this number of frames       */
-   long         saveCbCtrlClosedLoop;
+   long         saveCbAoCtrlClosedLoop;
                            /* Save aO control circular buffer during closed   */
                            /* loop sequence                                   */
-   long         saveCbCtrlClosedLoopFrame;
+   long         saveCbAoCtrlClosedLoopFrame;
                            /* Save aO control circular buffer during closed   */
                            /* loop sequence every this number of frames       */
-   long         fgFrame;   /* Number of frames with FG only over the whole CCD*/
+   long         ggFrame;   /* Number of frames with GG only over the whole CCD*/
                            /* in the closed loop sequence                     */
    long         methodFluxComp;
                            /* Method for average flux computation             */
    long         averageFluxFlag;
                            /* Average flux after FG Flag                      */
-   long         threshFlag;/* Threshold after FG Flag                         */
+   long         threshFlag;/* Threshold after GG Flag                         */
    long         aoFlag;    /* aO Flag in sequence closed loop                 */
    long         nFramesAverageFlux;
                            /* Number of frames to average for computing the   */
                            /* average flux                                    */
    long         writeToRm; /* Write to RM flag (TRUE/FALSE)                   */
-   double       fgTime;    /* Time with FG only over the whole CCD in the     */
+   long         threshRealTimeFlag;
+                           /* Compute the threshold in real time during fast  */
+                           /* guide (TRUE/FALSE)                              */
+   double       ggTime;    /* Time with GG only over the whole CCD in the     */
                            /* closed loop sequence                            */
+   double       aoTime;    /* Time to average aO data                         */
    double       saveCbFgCtrlClosedLoopTime;
                            /* Save FG control circular  buffer during closed  */
                            /* loop sequence every this time                   */
-   double       saveCbCtrlClosedLoopTime;
+   double       saveCbAoCtrlClosedLoopTime;
                            /* Save aO control circular  buffer during closed  */
                            /* loop sequence every this time                   */
    double       rateBrightPixThreshComp;
@@ -517,6 +566,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Multiplicative coeff for threshold computation  */
    double       averageRms;
                            /* Average rms for threshold computation           */
+   double       averageMean;
+                           /* Average mean for threshold computation          */
    double       multCoeffAverageFlux;
                            /* Multiplicative coefficient for average flux     */
    double       averageFlux;
@@ -524,6 +575,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       tipScale;  /* Scale factor of the tip mode                    */
    double       tiltScale; /* Scale factor of the tilt mode                   */
    double       focusScale; /* Scale factor of the focus mode                 */
+   double       defFocusScale100Hz;
+                           /* Default scale factor of the focus mode at 100Hz */
    double       slidingFocusGain; 
                            /* Gain for the sliding average for the focus mode */
    double       amplitude; /* Amplitude of the mode when computing a column   */
@@ -560,10 +613,10 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       rawtEnd;   /* Raw Gemini time at end of observation.          */
    double       exposureTime;
                            /* Current exposure time                           */
-   double       cutoffFrequency;
-                           /* Cuttof frequency (bandwidth ) of the system     */
-   double       rateSamplingFrequency;
-                           /* Rate of sampling frequency (between 0 and 1)    */
+   double       cutoffFrequencyTipTilt;
+                           /* Cuttof frequency (bandwidth) of the system      */
+   double       cutoffFrequencyFocus;
+                           /* Cuttof frequency (bandwidth) of the system      */
    double       exposedRQ; /* Requested total exposure time.                  */
    double       exposed;   /* Actual total exposure time.                     */
 
@@ -649,17 +702,19 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* SIR record.                          */
    DATREC_CONTEXT pAoFlatInitContext; /* Context structure for aoFlatInit     */
                                       /* SIR record.                          */
+   DATREC_CONTEXT pAoDarkInitContext; /* Context structure for aoDarkInit     */
+                                      /* SIR record.                          */
    DATREC_CONTEXT pAoContMatInitContext;
                                       /* Context structure for                */
                                       /* aoContMatInit SIR record.            */
    DATREC_CONTEXT pAoIntMatInitContext; 
                                       /* Context structure for                */
                                       /* aoIntMatInit SIR record.             */
-   DATREC_CONTEXT pAoFgContMatInitContext;
+   DATREC_CONTEXT pFgContMatInitContext;
                                       /* Context structure for                */
-                                      /* aoFgContMatInit SIR record.          */
-   DATREC_CONTEXT pAoDarkInitContext; /* Context structure for aoDarkInit     */
-                                      /* SIR record.                          */
+                                      /* fgContMatInit SIR record.            */
+   DATREC_CONTEXT pAoRmsContext;      /* Context structure for aoRms SIR      */
+                                      /* record.                              */
    DATREC_CONTEXT pAoThreshContext;   /* Context structure for aoThresh SIR   */
                                       /* record.                              */
    DATREC_CONTEXT pAoProcessModeContext;
@@ -669,12 +724,25 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* record.                              */
    DATREC_CONTEXT pAoSaveCbImContext; /* Context structure for aoSaveCbIm SIR */
                                       /* record.                              */
-   DATREC_CONTEXT pAoSaveCbCtrlContext;
-                                      /* Context structure for aoSaveCbCtrl   */
+   DATREC_CONTEXT pAoSaveCbAoCtrlContext;
+                                      /* Context structure for aoSaveCbAoCtrl */
                                       /* SIR record.                          */
    DATREC_CONTEXT pAoSaveCbFgCtrlContext;
                                       /* Context structure for aoSaveCbFgCtrl */
                                       /* SIR record.                          */
+   DATREC_CONTEXT pFgTipGainContext;  /* Context structure for fgTipGain SIR  */
+                                      /* record.                              */
+   DATREC_CONTEXT pFgTiltGainContext; /* Context structure for fgTiltGain SIR */
+                                      /* record.                              */
+   DATREC_CONTEXT pFgFocusGainContext;/* Context structure for fgFocusGain SIR*/
+                                      /* record.                              */
+   DATREC_CONTEXT pFgFocusGain100Context;
+                                      /* Context structure for fgFocusGain100 */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pCfFocusBwContext;  /* Context structure for cfFocusBw SIR  */
+                                      /* record.                              */
+   DATREC_CONTEXT pCfTipTiltBwContext;/* Context structure for cfTipTiltBw SIR*/
+                                      /* record.                              */
    DATREC_CONTEXT pDetTypeContext;    /* Context structure for detector       */
                                       /* controller type.                     */
    DATREC_CONTEXT pDetIdContext;      /* Context structure for detector       */
@@ -742,50 +810,61 @@ enum
    DET_CONTROL_CMD_DHS_RECONNECT,/* Set connection with DHS                   */
    DET_CONTROL_CMD_DHS_DISPLAY,/* Set display parameters for DHS QL           */
    DET_CONTROL_CMD_EXPOSURE,   /* Specify exposure time.                      */
-   DET_CONTROL_CMD_OBSTYPE,    /* Specify observation type.                   */
-   DET_CONTROL_CMD_SETDHS,     /* Set Data Handling System parameters.        */
-   DET_CONTROL_CMD_SETWCS,     /* Set World Coordinate System parameters.     */
+   DET_CONTROL_CMD_OBS_TYPE,   /* Specify observation type.                   */
+   DET_CONTROL_CMD_SET_DHS,    /* Set Data Handling System parameters.        */
+   DET_CONTROL_CMD_SET_WCS,    /* Set World Coordinate System parameters.     */
    DET_CONTROL_CMD_OBSERVE,    /* Make observation.                           */
    DET_CONTROL_CMD_PAUSE,      /* Pause observation.                          */
    DET_CONTROL_CMD_CONTINUE,   /* Continue observation.                       */
    DET_CONTROL_CMD_STOP,       /* Stop observation.                           */
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
-   DET_CONTROL_CMD_SIGRESET,   /* Reset signal processing.                    */
-   DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
-   DET_CONTROL_CMD_SIGINITGAIN,/* Initialise signal processing gains.         */
-   DET_CONTROL_CMD_SIGINITSH,  /* Initialise WFS geometry for signal process. */
-   DET_CONTROL_CMD_SIGINITFGGAIN,/* Initialize FG gains                       */
-   DET_CONTROL_CMD_SIGINITBW,  /* Init Butterworth filter.                    */
-   DET_CONTROL_CMD_SIGMODE_NONE, /* Configure to no signal processing.        */
-   DET_CONTROL_CMD_SIGMODE_DARK, /* Configure to dark subtraction only.       */
-   DET_CONTROL_CMD_SIGMODE_COADD, /* Configure to coadd only.                 */
-   DET_CONTROL_CMD_SIGMODE_THRESH,/* Configure to compute threshold.          */
-   DET_CONTROL_CMD_SIGMODE_TOTAL,
+   DET_CONTROL_CMD_SIG_RESET,  /* Reset signal processing.                    */
+   DET_CONTROL_CMD_SIG_INIT,   /* Initialise signal processing.               */
+   DET_CONTROL_CMD_SIG_INIT_AO_GAIN,
+                               /* Initialise aO gains.                        */
+   DET_CONTROL_CMD_SIG_INIT_FG_GAIN,
+                               /* Init FG gains.                              */
+   DET_CONTROL_CMD_SIG_INIT_BW,/* Init Butterworth filter.                    */
+   DET_CONTROL_CMD_SIG_MODE_NONE, 
+                               /* Configure to no signal processing.          */
+   DET_CONTROL_CMD_SIG_MODE_DARK, 
+                               /* Configure to dark subtraction only.         */
+   DET_CONTROL_CMD_SIG_MODE_COADD, 
+                               /* Configure to coadd only.                    */
+   DET_CONTROL_CMD_SIG_MODE_THRESH,
+                               /* Configure to compute threshold.             */
+   DET_CONTROL_CMD_SIG_MODE_TOTAL,
                                /* Configure to average flux computation mode. */
-   DET_CONTROL_CMD_SIGMODE_GG, /* Configure to global guide only.             */
-   DET_CONTROL_CMD_SIGMODE_GG_COADD,
+   DET_CONTROL_CMD_SIG_MODE_GG,/* Configure to global guide only.             */
+   DET_CONTROL_CMD_SIG_MODE_GG_COADD,
                                /* Configure to fast guide and coadd mode.     */
-   DET_CONTROL_CMD_SIGMODE_FG_FOCUS, /* Configure to fast guide and focus.    */
-   DET_CONTROL_CMD_SIGMODE_FG_FOCUS_COADD, 
+   DET_CONTROL_CMD_SIG_MODE_FG_FOCUS, 
+                               /* Configure to fast guide and focus.          */
+   DET_CONTROL_CMD_SIG_MODE_FG_FOCUS_COADD, 
                                /* Configure to fast guide and focus and coadd */
                                /* mode.                                       */
-   DET_CONTROL_CMD_SIGMODE_AO, /* Configure to aO only.                       */
-   DET_CONTROL_CMD_SIGMODE_GG_AO,
+   DET_CONTROL_CMD_SIG_MODE_AO,/* Configure to aO only.                       */
+   DET_CONTROL_CMD_SIG_MODE_GG_AO,
                                /* Configure to global guide and aO.           */
-   DET_CONTROL_CMD_SIGMODE_FG_FOCUS_AO, /* Configure to FG and focus and aO.  */
-   DET_CONTROL_CMD_SIGMODE_SEQ_DARK,/* Configure sequence dark mode.          */
-   DET_CONTROL_CMD_SIGMODE_SEQ,/* Configure sequence closed loop mode.        */
-   DET_CONTROL_CMD_SIGINIT_CB, /* Save circular buffers.                      */
-   DET_CONTROL_CMD_SIGMEAS_IM, /* Measure column of interaction matrix.       */
-   DET_CONTROL_CMD_SIGCOMP_MAT,/* Compute control and interaction matrixes.   */
-   DET_CONTROL_CMD_SIGINIT_AST_MODEL,
+   DET_CONTROL_CMD_SIG_MODE_FG_FOCUS_AO, 
+                               /* Configure to FG and focus and aO.           */
+   DET_CONTROL_CMD_SIG_MODE_SEQ_DARK,
+                               /* Configure sequence dark mode.               */
+   DET_CONTROL_CMD_SIG_MODE_SEQ,
+                               /* Configure sequence closed loop mode.        */
+   DET_CONTROL_CMD_SIG_SAVE_CB,/* Save circular buffers.                      */
+   DET_CONTROL_CMD_SIG_MEAS_AO_IM, 
+                               /* Measure column of aO interaction matrix.    */
+   DET_CONTROL_CMD_SIG_COMP_AO_MAT,
+                               /* Compute aO control and interaction matrixes.*/
+   DET_CONTROL_CMD_SIG_INIT_AST_MODEL,
                                /* Init zero point model for astigmatism off   */
                                /* axis                                        */
-   DET_CONTROL_CMD_SIGINIT_TREF_MODEL,
+   DET_CONTROL_CMD_SIG_INIT_TREF_MODEL,
                                /* Init zero point model for trefoil off axis  */
-   DET_CONTROL_CMD_SIGINIT_COMA_MODEL,
+   DET_CONTROL_CMD_SIG_INIT_COMA_MODEL,
                                /* Init zero point model for coma off axis     */
-   DET_CONTROL_CMD_SIGINIT_FOCUS_MODEL,
+   DET_CONTROL_CMD_SIG_INIT_FOCUS_MODEL,
                                /* Init zero point model for focus off axis    */
 
 

@@ -16,19 +16,21 @@ data/defFullRefP1.dat
 # Name of aO scale factor file
 data/defAoScaleP1.dat
 # Name of aO interaction matrix file
-data/defIntMatP1CP.dat
+data/defAoIntMatP1CP.dat
 # Name of aO control matrix file
-data/theoContMatP1.dat
+data/defAoContMatP1CP.dat
 # Name of FG control matrix file
 data/defFgContMatP1CP.dat
 # Scale factor for tip mode (double)
--0.1
+0.05
 # Scale factor for tilt mode (double)
--0.1
+0.05
 # Scale factor for focus mode (double)
--0.001
+0.001
 # Gain for focus sliding average (double)
 0.001
+# RMS value (double)
+15
 # Threshold value for pixel (double)
 50
 # Threshold value for total counts (double)
