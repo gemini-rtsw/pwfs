@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.42 2001-06-19 17:41:41 cjm Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.43 2001-06-21 01:05:48 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -74,6 +74,8 @@ mbec	mbec
 pcstest	mbec/pcstest
 #M	somtest	some test
 somtest	mbec/sometest
+#M	imporTest
+imporTest	mbec/imporTest
 #M	gnaacSrc-mv167-gem5	Niri temporary backup for mv167 target
 gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
 #M	gnaacSrc-ppc-gem6t	Niri temporary backup for ppc target
