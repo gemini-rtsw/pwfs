@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.35 2001-03-28 07:52:52 gemvx Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.36 2001-03-28 07:55:33 gemvx Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -74,10 +74,10 @@ mbec	mbec
 pcstest	mbec/pcstest
 #M	somtest	some test
 somtest	mbec/sometest
-#M	gnaacSrcmv167gem5 Niri temp rep backup for mv167 target
-gnaacSrcmv167gem5	mbec/gnaacSrc-mv167-gem5
-#M	gnaacSrcppcgem6t Niri temp rep backup for ppc target
-gnaacSrcppcgem6t mbec/gnaacSrc-ppc-gem6t
+#M	gnaacSrc-mv167-gem5 Niri temporary backup for mv167 target
+gnaacSrc-mv167-gem5	mbec/gnaacSrc-mv167-gem5
+#M	gnaacSrc-ppc-gem6t Niri temporary backup for ppc target
+gnaacSrc-ppc-gem6t mbec/gnaacSrc-ppc-gem6t
 #M	comcon	Components Controller
 #D	niri	Gemini NIRI Software
 niri	niri
