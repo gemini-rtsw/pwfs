@@ -315,7 +315,7 @@ double dfilter
  *
  *
  * HISTORY (optional):
- * 27-Oct-1998  Coeff are computing in detControl.c and the cutoffFreq set by
+ * 27-Oct-2000  Coeff are computing in detControl.c and the cutoffFreq set by
  *              the user
  * 28-Oct-1998  Original version - Sean Prior
  *-
@@ -942,9 +942,13 @@ STATUS writeWfsToSynchro
 
       result.z2 = (f->cosTheta*(*pz) - f->sinTheta*(*(pz+1))) - f->null[5];
       result.z3 = (f->sinTheta*(*pz) + f->cosTheta*(*(pz+1))) - f->null[6];
+      result.z4 = *(pz+2);
+
       /*result.z4 = (*(pz+2)) - f->null[7];*/
 
+/*
       result.z4 = newDfilter (*(pz+2),2);
+*/
 
       semGive(f->access);
    }
@@ -1058,6 +1062,7 @@ STATUS writeWfsToSynchro
  * 26-Nov-1999: Change sign into the compiste angle formula (cb)
  * 13-Dec-1999: Remove limit checks for cass rot angle (cb)
  * 28-Mar-2000: Simplified version for P2 only (cb)
+ * 11-Dec-2000: Composite angle now + PA in ttfZero (cb)
  *
  */
 
@@ -1121,8 +1126,11 @@ long ttfZero
 
       /* calculate composite correction angle */
 
+      /*compositeAngle = 
+      (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;*/
+
       compositeAngle = 
-      (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;   
+      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec2000*/
 
       f->theta      = compositeAngle;
       f->sinTheta   = sin(f->theta);
@@ -1196,6 +1204,7 @@ long ttfZero
  *              rotationAngle = 
                 tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
  * 28-Mar-2000: simplified version for P2 only
+ * 11-Dec-2000: Composite angle now + PA in aoZero (cb)
  *
  */
 
@@ -1259,8 +1268,12 @@ long aoZero
 
       /* calculate composite correction angle */
 
+      /*compositeAngle = 
+      (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;*/
+
       compositeAngle = 
-      (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;   
+      (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec2000*/
+
       f->theta      = compositeAngle;
       f->sinTheta   = sin(f->theta);
       f->cosTheta   = cos(f->theta);

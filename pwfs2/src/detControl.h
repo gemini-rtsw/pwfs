@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   11 dec 2000 - cb add DET_CONTROL_CMD_SIGRESET
  *   30 oct 2000 - cb add cutoffFrequency rateSamplingFrequency
  *   25 oct 2000 - cb add aoSaveCbIm and aoSaveCbCtrl sir records
  *   13 apr 2000 - cb add parameters to measure the average flux during the 
@@ -572,6 +573,7 @@ enum
    DET_CONTROL_CMD_CONTINUE,   /* Continue observation.                       */
    DET_CONTROL_CMD_STOP,       /* Stop observation.                           */
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
+   DET_CONTROL_CMD_SIGRESET,   /* Reset signal processing.                    */
    DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
    DET_CONTROL_CMD_SIGINITGAIN,/* Init FG gains.                              */
    DET_CONTROL_CMD_SIGINITBW,  /* Init Butterworth filter.                    */
