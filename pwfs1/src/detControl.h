@@ -13,6 +13,8 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   23 May 2001: CB - add detSigInitModTref and replace detSigInitMod by
+ *                     detSigInitModAst
  *   12 Apr 2001: CB - add cad detSigInitMod
  *   02 Apr 2001: CB - add sir adc0, adc1, adc2, adc3
  *   20 Feb 2001: CB - add sir dhsCon
@@ -760,8 +762,11 @@ enum
    DET_CONTROL_CMD_SIGINIT_CB, /* Save circular buffers.                      */
    DET_CONTROL_CMD_SIGMEAS_IM, /* Measure column of interaction matrix.       */
    DET_CONTROL_CMD_SIGCOMP_MAT,/* Compute control and interaction matrixes.   */
-   DET_CONTROL_CMD_SIGINIT_MODEL,/* Init zero point model for astigmatism off */
+   DET_CONTROL_CMD_SIGINIT_AST_MODEL,
+                               /* Init zero point model for astigmatism off   */
                                /* axis                                        */
+   DET_CONTROL_CMD_SIGINIT_TREF_MODEL,
+                               /* Init zero point model for trefoil off axis  */
 
 
    /* genSub commands. */

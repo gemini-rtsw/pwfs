@@ -18,7 +18,7 @@ data/defAoScaleP1.dat
 # Name of aO interaction matrix file
 data/defIntMatP1MK.dat
 # Name of aO control matrix file
-data/defContMatP1MK.dat
+data/theoContMatP1.dat
 # Name of FG control matrix file
 data/defFgContMatP1MK.dat
 # Scale factor for tip mode (double)

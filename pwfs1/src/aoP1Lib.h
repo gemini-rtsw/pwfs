@@ -17,6 +17,8 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 23 May 2001: CB - replace ZP_MODEL_ID by AST_ZP_MODEL_ID structure
+ *                   add TREF_ZP_MODEL_ID structure as well
  * 12 April 2001: CB - Add structure ZP_MODEL_ID_STRUCT
  * 02 Feb 2001: CB - Add aoVectAfterRot and fgVectAfterRot vectors in the 
  *                   circular buffers AO_CB_CTRL_ID and AO_CB_FG_CTRL_ID
@@ -659,28 +661,49 @@ typedef struct
 
 typedef struct
 {
-   double   a1;
-   double   a2;
-   double   a3;
-   double   p1;
-   double   p2;
-   double   p3;
-   double   c;
-   double   b1;
-   double   b2;
-   double   b3;
-   double   pp1;
-   double   pp2;
-   double   pp3;
-   double   d;
-   double   astig0;
-   double   astig45;
-   int      applyModel;
-   double   gain0;
-   double   gain45;
-   double   offsetAstig0;
-   double   offsetAstig45;
-} ZP_MODEL_ID_STRUCT, *ZP_MODEL_ID;
+
+   double   a1;                        /* Scale factor of cos (theta)         */
+   double   a2;                        /* Scale factor of cos (2*theta)       */
+   double   a3;                        /* Scale factor of cos (4*theta)       */
+   double   p1;                        /* Phase of cos (theta)                */
+   double   p2;                        /* Phase of cos (2*theta)              */
+   double   p3;                        /* Phase of cos (4*theta)              */
+   double   c;                         /* Constant term for astig0            */
+   double   b1;                        /* Scale factor of sin (theta)         */
+   double   b2;                        /* Scale factor of sin (2*theta)       */
+   double   b3;                        /* Scale factor of sin (4*theta)       */
+   double   pp1;                       /* Phase of sin (theta)                */
+   double   pp2;                       /* Phase of sin (2*theta)              */
+   double   pp3;                       /* Phase of sin (4*theta)              */
+   double   d;                         /* Constant term for astig45           */
+   double   astig0;                    /* Zero point model for astig 0        */
+   double   astig45;                   /* Zero point model for astig45        */
+   int      applyModel;                /* Apply the astigmatism zero point    */
+                                       /* model TRUE|FALSE                    */
+   double   gain0;                     
+   double   gain45;                   
+   double   offsetAstig0;            
+   double   offsetAstig45;          
+
+} AST_ZP_MODEL_ID_STRUCT, *AST_ZP_MODEL_ID;
+
+/********************** Structure for zero point model for trefoil off axis ***/
+
+typedef struct
+{
+
+   double   a;                         /* Scale factor of cos (3*theta)       */
+   double   p;                         /* Phase of cos (3*theta)              */
+   double   c;                         /* Constant term for cos trefoil       */
+   double   b;                         /* Scale factor of sin (3*theta)       */
+   double   pp;                        /* Phase of sin (3*theta)              */
+   double   d;                         /* Constant term for sin trefoil       */
+   double   costref;                   /* Zero point model for cos trefoil    */
+   double   sintref;                   /* Zero point model for sin trefoil    */
+   int      applyModel;                /* Apply the trefoil zero point model  */
+                                       /* TRUE|FALSE                          */
+
+} TREF_ZP_MODEL_ID_STRUCT, *TREF_ZP_MODEL_ID;
 
 /**************************************************************** Functions ***/
 

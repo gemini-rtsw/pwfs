@@ -202,8 +202,11 @@ AO_CB_IM_ID   aoCbImIdP1;
 double sampleData[5][3];
 double coeffData[5];
 
-ZP_MODEL_ID_STRUCT astigModel;
+AST_ZP_MODEL_ID_STRUCT astigModel;
 SEM_ID  accessAstigModel;
+
+TREF_ZP_MODEL_ID_STRUCT trefoilModel;
+SEM_ID  accessTrefoilModel;
 
 /* declare prototypes */
 
@@ -489,6 +492,18 @@ long gensubToTcsInit
       }
    }
 
+   /* create semaphore to prevent multiple access to trefoilModel data */
+
+   if(accessTrefoilModel == NULL)
+   {
+      if ((accessTrefoilModel = 
+          semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) 
+          == NULL)
+      {
+             printf ("unable to create accessTrefoilModel sem\n");
+      }
+   }
+
    /* init structure astigModel */
 
    astigModel.a1 = 0.0;
@@ -512,6 +527,18 @@ long gensubToTcsInit
    astigModel.gain45 = 1.0;
    astigModel.offsetAstig0 = 0.0;
    astigModel.offsetAstig45 = 0.0;
+
+   /* init structure trefoilModel */
+
+   trefoilModel.a = 0.0;
+   trefoilModel.p = 0.0;
+   trefoilModel.c = 0.0;
+   trefoilModel.b = 0.0;
+   trefoilModel.pp = 0.0;
+   trefoilModel.d = 0.0;
+   trefoilModel.costref = 0.0;
+   trefoilModel.sintref = 0.0;
+   trefoilModel.applyModel = 0.0;
 
    /* create structure holding angle and null values for ao data */
 
@@ -902,8 +929,11 @@ STATUS writeWfsToTcs
       result.z9 = (*(pz+7));
 
       /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
-      result.z10 = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)));
-      result.z11 = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)));
+      result.z10 = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
+                   - (trefoilModel.costref)*(aoCtrlId->aoScaleFactorVect[8]);
+
+      result.z11 = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
+                   - (trefoilModel.sintref)*(aoCtrlId->aoScaleFactorVect[9]);
 
       /* (4*r^2-3) * r^2 * cos(2t) and (4*r^2-3) * r^2 * sin(2t) */
       result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11)));
@@ -1477,7 +1507,7 @@ long aoZero
       return(ERROR);
    }
 
-   /* compute zero point model */
+   /* compute astigmatism zero point model */
 
    if(semTake(accessAstigModel, WFS_TIMEOUT) == OK)
    {
@@ -1510,6 +1540,35 @@ long aoZero
       return(ERROR);
    }
 
+   /* compute trefoil zero point model */
+
+   if(semTake(accessTrefoilModel, WFS_TIMEOUT) == OK)
+   {
+     if (trefoilModel.applyModel == 0 )
+     {
+        trefoilModel.costref = 0.0;
+        trefoilModel.sintref = 0.0;
+     }
+     else
+     {
+        trefoilModel.costref = 
+        trefoilModel.a*cos(3*compositeAngle + trefoilModel.p*DEGS2RADS) +
+        trefoilModel.c;
+
+        trefoilModel.sintref = 
+        trefoilModel.b*sin(3*compositeAngle + trefoilModel.pp*DEGS2RADS) +
+        trefoilModel.d;
+     }
+
+     semGive (accessTrefoilModel);
+   }
+   else
+   {
+      logMsg("Modify frame - unable to get mutex for trefoilModel \n", 
+             0, 0, 0, 0 ,0 ,0);
+      return(ERROR);
+   }
+
    /* write sample values to genSub ouputs */
 
    *(double *) pgsub->vala = f->null[0];         /* tSent */ 
@@ -1524,6 +1583,8 @@ long aoZero
    /* *(double *) pgsub->vali = f->null[7]; */        /* z4 */
    *(double *) pgsub->valg = astigModel.astig0;
    *(double *) pgsub->valh = astigModel.astig45;
+   *(double *) pgsub->vali = trefoilModel.costref;
+   *(double *) pgsub->valj = trefoilModel.sintref;
 
    return (OK);
 }

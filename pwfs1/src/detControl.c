@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.21 2001-04-16 20:30:46 cboyer Exp $"};
+   "$Id: detControl.c,v 1.22 2001-05-24 04:13:11 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   23 May 2001: CB - replace command detSigInitMod by detSigInitModAst and 
+ *                     add detSigInitModTref
  *   12 Apr 2001: CB - Add command detSigInitMod
  *   02 Apr 2001: CB - Add adc0, adc1, adc2, adc3 sir records
  *   05 Mar 2001: CB - Fix bug dhsQlRate when only 1 frame
@@ -216,10 +218,16 @@ extern double sampleData[5][3];    /* Samples for butterworth filter          */
 extern double coeffData[5];        /* Coefficients for butterworth filter     */
                                    /* defined in writeZernikes.c              */
 
-extern ZP_MODEL_ID_STRUCT astigModel;
+extern AST_ZP_MODEL_ID_STRUCT astigModel;
                                    /* Astig model defined in writeZernikes.c  */
 
 extern SEM_ID accessAstigModel;    /* Semaphore Astig model defined in        */
+                                   /* writeZernikes.c                         */
+
+extern TREF_ZP_MODEL_ID_STRUCT trefoilModel;
+                                   /* Trefoil model defined in writeZernikes.c*/
+
+extern SEM_ID accessTrefoilModel;  /* Semaphore Trefoil model defined in      */
                                    /* writeZernikes.c                         */
 
 /******************************************************* External functions ***/
@@ -405,8 +413,12 @@ LOCAL uint32   detSigModeSeqDark (const char * pRecordPrefix,
 LOCAL uint32   detInitObserveRecord (const char * pRecordPrefix, long * pNExp,
                                      double * pExpTime, long * pOutOption);
 
-LOCAL uint32 detSigInitMod (CAD_CMD_CONTEXT cadCmdContext, int commandNumber, 
-                            SDSU_ID sdsuId, OBS_ID obsId);
+LOCAL uint32 detSigInitModAst (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
+                               SDSU_ID sdsuId, OBS_ID obsId);
+
+LOCAL uint32 detSigInitModTref (CAD_CMD_CONTEXT cadCmdContext, 
+                                int commandNumber, SDSU_ID sdsuId, 
+                                OBS_ID obsId);
 
 /******************************************* Plus some additional functions ***/
 
@@ -1973,12 +1985,20 @@ STATUS   detControl
                                cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
-         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_MODEL)
+         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_AST_MODEL)
          {
 
             /* Init zero point model for astig off axis */
             errorNumber =
-            detSigInitMod (cadCmdContext, commandNumber, sdsuId, obsId); 
+            detSigInitModAst (cadCmdContext, commandNumber, sdsuId, obsId); 
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIGINIT_TREF_MODEL)
+         {
+
+            /* Init zero point model for trefoil off axis */
+            errorNumber =
+            detSigInitModTref (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
          else
@@ -19788,10 +19808,10 @@ uint32 detWriteDefSirContext
 
 /*+
  *   FUNCTION NAME:
- *   detSigInitMod
+ *   detSigInitModAst
  *
  *   INVOCATION:
- *   detSigInitMod (cadCmdContext, commandNumber, sdsuId, obsId)
+ *   detSigInitModAst (cadCmdContext, commandNumber, sdsuId, obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
@@ -19803,7 +19823,7 @@ uint32 detWriteDefSirContext
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigInitMod command
+ *   Execute detSigInitModAst command
  *
  *   DESCRIPTION:
  *   This function updates the external structure astigModel
@@ -19822,7 +19842,7 @@ uint32 detWriteDefSirContext
  *-
  */
 
-uint32 detSigInitMod
+uint32 detSigInitModAst
    (
    CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
    int             commandNumber, /* Command number.                          */
@@ -19959,6 +19979,129 @@ uint32 detSigInitMod
       astigModel.offsetAstig45 = offset45;
 
       semGive (accessAstigModel);
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitModTref
+ *
+ *   INVOCATION:
+ *   detSigInitModTref (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitModTref command
+ *
+ *   DESCRIPTION:
+ *   This function updates the external structure trefoilModel
+ * 
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitModTref
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32       errorNumber;      /* Error number reported by task.           */
+
+   double       a;
+   double       p;
+   double       c;
+   double       b;
+   double       pp;
+   double       d;
+   long         apply;
+
+
+   /*
+    * Initialise the error number 
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   /*
+    * Get the attributes provided with this command.
+    */
+       
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&a);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&p);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&c);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&b);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&pp);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&d);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&apply);
+
+   /*
+    * Update the trefoilModel structure
+    */
+
+   if (semTake (accessTrefoilModel, 100) != OK)
+   {
+      ERROR_SET (S_detControl_INTERNAL, 
+                 "Timeout on mutex acess to trefoilModel",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+   else
+   {
+      trefoilModel.a = a;
+      trefoilModel.p = p;
+      trefoilModel.c = c;
+      trefoilModel.b = b;
+      trefoilModel.pp = pp;
+      trefoilModel.d = d;
+      trefoilModel.applyModel = apply;
+
+      semGive (accessTrefoilModel);
    }
 
    return (errorNumber);

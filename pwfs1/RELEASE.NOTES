@@ -157,3 +157,9 @@ V2-1 16 April 2001 CB:
   - add detSigInitMod: zero point model for astigmatism off axis
   - add in par 2 new control matrixes: theoContMatP1.dat and
     theoContMatP1Aliasing.dat
+
+V2-2 23 May 2001 CB:
+--------------------
+  - rename detSigInitMod with detSigInitModAst
+  - add detSigInitModTref : zero point model for trefoil off axis
+  - default cont mat is now theoContMatP1.dat
