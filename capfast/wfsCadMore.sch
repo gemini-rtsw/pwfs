@@ -1,9 +1,20 @@
 [schematic2]
-uniq 149
+uniq 150
 [tools]
 [detail]
 s 2464 -704 500 512 wfsCadMore.sch
 [cell use]
+use ecad8 -800 -697 100 0 detSigInitAoThresh
+xform 0 -640 -192
+p -736 -768 100 0 1 DESC:Init aO thresholds
+p -704 0 100 0 1 FTVA:DOUBLE
+p -704 -32 100 0 1 FTVB:DOUBLE
+p -704 -64 100 0 0 FTVC:STRING
+p -704 -96 100 0 0 FTVD:STRING
+p -416 -736 100 0 1 INAM:epToVxCadInit
+p -736 -736 100 0 1 PREC:1
+p -128 -736 100 0 1 PV:$(top)$(wfs)
+p -416 -768 100 0 1 SNAM:epToVxCadExecute
 use ecad8 3232 39 100 0 detSigModeGgAo
 xform 0 3392 544
 p 3296 -32 100 0 1 DESC:Set GG and aO mode
@@ -181,7 +192,7 @@ p -704 1504 100 0 1 FTVP:DOUBLE
 p -704 1472 100 0 1 FTVQ:DOUBLE
 p -704 1440 100 0 1 FTVR:DOUBLE
 p -704 1408 100 0 1 FTVS:DOUBLE
-p -704 1376 100 0 1 FTVT:DOUBLE
+p -704 1376 100 0 0 FTVT:DOUBLE
 p -752 384 100 0 1 INAM:epToVxCadInit
 p -752 448 100 0 1 PREC:1
 p -752 320 100 0 1 PV:$(top)$(wfs)
@@ -210,10 +221,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2004-03-02 00:44:35 $
-p 2592 2304 200 0 -1 id:$Id: wfsCadMore.sch,v 1.11 2004-03-02 00:44:35 cboyer Exp $
+p 3120 -784 200 0 -1 date:$Date: 2004-05-05 21:54:51 $
+p 2592 2304 200 0 -1 id:$Id: wfsCadMore.sch,v 1.12 2004-05-05 21:54:51 cboyer Exp $
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
-p 2592 -528 200 0 -1 revision:$Revision: 1.11 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.12 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]

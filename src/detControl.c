@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.32 2004-03-02 00:44:36 cboyer Exp $"};
+   "$Id: detControl.c,v 1.33 2004-05-05 21:54:52 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   29 Mar 2004: CB - Add detSigInitAoThresh and aoMaxThreshold
  *   07 Jan 2004: CB - Default FG gains from file, remove TIM_EEPROM_PROGRAM,
  *                     add detInitSigModeSeq
  *   04 Feb 2003: CB - Add proportional gain for aO
@@ -375,6 +376,10 @@ LOCAL uint32   detSigInit (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 LOCAL uint32   detSigInitAoGain (CAD_CMD_CONTEXT cadCmdContext, 
                                  int commandNumber, SDSU_ID sdsuId, 
                                  OBS_ID obsId);
+
+LOCAL uint32   detSigInitAoThresh (CAD_CMD_CONTEXT cadCmdContext, 
+                                   int commandNumber, SDSU_ID sdsuId, 
+                                   OBS_ID obsId);
 
 LOCAL uint32   detSigInitBw (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
@@ -2104,6 +2109,7 @@ STATUS   detControl
             errorNumber =
             detSigInit (cadCmdContext, commandNumber, sdsuId, obsId);
          }
+
          else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_AO_GAIN)
          {
 
@@ -2111,6 +2117,15 @@ STATUS   detControl
 
             errorNumber =
             detSigInitAoGain (cadCmdContext, commandNumber, sdsuId, obsId); 
+         }
+
+         else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_AO_THRESH)
+         {
+
+            /* Update open/closed loop aO threshold */
+
+            errorNumber =
+            detSigInitAoThresh (cadCmdContext, commandNumber, sdsuId, obsId); 
          }
 
          else if (commandNumber == DET_CONTROL_CMD_SIG_INIT_FG_GAIN)
@@ -5212,9 +5227,11 @@ uint32 detObserveStart
       obsId->averageFlux = 0.0;
       obsId->updateFgScale = FALSE;
       obsId->updateAoScale = FALSE;
+      obsId->updateAoThresh = FALSE;
 #ifdef DEBUG
       printf ( "detControl : updateFgScale = %d\n" , obsId->updateFgScale );
       printf ( "detControl : updateAoScale = %d\n" , obsId->updateAoScale );
+      printf ( "detControl : updateAoThresh = %d\n" , obsId->updateAoThresh );
 #endif
 
       ptrPwfs2->interval = 0.0 ;
@@ -11804,9 +11821,15 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
-                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
+
+               if ( obsId->updateAoThresh == TRUE )
+               {
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
+                  obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+                  obsId->updateAoThresh = FALSE ;
+               }
 
                if ( aoModeCompute (pImage, imageStatus, obsId->aoCcdId, 
                                    obsId->aoCtrlId, nCoadds, nPause, pThresh, 
@@ -11855,9 +11878,15 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
-                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
+
+               if ( obsId->updateAoThresh == TRUE )
+               {
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
+                  obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+                  obsId->updateAoThresh = FALSE ;
+               };
 
                if ( aoGlobalGuide (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                    pTotal, pGuides, pFg, pFgAfterRot, 
@@ -12256,9 +12285,15 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
-                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
+
+               if ( obsId->updateAoThresh == TRUE )
+               {
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
+                  obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+                  obsId->updateAoThresh = FALSE ;
+               };
 
                if ( aoGuideAndFocus (pImage, obsId->aoCcdId, obsId->aoCtrlId,
                                      pPrevThresh, pTotal, pCentroids, 
@@ -12467,9 +12502,15 @@ void detObserveEnd
                      ERROR_SET (0, "Failed to update aO scale factors",
                                 ERROR_LOG_NOW);
                   }
-                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
                   obsId->updateAoScale = FALSE ;
                } ;
+
+               if ( obsId->updateAoThresh == TRUE )
+               {
+                  obsId->aoCtrlId->aoThreshold = obsId->aoThreshold;
+                  obsId->aoCtrlId->aoMaxThreshold = obsId->aoMaxThreshold;
+                  obsId->updateAoThresh = FALSE ;
+               };
 
                if ( (obsId->ggFrame != 0) && 
                     (obsId->coaddCounter < obsId->ggFrame) )
@@ -14260,7 +14301,6 @@ uint32 detFrameSize
    double       thresh;
    double       totalThresh;
    double       seeingGain;
-   double       aoThreshold;
    double       fgGain[3];
    double       slidingFocusGain;
 
@@ -14432,7 +14472,7 @@ uint32 detFrameSize
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain,
-                               &aoThreshold, fgGain, &slidingFocusGain ) 
+                               fgGain, &slidingFocusGain ) 
               == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
@@ -14589,7 +14629,7 @@ uint32 detFrameSize
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain,
-                               &aoThreshold, fgGain, &slidingFocusGain ) 
+                               fgGain, &slidingFocusGain ) 
               == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
@@ -14873,7 +14913,7 @@ uint32 detFrameSize
                                 fullAoCmFileName, fullFgCmFileName,
                                 fullSeeingCmFileName, fullSeeingCvFileName,
                                 refX, refY, angleM2, angleM1, seeingGain, 
-                                aoThreshold, obsId->aoCcdId, obsId->aoCtrlId ) 
+                                obsId->aoCcdId, obsId->aoCtrlId ) 
           == ERROR )
       {
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
@@ -15788,6 +15828,8 @@ STATUS detObsShow
            (obsId->updateFgScale ? "TRUE" : "FALSE") );
    printf ("UpdateAoScale                    : %s\n",
            (obsId->updateAoScale ? "TRUE" : "FALSE") );
+   printf ("UpdateAoThresh                   : %s\n",
+           (obsId->updateAoThresh ? "TRUE" : "FALSE") );
    printf ("SaveCentroids                    : %s\n",
            (obsId->saveCentroids ? "TRUE" : "FALSE") );
    printf ("nMode                            : %d\n", (int)(obsId->nMode) );
@@ -16086,7 +16128,6 @@ uint32 detSigInit
                              pFullSeeingCoeffMatFileName, 
                              pFullSeeingCoeffVectFileName, refX, refY, 
                              angleM2, angleM1, seeingGain,
-                             obsId->aoCtrlId->aoThreshold,
                              obsId->aoCcdId, obsId->aoCtrlId ) == ERROR )
    {
       ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
@@ -16312,7 +16353,6 @@ uint32 detSigInitAoGain
 
    AO_VECT      aoScaleVect;
 
-   double       aoThreshold;
 
    /*
     * Initialise the error number 
@@ -16398,8 +16438,6 @@ uint32 detSigInitAoGain
                              (char *)&(obsId->aoScaleVect[17]));
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18,
                              (char *)&(obsId->aoScaleVect[18]));
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 19,
-                             (char *)&(obsId->aoThreshold));
       obsId->updateAoScale = TRUE ;
    }
    else /* observation not in progress */
@@ -16452,8 +16490,6 @@ uint32 detSigInitAoGain
                              (char *)&(aoScaleVect[17]));
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 18, 
                              (char *)&(aoScaleVect[18]));
-      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 19,
-                             (char *)&aoThreshold);
 
       if ( aoScaleUpdate (aoScaleVect, obsId->aoCtrlId) == ERROR )
       {
@@ -16462,8 +16498,6 @@ uint32 detSigInitAoGain
          errorNumber = S_detControl_INTERNAL;
          return (errorNumber);
       }
-     obsId->aoCtrlId->aoThreshold = aoThreshold;
-     obsId->aoThreshold = aoThreshold;
    }
 
    return (errorNumber);
@@ -20052,7 +20086,6 @@ STATUS detInitSigInit
    double rms;
    double totalThresh;
    double seeingGain;
-   double aoThreshold;
    double fgGain[3];
    double slidingFocusGain;
 
@@ -20086,7 +20119,7 @@ STATUS detInitSigInit
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain, 
-                               &aoThreshold, fgGain, &slidingFocusGain) 
+                               fgGain, &slidingFocusGain) 
               == ERROR )
          {
             printf ("Failed to read ao control file parameters\n");
@@ -20136,7 +20169,7 @@ STATUS detInitSigInit
                                aoCmFileName, fgCmFileName, seeingCmFileName,
                                seeingCvFileName, &rms, &thresh, &totalThresh, 
                                &angleM2, &angleM1, &seeingGain,
-                               &aoThreshold, fgGain, &slidingFocusGain) 
+                               fgGain, &slidingFocusGain) 
               == ERROR )
          {
             ERROR_LOG ("Failed to read ao control file parameters");
@@ -23587,6 +23620,209 @@ STATUS detInitSigModeSeq
    *(double *)pgsub->valr = *(double *)pgsub->r;
    *(double *)pgsub->vals = *(double *)pgsub->s;
    *(long *)pgsub->valt = *(long *)pgsub->t;
+
+   return (OK);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detSigInitAoThresh
+ *
+ *   INVOCATION:
+ *   detSigInitAoThresh (cadCmdContext, commandNumber, sdsuId, obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber (int)             Command number
+ *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
+ *   (>) obsId         (OBS_ID)          Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (uint32)   Error number. 0 if command successful.
+ *
+ *   PURPOSE:
+ *   Execute detSigInitAoThresh command
+ *
+ *   DESCRIPTION:
+ *   This function updates aO threshold in open and closed loop
+ * 
+ *   EXTERNAL VARIABLES:
+ *   None. 
+ *
+ *   PRIOR REQUIREMENTS:
+ *   None
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+uint32 detSigInitAoThresh
+   (
+   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
+   int             commandNumber, /* Command number.                          */
+   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
+   OBS_ID          obsId          /* Observation context structure.           */
+   )
+{
+   uint32       errorNumber;      /* Error number reported by task.           */
+
+   double       aoThreshold;
+   double       aoMaxThreshold;
+
+   /*
+    * Initialise the error number 
+    */
+
+   errorNumber = 0;
+
+   /*
+    * Check there are valid SDSU and observation context structures.
+    */
+
+   if ( sdsuId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "SDSU context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL, "Observation context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   }
+
+   if ( obsId->aoCtrlId == NULL )
+   {
+      ERROR_SET (S_detControl_INTERNAL,
+                 "AO control context not initialised",
+                 ERROR_LOG_NOW);
+      errorNumber = S_detControl_INTERNAL;
+      return (errorNumber);
+   };
+
+   if ( obsId->observing )
+   {
+
+#ifdef DEBUG
+      printf ( "Observation in progress, update aO thresholds\n" ) ;
+#endif
+
+      /*
+       * Get the attributes provided with this command.
+       */
+
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                            (char *)&aoThreshold);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
+                            (char *)&aoMaxThreshold);
+
+      if ( obsId->aoThreshold > obsId->aoMaxThreshold)
+      {
+         ERROR_SET (S_detControl_INTERNAL,
+                    "Init aO thresholds: aO threshold > aO Max Threshold",
+                    ERROR_LOG_NOW);
+         errorNumber = S_detControl_INTERNAL;
+         return (errorNumber);
+      }
+
+      obsId->aoThreshold= aoThreshold;
+      obsId->aoMaxThreshold = aoMaxThreshold;
+
+      obsId->updateAoThresh = TRUE ;
+   }
+   else /* observation not in progress */
+   {
+#ifdef DEBUG
+      printf ( "Observation not in progress, update aO thresholds... \n" ) ;
+#endif
+
+      MESSAGE_LOG (MSG_LOG, "Update aO thresholds during open loop..." ) ;
+
+      /*
+       * Get the attributes provided with this command.
+       */
+
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
+                             (char *)&aoThreshold);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1,
+                             (char *)&aoMaxThreshold);
+
+      if ( obsId->aoThreshold > obsId->aoMaxThreshold)
+      {
+         ERROR_SET (S_detControl_INTERNAL,
+                    "Init aO thresholds: aO threshold > aO Max Threshold",
+                    ERROR_LOG_NOW);
+         errorNumber = S_detControl_INTERNAL;
+         return (errorNumber);
+      }
+
+      obsId->aoCtrlId->aoThreshold = aoThreshold;
+      obsId->aoThreshold = aoThreshold;
+      obsId->aoCtrlId->aoMaxThreshold = aoMaxThreshold;
+      obsId->aoMaxThreshold = aoMaxThreshold;
+
+   }
+
+   return (errorNumber);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detInitSigInitAoThresh
+ *
+ *   INVOCATION:
+ *   detInitSigInitAoThresh (struct genSubRecord *pgsub)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (<) pgsub (struct genSubRecord *) Pointer to initSigInitAoThresh gsub 
+ *                                     record
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK if command successful, ERROR if unsuccessful
+ *
+ *   PURPOSE:
+ *   Init the detSigInitAoThresh input fields
+ *
+ *   DESCRIPTION:
+ *   For this record, I have decided to use Epics facilities and not
+ *   epToVxLib.
+ *
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *   external variables: detObsIdP2
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None
+ *-
+ */
+
+STATUS detInitSigInitAoThresh
+   (
+   struct genSubRecord * pgsub 
+                            /* Pointer to "initSigInitAoThresh" gensub record */
+   )
+
+{
+   *(double *)pgsub->vala = *(double *)pgsub->a;
+   *(double *)pgsub->valb = *(double *)pgsub->b;
 
    return (OK);
 }

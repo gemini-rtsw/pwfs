@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.29 2004-03-02 00:44:36 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.30 2004-05-05 21:54:53 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -61,6 +61,8 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  * HISTORY MODIFICATIONS
+ * 29 Mar 2004 - cb Remove aoThreshold detSigInitAoGain, create 
+ *                  detSigInitAoThresh
  * 04 Feb 2003 - cb Add aoThreshold detSigInitAoGain
  * 08 Oct 2002 - cb add detPowerOff
  * 24 Sep 2002 - cb Implement seeing computation according FR's method (add r0,
@@ -474,8 +476,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_P, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_Q, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_R, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_T, EPICS_DATA_TYPE_DOUBLE, "0.5", {"0.01", "10.0"}
+  CAD_ATTRIB_S, EPICS_DATA_TYPE_DOUBLE, "0.0", {NO_ATTRIBUTE_LIMITS}
  },
 #if (MK)
  {
@@ -805,6 +806,16 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_D, EPICS_DATA_TYPE_DOUBLE, "0.0", {"-360.0","360.0"},
   CAD_ATTRIB_E, EPICS_DATA_TYPE_DOUBLE, "0.0", {"-360.0","360.0"},
   CAD_ATTRIB_F, EPICS_DATA_TYPE_LONG, "0", {"0","1"}
+ },
+ {
+  RECORD_NAME ("dc:detSigInitAoThresh"),
+  TASK_NAME ("p2", DET_CONTROL_TASK_NAME),
+  DET_CONTROL_CMD_SIG_INIT_AO_THRESH,
+  STOP_DIRECTIVE_UNSUPPORTED,
+  SIMULATION_MODE_SUPPORTED,
+  180.0,
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_DOUBLE, "0.5", {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE, "5.0", {NO_ATTRIBUTE_LIMITS}
  }
 };
 
