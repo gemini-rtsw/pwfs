@@ -78,4 +78,12 @@ V1-2 11 August 2000 CB:
   - Gain for focus set to -0.001 and sequence closed loop now by default 
     compute threshold and total.
 
-newDev equivalent to V1-2
+V1-3 25 October 2000 CB:
+------------------------
+  - Modify detHeadTempGet to have an average on 1 record instead of 20
+  - startup.vws : timeClockInit simulated -> non simulated mode (left over for 
+    a test in lab)
+  - wfsDb.c modify the default values for detSigModeThresh, detSigModeTotal, 
+    detSigModeFgFocus, detSigModeFgCoadd, detSigModeSeq
+
+newDev equivalent to V1-3
