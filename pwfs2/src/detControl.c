@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.16 2001-09-13 18:57:47 cboyer Exp $"};
+   "$Id: detControl.c,v 1.17 2001-09-17 20:15:09 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -4701,7 +4701,7 @@ uint32 detObserveStart
 
    uint32       errorNumber;  /* Error number reported by task.               */
    
-   int          i, j;
+   int          i, j, k;
 
    /* Variables describing the observation. */
 
@@ -5031,7 +5031,14 @@ uint32 detObserveStart
             obsId->nAverageDataThreshComp = 0;
          else
          {
-            obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+            if ( obsId->aoCcdId->binningFlag == FALSE )
+               obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
+            else
+               obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
+
+            for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
+
             if (epToVxPipeWrite (NULL, 
                 (char *)(int)& (obsId->aoCtrlId->threshold), 
                 obsId->pAoThreshContext) == ERROR)
@@ -9765,6 +9772,7 @@ void detObserveEnd
    
    int            i;
    int            j;
+   int            k;
    int            indexIm;
    int            indexFgCtrl;
    int            indexCtrl;
@@ -9786,6 +9794,7 @@ void detObserveEnd
    double *       pErrorsFg;
    double *       pTime;
    double         elapsed;
+   double         t1, t2;
 
    /* File names. */
 
@@ -10387,14 +10396,31 @@ void detObserveEnd
 #endif
                   if ( obsId->coaddCounter == nCoadds )
                   {
-                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
+                     if ( timeNow (&t1) != OK )
+                     {
+#ifdef DEBUG
+                        ERROR_SET (0, "Failed to get time stamp",
+                                   ERROR_LOG_NOW);
+#endif
+                        t1 = (double)AO_TIME_NOW_ERROR ;
+                     }
+                     if ( aoThresholdPerSubapCompute (obsId->aoCtrlId->sumVect,
                                               obsId->aoCcdId, 
                                               obsId->rateBrightPixThreshComp,
-                                              &obsId->aoCtrlId->threshold) 
+                                              obsId->aoCtrlId->thresholdVect) 
                                               == ERROR )
                      {
                        ERROR_LOG ("Failed to subtract DARK from current frame");
                      }
+                     if ( timeNow (&t2) != OK )
+                     {
+#ifdef DEBUG
+                        ERROR_SET (0, "Failed to get time stamp",
+                                   ERROR_LOG_NOW);
+#endif
+                        t2 = (double)AO_TIME_NOW_ERROR ;
+                     }
+                     printf ( "t1=%f, t2=%f\n", t1, t2 );
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
                            obsId->pAoThreshContext) == ERROR)
@@ -10435,8 +10461,16 @@ void detObserveEnd
                      obsId->aoCtrlId->threshold = 
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
 
-                     obsId->aoCtrlId->thresholdDark =
-                     obsId->aoCtrlId->threshold ;
+                     if ( obsId->aoCcdId->binningFlag == FALSE )
+                        obsId->aoCtrlId->thresholdDarkFull =
+                        obsId->aoCtrlId->threshold ;
+                     else
+                        obsId->aoCtrlId->thresholdDarkBin =
+                        obsId->aoCtrlId->threshold ;
+
+                     for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                         obsId->aoCtrlId->thresholdVect[k] =
+                         obsId->aoCtrlId->threshold;
 
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
@@ -11036,8 +11070,16 @@ void detObserveEnd
                      obsId->aoCtrlId->threshold =
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
 
-                     obsId->aoCtrlId->thresholdDark =
-                     obsId->aoCtrlId->threshold ;
+                     if ( obsId->aoCcdId->binningFlag == FALSE )
+                        obsId->aoCtrlId->thresholdDarkFull =
+                        obsId->aoCtrlId->threshold ;
+                     else
+                        obsId->aoCtrlId->thresholdDarkBin =
+                        obsId->aoCtrlId->threshold ;
+
+                     for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+                         obsId->aoCtrlId->thresholdVect[k] =
+                         obsId->aoCtrlId->threshold;
 
                      if (epToVxPipeWrite (NULL,
                            (char *)(int)& (obsId->aoCtrlId->threshold),
@@ -11120,10 +11162,10 @@ void detObserveEnd
                   if ( obsId->coaddCounter ==
                        (obsId->nAverageDataThreshComp + obsId->fgFrame) )
                   {
-                     if ( aoThresholdCompute (obsId->aoCtrlId->sumVect,
+                     if ( aoThresholdPerSubapCompute (obsId->aoCtrlId->sumVect,
                                               obsId->aoCcdId,
                                               obsId->rateBrightPixThreshComp,
-                                              &obsId->aoCtrlId->threshold)
+                                              obsId->aoCtrlId->thresholdVect)
                           == ERROR )
                      {
                         ERROR_LOG ("Failed to compute threshold") ;
@@ -12804,6 +12846,7 @@ uint32 detFrameSize
     */
 
    int          updateAoCtrlFlag = FALSE;
+   long         k;
    char         path[STRING_SIZE];        
    char         darkFileName[STRING_SIZE];
    char         fullDarkFileName[STRING_SIZE];
@@ -13401,7 +13444,16 @@ uint32 detFrameSize
          ERROR_SET (0, "Failed to update AO control context", ERROR_LOG_NOW);
       }
 
+/*
       obsId->aoCtrlId->threshold = thresh;
+*/
+      if ( obsId->aoCcdId->binningFlag == FALSE )
+         obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
+      else
+         obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
+      for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+          obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
+
       obsId->aoCtrlId->totalThreshold = totalThresh;
 
       angleWithM1 = obsId->aoCtrlId->angleWithM1;
@@ -16375,6 +16427,7 @@ uint32 detSigModeThresh
    uint32       errorNumber;    /* Error number reported by task.             */
    long         sigMode;        /* Signal processing mode.                    */
    long         method;         /* Method for threshold computation.          */
+   long         i;              /* Index                                      */
    long         nAverageData;   /* Number of data to average.                 */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
@@ -16451,6 +16504,9 @@ uint32 detSigModeThresh
    {
       /* no computation requested */
       obsId->aoCtrlId->threshold = threshold;
+
+      for ( i = 0 ; i < obsId->aoCcdId->subapUsedNb ; i ++ )
+          obsId->aoCtrlId->thresholdVect[i] = threshold;
 
       if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
@@ -18531,6 +18587,7 @@ uint32 detSigReset
    )
 {
    uint32       errorNumber;    /* Error number reported by task.             */
+   long         k;              /* Index                                      */
    long         sigMode;        /* Signal processing mode.                    */
    long         nExp;           /* Number of exposure                         */
    long         outOption;      /* Output option                              */
@@ -18612,7 +18669,17 @@ uint32 detSigReset
     * Reset the thresholds 
     */
 
+   if ( obsId->aoCcdId->binningFlag == FALSE )
+      obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkFull;
+   else
+      obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDarkBin;
+
+   for ( k = 0 ; k < obsId->aoCcdId->subapUsedNb ; k ++ )
+       obsId->aoCtrlId->thresholdVect[k] = obsId->aoCtrlId->threshold;
+
+/*
    obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+*/
 
    if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                         obsId->pAoThreshContext) == ERROR)

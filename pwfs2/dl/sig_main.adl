@@ -7,10 +7,10 @@ display {
 	mnrv="4"
 	ndyng="1"
 	npc="19"
-	nstr="140"
+	nstr="143"
 	ndynamic="15"
 	nplot="0"
-	nrd="10"
+	nrd="11"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5450"
+	nwords_dspy="5640"
 	nwords_sta="224"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2782"
-	osta="2558"
-	odynamic="2842"
-	oplot="3838"
-	ord="3838"
-	oes="5438"
-	okd="5438"
-	opd="5450"
-	opo="5450"
+	odyng="2812"
+	osta="2588"
+	odynamic="2872"
+	oplot="3868"
+	ord="3868"
+	oes="5628"
+	okd="5628"
+	opd="5640"
+	opo="5640"
 	opc="68"
 	ostr="304"
-	ocmap="2558"
-	ocrules="2558"
+	ocmap="2588"
+	ocrules="2588"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -551,7 +551,7 @@ display {
 	object {
 		x="381"
 		y="322"
-		width="355"
+		width="149"
 		height="21"
 		groupid="0"
 	}
@@ -2347,6 +2347,140 @@ display {
 	clr="0"
 	bclr="6"
 	menu_title="INIT ZERO POINT MODEL"
+	decorate="none"
+}
+"related display" {
+	object {
+		x="535"
+		y="321"
+		width="201"
+		height="22"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="PER SUBAPERTURE"
+		name="showThreshDiagP2.dl"
+		args="top=$(top),sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="0"
+	bclr="6"
+	menu_title="MORE"
 	decorate="none"
 }
 "kill display" {

@@ -29,3 +29,6 @@ echo Removing EPICS links...
 /usr/bin/rm -rf `find . -name ".epics" -print`
 /usr/bin/rm -rf `find . -name ".version" -print`
 /usr/bin/rm -rf `find . -name ".applTop" -print`
+
+echo Removing Distfile
+/usr/bin/rm Distfile

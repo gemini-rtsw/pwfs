@@ -17,6 +17,8 @@
  * Corinne Boyer
  *
  * HISTORY MODIFICATION:
+ * 13 Sep 2001: CB - Add aoThresholdPerSubapCompute(), thresholdVect, 
+ *                   thresholdDarkFull and thresholdDarkBin
  * 08 Aug 2001: CB - Major modifications to have ao correction with P2 also
  * 08 Feb 2001: CB - Add zernikesVectAfterRot in circular buffer AO_CB_CTRL_ID 
  * 25 Oct 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
@@ -349,8 +351,15 @@ typedef struct
    double       thresholdMultCoeff;    /* Multiplicative coefficient for      */
                                        /* threshold computation               */
 
-   double       thresholdDark;         /* Threshold computed during sequence  */
-                                       /* dark - save                         */ 
+   double       thresholdDarkFull;     /* Threshold computed during sequence  */
+                                       /* dark when no binning - save         */ 
+
+   double       thresholdDarkBin;      /* Threshold computed during sequence  */
+                                       /* dark when binning - save            */ 
+
+   WFS_VECT     thresholdVect;         /* Threshold computed for each         */
+                                       /* subaperture                         */
+
    double       averageTotal;          /* Average of the total counts for the */
                                        /* whole CCD                           */
 
@@ -847,6 +856,8 @@ STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
 STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1, 
                          double * pA2, double * pP2, double * pC,
                          int * pApply);
+STATUS aoThresholdPerSubapCompute (float * pImage, AO_CCD_ID aoCcdId, 
+                                   double ratePixel, double * pThreshold);
 #endif
 
 #endif /* __INCaoP2Libh */

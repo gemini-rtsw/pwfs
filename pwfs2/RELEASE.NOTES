@@ -178,4 +178,6 @@ V2-2 13 September 2001 CB:
     according to the site. During the init process, model init file is read 
     and the models are initialized
 
-test equivalent to V2-2
+V2-3 17 September 2001 CB:
+--------------------------
+  - Threshold per subaperture implemented
