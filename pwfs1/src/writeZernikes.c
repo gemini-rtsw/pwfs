@@ -89,7 +89,7 @@
 #define MIN_TT_M2	        -12.5	/* min tip/tilt for AO correction (arcsec) */
 #define MAX_FOCUS_M2	        0.84	/* max focus for AO correction (microns) */
 #define MIN_FOCUS_M2	        -0.84	/* min focus for AO correction (microns) */
-#define MICRON2MM		1.0e-3  /* conversion factor for microns to mm **/
+#define MICRON2MM		1.0e-3  /* conversion factor for microns to mm */
 
 /* specify include files */
 
@@ -714,8 +714,8 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 		result.z4 = (pWfs->z[3]);
 
                 /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
-		result.z5 = (f->cos2Theta*pWfs->z[4] - f->sin2Theta*pWfs->z[5]);
-		result.z6 = (f->sin2Theta*pWfs->z[4] + f->cos2Theta*pWfs->z[5]);
+		result.z5 = (f->cos2Theta*pWfs->z[4] - f->sin2Theta*pWfs->z[5]) - (f->null[8])*1000.0;
+		result.z6 = (f->sin2Theta*pWfs->z[4] + f->cos2Theta*pWfs->z[5]) - (f->null[9])*1000.0;
 
                 /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and (3*r^2 - 2) * r * sin(t) */
 		result.z7 = (f->cosTheta*pWfs->z[6] - f->sinTheta*pWfs->z[7]);
@@ -880,7 +880,8 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 
 		result.z2 = (f->cosTheta*pWfs->FGZernikes[0] - f->sinTheta*pWfs->FGZernikes[1]) - f->null[5];
 		result.z3 = (f->sinTheta*pWfs->FGZernikes[0] + f->cosTheta*pWfs->FGZernikes[1]) - f->null[6];
-		result.z4 = pWfs->FGZernikes[2] - f->null[7];
+		/*result.z4 = pWfs->FGZernikes[2] - (pWfs->focusscale * f->null[7]);*/
+		result.z4 = pWfs->FGZernikes[2] ;
 
 		semGive(f->access);
 	}
@@ -894,7 +895,7 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
 
 	if(ptr != NULL)
 	{
-          if ( (result.z2 > MIN_TT_M2) && (result.z2 < MAX_TT_M2) )
+          /*if ( (result.z2 > MIN_TT_M2) && (result.z2 < MAX_TT_M2) )
 	     ptr->z1 = (float)(result.z2);
           else if ( result.z2 <= MIN_TT_M2 )
              ptr->z1 = MIN_TT_M2 ;
@@ -913,7 +914,11 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
           else if ( result.z4 <= MIN_FOCUS_M2 )
              ptr->z3 = MIN_FOCUS_M2 ;
           else
-             ptr->z3 = MAX_FOCUS_M2 ;
+             ptr->z3 = MAX_FOCUS_M2 ;*/
+
+	  ptr->z1 = (float)(result.z2);
+	  ptr->z2 = (float)(result.z3);
+	  ptr->z3 = (float)(result.z4);
 
 	  ptr->err1	= (float)(pWfs->FGZernikesError[0]);
 	  ptr->err2	= (float)(pWfs->FGZernikesError[1]);
@@ -1182,6 +1187,7 @@ long    aoZero (struct genSubRecord * pgsub)
         double  fudgeAngle = 0.0;
         double  armAngle = 0.0;
         double  compositeAngle = 0.0;
+        double  applyAstig = 0.0;
 
 	ptr = (double *) pgsub->j;
 
@@ -1216,6 +1222,11 @@ long    aoZero (struct genSubRecord * pgsub)
 			armAngle = 0.0;
 		}
 
+		if(sscanf(pgsub->d, "%lf", &applyAstig) != 1)
+		{
+			applyAstig = 0.0;
+		}
+
 		/* sanity check conversion factors */
 
 		if(tableAngle < LOW_PROBE_ANGLE || tableAngle > HIGH_PROBE_ANGLE)
@@ -1237,6 +1248,17 @@ long    aoZero (struct genSubRecord * pgsub)
 		{
 		    f->null[index] = *(ptr++);
 		}
+
+                if ( applyAstig == 0.0 ) 
+                {
+                   f->null[8] = 0.0 ;
+                   f->null[9] = 0.0 ;
+                }
+                else
+                {
+                   f->null[8] = applyAstig * f->null[8];
+                   f->null[9] = applyAstig * f->null[9];
+                }
 
 		/* calculate composite correction angle */
 
@@ -1357,7 +1379,7 @@ STATUS showAoDiag1(struct genSubRecord * pgsub)
 
 	if( (fabs(localDiag[GUARD1] - localDiag[GUARD2])) > DBL_EPSILON)
 	{
-	    /* printf("guard1 = %f, guard2 = %f\n", localDiag[GUARD1], localDiag[GUARD2]); */
+	     printf("guard1 = %f, guard2 = %f, epsi=%f\n", localDiag[GUARD1], localDiag[GUARD2], DBL_EPSILON); 
 
 		/* array has been written by another process during read - discard */
 

@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   14 Jan 2000: CB - Add focus gains
  *   27 oct 1999: CB - Add a new parameter dhsOutOptions in the structure 
  *                     + fits keywords
  *   8 July 1999: CB - Add a new parameter timeToWaitAo in the structure 
@@ -232,6 +233,9 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* when closed loop                                */
    double       tipGain;   /* FG tip gain, new value                          */
    double       tiltGain;  /* FG tilt gain, new value                         */
+   double       focusGain; /* FG focus gain, new value                        */
+   double       focusAverageGain;  
+                           /* FG focus boxcare average gain, new value        */
 
                            /* Time stamps.                                    */
                            /* ------------                                    */

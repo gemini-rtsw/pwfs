@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.9 2000-01-05 20:56:50 cboyer Exp $"};
+   "$Id: detControl.c,v 1.10 2000-04-19 01:36:46 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -1015,6 +1015,8 @@ STATUS   detControl
             if ( obsId->ospAOContext != NULL )
             {
                obsId->ospAOContext->coaddcounter = 0;
+               obsId->ospAOContext->focusCounter = 0;
+               obsId->ospAOContext->newFocus = 0;
             }
 
             errorNumber = 
@@ -3732,6 +3734,10 @@ void detObserveEnd
                   {
                      obsId->ospAOContext->tipscale = obsId->tipGain ;
                      obsId->ospAOContext->tiltscale = obsId->tiltGain ;
+                     obsId->ospAOContext->focusscale = (float)(obsId->focusGain) ;
+                     obsId->ospAOContext->gainFocus = (float)(obsId->focusAverageGain) ;
+                     obsId->ospAOContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
+
                      obsId->updateFGGain = FALSE ;
                   } ;
                   if ( ospTracking (obsId->pCurFrame , obsId->ospAOContext) 
@@ -3794,6 +3800,9 @@ void detObserveEnd
                   {
                      obsId->ospAOContext->tipscale = obsId->tipGain ;
                      obsId->ospAOContext->tiltscale = obsId->tiltGain ;
+                     obsId->ospAOContext->focusscale = (float)(obsId->focusGain) ;
+                     obsId->ospAOContext->gainFocus = (float)(obsId->focusAverageGain) ;
+                     obsId->ospAOContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
                      obsId->updateFGGain = FALSE ;
                   } ;
                   if ( ospTracking (obsId->pCurFrame , obsId->ospAOContext) 
@@ -3839,6 +3848,9 @@ void detObserveEnd
                   {
                      obsId->ospAOContext->tipscale = obsId->tipGain ;
                      obsId->ospAOContext->tiltscale = obsId->tiltGain ;
+                     obsId->ospAOContext->focusscale = (float)(obsId->focusGain) ;
+                     obsId->ospAOContext->gainFocus = (float)(obsId->focusAverageGain) ;
+                     obsId->ospAOContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
                      obsId->updateFGGain = FALSE ;
                   } ;
                   if ( ospTracking (obsId->pCurFrame , obsId->ospAOContext) 
@@ -3993,6 +4005,9 @@ void detObserveEnd
                   {
                      obsId->ospAOContext->tipscale = obsId->tipGain ;
                      obsId->ospAOContext->tiltscale = obsId->tiltGain ;
+                     obsId->ospAOContext->focusscale = (float)(obsId->focusGain) ;
+                     obsId->ospAOContext->gainFocus = (float)(obsId->focusAverageGain) ;
+                     obsId->ospAOContext->one_gainFocus = 1.0 - (float)(obsId->focusAverageGain) ;
                      obsId->updateFGGain = FALSE ;
                   } ;
                   if ( ospTracking (obsId->pCurFrame , obsId->ospAOContext) 
@@ -8071,6 +8086,8 @@ uint32 detSigInitFGGain
    uint32         errorNumber;    /* Error number reported by task.           */
    double         tipGain;
    double         tiltGain;
+   double         focusGain;
+   double         focusAverageGain;
 
    /*
     * Initialise the error number 
@@ -8126,6 +8143,13 @@ uint32 detSigInitFGGain
                              (char *)&(obsId->tipGain));
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
                              (char *)&(obsId->tiltGain));
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, 
+                             (char *)&(obsId->focusGain));
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, 
+                             (char *)&(obsId->focusAverageGain));
+
+      /*printf ( "focusGain = %f, focusAverageGain= %f\n" ,
+              obsId->focusGain , obsId->focusAverageGain ) ;*/
       obsId->updateFGGain = TRUE ;
    }
    else
@@ -8137,9 +8161,16 @@ uint32 detSigInitFGGain
 
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *)&tipGain);
       EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, (char *)&tiltGain);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, (char *)&focusGain);
+      EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 3, (char *)&focusAverageGain);
 
+      /*printf ( "focusGain = %f, focusAverageGain= %f\n" ,
+              focusGain , focusAverageGain ) ;*/
       obsId->ospAOContext->tipscale = tipGain ;
       obsId->ospAOContext->tiltscale = tiltGain ;
+      obsId->ospAOContext->focusscale = (float)(focusGain) ;
+      obsId->ospAOContext->gainFocus = (float)(focusAverageGain) ;
+      obsId->ospAOContext->one_gainFocus = 1.0 - (float)(focusAverageGain) ;
    }
 
    return (errorNumber);

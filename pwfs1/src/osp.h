@@ -102,6 +102,8 @@ struct OSP_CONTEXT{
     float previousFocus;
     float gainFocus ;
     float one_gainFocus ;
+    int focusCounter ;
+    int newFocus ;
     clock_t coaddstart;
     int wfsSource;
     int wfsMode;
