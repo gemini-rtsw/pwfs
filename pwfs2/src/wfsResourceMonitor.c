@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: wfsResourceMonitor.c,v 1.2 1999-07-17 02:14:27 cboyer Exp $"};
+   "$Id: wfsResourceMonitor.c,v 1.3 2002-01-03 03:39:26 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -51,8 +51,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include <memLib.h>
 #include <math.h>
 #include <tickLib.h>
-#include <ppc.h>
-#include "car.h"
+#include "menuCarstates.h"
 #include "gemTypes.h"
 #include "timeoutLib.h"
 #include "errorLib.h"
@@ -110,10 +109,6 @@ STATUS   wfsResourceMonitor
    long         ramLargestFreeBlk; /* Largest free block of RAM in Kbytes.    */
    long         cpuUsage;          /* CPU usage expressed as a percentage.    */
    MEM_PART_STATS   partStats;     /* Memory partition statistics structure.  */
-
-   /* Turn off floating point excetion errors */
-
-   setFPE() ;
 
    /* Create and initialise an error context structure for this task */
 

@@ -2,7 +2,7 @@
 #
 
 # Execute Gemini VxWorks script to ensure all users are recognised.
-< /usr/local/vxworks/vxUsers
+< /gemini/external/vxWorks/tornado2.0/vxUsers
 
 # Set the prompt
 shellPromptSet "Minimal startup pwfs2> "

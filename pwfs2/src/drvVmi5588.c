@@ -1,5 +1,5 @@
 /* drvVmi5588.c -  Device driver for VMIC VMIVME5588 */
-/* $Id: drvVmi5588.c,v 1.2 1999-07-17 02:14:02 cboyer Exp $
+/* $Id: drvVmi5588.c,v 1.3 2002-01-03 03:39:25 cboyer Exp $
 *
 *	Author:		Andrew Johnson
 *	Date:		10-10-94
@@ -36,6 +36,7 @@ INCLUDE FILES: vmi5588.h
 #include	<logLib.h>
 #include	<stdio.h>
 #include	<sysLib.h>
+#include	<string.h>
 
 #ifndef NO_EPICS
     /* EPICS #includes */
@@ -235,7 +236,7 @@ long vmi5588_init
     }
     else
     {
-       printf ( "vmi5588_init: adr RM:%x\n", prm ) ;
+       printf ( "vmi5588_init: adr RM:%x\n", (int)prm ) ;
     }
     
     /* Check if something's out there */
@@ -304,7 +305,7 @@ long vmi5588_report
 	return S_dev_NoInit;
 
     printf("vmi5588: RM node 0x%x, status 0x%x, max %d retries\n",
-           prm->nodeId, rmStatus(0L), rmMaxAttempts);
+           prm->nodeId, (int)rmStatus(0L), rmMaxAttempts);
 
     if (vmi5588Debug) {
 	unsigned char   irs, csr, icr;
@@ -1199,7 +1200,7 @@ long vmi5588_pageInit
 
     if (vmi5588Debug) {
     	printf("Init pageIo index <%hd> page <%d>\n",
-    	       pageIndex, pageIo.number);
+    	       pageIndex, (int)pageIo.number);
     }
 
     return status;

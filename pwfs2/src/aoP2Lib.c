@@ -73,8 +73,10 @@
  *   aoModComaFileRead () - Read coma zero point model from model file
  *   aoModFocFileRead () - Read focus zero point model from model file
  *   aoThresholdPerSubapCompute() - Compute a threshold per subaperture
+ *   aoTotalThresholdCompute () - Compute the threshold for the total count
  * 
  *INDENT-OFF*
+ *   14 Dec 2001: CB - Threshold in real time: add rms, rmsDarkFull, rmsDarkBin
  *   30 Nov 2001: CB - Add writeToRm to aoGlobalGuide() and aoGuideAndFocus()
  *   31 Oct 2001: CB - aoGlobalGuide and aoGuideAndFocus x2 the TT values when
  *                     binning
@@ -2491,6 +2493,45 @@ STATUS aoCtrlContextInit (
    printf ( "aoCtrlContextInit(): %s\n", comment );
 #endif
 
+   /* Read RMS value for threshold computation */
+
+   if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+            "Failed to read rms from the AO init file %s",
+            ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+   aoCtrlId->rms = value;
+
+   if ( aoCcdId->binningFlag == FALSE )
+      aoCtrlId->rmsDarkFull = value;
+   else
+      aoCtrlId->rmsDarkBin = value;
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): rms = %f\n", aoCtrlId->rms );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+      "Failed to read the next line of comments from the AO init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      aoCtrlId->initFlag = FALSE;
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlContextInit(): %s\n", comment );
+#endif
+
    /* Read threshold value for centroid computation */
 
    if ( (fscanf (pFile, "%lf\n", &value)) == EOF )
@@ -2504,8 +2545,10 @@ STATUS aoCtrlContextInit (
    }
 
    aoCtrlId->threshold = value;
-   aoCtrlId->thresholdDarkFull = value;
-   aoCtrlId->thresholdDarkBin = value;
+   if ( aoCcdId->binningFlag == FALSE )
+      aoCtrlId->thresholdDarkFull = value;
+   else
+      aoCtrlId->thresholdDarkBin = value;
    for ( i = 0 ; i < aoCcdId->subapUsedNb ; i ++ )
        aoCtrlId->thresholdVect[i] = value;
    aoCtrlId->thresholdMethod = AO_THRESH_VALUE;
@@ -2547,8 +2590,8 @@ STATUS aoCtrlContextInit (
    }
 
    aoCtrlId->totalThreshold = value;
-   aoCtrlId->thresholdMethod = AO_TOTAL_VALUE;
-   aoCtrlId->thresholdMultCoeff = 0.0;
+   aoCtrlId->totalMethod = AO_TOTAL_VALUE;
+   aoCtrlId->multCoeffTotal = 0.0;
    aoCtrlId->averageTotal = 0.0;
 
 #ifdef DEBUG
@@ -2650,6 +2693,9 @@ STATUS aoCtrlContextInit (
 
    for ( i = 0 ; i < CCD_SIZE ; i ++ )
        aoCtrlId->sumVect[i] = 0.0;
+
+   for ( i = 0 ; i < (2 * SUBAP_NB) ; i ++ )
+       aoCtrlId->averageThreshVect[i] = 0.0;
 
    fclose (pFile);
 
@@ -3102,6 +3148,9 @@ STATUS aoCtrlContextShow (
       }
    }
 
+   printf ( "RMS: %f\n" , aoCtrlId->rms );
+   printf ( "RMS dark (no bin): %f\n" , aoCtrlId->rmsDarkFull );
+   printf ( "RMS dark (bin): %f\n" , aoCtrlId->rmsDarkBin );
    printf ( "Threshold method: %d\n" , aoCtrlId->thresholdMethod );
    printf ( "Threshold: %f\n" , aoCtrlId->threshold );
    printf ( "Threshold dark (no bin): %f\n" , aoCtrlId->thresholdDarkFull );
@@ -3736,7 +3785,7 @@ STATUS aoImageFloatAverage (
  *   aoRmsNoiseImageCompute
  *
  *   INVOCATION:
- *   aoRmsNoiseImageCompute (pImage, aoCcdId, pRmsNoise) 
+ *   aoRmsNoiseImageCompute (pImage, aoCcdId, pRmsNoise, pMeanNoise) 
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage         (float *)    Pointer to the image from which to compute 
@@ -3744,15 +3793,16 @@ STATUS aoImageFloatAverage (
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context 
  *                                   structure
  *   (<) pRmsNoise      (double *)   Pointer to the rms of the noise
+ *   (<) pMeanNoise     (double *)   Pointer to the mean of the noise
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   To compute the rms of the noise
+ *   To compute the mean and rms of the noise
  *
  *   DESCRIPTION:
- *   This routine computes for a dedicated image pImage the rms of the 
+ *   This routine computes for a dedicated image pImage the mean and rms of the 
  *   noise. 
  *
  *   EXTERNAL VARIABLES:
@@ -3772,7 +3822,8 @@ STATUS aoImageFloatAverage (
 STATUS aoRmsNoiseImageCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
-   double *     pRmsNoise
+   double *     pRmsNoise,
+   double *     pMeanNoise
    )
 {
    int          imageSize;
@@ -3806,6 +3857,8 @@ STATUS aoRmsNoiseImageCompute (
 
    meanPixel = meanPixel / (double)(aoCcdId->pixelsNb);
 
+   *pMeanNoise = meanPixel;
+
    variance = variance / (double)(aoCcdId->pixelsNb);
 
    rmsrms = variance - (meanPixel*meanPixel);
@@ -3821,6 +3874,10 @@ STATUS aoRmsNoiseImageCompute (
 
    *pRmsNoise = sqrt ( rmsrms );
 
+#ifdef DEBUG
+   printf ( "Mean=%f, rms=%f\n", (float)*pMeanNoise, (float)*pRmsNoise );
+#endif
+
    return (OK);
 }
 
@@ -3831,12 +3888,14 @@ STATUS aoRmsNoiseImageCompute (
  *   aoThresholdCompute
  *
  *   INVOCATION:
- *   aoThresholdCompute (pImage, aoCcdId, ratePixel, pThreshold)
+ *   aoThresholdCompute (pImage, aoCcdId, aoCtrlId, ratePixel, pThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage         (float *)    Pointer to the image from which to compute 
  *                                   the centroids
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context 
+ *                                   structure
+ *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control context 
  *                                   structure
  *   (>) ratePixel      (double)     Rate of the brightest pixels to determine 
  *                                   the threshold should between 0 and 1
@@ -3870,6 +3929,7 @@ STATUS aoRmsNoiseImageCompute (
 STATUS aoThresholdCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId,
    double       ratePixel,
    double *     pThreshold
    )
@@ -3883,11 +3943,12 @@ STATUS aoThresholdCompute (
    float *      pi;
    float *      pn;
    float *      pMax;
+   double       averageThresh;
    IMAGE_VECT   newImageVect; 
 
    /* Check range of ratePixel: should be between 0 and 1 */
 
-   if ( (ratePixel < 0.0) || (ratePixel > 1.0) )
+   if ( (ratePixel < 0.0) || (ratePixel >= 1.0) )
    {
       ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
                    ERROR_LOG_SAVE, ratePixel );
@@ -3925,7 +3986,13 @@ STATUS aoThresholdCompute (
    index = (int) ceil ((double)(aoCcdId->pixelsNb) * (1.0 - ratePixel));
    printf ( "index = %d\n" ,index);
 
-   *pThreshold = *(pn + index);
+   pn = newImageVect;
+   averageThresh = 0.0;
+   for ( i = 0 ; i < index ; i ++ )
+       averageThresh += (double)(*(pn + i));
+
+   *pThreshold = (averageThresh / (double)(index)) + 
+                 (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
 
    return (OK);
 }
@@ -3937,14 +4004,16 @@ STATUS aoThresholdCompute (
  *   aoCentroidsCompute
  *
  *   INVOCATION:
- *   aoCentroidsCompute (pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
- *                       pCentroidsVect, pErrorCentroidsVect, pWfsStatus)
+ *   aoCentroidsCompute (pImage, aoCcdId, aoCtrlId, pThreshVect, 
+ *                       pTotalCountsVect, pCentroidsVect, pErrorCentroidsVect,
+ *                       pWfsStatus)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage              (float *)    Pointer to the image from which to
  *                                        compute the centroids
  *   (>) aoCcdId             (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *   (!) aoCtrlId            (AO_CTRL_ID) Pointer to the AO control structure
+ *   (!) pThreshVect         (double *)   Pointer to the threshold vector
  *   (!) pTotalCountsVect    (double *)   Pointer to the total counts vector
  *   (!) pCentroidsVect      (double *)   Pointer to the centroids vector
  *   (!) pErrorCentroidsVect (double *)   Pointer to the error centroids vector
@@ -3981,6 +4050,7 @@ STATUS aoCentroidsCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId,
+   double *     pThreshVect,
    double *     pTotalCountsVect,
    double *     pCentroidsVect,
    double *     pErrorCentroidsVect,
@@ -4023,7 +4093,7 @@ STATUS aoCentroidsCompute (
               xSubap = (double)(0.0);
               ySubap = (double)(0.0);
               totalSubap = (double)(0.0);
-              thresh = aoCtrlId->thresholdVect[m];
+              thresh = *(pThreshVect + m);
 
               xSubapCenter = aoCtrlId->refWfsVect[2*m] - aoCcdId->xRaster*l;
               ySubapCenter = aoCtrlId->refWfsVect[2*m+1] -
@@ -4133,7 +4203,8 @@ STATUS aoCentroidsCompute (
  *   aoModeCompute
  *
  *   INVOCATION:
- *   aoModeCompute (pImage, aoCcdId, aoCtrlId, imageNb, aoCbAoCtrlId)
+ *   aoModeCompute (pImage, aoCcdId, aoCtrlId, imageNb, pThreshVect, 
+ *                  aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage    (float *)    Pointer to the float buffer which contains the
@@ -4141,6 +4212,8 @@ STATUS aoCentroidsCompute (
  *   (>) aoCcdId   (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *   (!) aoCtrlId  (AO_CTRL_ID) Pointer to the AO control structure
  *   (>) imageNb   (int)        Number of images to average
+ *   (>) pThreshVect  (int)              Vector of the image current threshold 
+ *                                       vector
  *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the aO control circular 
  *                                       buffer
  *
@@ -4176,9 +4249,11 @@ STATUS aoModeCompute (
    AO_CCD_ID        aoCcdId,
    AO_CTRL_ID       aoCtrlId,
    int              imageNb,
+   double *         pThreshVect,
    AO_CB_AO_CTRL_ID aoCbAoCtrlId
    )
 {
+   int          k;
    int          imageSize;
    int          indexCtrl;
    int *        pWfsStatus;
@@ -4199,6 +4274,7 @@ STATUS aoModeCompute (
    double *     pMaxCent;
    double *     pMat;
    double *     pTime;
+   double *     pThresh;
 
    /* Some initialisations */
 
@@ -4209,6 +4285,11 @@ STATUS aoModeCompute (
 
    /* Coadd images */
 
+#ifdef DEBUG
+   for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+       printf ( "aoModeCompute: pThreshVect[%d]=%f\n", k, *(pThreshVect + k));
+#endif
+
    if ( aoCtrlId->coaddCounter < imageNb )
    {
       if ( aoCtrlId->coaddCounter == 0 )
@@ -4217,6 +4298,9 @@ STATUS aoModeCompute (
          {
              *(p++) = *(pi++);
          }
+
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+             *(aoCtrlId->averageThreshVect + k) = *(pThreshVect + k);
       }
       else
       {
@@ -4224,7 +4308,18 @@ STATUS aoModeCompute (
          {
              *p = ( *(p) + *(pi++) );
          }
+
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+             *(aoCtrlId->averageThreshVect + k) += *(pThreshVect + k);
       }
+
+#ifdef DEBUG
+      for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+          printf ( "aoModeCompute: coaddCounter=%d, averageThreshVect[%d]=%f\n",
+                   aoCtrlId->coaddCounter, k, 
+                   *(aoCtrlId->averageThreshVect + k));
+#endif
+
       aoCtrlId->coaddCounter ++;
 
       if  ( aoCtrlId->coaddCounter == imageNb )
@@ -4233,6 +4328,7 @@ STATUS aoModeCompute (
           {
                *p = (*(p) / imageNb);
           }
+
           aoCtrlId->coaddCounter = 0;
 
          /* Compute the centroids */
@@ -4240,6 +4336,7 @@ STATUS aoModeCompute (
          indexCtrl = aoCbAoCtrlId->position;
          pTotalCountsVect = 
          aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].totalCountsVect;
+         pThresh = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].thresholdVect;
          pCentroidsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].centroidsVect;
          pErrorCentroidsVect =
          aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].errorCentroidsVect;
@@ -4255,11 +4352,20 @@ STATUS aoModeCompute (
          pMaxCent = pCentroidsVect + aoCcdId->centroidsNb;
          pMat = aoCtrlId->aoContMat;
 
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+              *(pThresh + k) = *(aoCtrlId->averageThreshVect + k) / imageNb;
+
+#ifdef DEBUG
+         for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+             printf ( "aoModeCompute: pThresh[%d]=%f\n",
+                      k, *(pThresh + k));
+#endif
+
          for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
              *pAo = 0.0;
 
          if ( aoCentroidsCompute ( aoCtrlId->sumVect, aoCcdId, aoCtrlId,
-                                   pTotalCountsVect,
+                                   pThresh, pTotalCountsVect,
                                    pCentroidsVect, pErrorCentroidsVect,
                                    pWfsStatus) == ERROR )
          {
@@ -4740,6 +4846,7 @@ STATUS aoCbAoCtrlZero
        aoCbAoCtrlId->cbAoCtrlRecord[index].wfsStatus = 0;
        for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
        {
+           aoCbAoCtrlId->cbAoCtrlRecord[index].thresholdVect[i] = 0.0;
            aoCbAoCtrlId->cbAoCtrlRecord[index].totalCountsVect[i] = 0.0;
            aoCbAoCtrlId->cbAoCtrlRecord[index].centroidsVect[i] = 0.0;
            aoCbAoCtrlId->cbAoCtrlRecord[index].errorCentroidsVect[i] = 0.0;
@@ -4812,6 +4919,7 @@ STATUS aoCbFgCtrlZero
        aoCbFgCtrlId->cbFgCtrlRecord[index].wfsStatus = 0;
        for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
        {
+           aoCbFgCtrlId->cbFgCtrlRecord[index].thresholdVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].totalCountsVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].centroidsVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].errorCentroidsVect[i] = 0.0;
@@ -4986,15 +5094,18 @@ STATUS aoCbAoCtrlSave
    aoHeaderCbAoCtrl.averageImageNb = aoCbAoCtrlId->averageImageNb;
    aoHeaderCbAoCtrl.exposureTime = aoCbAoCtrlId->exposureTime;
    for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
+       aoHeaderCbAoCtrl.thresholdVect[i] = aoCtrlId->thresholdVect[i];
+   for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
        aoHeaderCbAoCtrl.refWfsVect[i] = aoCtrlId->refWfsVect[i];
    for ( i = 0 ; i < aoCtrlId->aoModeNb ; i ++ )
        aoHeaderCbAoCtrl.aoScaleFactorVect[i] = aoCtrlId->aoScaleFactorVect[i];
+   aoHeaderCbAoCtrl.rms = aoCtrlId->rms;
    aoHeaderCbAoCtrl.threshold = aoCtrlId->threshold;
    aoHeaderCbAoCtrl.totalThreshold = aoCtrlId->totalThreshold;
    aoHeaderCbAoCtrl.angleWithM1 = aoCtrlId->angleWithM1;
 
    /*
-    * Open the image circular buffer
+    * Open the aO control circular buffer
     */
 
    pFile = fopen ( aoHeaderCbAoCtrl.cbAoCtrlFileName, "w" );
@@ -5277,18 +5388,22 @@ STATUS aoCbFgCtrlSave
        aoHeaderCbFgCtrl.refGuideVect[i] = aoCtrlId->refGuideVect[i];
 
    for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
+       aoHeaderCbFgCtrl.thresholdVect[i] = aoCtrlId->thresholdVect[i];
+
+   for ( i = 0 ; i < aoCcdId->centroidsNb ; i ++ )
        aoHeaderCbFgCtrl.refWfsVect[i] = aoCtrlId->refWfsVect[i];
 
    for ( i = 0 ; i < aoCtrlId->fgModeNb ; i ++ )
        aoHeaderCbFgCtrl.fgScaleFactorVect[i] = aoCtrlId->fgScaleFactorVect[i];
 
    aoHeaderCbFgCtrl.threshold = aoCtrlId->threshold;
+   aoHeaderCbFgCtrl.rms = aoCtrlId->rms;
    aoHeaderCbFgCtrl.totalThreshold = aoCtrlId->totalThreshold;
    aoHeaderCbFgCtrl.angleWithM2 = aoCtrlId->angleWithM2;
    aoHeaderCbFgCtrl.slidingFocusGain = aoCtrlId->slidingFocusGain;
 
    /*
-    * Open the image circular buffer
+    * Open the fg control circular buffer
     */
 
    pFile = fopen ( aoHeaderCbFgCtrl.cbFgCtrlFileName, "w" );
@@ -5495,6 +5610,7 @@ STATUS aoGuideAndFocus (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
    AO_CTRL_ID   aoCtrlId,
+   double *     pThreshVect,
    double *     pTotalCountsVect,
    double *     pCentroidsVect,
    double *     pErrorCentroidsVect,
@@ -5540,9 +5656,9 @@ STATUS aoGuideAndFocus (
 
    /* First compute the centroids of the image */
 
-   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
-                             pCentroidsVect, pErrorCentroidsVect,
-                             pWfsStatus) == ERROR )
+   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pThreshVect, 
+                             pTotalCountsVect, pCentroidsVect, 
+                             pErrorCentroidsVect, pWfsStatus) == ERROR )
    {
       ERROR_SET (0, "Error when computing centroids" , ERROR_LOG_SAVE);
       return (ERROR);
@@ -5607,13 +5723,15 @@ STATUS aoGuideAndFocus (
  *   aoModeAnalyze
  *
  *   INVOCATION:
- *   aoModeAnalyze (pImage, aoCcdId, aoCtrlId, aoCbAoCtrlId)
+ *   aoModeAnalyze (pImage, aoCcdId, aoCtrlId, pThreshVect, aoCbAoCtrlId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pImage    (float *)    Pointer to the float buffer which contains the
- *                              image coadded
- *   (>) aoCcdId   (AO_CCD_ID)  Pointer to the AO CCD geometry context
- *   (!) aoCtrlId  (AO_CTRL_ID) Pointer to the AO control structure
+ *   (>) pImage       (float *)    Pointer to the float buffer which contains 
+ *                                 the image coadded
+ *   (>) aoCcdId      (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *   (!) aoCtrlId     (AO_CTRL_ID) Pointer to the AO control structure
+ *   (>) pThreshVect  (double *)   Threshold vector to use for centroids 
+ *                                 computation
  *   (!) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the ao control circular 
  *                                       buffer
  *
@@ -5648,9 +5766,11 @@ STATUS aoModeAnalyze (
    float *       pImage,
    AO_CCD_ID     aoCcdId,
    AO_CTRL_ID    aoCtrlId,
+   double *      pThreshVect,
    AO_CB_AO_CTRL_ID aoCbAoCtrlId
    )
 {
+   int          k;
    int          indexCtrl;
    int *        pWfsStatus;
    double *     pTotalCountsVect;
@@ -5666,11 +5786,13 @@ STATUS aoModeAnalyze (
    double *     pMaxCent;
    double *     pMat;
    double *     pTime;
+   double *     pThresh;
 
    /* Some initialisations */
 
    indexCtrl = aoCbAoCtrlId->position;
    pTotalCountsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].totalCountsVect;
+   pThresh = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].thresholdVect;
    pCentroidsVect = aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].centroidsVect;
    pErrorCentroidsVect = 
    aoCbAoCtrlId->cbAoCtrlRecord[indexCtrl].errorCentroidsVect;
@@ -5688,10 +5810,14 @@ STATUS aoModeAnalyze (
    for ( pAo = pAoVect ; pAo < pMaxAo ; pAo ++ )
        *pAo = 0.0;
 
+   for ( k = 0 ; k < aoCcdId->subapUsedNb ; k ++ )
+       *(pThresh + k) = *(pThreshVect + k);
+
    /* Compute the centroids */
 
 
-   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pTotalCountsVect,
+   if ( aoCentroidsCompute ( pImage, aoCcdId, aoCtrlId, pThresh, 
+                             pTotalCountsVect,
                              pCentroidsVect, pErrorCentroidsVect,
                              pWfsStatus) == ERROR )
    {
@@ -6291,7 +6417,8 @@ STATUS aoDarkUpdate (
  *   INVOCATION:
  *   aoCtrlFileRead (pInitFileName, pPath, pDarkFileName, pFlatFileName, 
  *                   pRefFileName, pRefX, pRefY, pAoImFileName, pAoCmFileName,
- *                   pFgCmFileName, pThresh, pTotalThresh, pAngleM2, pAngleM1)
+ *                   pFgCmFileName, pRms, pThresh, pTotalThresh, pAngleM2, 
+ *                   pAngleM1)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pInitFileName (char *)   Pointer to the AO init file name 
@@ -6304,6 +6431,7 @@ STATUS aoDarkUpdate (
  *   (<) pAoImFileName (char *)   Pointer to the aO interaction matrix file name
  *   (<) pAoCmFileName (char *)   Pointer to the aO control matrix file name
  *   (<) pFgCmFileName (char *)   Pointer to the FG control matrix file name
+ *   (<) pRms          (double *) Pointer to the RMS
  *   (<) pThresh       (double *) Pointer to the threshold
  *   (<) pTotalThresh  (double *) Pointer to the total flux threshold
  *   (<) pAngleM2      (double *) Pointer to the angle with M2
@@ -6343,6 +6471,7 @@ STATUS aoCtrlFileRead (
    char *   pAoImFileName,
    char *   pAoCmFileName,
    char *   pFgCmFileName,
+   double * pRms,
    double * pThresh,
    double * pTotalThresh,
    double * pAngleM2,
@@ -6716,6 +6845,31 @@ STATUS aoCtrlFileRead (
 #endif
 
    }
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      printf (
+      "Failed to read the next line of comments from the AO init file %s\n",
+      pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /* Read rms */
+
+   if ( (fscanf (pFile, "%lf\n", pRms)) == EOF )
+   {
+      printf ( "Failed to read rms from the AO init file %s\n",
+               pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoCtrlFileRead(): rms = %f\n", *pRms );
+#endif
 
    /* Skip the next line of comment */
 
@@ -8236,12 +8390,15 @@ STATUS aoModFocFileRead (
  *   aoThresholdPerSubapCompute
  *
  *   INVOCATION:
- *   aoThresholdPerSubapCompute (pImage, aoCcdId, ratePixel, pThreshold)
+ *   aoThresholdPerSubapCompute (pImage, aoCcdId, aoCtrlId, ratePixel, 
+ *                               pThreshold)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pImage         (float *)    Pointer to the image from which to compute
  *                                   the centroids
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                                   structure
+ *   (>) aoCtrlId       (AO_CTRL_ID) Pointer to the AO control context
  *                                   structure
  *   (>) ratePixel      (double)     Rate of the brightest pixels to determine
  *                                   the thresholds - should be between 0 and 1
@@ -8275,6 +8432,7 @@ STATUS aoModFocFileRead (
 STATUS aoThresholdPerSubapCompute (
    float *      pImage,
    AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId,
    double       ratePixel,
    double *     pThreshold
    )
@@ -8291,11 +8449,12 @@ STATUS aoThresholdPerSubapCompute (
    float *      pi;
    float *      pMin;
    float *      pMax;
+   double       averageThresh;
    IMAGE_VECT   newImageVect;
 
    /* Check range of ratePixel: should be between 0 and 1 */
 
-   if ( (ratePixel < 0.0) || (ratePixel > 1.0) )
+   if ( (ratePixel < 0.0) || (ratePixel >= 1.0) )
    {
       ERROR_SET1 ( 0 , "ratePixel (%f) should be comprised between 0 and 1",
                    ERROR_LOG_SAVE, ratePixel );
@@ -8368,8 +8527,14 @@ STATUS aoThresholdPerSubapCompute (
               /* Now compute the threshold for this subaperture */
 
               index = (int) ceil ((double)(pixelsNb) * (1.0 - ratePixel));
+    
+              pn = newImageVect;
+              averageThresh = 0.0;
+              for ( i = 0 ; i < index ; i ++ )
+                  averageThresh += (double)(*(pn + i));
 
-              *(pThreshold + m) = *(pn + index);
+              *(pThreshold + m) = (averageThresh / (double)(index)) + 
+              (aoCtrlId->thresholdMultCoeff * aoCtrlId->rms);
 
 #ifdef DEBUG
               printf ( "index = %d\n" ,index);
@@ -8382,3 +8547,111 @@ STATUS aoThresholdPerSubapCompute (
 
    return (OK);
 }
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoTotalThresholdCompute
+ *
+ *   INVOCATION:
+ *   aoTotalThresholdCompute (aoCcdId, aoCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCcdId    (AO_CCD_ID)  Pointer to the AO CCD geometry context
+ *                               structure
+ *   (>) aoCtrlId   (AO_CTRL_ID) Pointer to the control context structure
+ *
+ *   FUNCTION VALUE:
+ *   (double) totalThreshold
+ *
+ *   PURPOSE:
+ *   To compute the threshold for the total count
+ *
+ *   DESCRIPTION:
+ *   This routine computes for the threshold for the total count according to
+ *   complex formula :
+ *   totalThreshold = [ ( F(N)/Npix^0.65 ) + G(N) ] * Npix * rms
+ *   with F(N) = 6.0 * exp (0.8*N^1.5) * exp ( -1.5 * N^1.32)
+ *   with G(N) = 0.38 * exp ( -1.5 * N^1.32)
+ *   with N < 2.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None.
+ *
+ *   PRIOR REQUIREMENTS:
+ *
+ *   INCLUDE FILES:
+ *   aoP2Lib.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+double aoTotalThresholdCompute (
+   AO_CCD_ID    aoCcdId,
+   AO_CTRL_ID   aoCtrlId
+   )
+{
+   double a, b, c, d, e, f, g;
+   double N;
+   double Npix;
+   double exp_e_Npowerf;
+   double exp_c_Npowerd;
+   double FN;
+   double GN;
+   double totalThreshold;
+
+   /* Some init */
+
+   a = 0.65;
+   b = 6.0;
+   c = 0.8;
+   d = 1.5;
+   e = -1.5;
+   f = 1.32;
+   g = 0.38;
+
+   N = aoCtrlId->thresholdMultCoeff;
+   Npix = aoCcdId->pixelsNb;
+
+   /* Check range of N */
+
+   if ( N > 2.0 )
+   {
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+      N = 2;
+   };
+
+   if ( N < 0.0 )
+   {
+      ERROR_SET1 ( 0 , "N (%f) should be comprised between 0 and 2",
+                   ERROR_LOG_SAVE, N );
+      N = 0;
+   };
+
+   /* Compute the total threshold */
+
+   exp_c_Npowerd = exp (c * pow (N, d));
+   exp_e_Npowerf = exp (e * pow (N, f));
+
+   FN = b * exp_c_Npowerd * exp_e_Npowerf;
+   GN = g * exp_e_Npowerf;
+
+   totalThreshold = ( (FN/pow(Npix,a)) + GN ) * Npix * aoCtrlId->rms;
+
+/*#ifdef DEBUG */
+   printf ( "exp_c_Npowerd = %f\n" , exp_c_Npowerd);
+   printf ( "exp_e_Npowerf = %f\n" , exp_e_Npowerf);
+   printf ( "FN = %f\n" , FN );
+   printf ( "GN = %f\n" , GN );
+   printf ( "totalThreshold = %f\n" , totalThreshold );
+/*#endif */
+
+   /* Return it */
+
+   return ( totalThreshold );
+}
+

@@ -191,3 +191,12 @@ V2-5 03 December 2001 CB:
   - add writeToRm flag when doing guiding
 
 newDev equivalent to V2-5
+
+V3-0
+  - Port to epics 3.13.4
+  - Threshold in real time: FG(n) is computed with threshold(n-1), aO(n) is 
+    computed with average threshold during N frames
+  - detDhsInit is now started by detControl.c
+  - CB sizes increased
+  - aO: replace imageNb parameter with a time parameter, them imageNb is 
+    computed from this time and current exposure time
