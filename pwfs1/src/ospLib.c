@@ -4678,11 +4678,13 @@ int ospCalibrateTilt ( float *buffp ,
  * ospAoCor
  *
  * INVOCATION:
- * ospAoCor ( buffp, N, wfsSpecific )
+ * ospAoCor ( buffp, N, timeToWait, wfsSpecific )
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * (>) buffp (float *) buffer which contains pixel data
  * (>) N (int) Number of frames to average
+ * (>) timeToWait (int) time in sec to wait after applying the Z coefficients, 
+ *                      and before starting new measurements 
  * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
  *
  * FUNCTION VALUE:
@@ -4690,7 +4692,8 @@ int ospCalibrateTilt ( float *buffp ,
  *
  * PURPOSE:
  * To compute AO corrections
- * 8 March 1999 - cb
+ * 8 March 1999 - cb creation
+ * 8 July 1999 - cb add timeToWait 
  *
  * DESCRIPTION:
  *
@@ -4709,6 +4712,7 @@ int ospCalibrateTilt ( float *buffp ,
 
 int ospAoCor ( float *buffp ,
 	       int N , 
+               int timeToWait ,
                struct OSP_CONTEXT *wfsSpecific )
 {
     int   buffSize;
@@ -4860,6 +4864,9 @@ int ospAoCor ( float *buffp ,
        } ;
 
        writeWfsToTcs(wfsSpecific);
+       printf ( "ospAoCor(): Z coeff sent to TCS, wait now %d s...\n" , timeToWait ) ; 
+       taskDelay ( timeToWait * sysClkRateGet() ) ;
+       printf ( "ospAoCor(): end of wait, start again measurements \n" ) ;
 #endif /*vxWorks*/
 
     }

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
- "$Id: wfsDb.c,v 1.5 1999-06-29 22:55:14 cboyer Exp $"};
+ "$Id: wfsDb.c,v 1.6 1999-07-15 02:24:27 cboyer Exp $"};
 
 /*+
  * MODULE NAME:
@@ -62,6 +62,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Steven Beard
  *
  *INDENT-OFF*
+ *   8July1999-cb add new parameter time to detSigMode
  *
  *INDENT-ON*
  *-
@@ -491,6 +492,7 @@ CAD_RECORD pWfsDbCadList [] =
   40.0,
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG,  "7",      {"0", "8"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG,  "1",      {"1", NO_HI_LIMIT},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG,  "0",      {"0", NO_HI_LIMIT},
  },
  {
   RECORD_NAME ("dc:detSigUpdate"),

@@ -87,6 +87,7 @@
 #define MIN_TT_M2	        -12.5	/* min tip/tilt for AO correction (arcsec) */
 #define MAX_FOCUS_M2	        0.84	/* max focus for AO correction (microns) */
 #define MIN_FOCUS_M2	        -0.84	/* min focus for AO correction (microns) */
+#define MICRON2MM		1.0e-3  /* conversion factor for microns to mm **/
 
 /* specify include files */
 
@@ -663,7 +664,7 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 	{
 		/* first rotate the tip and tilt values to the tcs frame of reference */
 
-		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2]) - f->null[5];
+		/*result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2]) - f->null[5];
 		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2]) - f->null[6];
 		result.z4 = pWfs->z[3] - f->null[7];
 		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5]) - f->null[8];
@@ -681,7 +682,27 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17]) - f->null[20];
 		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17]) - f->null[21];
 		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19]) - f->null[22];
-		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19]) - f->null[23];
+		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19]) - f->null[23];*/
+
+		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2])*MICRON2MM ;
+		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2])*MICRON2MM ;
+		result.z4 = (pWfs->z[3])*MICRON2MM;
+		result.z5 = (f->cosTheta*pWfs->z[4] - f->sinTheta*pWfs->z[5])*MICRON2MM ;
+		result.z6 = (f->sinTheta*pWfs->z[4] + f->cosTheta*pWfs->z[5])*MICRON2MM ;
+		result.z7 = (f->cosTheta*pWfs->z[6] - f->sinTheta*pWfs->z[7])*MICRON2MM ;
+		result.z8 = (f->sinTheta*pWfs->z[6] + f->cosTheta*pWfs->z[7])*MICRON2MM ;
+		result.z9 = (pWfs->z[8])*MICRON2MM ;
+		result.z10 = (f->cosTheta*pWfs->z[9] - f->sinTheta*pWfs->z[10])*MICRON2MM ;
+		result.z11 = (f->sinTheta*pWfs->z[9] + f->cosTheta*pWfs->z[10])*MICRON2MM ;
+		result.z12 = (f->cosTheta*pWfs->z[11] - f->sinTheta*pWfs->z[12])*MICRON2MM ;
+		result.z13 = (f->sinTheta*pWfs->z[11] + f->cosTheta*pWfs->z[12])*MICRON2MM ;
+		result.z14 = (f->cosTheta*pWfs->z[13] - f->sinTheta*pWfs->z[14])*MICRON2MM ;
+		result.z15 = (f->sinTheta*pWfs->z[13] + f->cosTheta*pWfs->z[14])*MICRON2MM ;
+		result.z16 = (pWfs->z[15])*MICRON2MM;
+		result.z17 = (f->cosTheta*pWfs->z[16] - f->sinTheta*pWfs->z[17])*MICRON2MM ;
+		result.z18 = (f->sinTheta*pWfs->z[16] + f->cosTheta*pWfs->z[17])*MICRON2MM ;
+		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19])*MICRON2MM ;
+		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM ;
 
 		semGive(f->access);
 	}

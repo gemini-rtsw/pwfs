@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.5 1999-06-29 22:55:10 cboyer Exp $"};
+   "$Id: detControl.c,v 1.6 1999-07-15 02:24:23 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -35,6 +35,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   8 July 1999: CB - ospAoCor () has a new parameter, timeToWait
  *   21 June 1999: CB - Modify detSigInit to add a new parameter, 
  *                      number of used subaperture * 2
  *   21 Apr 1999: CB - Simplified version for PWFS1 only
@@ -748,6 +749,7 @@ STATUS   detControl
 
       obsId->sigMode = OSP_MODE_NONE;
       obsId->nCoaddFrames = 1;
+      obsId->timeToWaitAo = 0;
       obsId->coaddCounter = 0;
    }
    else
@@ -3061,6 +3063,9 @@ void detObserveEnd
 
    int          nCoadds;           /* Number of frames per coadd.             */
    int          frameNb;           /* Number of frame before calibration.     */
+   int          timeToWait;        /* Time to wait in sec for ospAoCor before */
+                                   /* start new measurements after Z have been*/
+                                   /* sent to the TCS                         */
  
    /* 
     * Variables associated with "observe" command.
@@ -3258,31 +3263,33 @@ void detObserveEnd
    }
    else if ( pRawFrame->header.status != 0 )
    {
+#ifdef DEBUG
       if ((pRawFrame->header.status & SDSU_FSTAT_TIMEOUT) != 0)
       {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Timeout in frame %lu - frame ignored", frameCount);*/
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Timeout in frame %lu - frame ignored", frameCount);
       }
       else if ((pRawFrame->header.status & SDSU_FSTAT_OVERRUN) != 0)
       {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Data overrun in frame %lu - frame ignored", frameCount);*/
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Data overrun in frame %lu - frame ignored", frameCount);
       }
       else if ((pRawFrame->header.status & SDSU_FSTAT_FRAMESYNC) != 0)
       {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Sync error in frame %lu - ignored", frameCount);*/
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Sync error in frame %lu - ignored", frameCount);
       }
       else if ((pRawFrame->header.status & SDSU_FSTAT_CHECKSUM) != 0)
       {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Checksum error in frame %lu - ignored", frameCount);*/
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Checksum error in frame %lu - ignored", frameCount);
       }
       else if ((pRawFrame->header.status & SDSU_FSTAT_NOK) != 0)
       {
-         /*MESSAGE_LOG1 (MSG_WARNING, 
-                       "Overwritten error in frame %lu - ignored", frameCount);*/
+         MESSAGE_LOG1 (MSG_WARNING, 
+                       "Overwritten error in frame %lu - ignored", frameCount);
       }
+#endif
    }
    else
    {
@@ -3396,9 +3403,10 @@ void detObserveEnd
                    */
 
                   nCoadds = (int) obsId->nCoaddFrames;
+                  timeToWait = (int) obsId->timeToWaitAo;
 #ifdef DEBUG
-                  printf ("ospAoCor: %p %d %p\n", obsId->pCurFrame, nCoadds, 
-                          obsId->ospAOContext);
+                  printf ("ospAoCor: %p %d %d %p\n", obsId->pCurFrame, nCoadds, 
+                          timeToWait , obsId->ospAOContext);
 #endif
                   if ( obsId->updateAOGain == TRUE )
                   {
@@ -3410,7 +3418,7 @@ void detObserveEnd
                      obsId->updateAOGain = FALSE ;
                   } ;
 
-                  if ( ospAoCor (obsId->pCurFrame, nCoadds, 
+                  if ( ospAoCor (obsId->pCurFrame, nCoadds, timeToWait ,
                                  obsId->ospAOContext)
                        == ERROR )
                   {
@@ -3425,6 +3433,7 @@ void detObserveEnd
                    */
 
                   nCoadds = (int) obsId->nCoaddFrames;
+                  timeToWait = (int) obsId->timeToWaitAo;
 #ifdef DEBUG
                   printf ("ospTracking: %p %p\n", obsId->pCurFrame, 
                           obsId->ospAOContext);
@@ -3442,8 +3451,8 @@ void detObserveEnd
                   }
 
 #ifdef DEBUG
-                  printf ("ospAoCor: %p %d %p\n", obsId->pCurFrame, nCoadds, 
-                          obsId->ospAOContext);
+                  printf ("ospAoCor: %p %d %d %p\n", obsId->pCurFrame, nCoadds, 
+                          timeToWait, obsId->ospAOContext);
 #endif
                   if ( obsId->updateAOGain == TRUE )
                   {
@@ -3455,7 +3464,7 @@ void detObserveEnd
                      obsId->updateAOGain = FALSE ;
                   } ;
 
-                  if ( ospAoCor (obsId->pCurFrame, nCoadds, 
+                  if ( ospAoCor (obsId->pCurFrame, nCoadds, timeToWait,
                                  obsId->ospAOContext)
                        == ERROR )
                   {
@@ -3563,6 +3572,9 @@ void detObserveEnd
                    */
 
                   obsId->coaddCounter++;
+#ifdef DEBUG
+                  printf ( "OSP_MODE_COADD: coaddcounter=%d\n" , obsId->coaddCounter ) ;
+#endif
                   if ( obsId->coaddCounter == nCoadds )
                   {
                      /*
@@ -7406,6 +7418,8 @@ uint32 detSigMode
 
    long            sigMode;       /* Signal processing mode.                  */
    long            nCoaddFrames;  /* Number of frames to coadd.               */
+   long            timeToWaitSecs;/* Time to wait in sec before new data for  */
+                                  /* active optics mode only                  */
 
    /*
     * Initialise the error number and obtain the attributes provided with the 
@@ -7416,6 +7430,8 @@ uint32 detSigMode
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0, (char *) & sigMode);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 1, 
                           (char *) & nCoaddFrames);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 2, 
+                          (char *) & timeToWaitSecs);
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -7466,15 +7482,15 @@ uint32 detSigMode
          break;
 
       case (OSP_MODE_AO):
-         MESSAGE_LOG1 (MSG_LOG,
+         MESSAGE_LOG2 (MSG_LOG,
             "Signal processing switched to \"AO\" mode - "
-            "nCoaddFrames=%ld", nCoaddFrames);
+            "nCoaddFrames=%ld, time=%ld", nCoaddFrames, timeToWaitSecs);
          break;
 
       case (OSP_MODE_FG_AO):
-         MESSAGE_LOG1 (MSG_LOG,
+         MESSAGE_LOG2 (MSG_LOG,
             "Signal processing switched to \"FG + AO\" mode - "
-            "nCoaddFrames=%ld", nCoaddFrames );
+            "nCoaddFrames=%ld, time=%ld", nCoaddFrames, timeToWaitSecs);
          break;
 
       case (OSP_MODE_FG_COADD):
@@ -7510,6 +7526,7 @@ uint32 detSigMode
 
    obsId->sigMode = sigMode;
    obsId->nCoaddFrames = nCoaddFrames;
+   obsId->timeToWaitAo = timeToWaitSecs;
 
    /* Initialise the coadd counter used to decide when to save coadded data 
     * to disk. 

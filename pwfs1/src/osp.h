@@ -343,7 +343,7 @@ int ospCalibrateRefVector ( float *buffp , int N ,
                   struct OSP_CONTEXT *wfsSpecific );
 int ospCoAddFocus ( float *buffp , int N ,
                   struct OSP_CONTEXT *wfsSpecific );
-int ospAoCor ( float *buffp , int N ,
+int ospAoCor ( float *buffp , int N , int timeToWait ,
                struct OSP_CONTEXT *wfsSpecific );
 int ospAoAnalyze ( struct OSP_CONTEXT *wfsSpecific );
 

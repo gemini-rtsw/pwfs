@@ -13,6 +13,7 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   8 July 1999: CB - Add a new parameter timeToWaitAo in the structure OBS_ID_STRUCT
  *   21 Apr 1999: CB - Simplified version for PWFS1 only
  *INDENT-ON*
  *-
@@ -199,6 +200,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
    long         sigMode;   /* Signal processing mode.                         */
    long         nCoaddFrames;   
                            /* Number of frames to coadd.                      */
+   long         timeToWaitAo;   
+                           /* Time to wait in secs for AO mode                */
    int          coaddCounter;   
                            /* Counter used to decide when to save coadded data*/
    BOOL         updateAOGain;   
