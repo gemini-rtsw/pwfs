@@ -5,35 +5,23 @@ data/defFullP2DarkCP.fits
 data/defFullP2FlatCP.fits
 # Name of the AO SH reference file (string)
 data/defFullRefP2.dat
+# Number of modes to be corrected
+3
 # Value for the x center for the whole CCD (double)
 40.5
 # Value for the y center for the whole CCD (double)
 40.5
-# aO modes number to correct (int)
-19
-# FG modes number to correct (int)
-3
-# Name of aO scale factor file
-data/defAoScaleP2.dat
-# Name of aO interaction matrix file
-data/defAoIntMatP2CP.dat
-# Name of aO control matrix file
-data/defAoContMatP2CP.dat
-# Name of FG control matrix file
-data/defFgContMatP2CP.dat
 # Scale factor for tip mode (double)
-0.05
+-0.1
 # Scale factor for tilt mode (double)
-0.05
+-0.1
 # Scale factor for focus mode (double)
-0.0001
+-0.001
 # Gain for focus sliding average (double)
-0.0003
+0.001
 # Threshold value for pixel (double)
 50
 # Threshold value for total counts (double)
 0
 # Angle in radians between M2 and PWFS2 (double)
-3.14159
-# Angle in radians between M1 and PWFS2 (double)
 3.14159
