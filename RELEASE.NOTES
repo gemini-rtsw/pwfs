@@ -7,3 +7,8 @@ Modification toward V0-2
   - comments from CM
   - New TIM boot codes
   - binning at 200Hz
+
+V0-4 12 Nov 1999 CB:
+--------------------
+Modification toward V0-3
+  - StripTool facilities added in showFG.adl
