@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.20 2000-09-25 23:27:47 dayle Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.21 2000-09-25 23:32:58 dayle Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -70,14 +70,14 @@ mbec	mbec
 #M	pcstest	Jmaclean Runtime version of the PCS
 pcstest	mbec/pcstest
 
-#D      scs     Gemini Secondary Control System
-#M      scs     Gemini Secondary Control System
-scs     scs     
+#D	scs	Gemini Secondary Control System
+#M	scs	Gemini Secondary Control System
+scs	scs
 
-#D      m2      Gemini M2 Tilt System
-#M      m2      Gemini M2 Tilt System
-m2      m2      
+#D	m2	Gemini M2 Tilt System
+#M	m2	Gemini M2 Tilt System
+m2	m2
 
-#D      m2cfg   Gemini M2 Tilt System Configuration
-#M      m2cfg   Gemini M2 Tilt System Configuration
-m2cfg   m2cfg   
+#D	m2cfg	Gemini M2 Tilt System Configuration
+#M	m2cfg	Gemini M2 Tilt System Configuration
+m2cfg	m2cfg
