@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="28"
-	nstr="62"
+	nstr="88"
 	ndynamic="27"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3546"
+	nwords_dspy="3798"
 	nwords_sta="740"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1734"
-	osta="994"
-	odynamic="1734"
-	oplot="3534"
-	ord="3534"
-	oes="3534"
-	okd="3534"
-	opd="3546"
-	opo="3546"
+	odyng="1986"
+	osta="1246"
+	odynamic="1986"
+	oplot="3786"
+	ord="3786"
+	oes="3786"
+	okd="3786"
+	opd="3798"
+	opo="3798"
 	opc="68"
-	ostr="482"
-	ocmap="994"
-	ocrules="994"
+	ostr="444"
+	ocmap="1246"
+	ocrules="1246"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -204,209 +204,209 @@ display {
 	object {
 		x="29"
 		y="169"
-		width="87"
+		width="160"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z1:"
+	textix="Gain X tilt ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="191"
-		width="87"
+		width="154"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z2:"
+	textix="Gain Y tilt ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="214"
-		width="87"
+		width="159"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z3:"
+	textix="Gain Focus ...:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="237"
-		width="87"
+		width="158"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z4:"
+	textix="Gain 0 astigm :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="260"
-		width="87"
+		width="162"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z5:"
+	textix="Gain 45 astigm:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="283"
-		width="87"
+		width="151"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z6:"
+	textix="Gain X coma ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="306"
-		width="87"
+		width="174"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z7:"
+	textix="Gain Y coma ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="328"
-		width="87"
+		width="171"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z8:"
+	textix="Gain spherical:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="351"
-		width="87"
+		width="162"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z9:"
+	textix="Gain X trefoil:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="374"
-		width="99"
+		width="159"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z10:"
+	textix="Gain Y trefoil:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="397"
-		width="103"
+		width="179"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z11:"
+	textix="Gain Z11 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="420"
-		width="96"
+		width="156"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z12:"
+	textix="Gain Z12 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="443"
-		width="94"
+		width="152"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z13:"
+	textix="Gain Z13 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="465"
-		width="98"
+		width="160"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z14:"
+	textix="Gain Z14 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="488"
-		width="96"
+		width="153"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z15:"
+	textix="Gain Z15 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="511"
-		width="98"
+		width="153"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z16:"
+	textix="Gain Z16 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="534"
-		width="93"
+		width="164"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z17:"
+	textix="Gain Z17 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="557"
-		width="98"
+		width="156"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z18:"
+	textix="Gain Z18 ... .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="29"
 		y="580"
-		width="93"
+		width="167"
 		height="16"
 		groupid="0"
 	}
-	textix="Gain Z19:"
+	textix="Gain Z19 ... .:"
 	align="horiz. left"
 }
 "message button" {
@@ -785,8 +785,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="166"
+		x="181"
+		y="168"
 		width="110"
 		height="19"
 		groupid="0"
@@ -830,8 +830,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="188"
+		x="181"
+		y="190"
 		width="110"
 		height="19"
 		groupid="0"
@@ -875,8 +875,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="211"
+		x="181"
+		y="213"
 		width="110"
 		height="19"
 		groupid="0"
@@ -920,8 +920,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="234"
+		x="181"
+		y="236"
 		width="110"
 		height="19"
 		groupid="0"
@@ -965,8 +965,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="257"
+		x="181"
+		y="259"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1010,8 +1010,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="280"
+		x="181"
+		y="282"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1055,8 +1055,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="303"
+		x="181"
+		y="305"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1100,8 +1100,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="325"
+		x="181"
+		y="327"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1145,8 +1145,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="348"
+		x="181"
+		y="350"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1190,8 +1190,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="371"
+		x="181"
+		y="373"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1235,8 +1235,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="394"
+		x="181"
+		y="396"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1280,8 +1280,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="417"
+		x="181"
+		y="419"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1325,8 +1325,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="440"
+		x="181"
+		y="442"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1370,8 +1370,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="462"
+		x="181"
+		y="464"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1415,8 +1415,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="485"
+		x="181"
+		y="487"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1460,8 +1460,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="508"
+		x="181"
+		y="510"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1505,8 +1505,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="531"
+		x="181"
+		y="533"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1550,8 +1550,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="554"
+		x="181"
+		y="556"
 		width="110"
 		height="19"
 		groupid="0"
@@ -1595,8 +1595,8 @@ display {
 }
 "text entry" {
 	object {
-		x="125"
-		y="577"
+		x="181"
+		y="579"
 		width="110"
 		height="19"
 		groupid="0"

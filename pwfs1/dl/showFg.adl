@@ -7,7 +7,7 @@ display {
 	mnrv="4"
 	ndyng="0"
 	npc="45"
-	nstr="57"
+	nstr="101"
 	ndynamic="44"
 	nplot="0"
 	nrd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="4286"
+	nwords_dspy="4674"
 	nwords_sta="368"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1370"
-	osta="1002"
-	odynamic="1370"
-	oplot="4274"
-	ord="4274"
-	oes="4274"
-	okd="4274"
-	opd="4286"
-	opo="4286"
+	odyng="1758"
+	osta="1390"
+	odynamic="1758"
+	oplot="4662"
+	ord="4662"
+	oes="4662"
+	okd="4662"
+	opd="4674"
+	opo="4674"
 	opc="68"
 	ostr="600"
-	ocmap="1002"
-	ocrules="1002"
+	ocmap="1390"
+	ocrules="1390"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -95,8 +95,8 @@ display {
 }
 "text" {
 	object {
-		x="122"
-		y="74"
+		x="130"
+		y="75"
 		width="102"
 		height="20"
 		groupid="0"
@@ -106,8 +106,8 @@ display {
 }
 "text" {
 	object {
-		x="292"
-		y="74"
+		x="300"
+		y="75"
 		width="122"
 		height="20"
 		groupid="0"
@@ -119,11 +119,11 @@ display {
 	object {
 		x="17"
 		y="128"
-		width="59"
+		width="79"
 		height="20"
 		groupid="0"
 	}
-	textix="Tilt:"
+	textix="Y tilt:"
 	align="horiz. left"
 }
 "text" {
@@ -150,225 +150,225 @@ display {
 	object {
 		x="17"
 		y="250"
-		width="40"
+		width="127"
 		height="20"
 		groupid="0"
 	}
-	textix="2:"
+	textix="X tilt ...:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="277"
-		width="41"
+		width="144"
 		height="20"
 		groupid="0"
 	}
-	textix="3:"
+	textix="Y tilt ...:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="302"
-		width="40"
+		width="130"
 		height="20"
 		groupid="0"
 	}
-	textix="4:"
+	textix="Focus ... :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="329"
-		width="40"
+		width="141"
 		height="20"
 		groupid="0"
 	}
-	textix="5:"
+	textix="0 Astigm .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="356"
-		width="41"
+		width="130"
 		height="20"
 		groupid="0"
 	}
-	textix="6:"
+	textix="45 Astigm :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="383"
-		width="40"
+		width="131"
 		height="20"
 		groupid="0"
 	}
-	textix="7:"
+	textix="X coma ...:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="412"
-		width="40"
+		width="136"
 		height="20"
 		groupid="0"
 	}
-	textix="8:"
+	textix="Y coma ...:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="441"
-		width="41"
+		width="132"
 		height="20"
 		groupid="0"
 	}
-	textix="9:"
+	textix="Sperical .:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="471"
-		width="40"
+		width="128"
 		height="20"
 		groupid="0"
 	}
-	textix="10:"
+	textix="X trefoil :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="500"
-		width="40"
+		width="133"
 		height="20"
 		groupid="0"
 	}
-	textix="11:"
+	textix="Y trefoil :"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="529"
-		width="41"
+		width="156"
 		height="20"
 		groupid="0"
 	}
-	textix="12:"
+	textix="z11 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="558"
-		width="40"
+		width="147"
 		height="20"
 		groupid="0"
 	}
-	textix="13:"
+	textix="z12 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="588"
-		width="40"
+		width="154"
 		height="20"
 		groupid="0"
 	}
-	textix="14:"
+	textix="z13 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="617"
-		width="41"
+		width="148"
 		height="20"
 		groupid="0"
 	}
-	textix="15:"
+	textix="z14 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="644"
-		width="40"
+		width="168"
 		height="20"
 		groupid="0"
 	}
-	textix="16:"
+	textix="z15 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="673"
-		width="40"
+		width="152"
 		height="20"
 		groupid="0"
 	}
-	textix="17:"
+	textix="z16 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="700"
-		width="41"
+		width="136"
 		height="20"
 		groupid="0"
 	}
-	textix="18:"
+	textix="z17 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="729"
-		width="40"
+		width="131"
 		height="20"
 		groupid="0"
 	}
-	textix="19:"
+	textix="z18 ... ..:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="101"
-		width="58"
+		width="78"
 		height="20"
 		groupid="0"
 	}
-	textix="Tip:"
+	textix="X tilt:"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="17"
 		y="156"
-		width="70"
+		width="81"
 		height="20"
 		groupid="0"
 	}
-	textix="Focus:"
+	textix="Focus :"
 	align="horiz. left"
 }
 "text" {
 	object {
-		x="93"
+		x="170"
 		y="222"
 		width="102"
 		height="20"
@@ -379,7 +379,7 @@ display {
 }
 "text" {
 	object {
-		x="266"
+		x="343"
 		y="222"
 		width="122"
 		height="20"
@@ -392,17 +392,17 @@ display {
 	object {
 		x="17"
 		y="757"
-		width="40"
+		width="138"
 		height="20"
 		groupid="0"
 	}
-	textix="20:"
+	textix="z19 ... ..:"
 	align="horiz. left"
 }
 "text update" {
 	object {
-		x="89"
-		y="99"
+		x="97"
+		y="100"
 		width="160"
 		height="21"
 		groupid="0"
@@ -447,8 +447,8 @@ display {
 }
 "text update" {
 	object {
-		x="272"
-		y="99"
+		x="280"
+		y="100"
 		width="160"
 		height="21"
 		groupid="0"
@@ -493,8 +493,8 @@ display {
 }
 "text update" {
 	object {
-		x="89"
-		y="126"
+		x="97"
+		y="127"
 		width="160"
 		height="21"
 		groupid="0"
@@ -539,8 +539,8 @@ display {
 }
 "text update" {
 	object {
-		x="272"
-		y="126"
+		x="280"
+		y="127"
 		width="160"
 		height="21"
 		groupid="0"
@@ -585,8 +585,8 @@ display {
 }
 "text update" {
 	object {
-		x="89"
-		y="154"
+		x="97"
+		y="155"
 		width="160"
 		height="21"
 		groupid="0"
@@ -631,8 +631,8 @@ display {
 }
 "text update" {
 	object {
-		x="272"
-		y="154"
+		x="280"
+		y="155"
 		width="160"
 		height="21"
 		groupid="0"
@@ -677,7 +677,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="249"
 		width="160"
 		height="21"
@@ -723,7 +723,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="249"
 		width="160"
 		height="21"
@@ -769,7 +769,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="276"
 		width="160"
 		height="21"
@@ -815,7 +815,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="276"
 		width="160"
 		height="21"
@@ -861,7 +861,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="301"
 		width="160"
 		height="21"
@@ -907,7 +907,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="301"
 		width="160"
 		height="21"
@@ -953,7 +953,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="328"
 		width="160"
 		height="21"
@@ -999,7 +999,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="328"
 		width="160"
 		height="21"
@@ -1045,7 +1045,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="355"
 		width="160"
 		height="21"
@@ -1091,7 +1091,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="355"
 		width="160"
 		height="21"
@@ -1137,7 +1137,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="382"
 		width="160"
 		height="21"
@@ -1183,7 +1183,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="382"
 		width="160"
 		height="21"
@@ -1229,7 +1229,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="411"
 		width="160"
 		height="21"
@@ -1275,7 +1275,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="411"
 		width="160"
 		height="21"
@@ -1321,7 +1321,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="440"
 		width="160"
 		height="21"
@@ -1367,7 +1367,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="440"
 		width="160"
 		height="21"
@@ -1413,7 +1413,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="470"
 		width="160"
 		height="21"
@@ -1459,7 +1459,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="470"
 		width="160"
 		height="21"
@@ -1505,7 +1505,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="499"
 		width="160"
 		height="21"
@@ -1551,7 +1551,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="499"
 		width="160"
 		height="21"
@@ -1597,7 +1597,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="528"
 		width="160"
 		height="21"
@@ -1643,7 +1643,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="528"
 		width="160"
 		height="21"
@@ -1689,7 +1689,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="557"
 		width="160"
 		height="21"
@@ -1735,7 +1735,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="557"
 		width="160"
 		height="21"
@@ -1781,7 +1781,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="587"
 		width="160"
 		height="21"
@@ -1827,7 +1827,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="587"
 		width="160"
 		height="21"
@@ -1873,7 +1873,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="616"
 		width="160"
 		height="21"
@@ -1919,7 +1919,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="616"
 		width="160"
 		height="21"
@@ -1965,7 +1965,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="643"
 		width="160"
 		height="21"
@@ -2011,7 +2011,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="643"
 		width="160"
 		height="21"
@@ -2057,7 +2057,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="672"
 		width="160"
 		height="21"
@@ -2103,7 +2103,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="672"
 		width="160"
 		height="21"
@@ -2149,7 +2149,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="699"
 		width="160"
 		height="21"
@@ -2195,7 +2195,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="699"
 		width="160"
 		height="21"
@@ -2241,7 +2241,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="728"
 		width="160"
 		height="21"
@@ -2287,7 +2287,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="728"
 		width="160"
 		height="21"
@@ -2333,7 +2333,7 @@ display {
 }
 "text update" {
 	object {
-		x="64"
+		x="141"
 		y="756"
 		width="160"
 		height="21"
@@ -2379,7 +2379,7 @@ display {
 }
 "text update" {
 	object {
-		x="247"
+		x="324"
 		y="756"
 		width="160"
 		height="21"
