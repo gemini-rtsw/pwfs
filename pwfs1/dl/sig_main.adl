@@ -5,9 +5,9 @@ display {
 	magic="305419896"
 	majv="2"
 	mnrv="4"
-	ndyng="0"
+	ndyng="1"
 	npc="19"
-	nstr="124"
+	nstr="128"
 	ndynamic="15"
 	nplot="0"
 	nrd="10"
@@ -18,28 +18,28 @@ display {
 	object {
 		x="328"
 		y="298"
-		width="718"
+		width="743"
 		height="667"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="5060"
+	nwords_dspy="5158"
 	nwords_sta="224"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="2452"
-	osta="2228"
-	odynamic="2452"
-	oplot="3448"
-	ord="3448"
-	oes="5048"
-	okd="5048"
-	opd="5060"
-	opo="5060"
+	odyng="2490"
+	osta="2266"
+	odynamic="2550"
+	oplot="3546"
+	ord="3546"
+	oes="5146"
+	okd="5146"
+	opd="5158"
+	opo="5158"
 	opc="68"
 	ostr="304"
-	ocmap="2228"
-	ocrules="2228"
+	ocmap="2266"
+	ocrules="2266"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -66,7 +66,7 @@ display {
 	object {
 		x="9"
 		y="478"
-		width="699"
+		width="726"
 		height="180"
 		groupid="0"
 	}
@@ -97,7 +97,7 @@ display {
 	object {
 		x="9"
 		y="53"
-		width="699"
+		width="725"
 		height="419"
 		groupid="0"
 	}
@@ -267,6 +267,56 @@ display {
 	textix="SAVE FG CONTROL CIRCULAR BUFFER:"
 	align="horiz. left"
 }
+"<<basic attribute>>" {
+	attr {
+		clr="2"
+		style="solid"
+		fill="solid"
+		width="0"
+	}
+}
+"<<dynamic attribute>>" {
+	attr {
+		mod {
+			clrmod="static"
+			vis="if not zero"
+		}
+		param {
+			rulecolorfg="1"
+			rulecolorbg="1"
+			chan="$(top)initSigInit.VALU"
+			rulechan[0] = ""
+			rulechan[1] = ""
+			rulechan[2] = ""
+			rulechan[3] = ""
+			rulechan[4] = ""
+			rulechan[5] = ""
+			rulechan[6] = ""
+			rulechan[7] = ""
+			rulechan[8] = ""
+			rulechan[9] = ""
+			rulechan[10] = ""
+			rulechan[11] = ""
+			rulechan[12] = ""
+			rulechan[13] = ""
+			rulechan[14] = ""
+			rulechan[15] = ""
+			clrrule=""
+			clrargs=""
+		}
+	}
+}
+"text" {
+	object {
+		x="525"
+		y="18"
+		width="95"
+		height="23"
+		groupid="0"
+	}
+	textix="Binning"
+	align="horiz. right"
+}
 "text update" {
 	object {
 		x="236"
@@ -363,7 +413,7 @@ display {
 	object {
 		x="374"
 		y="139"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -409,7 +459,7 @@ display {
 	object {
 		x="374"
 		y="166"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -455,7 +505,7 @@ display {
 	object {
 		x="374"
 		y="194"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -501,7 +551,7 @@ display {
 	object {
 		x="374"
 		y="334"
-		width="329"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -547,7 +597,7 @@ display {
 	object {
 		x="374"
 		y="222"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -593,7 +643,7 @@ display {
 	object {
 		x="374"
 		y="362"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -639,7 +689,7 @@ display {
 	object {
 		x="374"
 		y="250"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -685,7 +735,7 @@ display {
 	object {
 		x="374"
 		y="278"
-		width="329"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -731,7 +781,7 @@ display {
 	object {
 		x="374"
 		y="306"
-		width="329"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -777,7 +827,7 @@ display {
 	object {
 		x="374"
 		y="390"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -823,7 +873,7 @@ display {
 	object {
 		x="374"
 		y="418"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -869,7 +919,7 @@ display {
 	object {
 		x="374"
 		y="446"
-		width="328"
+		width="355"
 		height="21"
 		groupid="0"
 	}
@@ -913,7 +963,7 @@ display {
 }
 "message button" {
 	object {
-		x="621"
+		x="644"
 		y="61"
 		width="83"
 		height="29"
@@ -2301,8 +2351,8 @@ display {
 }
 "kill display" {
 	object {
-		x="619"
-		y="15"
+		x="643"
+		y="16"
 		width="90"
 		height="23"
 		groupid="0"

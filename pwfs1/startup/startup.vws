@@ -1,4 +1,4 @@
-# $Id: startup.vws,v 1.5 2000-07-12 00:51:44 cboyer Exp $
+# $Id: startup.vws,v 1.6 2001-02-15 05:39:30 cboyer Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -72,7 +72,7 @@ ld < $(version)/bin/$(arch)/testKit
 taskCreateHookAdd( usrFppCreateHook )
 
 # Initialise the Gemini time system (1=master, 1=simulate, intPerSecond, intperTick, timeOffset)
-timeClockInit (0, 0, 60, 1, 0)
+timeClockInit (0, 1, 60, 1, 0)
 
 # Configure the Timestamp system (1=Master IOC, synch rate, clock rate, master, port, timeout, type)
 TSconfigure 1, 0, 0, 0, 0, 0, 0
@@ -101,7 +101,7 @@ logErrorsToPipe = 1
 
 # start the impmaster
 # (Comment this out if the DHS is not being used)
-taskSpawn ( "ImpMaster", 100, 0x8, 20000, ImpMaster)
+#taskSpawn ( "ImpMaster", 100, 0x8, 20000, ImpMaster)
 
 # Initialise WFS system (processorNumber, redirectLog)
 wfsSysInit (0, logErrorsToPipe)
@@ -128,7 +128,7 @@ epToVxCaInitRecords ()
 
 # Initialise the DHS for the detector controllers (clientName, numConnect, hostName, serverName)
 # (Uncomment this line to activate the DHS. Comment it to prevent the DHS from being used).
-detDhsInit ("pwfs1", 16, "10.2.4.56", "dataServerNS")
+#detDhsInit ("pwfs1", 16, "10.2.4.56", "dataServerNS")
 
 # Spawn generic-record i/o Daemon task after querying the number of processors
 NProc = 1

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.16 2001-02-07 02:51:11 cboyer Exp $"};
+   "$Id: detControl.c,v 1.17 2001-02-15 05:39:29 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   09 Feb 2001: CB - ADC offset now for bin and no bin
  *   26 Jan 2001: CB - read the detector init file according to the site
  *                     read the ao init file according to the site
  *   08 Dec 2000: CB - Add parameter detSigModeSeq (ao yes/no)
@@ -266,7 +267,8 @@ LOCAL uint32   detSave (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 
 LOCAL uint32   detGeometry (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                             SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
-                            AO_CTRL_ID aoCtrlId);
+                            AO_CTRL_ID aoCtrlId, long * pOffsetFullVect,
+                            long * pOffsetBinVect);
 
 LOCAL uint32   detPrimitive (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId);
@@ -282,7 +284,8 @@ LOCAL uint32   detTemp   (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
 
 LOCAL uint32   detFrameSize (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                              SDSU_ID sdsuId, OBS_ID obsId, AO_CCD_ID aoCcdId,
-                             AO_CTRL_ID aoCtrlId);
+                             AO_CTRL_ID aoCtrlId, long *pOffsetFullVect,
+                             long *pOffsetBinVect);
 
 LOCAL uint32   detDhsReconnect (CAD_CMD_CONTEXT cadCmdContext,
                                 int commandNumber, SDSU_ID sdsuId, 
@@ -441,8 +444,8 @@ uint32 detComputeCoeffButterworth (double expTime, double cutoffFreq,
                                    double * pCoeffData);
 
 uint32 detContInit (char * pInitFileName, uint32 * pTempCode,
-                    uint32 * pTempCoeff, long *pOffset0, long * pOffset1,
-                    long * pOffset2, long * pOffset3, char * pCcdSn);
+                    uint32 * pTempCoeff, long *pOffsetFullVect, 
+                    long * pOffsetBinVect, char * pCcdSn);
 
 uint32 detGetSirContext (const char * pRecordPrefix, OBS_ID obsId);
 
@@ -503,10 +506,11 @@ STATUS   detControl
                                     /* DSP code                               */
    uint32         tempCode;         /* Target temperature code                */
    uint32         tempCoeff;        /* Coefficient for temperature control    */
-   long           offset0;          /* ADC offset for output 0.               */
-   long           offset1;          /* ADC offset for output 1.               */
-   long           offset2;          /* ADC offset for output 2.               */
-   long           offset3;          /* ADC offset for output 3.               */
+   long           i;                /* index                                  */
+   long           offsetFullVect[4];/* ADC offset vector - no binning.        */
+   long           offsetBinVect[4]; /* ADC offset vector - binning.           */
+   long           offsetVect[4];    /* ADC offset vector                      */
+
 
    char           detContInitFileName [ STRING_SIZE ] ;
                                     /* Full Name of the detector controller   */
@@ -968,8 +972,7 @@ STATUS   detControl
       strcat ( detContInitFileName , defFileName ) ;
 
       if ( detContInit ( detContInitFileName, &tempCode, &tempCoeff,
-                         &offset0, &offset1, &offset2, &offset3,
-                         obsId->detId) == ERROR )
+                         offsetFullVect, offsetBinVect, obsId->detId) == ERROR )
       {
          MESSAGE_LOG ( MSG_LOG,
            "Failed to init detector controller default settings from file");
@@ -979,11 +982,22 @@ STATUS   detControl
 
          tempCode = (uint32)1282 ;
          tempCoeff = (uint32)128 ;
-         offset0 = 2560;
-         offset1 = 2560;
-         offset2 = 2560;
-         offset3 = 2560;
+         for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = 2560;
          strcpy ( obsId->detId , DET_CCD_SN ) ;
+      }
+      else
+      {
+         if ( obsId->aoCcdId->binningFlag == FALSE )
+         {
+            for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+                offsetVect[i] = offsetFullVect[i];
+         }
+         else
+         {
+            for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+                offsetVect[i] = offsetBinVect[i];
+         }
       }
    }
    else
@@ -993,10 +1007,8 @@ STATUS   detControl
 
       tempCode = (uint32)1282 ;
       tempCoeff = (uint32)128 ;
-      offset0 = 2560;
-      offset1 = 2560;
-      offset2 = 2560;
-      offset3 = 2560;
+         for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = 2560;
       strcpy ( obsId->detId , DET_CCD_SN ) ;
    }
 
@@ -1049,31 +1061,31 @@ STATUS   detControl
    {
       MESSAGE_LOG4 (MSG_LOG, 
               "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
-              offset0, offset1, offset2, offset3);
+              offsetVect[0], offsetVect[1], offsetVect[2], offsetVect[3]);
 
       if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
-                         (uint32) offset0 ) == ERROR )
+                         (uint32) offsetVect[0] ) == ERROR )
       {
          ERROR_LOG ("Error setting ADC offset 0 parameter");
          initFailed = TRUE;
       }
 
       if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
-                         (uint32) offset1 ) == ERROR )
+                         (uint32) offsetVect[1] ) == ERROR )
       {
          ERROR_LOG ("Error setting ADC offset 1 parameter");
          initFailed = TRUE;
       }
 
       if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
-                         (uint32) offset2 ) == ERROR )
+                         (uint32) offsetVect[2] ) == ERROR )
       {
          ERROR_LOG ("Error setting ADC offset 2 parameter");
          initFailed = TRUE;
       }
 
       if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
-                         (uint32) offset3 ) == ERROR )
+                         (uint32) offsetVect[3] ) == ERROR )
       {
          ERROR_LOG ("Error setting ADC offset 3 parameter");
          initFailed = TRUE;
@@ -1476,7 +1488,7 @@ STATUS   detControl
 
             errorNumber =
             detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId,
-                          aoCtrlId);
+                          aoCtrlId, offsetFullVect, offsetBinVect);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_DHS_RECONNECT)
@@ -1626,7 +1638,7 @@ STATUS   detControl
 
             errorNumber = 
             detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, 
-                         aoCcdId, aoCtrlId);
+                         aoCcdId, aoCtrlId, offsetFullVect, offsetBinVect);
          }
 
          else if (commandNumber == DET_CONTROL_CMD_PRIMITIVE)
@@ -4764,6 +4776,7 @@ uint32 detObserveStart
          else
          {
             obsId->aoCtrlId->threshold = obsId->aoCtrlId->thresholdDark;
+
             if (epToVxPipeWrite (NULL,
                 (char *)(int)& (obsId->aoCtrlId->threshold),
                 obsId->pAoThreshContext) == ERROR)
@@ -6400,10 +6413,11 @@ uint32 detInit
                                  /* memory                                    */
    int          nPixels;         /* Total number of digitised pixels.         */
    int          newMaxFrames;    /* New maximum number of frames.             */
-   long         offset0;         /* ADC offset for output 0.                  */
-   long         offset1;         /* ADC offset for output 1.                  */
-   long         offset2;         /* ADC offset for output 2.                  */
-   long         offset3;         /* ADC offset for output 3.                  */
+   long         i;               /* index                                     */
+   long         offsetVect[4];   /* ADC offset vector                         */
+   long         offsetFullVect[4];
+                                 /* ADC offset vector - no binning            */
+   long         offsetBinVect[4];/* ADC offset vector - binning               */
    uint32       tempCode;        /* Target temperature code                   */
    uint32       tempCoeff;       /* Coefficient for temperature control       */
    char         defFileName [ STRING_SIZE ] ;
@@ -6844,8 +6858,7 @@ uint32 detInit
       strcat ( detContInitFileName , defFileName ) ;
 
       if ( detContInit ( detContInitFileName, &tempCode, &tempCoeff,
-                         &offset0, &offset1, &offset2, &offset3,
-                         obsId->detId) == ERROR )
+                         offsetFullVect, offsetBinVect, obsId->detId) == ERROR )
       {
          MESSAGE_LOG ( MSG_LOG,
            "Failed to init detector controller default settings from file");
@@ -6855,11 +6868,22 @@ uint32 detInit
 
          tempCode = (uint32)1282 ;
          tempCoeff = (uint32)128 ;
-         offset0 = 2560;
-         offset1 = 2560;
-         offset2 = 2560;
-         offset3 = 2560;
+         for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = 2560;
          strcpy ( obsId->detId , DET_CCD_SN ) ;
+      }
+      else
+      {
+         if ( obsId->aoCcdId->binningFlag == FALSE )
+         {
+            for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+                offsetVect[i] = offsetFullVect[i];
+         }
+         else
+         {
+            for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+                offsetVect[i] = offsetBinVect[i];
+         }
       }
    }
    else
@@ -6869,10 +6893,8 @@ uint32 detInit
 
       tempCode = (uint32)1282 ;
       tempCoeff = (uint32)128 ;
-      offset0 = 2560;
-      offset1 = 2560;
-      offset2 = 2560;
-      offset3 = 2560;
+      for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+          offsetVect[i] = 2560;
       strcpy ( obsId->detId , DET_CCD_SN ) ;
    }
 
@@ -6892,28 +6914,28 @@ uint32 detInit
 
    MESSAGE_LOG4 (MSG_LOG,
            "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
-           offset0, offset1, offset2, offset3);
+           offsetVect[0], offsetVect[1], offsetVect[2], offsetVect[3]);
 
    if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
-                      (uint32) offset0 ) == ERROR )
+                      (uint32) offsetVect[0] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 0 parameter");
    }
 
    if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
-                      (uint32) offset1 ) == ERROR )
+                      (uint32) offsetVect[1] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 1 parameter");
    }
 
    if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
-                      (uint32) offset2 ) == ERROR )
+                      (uint32) offsetVect[2] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 2 parameter");
    }
 
    if ( sdsuParamWRP (*pSdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
-                      (uint32) offset3 ) == ERROR )
+                      (uint32) offsetVect[3] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 3 parameter");
    }
@@ -7047,11 +7069,10 @@ uint32 detReset
    char         pFullOmfFileName [(EPICS_MAX_BYTES_STRING_ATTRIB + 1)*2];
                                    /* Combined path name and file name.       */
    BOOL         limitAdrsRange;    /* Flag for limiting address range         */
-
-   long         offset0;           /* ADC offset for output 0.                */
-   long         offset1;           /* ADC offset for output 1.                */
-   long         offset2;           /* ADC offset for output 2.                */
-   long         offset3;           /* ADC offset for output 3.                */
+   long         i;                 /* index                                   */
+   long         offsetFullVect[4]; /* ADC offset vector - no binning.         */
+   long         offsetBinVect[4];  /* ADC offset vector - binning.            */
+   long         offsetVect[4];     /* ADC offset vector                       */
    uint32       tempCode;          /* Target temperature code                 */
    uint32       tempCoeff;         /* Coefficient for temperature control     */
    char         defFileName [ STRING_SIZE ] ;
@@ -7293,8 +7314,7 @@ uint32 detReset
       strcat ( detContInitFileName , defFileName ) ;
 
       if ( detContInit ( detContInitFileName, &tempCode, &tempCoeff,
-                         &offset0, &offset1, &offset2, &offset3,
-                         obsId->detId) == ERROR )
+                         offsetFullVect, offsetBinVect, obsId->detId) == ERROR )
       {
          MESSAGE_LOG ( MSG_LOG,
            "Failed to init detector controller default settings from file");
@@ -7304,11 +7324,22 @@ uint32 detReset
 
          tempCode = (uint32)1282 ;
          tempCoeff = (uint32)128 ;
-         offset0 = 2560;
-         offset1 = 2560;
-         offset2 = 2560;
-         offset3 = 2560;
+         for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = 2560;
          strcpy ( obsId->detId , DET_CCD_SN ) ;
+      }
+      else
+      {
+         if ( obsId->aoCcdId->binningFlag == FALSE )
+         {
+            for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+                offsetVect[i] = offsetFullVect[i];
+         }
+         else
+         {
+            for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+                offsetVect[i] = offsetBinVect[i];
+         }
       }
    }
    else
@@ -7318,10 +7349,8 @@ uint32 detReset
 
       tempCode = (uint32)1282 ;
       tempCoeff = (uint32)128 ;
-      offset0 = 2560;
-      offset1 = 2560;
-      offset2 = 2560;
-      offset3 = 2560;
+      for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+          offsetVect[i] = 2560;
       strcpy ( obsId->detId , DET_CCD_SN ) ;
    }
 
@@ -7341,28 +7370,28 @@ uint32 detReset
 
    MESSAGE_LOG4 (MSG_LOG,
                  "Defining new ADC offset levels: %#lx %#lx %#lx %#lx",
-                 offset0, offset1, offset2, offset3);
+                 offsetVect[0], offsetVect[1], offsetVect[2], offsetVect[3]);
 
    if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
-                      (uint32) offset0 ) == ERROR )
+                      (uint32) offsetVect[0] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 0 parameter");
    }
 
    if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
-                      (uint32) offset1 ) == ERROR )
+                      (uint32) offsetVect[1] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 1 parameter");
    }
 
    if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
-                      (uint32) offset2 ) == ERROR )
+                      (uint32) offsetVect[2] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 2 parameter");
    }
 
    if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
-                      (uint32) offset3 ) == ERROR )
+                      (uint32) offsetVect[3] ) == ERROR )
    {
       ERROR_LOG ("Error setting ADC offset 3 parameter");
    }
@@ -7760,15 +7789,17 @@ uint32 detSave
  *
  *   INVOCATION:
  *   detGeometry (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
- *                aoCtrlId)
+ *                aoCtrlId, pOffsetFullVect, pOffsetBinVect)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
- *   (>) commandNumber (int)             Command number
- *   (>) sdsuId        (SDSU_ID)         Current SDSU context structure
- *   (!) obsId         (OBS_ID)          Observation context structure
- *   (<) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
- *   (<) aoCtrlId      (AO_CTRL_ID)      AO control context structure
+ *   (>) cadCmdContext   (CAD_CMD_CONTEXT) CAD command context structure
+ *   (>) commandNumber   (int)             Command number
+ *   (>) sdsuId          (SDSU_ID)         Current SDSU context structure
+ *   (!) obsId           (OBS_ID)          Observation context structure
+ *   (<) aoCcdId         (AO_CCD_ID)       AO CCD geometry context structure
+ *   (<) aoCtrlId        (AO_CTRL_ID)      AO control context structure
+ *   (>) pOffsetFullVect (long *)          ADC offset vector - no binning
+ *   (>) pOffsetBinVect  (long *)          ADC offset vector - binning
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -7794,12 +7825,15 @@ uint32 detSave
 
 uint32 detGeometry
    (
-   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
-   int             commandNumber, /* Command number.                          */
-   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId,         /* Observation context structure.           */
-   AO_CCD_ID       aoCcdId,       /* AO CCD geometry context structure        */
-   AO_CTRL_ID      aoCtrlId       /* AO control context structure             */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId,           /* Observation context structure.         */
+   AO_CCD_ID       aoCcdId,         /* AO CCD geometry context structure      */
+   AO_CTRL_ID      aoCtrlId,        /* AO control context structure           */
+   long *          pOffsetFullVect, /* ADC offset vector - no binning         */
+   long *          pOffsetBinVect   /* ADC offset vector - binning            */
+
    )
 {
    uint32          errorNumber;   /* Error number reported by task.           */
@@ -7835,6 +7869,12 @@ uint32 detGeometry
    long         reqPixelsNb;/* Total number of digitised pixels.              */
    long         defPixelsNb;/* Total number of digitised pixels.              */
    int          nPackets;   /* Number of packets expected per frame.          */
+   int          updateOffset;
+                            /* Flag to indicate if we have to update the ADC  */
+                            /* offsets or not                                 */
+   long         i;          /* index                                          */
+   long         offsetVect[4];
+                            /* ADC offset vector                              */
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -7852,6 +7892,13 @@ uint32 detGeometry
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *) &yReqStart);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *) &xReqSpace);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *) &yReqSpace);
+
+   /*
+    * Initialise updateOffset
+    */
+
+   updateOffset = FALSE ;
+
 
    /*
     * Check there are valid SDSU and observation context structures.
@@ -8002,6 +8049,13 @@ uint32 detGeometry
             ERROR_LOG (
             "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
          }
+
+         /* Init the ADC offset vector */
+
+         for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = pOffsetBinVect[i];
+
+         updateOffset = TRUE;
       }
    }
    else
@@ -8030,6 +8084,13 @@ uint32 detGeometry
             ERROR_LOG (
             "Failed to initialise DET_CONTROL_AOFLATINIT_SIR_NAME record");
          }
+
+         /* Init the ADC offset vector */
+
+         for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = pOffsetFullVect[i];
+
+         updateOffset = TRUE;
       }
       else
       {
@@ -8119,6 +8180,41 @@ uint32 detGeometry
       ERROR_LOG ("Failed to download geometry parameters to TIMING DSP");
       errorNumber = S_detControl_SDSU_ERROR;
       return (errorNumber);
+   }
+
+   if ( updateOffset == TRUE )
+   {
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
+                        (uint32) offsetVect[0] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 0 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
+                         (uint32) offsetVect[1] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 1 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
+                         (uint32) offsetVect[2] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 2 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
+                         (uint32) offsetVect[3] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 3 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
    }
 
    if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
@@ -9887,7 +9983,6 @@ void detObserveEnd
                      {
                        ERROR_LOG ("Failed to subtract DARK from current frame");
                      }
-                     /*printf ( "Threshold = %f\n", obsId->aoCtrlId->threshold);*/
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
                            obsId->pAoThreshContext) == ERROR)
@@ -9929,9 +10024,10 @@ void detObserveEnd
 
                      obsId->aoCtrlId->threshold = 
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
+
                      obsId->aoCtrlId->thresholdDark =
                      obsId->aoCtrlId->threshold ;
-                     /*printf ( "Threshold = %f\n", obsId->aoCtrlId->threshold);*/
+
                      if (epToVxPipeWrite (NULL, 
                            (char *)(int)& (obsId->aoCtrlId->threshold), 
                            obsId->pAoThreshContext) == ERROR)
@@ -9939,6 +10035,7 @@ void detObserveEnd
                         ERROR_LOG (
                         "Failed to init DET_CONTROL_AOTHRESH_SIR_NAME record");
                      }
+
                   }
                }
                else
@@ -10516,10 +10613,10 @@ void detObserveEnd
 
                      obsId->aoCtrlId->threshold =
                      obsId->multCoeffRmsThreshComp * obsId->averageRms ;
+
                      obsId->aoCtrlId->thresholdDark =
                      obsId->aoCtrlId->threshold ;
-                     /*printf ( "Threshold = %f\n", 
-                                obsId->aoCtrlId->threshold); */
+
                      if (epToVxPipeWrite (NULL,
                            (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
@@ -10609,8 +10706,6 @@ void detObserveEnd
                      {
                         ERROR_LOG ("Failed to compute threshold") ;
                      }
-                     /*printf ( "Threshold = %f\n",
-                                obsId->aoCtrlId->threshold); */
                      if (epToVxPipeWrite (NULL,
                                   (char *)(int)& (obsId->aoCtrlId->threshold),
                                   obsId->pAoThreshContext) == ERROR)
@@ -12200,7 +12295,7 @@ STATUS detWriteFits
  *
  *   INVOCATION:
  *   detFrameSize (cadCmdContext, commandNumber, sdsuId, obsId, aoCcdId, 
- *                 aoCtrlId)
+ *                 aoCtrlId, pOffsetFullVect, pOffsetBinVect)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) cadCmdContext (CAD_CMD_CONTEXT) CAD command context structure
@@ -12209,6 +12304,8 @@ STATUS detWriteFits
  *   (!) obsId         (OBS_ID)          Observation context structure
  *   (<) aoCcdId       (AO_CCD_ID)       AO CCD geometry context structure
  *   (<) aoCtrlId      (AO_CTRL_ID)      AO control context structure
+ *   (>) pOffsetFullVect (long *)          ADC offset vector - no binning
+ *   (>) pOffsetBinVect  (long *)          ADC offset vector - binning
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -12246,12 +12343,15 @@ STATUS detWriteFits
 
 uint32 detFrameSize
    (
-   CAD_CMD_CONTEXT cadCmdContext, /* CAD command context structure.           */
-   int             commandNumber, /* Command number.                          */
-   SDSU_ID         sdsuId,        /* SDSU context structure.                  */
-   OBS_ID          obsId,         /* Observation context structure.           */
-   AO_CCD_ID       aoCcdId,       /* AO CCD geometry context structure        */
-   AO_CTRL_ID      aoCtrlId       /* AO control context structure             */
+   CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
+   int             commandNumber,   /* Command number.                        */
+   SDSU_ID         sdsuId,          /* SDSU context structure.                */
+   OBS_ID          obsId,           /* Observation context structure.         */
+   AO_CCD_ID       aoCcdId,         /* AO CCD geometry context structure      */
+   AO_CTRL_ID      aoCtrlId,        /* AO control context structure           */
+   long *          pOffsetFullVect, /* ADC offset vector - no binning         */
+   long *          pOffsetBinVect   /* ADC offset vector - binning            */
+
    )
 {
    uint32          errorNumber;   /* Error number reported by task.           */
@@ -12308,6 +12408,15 @@ uint32 detFrameSize
    double       refY;
    double       thresh;
    double       totalThresh;
+
+   /*
+    * Parameters to update the ADC offset
+    */
+
+   int          updateOffset = FALSE;
+   long         i;                  /* index                                  */
+   long         offsetVect[4];      /* ADC offset vector                      */
+
 
    /*
     * Initialise the error number and obtain the attributes provided with the
@@ -12467,6 +12576,13 @@ uint32 detFrameSize
          updateAoCtrlFlag = TRUE;
       }
 
+      /* Init the ADC offset vector */
+
+      for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = pOffsetBinVect[i];
+
+      updateOffset = TRUE;
+
    }
    else if ( (binFlag == TRUE) && (aoCcdId->binningFlag == TRUE) )
    {
@@ -12596,6 +12712,14 @@ uint32 detFrameSize
          sprintf ( fullFgCmFileName, "%s/%s", path, fgCmFileName );
          updateAoCtrlFlag = TRUE;
       }
+
+      /* Init the ADC offset vector */
+
+      for ( i = 0 ; i < obsId->aoCcdId->outputsNb ; i ++ )
+             offsetVect[i] = pOffsetFullVect[i];
+
+      updateOffset = TRUE;
+
    }
    else 
    {
@@ -12703,6 +12827,41 @@ uint32 detFrameSize
       ERROR_LOG ("Failed to download geometry parameters to TIMING DSP");
       errorNumber = S_detControl_SDSU_ERROR;
       return (errorNumber);
+   }
+
+   if ( updateOffset == TRUE )
+   {
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS0",
+                        (uint32) offsetVect[0] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 0 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS1",
+                         (uint32) offsetVect[1] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 1 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS2",
+                         (uint32) offsetVect[2] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 2 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
+
+      if ( sdsuParamWRP (sdsuId, SDSU_IDENT_TIM, "T_ADC_OS3",
+                         (uint32) offsetVect[3] ) == ERROR )
+      {
+         ERROR_LOG ("Error setting ADC offset 3 parameter");
+         errorNumber = S_detControl_SDSU_ERROR;
+         return (errorNumber);
+      }
    }
 
    if (sdsuPrimitive (sdsuId, "LDP", SDSU_IDENT_TIM, NULL, NULL) == ERROR)
@@ -15807,6 +15966,7 @@ uint32 detSigModeThresh
    {
       /* no computation requested */
       obsId->aoCtrlId->threshold = threshold;
+
       if (epToVxPipeWrite (NULL, (char *)(int)& (obsId->aoCtrlId->threshold),
                            obsId->pAoThreshContext) == ERROR)
       {
@@ -17567,6 +17727,8 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->vali, "data/defIntMatP1MK.dat" );
          strcpy ( (char *)pgsub->valj, "data/defContMatP1MK.dat" );
          strcpy ( (char *)pgsub->valk, "data/defFgContMatP1MK.dat" );*/
+
+         *(long *)pgsub->valu = 0; /* no binning: 0 */
       }
    }
    else if ( (xbin == 2) && (ybin == 2) )
@@ -17617,6 +17779,8 @@ STATUS detInitSigInit
          strcpy ( (char *)pgsub->vali, "data/defIntMatP1MK.dat" );
          strcpy ( (char *)pgsub->valj, "data/defContMatP1MK.dat" );*/
          strcpy ( (char *)pgsub->valk, "data/defFgContMatP1MK.dat" );
+
+         *(long *)pgsub->valu = 1; /* binning: 1 */
       }
    }
    else
@@ -18038,18 +18202,16 @@ uint32 detSigReset
  *   detContInit
  *
  *   INVOCATION:
- *   detContInit (pInitFileName, pTempCode, pTempCoeff, pOffset0, pOffset1, 
- *                pOffset2, pOffset3, pCcdSn)
+ *   detContInit (pInitFileName, pTempCode, pTempCoeff, 
+ *                poffsetFulVect, pOffsetBinVect, pCcdSn)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pInitFileName (char *)   Init file Name
- *   (>) pTempCode     (uint32 *) Target temperature code
- *   (>) pTempCoeff    (uint32 *) Coefficient for temperature control
- *   (>) pOffset0      (long *)   ADC offset for output 0
- *   (>) pOffset1      (long *)   ADC offset for output 1
- *   (>) pOffset2      (long *)   ADC offset for output 2
- *   (>) pOffset3      (long *)   ADC offset for output 3
- *   (>) pCcdSn        (char *)   CCD serial number
+ *   (>) pInitFileName   (char *)   Init file Name
+ *   (>) pTempCode       (uint32 *) Target temperature code
+ *   (>) pTempCoeff      (uint32 *) Coefficient for temperature control
+ *   (>) pOffsetFullVect (long *)   ADC offset vector when no binning [4]
+ *   (>) pOffsetBinVect  (long *)   ADC offset vector when binning [4]
+ *   (>) pCcdSn          (char *)   CCD serial number
  *
  *   FUNCTION VALUE:
  *   (uint32)   Error number. 0 if command successful.
@@ -18081,10 +18243,8 @@ uint32 detContInit
    char *   pInitFileName,          /* Init file Name                         */
    uint32 * pTempCode,              /* Target temperature code                */
    uint32 * pTempCoeff,             /* Coefficient for temperature control    */
-   long   * pOffset0,               /* ADC offset for output 0                */
-   long   * pOffset1,               /* ADC offset for output 1                */
-   long   * pOffset2,               /* ADC offset for output 2                */
-   long   * pOffset3,               /* ADC offset for output 3                */
+   long   * pOffsetFullVect,        /* ADC offset vector [4] - no binning     */
+   long   * pOffsetBinVect,         /* ADC offset vector [4] - binning        */
    char *   pCcdSn                  /* CCD serial number                      */
    )
 {
@@ -18221,21 +18381,21 @@ uint32 detContInit
    printf ( "detContInit(): %s\n", comment );
 #endif
 
-   /* Read the default ADC offset for output 0 */
+   /* Read the default ADC offset for output 0 - no binning */
 
    if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
    {
       ERROR_SET1 ( 0,
-        "Failed to read the ADC offset for output 0 from the DC init file %s",
+        "Failed to read the ADC offset0 (full) from the DC init file %s",
         ERROR_LOG_SAVE, pInitFileName );
       fclose (pFile);
       return (ERROR);
    }
 
-   *pOffset0 = offset;
+   *(pOffsetFullVect + 0) = offset;
 
 #ifdef DEBUG
-   printf ( "detContInit(): ADC offset for output 0 = %d\n", offset );
+   printf ( "detContInit(): ADC offset for output 0 (full) = %d\n", offset );
 #endif
 
    /* Skip the next line of comment */
@@ -18253,21 +18413,21 @@ uint32 detContInit
    printf ( "detContInit(): %s\n", comment );
 #endif
 
-   /* Read the ADC offset for output 1 */
+   /* Read the ADC offset for output 1 - no binning */
 
    if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
    {
       ERROR_SET1 ( 0,
-        "Failed to read the ADC offset for output 1 from the DC init file %s",
+        "Failed to read the ADC offset1 (full) from the DC init file %s",
         ERROR_LOG_SAVE, pInitFileName );
       fclose (pFile);
       return (ERROR);
    }
 
-   *pOffset1 = offset;
+   *(pOffsetFullVect + 1) = offset;
 
 #ifdef DEBUG
-   printf ( "detContInit(): ADC offset for output 1 = %d\n", offset );
+   printf ( "detContInit(): ADC offset for output 1 (full) = %d\n", offset );
 #endif
 
    /* Skip the next line of comment */
@@ -18285,21 +18445,21 @@ uint32 detContInit
    printf ( "detContInit(): %s\n", comment );
 #endif
 
-   /* Read the ADC offset for output 2 */
+   /* Read the ADC offset for output 2 - no binning */
 
    if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
    {
       ERROR_SET1 ( 0,
-        "Failed to read the ADC offset for output 2 from the DC init file %s",
+        "Failed to read the ADC offset2 (full) from the DC init file %s",
         ERROR_LOG_SAVE, pInitFileName );
       fclose (pFile);
       return (ERROR);
    }
 
-   *pOffset2 = offset;
+   *(pOffsetFullVect + 2) = offset;
 
 #ifdef DEBUG
-   printf ( "detContInit(): ADC offset for output 2 = %d\n", offset );
+   printf ( "detContInit(): ADC offset for output 2 (full) = %d\n", offset );
 #endif
 
    /* Skip the next line of comment */
@@ -18317,21 +18477,149 @@ uint32 detContInit
    printf ( "detContInit(): %s\n", comment );
 #endif
 
-   /* Read the ADC offset for output 3 */
+   /* Read the ADC offset for output 3 - no binning */
 
    if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
    {
       ERROR_SET1 ( 0,
-        "Failed to read the ADC offset for output 3 from the DC init file %s",
+        "Failed to read the ADC offset3 (full) from the DC init file %s",
         ERROR_LOG_SAVE, pInitFileName );
       fclose (pFile);
       return (ERROR);
    }
 
-   *pOffset3 = offset;
+   *(pOffsetFullVect + 3) = offset;
 
 #ifdef DEBUG
    printf ( "detContInit(): ADC offset for output 3 = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the default ADC offset for output 0 - binning */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset0 (bin) from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *(pOffsetBinVect + 0) = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 0 (bin)= %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the ADC offset for output 1 - binning */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset1 (bin) from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *(pOffsetBinVect + 1) = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 1 (bin) = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the ADC offset for output 2 - binning */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset2 (bin) from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *(pOffsetBinVect + 2) = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 2 (bin) = %d\n", offset );
+#endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0,
+         "Failed to read the second line of comments from the DC init file %s",
+         ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "detContInit(): %s\n", comment );
+#endif
+
+   /* Read the ADC offset for output 3  - binning */
+
+   if ( (fscanf (pFile, "%d\n", &offset)) == EOF )
+   {
+      ERROR_SET1 ( 0,
+        "Failed to read the ADC offset3 (bin) from the DC init file %s",
+        ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   *(pOffsetBinVect + 3) = offset;
+
+#ifdef DEBUG
+   printf ( "detContInit(): ADC offset for output 3 (bin) = %d\n", offset );
 #endif
 
    /* Skip the next line of comment */

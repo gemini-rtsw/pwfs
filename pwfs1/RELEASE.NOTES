@@ -98,8 +98,8 @@ V1-4 15 December 2000 CB :
   - Modify formula composite angle in ttfZero in writeZernikes.c :
     RT - CR + PA as for active optics
 
-V1-5 28 January 2001 CB:
-------------------------
+V1-5 28 January 2001 CB (not used):
+-----------------------------------
   - pwfs1Install : replace the link to cfitsio
     (/home/cboyer/wfs_lib/cfitsio-ppc) per /gemini/cfitsio/cfitsio
     and also add the site
@@ -112,8 +112,8 @@ V1-5 28 January 2001 CB:
     temp, ADC offsets and SN of the CCD
   - replace the button X, Y X 2 per YES in det_frameSize.dl
 
-V1-6 06 February 2001 CB:
--------------------------
+V1-6 06 February 2001 CB (not used):
+------------------------------------
   - Temp, offset not updated according to the site in detInit and detReset. 
     I have to move all the DATREC_CONTEXT structures to obsId, I have created
     detGetSirContext() and detWriteDefSirContext() and fix the bug.
@@ -123,3 +123,9 @@ V1-6 06 February 2001 CB:
     data and not on the average image...
   - Add a button "CLEAR ERRORS" on main screen
   - Save FG and AO vect after rotation
+
+V1-7 14 February 2001 CB:
+-------------------------
+  - Add a Binning flag in the signal processing main window
+  - ADC offset for binning and no binning (par and src)
+  - measure defFullP2DarkMK.fits and defBinP2DarkMK.fits
