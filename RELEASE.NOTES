@@ -331,7 +331,9 @@ V4-7 25 AUG 2004 AAG:
    - adl/detSigModeSeqMore.adl
         remove display
 
-  d) Others
+  c) Others
+   - src/wfsDb.c
+	Ao Gains (comaX, comaY) changed to 1.0
    - IMP_StartupMK.pwfs2
    - IMPS_StartupCP.pwfs2
    - pwfs2Install
@@ -343,3 +345,6 @@ V4-7 25 AUG 2004 AAG:
 	updated
    - startup/startupCP.vws
 	Dhs data Server updated (jughead)
+
+  d) writeZernikes.c remove clamping and gain increase for monitored
+   mode (comaX-comaY) - CB
