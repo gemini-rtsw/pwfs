@@ -75,4 +75,27 @@ V1-3 11 August 2000 CB:
     instead of CCD_SIZE
   - remove offset per defaults : 2100, 2250, 2530,2190
 
-newDev equivalent to V1-3
+V1-4 15 December 2000 CB :
+--------------------------
+  - wfsDb.c defaults value for detSigModeThresh, detSigModeTotal, detSigModeSeq, and subap allowed off = 0
+  - remove error when stop an observation not in progress
+  - replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
+  - set dhsQlRate according to the exposure time
+  - add aoSaveCbIm, aoSaveCbCtrl, aoSaveCbFgCtrl sir records
+  - add FG when threshold compution (method with spots)
+  - replace GG by FG when total computation and update gains 
+  - dm screens: replace label "dark" by "sky/dark" 
+  - add possibility to change butterworth filter parameters when probe arm
+    guiding
+  - add parameter to do aO or not in sequence closed loop
+  - new files in par: zeroFullP1Dark.fits and zeroBinP1Dark.fits
+    defFullP1Dark.fits and defBinP1Dark.fits now contain real dark 
+    for 10ms and 5ms
+  - now defContMatP1.dat contains the real matrix of 19sep200 = 
+    contMatP1_190900.dat
+  - new file zeroContMatP1.dat contains only 0
+  - add detSigReset (Red reset button in the signal processing window)
+  - Modify formula composite angle in ttfZero in writeZernikes.c :
+    RT - CR + PA as for active optics
+
+newDev equivalent to V1-4

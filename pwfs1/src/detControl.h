@@ -13,6 +13,10 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   08 Dec 2000: CB - Add aoFlag in sequence closed loop
+ *                     add detSigReset
+ *   07 Dec 2000: CB - Add aoSaveCbIm, aoSaveCbCtrl, aoSaveCbFgCtrl sir records
+ *                     add cutoffFrequency rateSamplingFrequency
  *   20 Apr 2000: CB - Major modifications: replace ospLib with aoP1Lib,
  *                     add 3 SIR records for stae of signal processing,
  *                     add all the geometry sir records,
@@ -115,6 +119,18 @@
 #define   DET_CONTROL_AOTOTAL_SIR_NAME        "aoTotal"
                                     /* Name of SIR record containing the      */
                                     /* flux threshold for centroids comp.     */
+
+#define   DET_CONTROL_AOSAVECBIM_SIR_NAME     "aoSaveCbIm"
+                                    /* Name of SIR record containing the      */
+                                    /* ao Save Image CB Flag                  */
+
+#define   DET_CONTROL_AOSAVECBCTRL_SIR_NAME   "aoSaveCbCtrl"
+                                    /* Name of SIR record containing the      */
+                                    /* ao Save Control CB Flag                */
+
+#define   DET_CONTROL_AOSAVECBFGCTRL_SIR_NAME "aoSaveCbFgCtrl"
+                                    /* Name of SIR record containing the      */
+                                    /* ao Save FG Control CB Flag             */
 
 #define   DET_CONTROL_AOPROCESSMODE_SIR_NAME  "aoProcessMode"
                                     /* Name of SIR record containing the      */
@@ -398,8 +414,8 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Method for average flux computation             */
    long         averageFluxFlag;
                            /* Average flux after FG Flag                      */
-   long         threshFlag;
-                           /* Threshold after FG Flag                         */
+   long         threshFlag;/* Threshold after FG Flag                         */
+   long         aoFlag;    /* aO Flag in sequence closed loop                 */
    long         nFramesAverageFlux;
                            /* Number of frames to average for computing the   */
                            /* average flux                                    */
@@ -461,6 +477,10 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       rawtEnd;   /* Raw Gemini time at end of observation.          */
    double       exposureTime;
                            /* Current exposure time                           */
+   double       cutoffFrequency;
+                           /* Cuttof frequency (bandwidth ) of the system     */
+   double       rateSamplingFrequency;
+                           /* Rate of sampling frequency (between 0 and 1)    */
    double       exposedRQ; /* Requested total exposure time.                  */
    double       exposed;   /* Actual total exposure time.                     */
 
@@ -496,7 +516,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
 
                            /* SAD information                                 */
                            /* ---------------                                 */
-   DATREC_CONTEXT   pDetObservingContext;
+   DATREC_CONTEXT pDetObservingContext;
                            /* Observing record context.                       */
    DATREC_CONTEXT pDetMeasuringContext;
                                       /* Measuring record context.            */
@@ -535,6 +555,14 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* SIR record.                          */
    DATREC_CONTEXT pAoTotalContext;    /* Context structure for aoTotal SIR    */
                                       /* record.                              */
+   DATREC_CONTEXT pAoSaveCbImContext; /* Context structure for aoSaveCbIm SIR */
+                                      /* record.                              */
+   DATREC_CONTEXT pAoSaveCbCtrlContext;
+                                      /* Context structure for aoSaveCbCtrl   */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pAoSaveCbFgCtrlContext;
+                                      /* Context structure for aoSaveCbFgCtrl */
+                                      /* SIR record.                          */
    DATREC_CONTEXT pDataLabelContext ; /* Data Label SIR record context        */
                                       /* structure                            */
    DATREC_CONTEXT pIntTimeContext ;   /* Integration time SIR record context  */
@@ -599,10 +627,12 @@ enum
    DET_CONTROL_CMD_CONTINUE,   /* Continue observation.                       */
    DET_CONTROL_CMD_STOP,       /* Stop observation.                           */
    DET_CONTROL_CMD_ABORT,      /* Abort observation.                          */
+   DET_CONTROL_CMD_SIGRESET,   /* Reset signal processing.                    */
    DET_CONTROL_CMD_SIGINIT,    /* Initialise signal processing.               */
    DET_CONTROL_CMD_SIGINITGAIN,/* Initialise signal processing gains.         */
    DET_CONTROL_CMD_SIGINITSH,  /* Initialise WFS geometry for signal process. */
    DET_CONTROL_CMD_SIGINITFGGAIN,/* Initialize FG gains                       */
+   DET_CONTROL_CMD_SIGINITBW,  /* Init Butterworth filter.                    */
    DET_CONTROL_CMD_SIGMODE_NONE, /* Configure to no signal processing.        */
    DET_CONTROL_CMD_SIGMODE_DARK, /* Configure to dark subtraction only.       */
    DET_CONTROL_CMD_SIGMODE_COADD, /* Configure to coadd only.                 */

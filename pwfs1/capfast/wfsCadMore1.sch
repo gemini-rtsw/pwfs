@@ -1,9 +1,23 @@
 [schematic2]
-uniq 163
+uniq 165
 [tools]
 [detail]
 s 2384 -704 500 512 wfsCadMore1.sch
 [cell use]
+use ecad2 1632 1575 100 0 detSigReset
+xform 0 1792 1888
+p 1696 1520 100 0 1 DESC:Reset signal processing
+p 1728 1888 100 0 0 FTVA:STRING
+p 1696 1488 100 0 1 INAM:epToVxCadInit
+p 1696 1424 100 0 1 PV:$(top)$(wfs)
+p 1696 1456 100 0 1 SNAM:epToVxCadExecute
+use ecad2 544 1575 100 0 detSigInitBW
+xform 0 704 1888
+p 608 1520 100 0 1 DESC:Set butterworth cutoff frequency
+p 640 1888 100 0 1 FTVA:DOUBLE
+p 608 1488 100 0 1 INAM:epToVxCadInit
+p 608 1424 100 0 1 PV:$(top)$(wfs)
+p 608 1456 100 0 1 SNAM:epToVxCadExecute
 use ecad8 1632 -57 100 0 detSigModeGgCoadd
 xform 0 1792 448
 p 1728 -128 100 0 1 DESC:Set Global Guide and Coadd mode
@@ -57,10 +71,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2000-07-12 00:51:42 $
+p 3120 -784 200 0 -1 date:$Date: 2000-12-16 03:32:55 $
 p 1888 -432 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS1
-p 2592 -528 200 0 -1 revision:$Revision: 1.2 $
+p 2592 -528 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor CAD Records
 [comments]

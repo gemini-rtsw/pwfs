@@ -47,7 +47,7 @@
  *   aoGlobalGuideAndError() - Compute tip and tilt modes only over the whole
  *                             CCD and the associated errors
  *   aoImageFloatAverage() - Average float images
- *   aoRmsNoiseDarkCompute() - To compute the rms of the noise
+ *   aoRmsNoiseImageCompute() - To compute the rms of the noise
  *   aoThresholdCompute() - Compute the threshold
  *   aoCentroidsCompute() - Compute the centroids of an image
  *   aoModeCompute() - Compute the aO modes
@@ -68,6 +68,7 @@
  *   aoCtrlFileRead () - Read parameters from the AO control file
  * 
  *INDENT-OFF*
+ *   31 October 2000: CB - Replace aoRmsNoiseDarkCompute aoRmsNoiseImageCompute
  *   21 April 2000: CB - original creation
  *INDENT-ON*
  *-
@@ -3724,13 +3725,13 @@ STATUS aoImageFloatAverage (
 
 /*+
  *   FUNCTION NAME:
- *   aoRmsNoiseDarkCompute
+ *   aoRmsNoiseImageCompute
  *
  *   INVOCATION:
- *   aoRmsNoiseDarkCompute (pDark, aoCcdId, pRmsNoise)
+ *   aoRmsNoiseImageCompute (pImage, aoCcdId, pRmsNoise)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   (>) pDark          (float *)    Pointer to the dark from which to compute
+ *   (>) pImage         (float *)    Pointer to the image from which to compute
  *                                   the rms of the noise
  *   (>) aoCcdId        (AO_CCD_ID)  Pointer to the AO CCD geometry context
  *                                   structure
@@ -3743,7 +3744,7 @@ STATUS aoImageFloatAverage (
  *   To compute the rms of the noise
  *
  *   DESCRIPTION:
- *   This routine computes for a dedicated dark image pDark the rms of the
+ *   This routine computes for a dedicated image pImage the rms of the
  *   noise.
  *
  *   EXTERNAL VARIABLES:
@@ -3760,15 +3761,15 @@ STATUS aoImageFloatAverage (
  *-
  */
 
-STATUS aoRmsNoiseDarkCompute (
-   float *      pDark,
+STATUS aoRmsNoiseImageCompute (
+   float *      pImage,
    AO_CCD_ID    aoCcdId,
    double *     pRmsNoise
    )
 {
    int          imageSize;
    float *      p;
-   float *      pd;
+   float *      pi;
    float *      pMax;
    double       value;
    double       meanPixel;
@@ -3778,15 +3779,15 @@ STATUS aoRmsNoiseDarkCompute (
    /* Some initialisations */
 
    imageSize = aoCcdId->pixelsNb;
-   pd = pDark;
-   pMax = (float *)((int)pd + imageSize*sizeof(float));
+   pi = pImage;
+   pMax = (float *)((int)pi + imageSize*sizeof(float));
 
    /* Compute mean and variance */
 
    meanPixel = 0.0;
    variance = 0.0;
 
-   for ( p = pd ; p < pMax ; p ++ )
+   for ( p = pi ; p < pMax ; p ++ )
    {
        value = (double)(*p);
 
