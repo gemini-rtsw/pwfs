@@ -125,6 +125,12 @@ typedef struct
 	double	theta;
 	double	sinTheta;
 	double	cosTheta;
+	double	sin2Theta;
+	double	cos2Theta;
+	double	sin3Theta;
+	double	cos3Theta;
+	double	sin4Theta;
+	double	cos4Theta;
 	double	null[AO_ZERO_ARRAY_SIZE];
 	SEM_ID	access;
 }frame;
@@ -166,7 +172,6 @@ SDSU_ID sdsuId;
 
 /* add by cb to display 6x6 centroids data */
 double  localDiag[DIAG_ARRAY_SIZE];
-double  globalAngleAO ;
 
 /* declare externals */
 
@@ -356,6 +361,12 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
 		ag2tcs->theta	= 0.0;
 		ag2tcs->sinTheta = sin(0.0);
 		ag2tcs->cosTheta = cos(0.0);
+		ag2tcs->sin2Theta = sin(0.0);
+		ag2tcs->cos2Theta = cos(0.0);
+		ag2tcs->sin3Theta = sin(0.0);
+		ag2tcs->cos3Theta = cos(0.0);
+		ag2tcs->sin4Theta = sin(0.0);
+		ag2tcs->cos4Theta = cos(0.0);
 	    }
 	}
 
@@ -380,6 +391,12 @@ long    gensubToTcsInit(struct genSubRecord * pgsub)
 		ag2m2->theta	= 0.0;
 		ag2m2->sinTheta = sin(0.0);
 		ag2m2->cosTheta = cos(0.0);
+		ag2m2->sin2Theta = sin(0.0);
+		ag2m2->cos2Theta = cos(0.0);
+		ag2m2->sin3Theta = sin(0.0);
+		ag2m2->cos3Theta = cos(0.0);
+		ag2m2->sin4Theta = sin(0.0);
+		ag2m2->cos4Theta = cos(0.0);
 	    }
 	}
 
@@ -483,7 +500,7 @@ long    gensubToTcsTtf (struct genSubRecord * pgsub)
 
 		*(double *)pgsub->vala = ttfData[8];	/* z2 */
 		*(double *)pgsub->valb = ttfData[9];	/* z3 */
-		*(double *)pgsub->valc = ttfData[10];/* z4 */
+		*(double *)pgsub->valc = ttfData[10];	/* z4 */
 		*(double *)pgsub->vald = ttfData[5];	/* e2 */
 		*(double *)pgsub->vale = ttfData[6];	/* e3 */
 		*(double *)pgsub->valf = ttfData[7];	/* e4 */
@@ -689,25 +706,46 @@ STATUS writeWfsToTcs(struct OSP_CONTEXT *pWfs)
 		result.z19 = (f->cosTheta*pWfs->z[18] - f->sinTheta*pWfs->z[19])*MICRON2MM - f->null[22];
 		result.z20 = (f->sinTheta*pWfs->z[18] + f->cosTheta*pWfs->z[19])*MICRON2MM - f->null[23];*/
 
-		result.z2 = pWfs->z[1] ;
-		result.z3 = pWfs->z[2] ;
-		result.z4 = pWfs->z[3] ;
-		result.z5 = pWfs->z[4] ;
-		result.z6 = pWfs->z[5] ;
-		result.z7 = pWfs->z[6] ;
-		result.z8 = pWfs->z[7] ;
-		result.z9 = pWfs->z[8] ;
-		result.z10 = pWfs->z[9] ;
-		result.z11 = pWfs->z[10] ;
-		result.z12 = pWfs->z[11] ;
-		result.z13 = pWfs->z[12] ;
-		result.z14 = pWfs->z[13] ;
-		result.z15 = pWfs->z[14] ;
-		result.z16 = pWfs->z[15] ;
-		result.z17 = pWfs->z[16] ;
-		result.z18 = pWfs->z[17] ;
-		result.z19 = pWfs->z[18] ;
-		result.z20 = pWfs->z[19] ;
+                /* tip and tilt: r * cos(t) and r * sin(t) */
+		result.z2 = (f->cosTheta*pWfs->z[1] - f->sinTheta*pWfs->z[2]);
+		result.z3 = (f->sinTheta*pWfs->z[1] + f->cosTheta*pWfs->z[2]);
+
+                /* focus : 2*r^2 -1 */
+		result.z4 = (pWfs->z[3]);
+
+                /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
+		result.z5 = (f->cos2Theta*pWfs->z[4] - f->sin2Theta*pWfs->z[5]);
+		result.z6 = (f->sin2Theta*pWfs->z[4] + f->cos2Theta*pWfs->z[5]);
+
+                /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and (3*r^2 - 2) * r * sin(t) */
+		result.z7 = (f->cosTheta*pWfs->z[6] - f->sinTheta*pWfs->z[7]);
+		result.z8 = (f->sinTheta*pWfs->z[6] + f->cosTheta*pWfs->z[7]);
+
+                /* spherical: 6*r^4 - 6*r^2 + 1 */
+		result.z9 = (pWfs->z[8]);
+
+                /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
+		result.z10 = (f->cos3Theta*pWfs->z[9] - f->sin3Theta*pWfs->z[10]);
+		result.z11 = (f->sin3Theta*pWfs->z[9] + f->cos3Theta*pWfs->z[10]);
+
+                /* (4*r^2-3) * r^2 * cos(2t) and (4*r^2-3) * r^2 * sin(2t) */
+		result.z12 = (f->cos2Theta*pWfs->z[11] - f->sin2Theta*pWfs->z[12]);
+		result.z13 = (f->sin2Theta*pWfs->z[11] + f->cos2Theta*pWfs->z[12]);
+
+                /* (10*r^4 -12*r^3 + 3) * r * cos(t) and (10*r^4 -12*r^3 + 3) * r * sin(t) */
+		result.z14 = (f->cosTheta*pWfs->z[13] - f->sinTheta*pWfs->z[14]);
+		result.z15 = (f->sinTheta*pWfs->z[13] + f->cosTheta*pWfs->z[14]);
+
+                /* 20*r^6 - 30*r^4 + 12*r^2 - 1 */
+		result.z16 = (pWfs->z[15]);
+
+                /* r^4 * cos(4t) and r^4 * sin(4t) */
+		result.z17 = (f->cos4Theta*pWfs->z[16] - f->sin4Theta*pWfs->z[17]);
+		result.z18 = (f->sin4Theta*pWfs->z[16] + f->cos4Theta*pWfs->z[17]);
+
+                /* (5*r^2 - 4) * r^3 * cos(3t) and (5*r^2 - 4) * r^3 * cos(3t) */
+		result.z19 = (f->cos3Theta*pWfs->z[18] - f->sin3Theta*pWfs->z[19]);
+		result.z20 = (f->sin3Theta*pWfs->z[18] + f->cos3Theta*pWfs->z[19]);
 
 		semGive(f->access);
 	}
@@ -1049,6 +1087,12 @@ long    ttfZero (struct genSubRecord * pgsub)
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);
+		f->sin2Theta	= sin(2*f->theta);
+		f->cos2Theta	= cos(2*f->theta);
+		f->sin3Theta	= sin(3*f->theta);
+		f->cos3Theta	= cos(3*f->theta);
+		f->sin4Theta	= sin(4*f->theta);
+		f->cos4Theta	= cos(4*f->theta);
 
 		semGive(f->access);
 	}
@@ -1120,6 +1164,7 @@ long    ttfZero (struct genSubRecord * pgsub)
  * 24-Nov-1999  Modified to add a fudge angle to the table angle (cb)
  * 26-Nov-1999  Change sign in the magic formula for the composite angle(cb)
  * 13-Dec-1999  Remove limit checks for the cass rotator angle (cb)
+ * 12-jan-2000  Change sign in the magic formula +arm now (cb)
  *
  */
 
@@ -1198,7 +1243,7 @@ long    aoZero (struct genSubRecord * pgsub)
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
 		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS);*/
 
-		compositeAngle = (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;
+		compositeAngle = (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS;
 
                 /*printf ( "compositeAngle = %lf, null[3]= %lf, tableAngle =%lf, armAngle=%lf\n" ,
                          compositeAngle , f->null[3], tableAngle, armAngle ) ;*/
@@ -1206,9 +1251,18 @@ long    aoZero (struct genSubRecord * pgsub)
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);
+		f->sin2Theta	= sin(2*f->theta);
+		f->cos2Theta	= cos(2*f->theta);
+		f->sin3Theta	= sin(3*f->theta);
+		f->cos3Theta	= cos(3*f->theta);
+		f->sin4Theta	= sin(4*f->theta);
+		f->cos4Theta	= cos(4*f->theta);
 
-                globalAngleAO = f->theta ; /* used by ospRotateCentroids */
-
+                /*printf ( "f->theta=%f, f->sinTheta=%f, f->cosTheta=%f\n" , f->theta , f->sinTheta , f->cosTheta ) ;
+                printf ( "f->sin2Theta=%f, f->cos2Theta=%f\n" ,  f->sin2Theta , f->cos2Theta ) ;
+                printf ( "f->sin3Theta=%f, f->cos3Theta=%f\n" ,  f->sin3Theta , f->cos3Theta ) ;
+                printf ( "f->sin4Theta=%f, f->cos4Theta=%f\n" ,  f->sin4Theta , f->cos4Theta ) ;*/
+                
 		semGive(f->access);
 	}
 	else

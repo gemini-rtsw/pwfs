@@ -18,8 +18,6 @@
 
 struct OSP_CONTEXT *wfsAddr;
 
-extern double globalAngleAO ; /* add by cb and defined into writeZernikes.c */
-
 #ifdef vxWorks
 int do_it();
 int do_it()
@@ -4358,17 +4356,14 @@ int ospRotateCentroids ( struct OSP_CONTEXT *wfsSpecific )
 
    /************************************************** Some initializations ***/
 
-   cosAngle = (float) cos (wfsSpecific->angleAO + globalAngleAO);
-   sinAngle = (float) sin (wfsSpecific->angleAO + globalAngleAO);
+   cosAngle = (float) cos (wfsSpecific->angleAO);
+   sinAngle = (float) sin (wfsSpecific->angleAO);
 
-   printf ( "rotate centroids : globalAngleAO = %f, angle = %f, cosAngle=%f, sinAngle=%f\n" ,
-            globalAngleAO , wfsSpecific->angleAO + globalAngleAO , cosAngle , sinAngle ) ;
-
-   for ( i = 1 ; i <= wfsSpecific->mp ; i = i+2 )
+   /*for ( i = 1 ; i <= wfsSpecific->mp ; i = i+2 )
    {
        printf ( "subaperture %d : X=%f, Y=%f\n" ,
-	        wfsSpecific->s[i], wfsSpecific->s[i+1]) ;
-   }
+	        i , wfsSpecific->s[i], wfsSpecific->s[i+1]) ;
+   }*/
 
    /************************************************************** Rotation ***/
 
@@ -4386,12 +4381,12 @@ int ospRotateCentroids ( struct OSP_CONTEXT *wfsSpecific )
        } ;
    }
 
-   printf ( "after rotation\n" ) ;
+   /*printf ( "after rotation\n" ) ;
    for ( i = 1 ; i <= wfsSpecific->mp ; i = i+2 )
    {
        printf ( "subaperture %d : X=%f, Y=%f\n" ,
-	        wfsSpecific->s[i], wfsSpecific->s[i+1]) ;
-   }
+	        i, wfsSpecific->s[i], wfsSpecific->s[i+1]) ;
+   }*/
    /***************************************************************************/
 
    return (OK) ;
@@ -4864,7 +4859,7 @@ int ospAoCor ( float *buffp ,
 
        /***************************************** Rotation of the centroids ***/
 
-       ospRotateCentroids ( wfsSpecific ) ;
+       /*ospRotateCentroids ( wfsSpecific ) ;*/
 
        /**************************************** Multiply by control matrix ***/
 
@@ -4999,7 +4994,7 @@ int ospAoAnalyze ( struct OSP_CONTEXT *wfsSpecific )
 
     /******************************************** Rotation of the centroids ***/
 
-    ospRotateCentroids ( wfsSpecific ) ;
+    /*ospRotateCentroids ( wfsSpecific ) ;*/
 
     /******************************************* Multiply by control matrix ***/
 
