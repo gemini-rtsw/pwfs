@@ -8,3 +8,12 @@ Modification toward V0-4
   - comments from CM
   - TELESCOP and OBSERVAT are now updated from the tcs:name
   - New TIM boot codes
+
+V0-6 18 Nov 1999 CB: 
+Modification toward V0-5
+  - synchroMap.h identical to pwfs2
+  - writeZernikes.c : include the nulls offsets from TCS
+                      add cass rotator angle
+  - ospLib.c : working on threshold into ospFGCentroidWrapper
+    -1 : threshold = 2nd biggest corner 
+    -2 : % biggest for each subaperture
