@@ -255,6 +255,7 @@ V4-5.dev 17 May 2004 AAG:
   * read default gains from .dat file when pressing the default button
   * set default of the detSigModeSeq CAD from pv load file (one per site)
   * set default of the detSigModeSeqDark CAD from pv load file (one per site)
+  * New threshold claculation
 
   - Added pwfs1SetDefCommandCP.pv and pwfs1SetDefCommandMK.pv
   - src/Makefile.Vx modified
@@ -277,8 +278,5 @@ V4-5.dev 17 May 2004 AAG:
   - adl/detSigInitFgGain.adl
   - adl/detSigModeSeq.adl
   - adl/detSigModeSeqDark.adl
-
-  * aoTotalThresholdCompute(): New fit similar as pwfs2
-  - src/aoP1Lib.c modified
-
-- pwfs1Unsetup: modified
+  - src/aoP1Lib.c, modified aoTotalThresholdCompute 
+  - pwfs1Unsetup: modified
