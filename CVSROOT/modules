@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.4 1998-07-23 21:50:20 ajf Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.5 1998-07-23 21:52:46 ajf Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -29,7 +29,7 @@
 #
 
 # Convenient aliases
-world		-a .
+#world		-a .
 
 # CVSROOT support
 CVSROOT		-i /home/ajf/bin/mkmodules CVSROOT
