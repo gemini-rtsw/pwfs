@@ -12,3 +12,18 @@ V0-4 12 Nov 1999 CB:
 --------------------
 Modification toward V0-3
   - StripTool facilities added in showFG.adl
+
+V0-5 02Feb 2000 CB:
+-------------------
+Modification toward V0-4
+  - writeZernikes.c ttfZero() add fudgeAngle to the magic formula, now:
+    null[3] + tableAngle + fudgeAngle - armAngle
+  - local.vws modified to allow save into /usr/astro
+  - TELESCOP and OBSERVAT are now updated from the tcs:name
+  - startup.vws: slalib and timelib are now in /gemini
+  - in startup_MINIMAL.vws -> Minimal startup pwfs2
+  - in writeZernikes.c ttfZero() remove limits for cass rot angle
+  - ospLib.c include last cfitsio version V0-3: FITSIO_READONLY
+  - defaults parameters for detSigInit and gains
+
+dev

@@ -10,6 +10,9 @@
  *
  *INDENT-OFF*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  1999/07/17 02:14:25  cboyer
+ * Minor modifications
+ *
  * Revision 1.13  1998/12/07 11:17:28  cics
  * Removed obsolete and unmanageable COPYRIGHT statement.
  *
@@ -124,5 +127,6 @@ IMPORT int		wfsNumProcsGet (void);
 IMPORT STATUS	wfsSysInit (const int processorNumber, const BOOL redirectErrorLog);
 IMPORT STATUS	wfsWriteVersion (void);
 IMPORT STATUS	wfsShow (void);
+IMPORT void     wfsGetTelName (char *pTelName);
 
 #endif /* __INCwfsLibh */

@@ -1,7 +1,8 @@
 [schematic2]
-uniq 56
+uniq 72
 [tools]
 [detail]
+w 2904 1483 100 0 n#57 hwin.hwin#68.in 2832 1472 3024 1472 egenSub.initTelName.INPA
 w 1512 1099 100 0 n#55 hwin.hwin#52.in 1440 1088 1632 1088 egenSub.updateAstCtx.INPG
 w 1512 1163 100 0 n#54 hwin.hwin#51.in 1440 1152 1632 1152 egenSub.updateAstCtx.INPF
 w 1512 1227 100 0 n#53 hwin.hwin#50.in 1440 1216 1632 1216 egenSub.updateAstCtx.INPE
@@ -10,36 +11,66 @@ w 1512 1355 100 0 n#47 hwin.hwin#46.in 1440 1344 1632 1344 egenSub.updateAstCtx.
 w 1512 1419 100 0 n#45 hwin.hwin#44.in 1440 1408 1632 1408 egenSub.updateAstCtx.INPB
 w 1512 1483 100 0 n#43 hwin.hwin#42.in 1440 1472 1632 1472 egenSub.updateAstCtx.INPA
 w 600 1307 100 0 n#37 ecalcs.presCalc.FLNK 496 1296 752 1296 elongins.present.SLNK
-w 648 1339 100 0 n#33 junction 592 1328 752 1328 elongins.present.INP
 w 328 1563 100 0 n#33 ecalcs.presCalc.VAL 496 1264 592 1264 592 1552 112 1552 112 1456 208 1456 ecalcs.presCalc.INPA
-s -592 2528 500 0 Wavefront Sensing - System TCS Interface Records
-s 2240 -336 500 512 systemTcs.sch
-s -64 704 200 0 Records used by TCS time system
-s -48 1632 200 0 Records monitored by TCS
-s 1344 1632 200 0 Update WCS info from TCS
+w 648 1339 100 0 n#33 junction 592 1328 752 1328 elongins.present.INP
+s 2864 1568 200 0 Update Telescope Name from TCS
 s 1344 1584 150 0 (Disconnect hw input if TCS unavailable and no test harness)
+s 1344 1632 200 0 Update WCS info from TCS
+s -48 1632 200 0 Records monitored by TCS
+s -64 704 200 0 Records used by TCS time system
+s 2240 -336 500 512 systemTcs.sch
+s -592 2528 500 0 Wavefront Sensing - System TCS Interface Records
 [cell use]
-use hwin 1248 1047 100 0 hwin#52
-xform 0 1344 1088
-p 1251 1080 100 0 -1 val(in):tcs:sad:sourceAEpoch.VAL
-use hwin 1248 1111 100 0 hwin#51
-xform 0 1344 1152
-p 1251 1144 100 0 -1 val(in):tcs:sad:sourceADec.VAL
-use hwin 1248 1175 100 0 hwin#50
-xform 0 1344 1216
-p 1251 1208 100 0 -1 val(in):tcs:sad:sourceARA.VAL
-use hwin 1248 1431 100 0 hwin#42
-xform 0 1344 1472
-p 1251 1464 100 0 -1 val(in):tcs:ak:astCtx.VALA
-use hwin 1248 1367 100 0 hwin#44
-xform 0 1344 1408
-p 1251 1400 100 0 -1 val(in):tcs:sad:sourceAInputFrame.VAL
-use hwin 1248 1303 100 0 hwin#46
-xform 0 1344 1344
-p 1251 1336 100 0 -1 val(in):tcs:sad:sourceAEquinox.VAL
+use hwin 2640 1431 100 0 hwin#68
+xform 0 2736 1472
+p 2643 1464 100 0 -1 val(in):tcs:name.VAL
+use egenSub 3024 711 100 0 initTelName
+xform 0 3168 1136
+p 3120 1472 100 0 1 FTA:STRING
+p 3120 1408 100 0 0 FTB:DOUBLE
+p 3120 1344 100 0 0 FTC:DOUBLE
+p 3120 1280 100 0 0 FTD:DOUBLE
+p 3120 1216 100 0 0 FTE:DOUBLE
+p 3120 1136 100 0 0 FTF:DOUBLE
+p 3120 1072 100 0 0 FTG:DOUBLE
+p 2801 293 100 0 0 FTH:DOUBLE
+p 3328 1424 100 0 0 FTVB:DOUBLE
+p 3120 1232 100 0 0 FTVE:DOUBLE
+p 3088 640 100 0 0 INAM:
+p 3120 1504 100 0 1 NOA:1
+p 3120 1440 100 0 0 NOB:1
+p 3120 1376 100 0 0 NOC:1
+p 3120 1312 100 0 0 NOD:1
+p 3120 1248 100 0 0 NOE:1
+p 2801 -27 100 0 0 NOF:1
+p 3120 1104 100 0 0 NOG:1
+p 2801 133 100 0 0 NOVA:1
+p 3120 1184 100 0 0 NOVF:1
+p 3088 640 100 0 1 PINI:YES
+p 3088 576 100 0 1 PV:$(top)
+p 3088 672 100 0 1 SCAN:Passive
+p 3088 608 100 0 1 SNAM:wfsInitTelName
 use hwin 1248 1239 100 0 hwin#49
 xform 0 1344 1280
 p 1251 1272 100 0 -1 val(in):tcs:sad:sourceAWavelength.VAL
+use hwin 1248 1303 100 0 hwin#46
+xform 0 1344 1344
+p 1251 1336 100 0 -1 val(in):tcs:sad:sourceAEquinox.VAL
+use hwin 1248 1367 100 0 hwin#44
+xform 0 1344 1408
+p 1251 1400 100 0 -1 val(in):tcs:sad:sourceAInputFrame.VAL
+use hwin 1248 1431 100 0 hwin#42
+xform 0 1344 1472
+p 1251 1464 100 0 -1 val(in):tcs:ak:astCtx.VALA
+use hwin 1248 1175 100 0 hwin#50
+xform 0 1344 1216
+p 1251 1208 100 0 -1 val(in):tcs:sad:sourceARA.VAL
+use hwin 1248 1111 100 0 hwin#51
+xform 0 1344 1152
+p 1251 1144 100 0 -1 val(in):tcs:sad:sourceADec.VAL
+use hwin 1248 1047 100 0 hwin#52
+xform 0 1344 1088
+p 1251 1080 100 0 -1 val(in):tcs:sad:sourceAEpoch.VAL
 use egenSub 1632 711 100 0 updateAstCtx
 xform 0 1776 1136
 p 1728 1472 100 0 1 FTA:DOUBLE
@@ -98,10 +129,10 @@ xform 0 1504 1120
 p 2496 -352 200 0 1 author:S.M.Beard
 p 3008 -384 100 0 0 border:D
 p 2496 -432 200 0 1 checked:B.Goodrich
-p 2992 -448 200 0 -1 date:$Date: 1999-11-10 23:57:16 $
-p 2480 2656 200 0 -1 id:$Id: systemTcs.sch,v 1.3 1999-11-10 23:57:16 cboyer Exp $
+p 2992 -448 200 0 -1 date:$Date: 2000-02-03 01:56:26 $
+p 2480 2656 200 0 -1 id:$Id: systemTcs.sch,v 1.4 2000-02-03 01:56:26 cboyer Exp $
 p 3008 -96 200 0 -1 project:Gemini Wavefront Sensing System
-p 2496 -176 200 0 -1 revision:$Revision: 1.3 $
+p 2496 -176 200 0 -1 revision:$Revision: 1.4 $
 p 3008 -224 200 0 -1 title:System TCS Interface Database
 use notes 3456 55 100 0 notes#13
 xform 0 3712 240

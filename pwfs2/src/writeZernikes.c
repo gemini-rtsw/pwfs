@@ -997,6 +997,9 @@ STATUS writeWfsToSynchro(struct OSP_CONTEXT *pWfs)
  *		rotationAngle = tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
  * 29-Jun-1999: Now the computation of the composite angle is
  *              tcsAngle + tableAngle - armAngle
+ * 19-Nov-1999: Add a fudge angle to the tableAngle
+ * 26-Nov-1999: Change sign into the compiste angle formula (cb)
+ * 13-Dec-1999: Remove limit checks for cass rot angle (cb)
  *
  */
 
@@ -1011,7 +1014,7 @@ long    ttfZero (struct genSubRecord * pgsub)
 	frame	*f;
 	double	*ptr;
 	double	tableAngle = 0.0;
-        double  polarityFudge = 1.0; 
+        double  fudgeAngle = 0.0; 
         double  armAngle = 0.0;
         double  compositeAngle = 0.0;
 
@@ -1038,9 +1041,9 @@ long    ttfZero (struct genSubRecord * pgsub)
 			tableAngle = 0.0;
 		}
 
-		if(sscanf(pgsub->b, "%lf", &polarityFudge) != 1)
+		if(sscanf(pgsub->b, "%lf", &fudgeAngle) != 1)
 		{
-			polarityFudge = 1.0;
+			fudgeAngle = 0.0;
 		}
 
 		if(sscanf(pgsub->c, "%lf", &armAngle) != 1)
@@ -1070,18 +1073,14 @@ long    ttfZero (struct genSubRecord * pgsub)
 		    f->null[index] = *(ptr++);
 		}
 
-		if(f->null[3] < -45.0 || f->null[3] > 215.0)
-		{
-			/*logMsg("ttfZero > %s tcs angle out of range\n", (int)pgsub->name, 0, 0, 0, 0, 0);*/
-			f->null[3] = 0.0;
-		}
 		/* calculate composite correction angle */
 
 		/*compositeAngle = (f->null[3]*DEGS2RADS) + (polarityFudge * ((probeAngle + rotationFudge)*DEGS2RADS));*/
 		/*compositeAngle = ((-1.0)*(probeAngle)*DEGS2RADS); *//* for TCS */
-
                 /*printf ( "tcsAngle=%f, tableAngle=%f, armAngle=%f\n" , f->null[3] , tableAngle  , armAngle) ;*/
-		compositeAngle = (f->null[3] + tableAngle - armAngle)*DEGS2RADS;   /* for SCS, null[3] corresponds to the cass rotator angle */
+
+		compositeAngle = (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;   /* for SCS, null[3] corresponds to the cass rotator angle */
+
 		f->theta	= compositeAngle;
 		f->sinTheta	= sin(f->theta);
 		f->cosTheta	= cos(f->theta);

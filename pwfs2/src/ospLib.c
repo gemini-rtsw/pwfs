@@ -2332,6 +2332,7 @@ if ( binFlag == FALSE )
    wfsSpecific->xcenter = (float)(refX) ; 
    wfsSpecific->ycenter = (float)(refY) ; 
 
+   printf ( "angle = %f, cosangle = %f, sinangle = %f\n" , wfsSpecific->angle , wfsSpecific->cosAngle , wfsSpecific->sinAngle ) ;
    /****************************************************** Init Dark buffer ***/
 
    if ( ospReadFloatImage ( wfsSpecific->ffsubbuff, wfsSpecific->subfile,
@@ -6416,7 +6417,7 @@ int /*STATUS*/ ospPrintHeaders ( char * infile )
 
     strncpy(filename,infile,79);
     status = 0;
-    if ( fits_open_file(&fptr, filename, READONLY, &status) ) 
+    if ( fits_open_file(&fptr, filename, FITSIO_READONLY, &status) ) 
     {
 	ospstatus=ospPrintError( status );  
 	fprintf(stderr,"...error took place in ospPrintHeaders\n");
@@ -6533,7 +6534,7 @@ int /*STATUS*/ ospReadFloatImage( float * buffp, char * infile, int buffsize)
     printf(" used as argument to ospReadFloatImage\n");
 #endif /*OSP_VERBOSE*/
 
-    if ( fits_open_file(&fptr, filename, READONLY, &status) )
+    if ( fits_open_file(&fptr, filename, FITSIO_READONLY, &status) )
     {
 	ospstatus=ospPrintError( status );   
 	fprintf(stderr,"...error took place in ospReadFloatImage\n");
@@ -6653,7 +6654,7 @@ int /*STATUS*/ ospReadUShortImage( unsigned short int * buffp, char * infile, in
     printf(" used as argument to ospReadShortImage\n");
 #endif /*OSP_VERBOSE*/
 
-    if ( fits_open_file(&fptr, filename, READONLY, &status) )
+    if ( fits_open_file(&fptr, filename, FITSIO_READONLY, &status) )
     {
 	ospstatus=ospPrintError( status );   
 	fprintf(stderr,"...error took place in ospReadUShortImage\n");
@@ -7902,6 +7903,676 @@ int ospTrackingAndFocus ( float * buffp ,
     return (OK) ;
 }
 
+/*----------------------------------------------------------------------------*/
+
+/*
+ *+
+ * FUNCTION NAME:
+ * ospNew2TrackingAndFocus 
+ *
+ * INVOCATION:
+ * ospNew2TrackingAndFocus ( buffp , wfsSpecific , binFlag )
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * (>) buffp (float *) buffer which contains pixel data
+ * (>) wfsSpecific (struct OSP_CONTEXT *) pointer to wfs structure
+ * (>) binFlag (int) TRUE or FALSE if binning or not
+ *
+ * FUNCTION VALUE:
+ * status returned OK or ERROR
+ *
+ * PURPOSE:
+ * To compute tip/tilt over whole CCD or over each subapertures and averaged 
+ * focus with boxcar average
+ *
+ * DESCRIPTION:
+ * Added by cb 8 April 1999
+ * modified by cb 02 nov 1999, add binFlag
+ * modified by cb 13 dec 1999, compute the TT over whole CCD or over each 
+ * subapertures
+ *
+ * EXTERNAL VARIABLES:
+ * None
+ *
+ * PRIOR REQUIREMENTS:
+ *
+ * INCLUDE FILES:
+ * osp.h
+ *
+ * DEFICIENCIES:
+ * None known
+ *-
+ */
+
+int ospNew2TrackingAndFocus ( float * buffp , 
+                              struct OSP_CONTEXT * wfsSpecific ,
+                              int binFlag )
+{
+    int    buffSize ;
+    int    i, j ;
+    int    offset ;
+    float  focus ;
+    float  tip ;
+    float  tilt ;
+    float  meanFocus ;
+    float  pixFloat ;
+    float  *p ;
+    float  *minp, *maxp ;
+    float  *redsubp ;
+    double xs, ys ;
+    double x, y ;
+    double xdiff, ydiff ;
+    double totals ;
+    double total ;
+    double pixel ;
+    double tempx, tempy ;
+    double ftempx, ftempy ;
+
+    /****************************************************** Initializations ***/
+
+    buffSize = wfsSpecific->buffsize ;
+    maxp = (float *)((int)buffp + buffSize*sizeof(float)) ;
+    redsubp = wfsSpecific->redsubbuff ;
+
+    /******************************************************* Substract dark ***/
+
+    /*p = buffp ;
+    wfsSpecific->cb_1_pixel[wfsSpecific->cb_1_pixel_index++]= *(p++) ;
+    wfsSpecific->cb_2_pixel[wfsSpecific->cb_2_pixel_index++]= *p ;
+    if ( wfsSpecific->cb_1_pixel_index == 500 )
+         wfsSpecific->cb_1_pixel_index = 0 ;
+    if ( wfsSpecific->cb_2_pixel_index == 500 )
+         wfsSpecific->cb_2_pixel_index = 0 ;*/
+
+    /*printf ( "buffp=%x, maxp=%x, redsubp=%x\n" , buffp, maxp, redsubp) ;*/
+
+    /*printf ( "subtract dark\n" ) ;*/
+
+    for ( p = buffp ; p < maxp ; p ++ )
+    {
+        *p = (*(p) - *(redsubp ++)) ;
+    } 
+
+    /*********************************************** Threshold and centroid ***/
+
+    x = (double)(0.0) ;
+    y = (double)(0.0) ;
+    total = (double)(0.0) ;
+    wfsSpecific->osplight = 0 ;
+
+    /**************************************************** First subaperture ***/
+
+    xs = (double)(0.0) ;
+    ys = (double)(0.0) ;
+    totals = (double)(0.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[2] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[4] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "first subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize ;
+        maxp = minp + wfsSpecific->ospxraster ;
+
+        /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
+            {
+               pixel = (double)(pixFloat) ;
+               xs += pixel*j ;
+               ys += pixel*i ;
+               totals += pixel ;
+               /*printf ( "i=%d, j=%d, pixel=%lf, xs=%lf, ys=%lf, totals=%lf\n" ,
+                        i, j, pixel, xs, ys, totals ) ;*/
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > (double)(0.0) )
+    {
+       tempx = (xs / totals) - xdiff ;
+       tempy = (ys / totals) - ydiff ;
+       ftempx = fabs ( tempx ) ;
+       ftempy = fabs ( tempy ) ;
+
+       /*printf ( "tempx=%lf, tempy=%lf, ftempx=%lf, ftempy=%lf\n" ,
+                tempx, tempy, ftempx, ftempy ) ;*/
+       if ( ftempx > MAX_DISP )
+       {
+          wfsSpecific->s[1] = (float)0.0 ;
+          /*printf ( "ftempx > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempx < MIN_DISP )
+       {
+          wfsSpecific->s[1] = (float)0.0 ;
+          /*printf ( "ftempx < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[1] = (float)(tempx) ;
+       }
+     
+       if ( ftempy > MAX_DISP )
+       {
+          wfsSpecific->s[2] = (float)0.0 ;
+          /*printf ( "ftempy > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempy < MIN_DISP )
+       {
+          wfsSpecific->s[2] = (float)0.0 ;
+          /*printf ( "ftempy < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[2] = (float)(tempy) ;
+       }
+          
+       wfsSpecific->dssq[1] = 0.0 ;
+       wfsSpecific->dssq[2] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[1] = 0.0 ;
+       wfsSpecific->s[2] = 0.0 ;
+       wfsSpecific->dssq[1] = OSP_NO_LIGHT ;
+       wfsSpecific->dssq[2] = OSP_NO_LIGHT ;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[1]=%f, s[2]=%f\n" , 
+             wfsSpecific->s[1] , wfsSpecific->s[2] ) ;*/
+
+    x += xs ;
+    y += ys ;
+    total += totals ;
+
+    /*printf ( "x=%lf, y=%lf, total=%lf\n" , x, y, total ) ;*/
+
+    /*************************************************** Second subaperture ***/
+
+    xs = (double)(0.0) ;
+    ys = (double)(0.0) ;
+    totals = (double)(0.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[6] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[8] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "second subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize + wfsSpecific->ospxraster ;
+        maxp = minp + wfsSpecific->ospxraster ;
+
+        /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
+            {
+               pixel = (double)(pixFloat) ;
+               xs += pixel*j ;
+               ys += pixel*i ;
+               totals += pixel ;
+               /*printf ( "i=%d, j=%d, pixel=%lf, xs=%lf, ys=%lf, totals=%lf\n" ,
+                        i, j, pixel, xs, ys, totals ) ;*/
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > (double)(0.0) )
+    {
+       tempx = (xs / totals) - xdiff ;
+       tempy = (ys / totals) - ydiff ;
+       ftempx = fabs (tempx) ;
+       ftempy = fabs (tempy) ;
+       /*printf ( "tempx=%lf, tempy=%lf, ftempx=%lf, ftempy=%lf\n" ,
+                tempx, tempy, ftempx, ftempy ) ;*/
+
+       if ( ftempx > MAX_DISP )
+       {
+          wfsSpecific->s[3] = (float)(0.0) ;
+          /*printf ( "ftempx > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempx < MIN_DISP )
+       {
+          wfsSpecific->s[3] = (float)(0.0) ;
+          /*printf ( "ftempx < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[3] = (float)(tempx) ;
+       }
+       
+       if ( ftempy > MAX_DISP )
+       {
+          wfsSpecific->s[4] = (float)(0.0) ;
+          /*printf ( "ftempy > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempy < MIN_DISP )
+       {
+          wfsSpecific->s[4] = (float)(0.0) ;
+          /*printf ( "ftempy < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[4] = (float)(tempy) ;
+       }
+          
+       wfsSpecific->dssq[3] = 0.0 ;
+       wfsSpecific->dssq[4] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[3] = 0.0 ;
+       wfsSpecific->s[4] = 0.0 ;
+       wfsSpecific->dssq[3] = OSP_NO_LIGHT;
+       wfsSpecific->dssq[4] = OSP_NO_LIGHT;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[3]=%f, s[4]=%f\n" , 
+             wfsSpecific->s[3] , wfsSpecific->s[4] ) ;*/
+
+    x += (xs + totals*wfsSpecific->ospxraster) ;
+    y += ys ;
+    total += totals ;
+    /*printf ( "x=%lf, y=%lf, total=%lf\n" , x, y, total ) ;*/
+    /**************************************************** Third subaperture ***/
+
+    xs = (double)(0.0) ;
+    ys = (double)(0.0) ;
+    totals = (double)(0.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[10] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[12] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "third subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
+
+    offset = wfsSpecific->ospyraster*wfsSpecific->xframesize ;
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize + offset ;
+        maxp = minp + wfsSpecific->ospxraster ;
+
+        /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
+            {
+               pixel = (double)(pixFloat) ;
+               xs += pixel*j ;
+               ys += pixel*i ;
+               totals += pixel ;
+               /*printf ( "i=%d, j=%d, pixel=%lf, xs=%lf, ys=%lf, totals=%lf\n" ,
+                        i, j, pixel, xs, ys, totals ) ;*/
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > (double)(0.0) )
+    {
+       tempx = (xs / totals) - xdiff ;
+       tempy = (ys / totals) - ydiff ;
+       ftempx = fabs ( tempx ) ;
+       ftempy = fabs ( tempy ) ;
+       /*printf ( "tempx=%lf, tempy=%lf, ftempx=%lf, ftempy=%lf\n" ,
+                tempx, tempy, ftempx, ftempy ) ;*/
+       if ( ftempx > MAX_DISP )
+       {
+          wfsSpecific->s[5] = (float)0.0 ;
+          /*printf ( "ftempx > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempx < MIN_DISP )
+       {
+          wfsSpecific->s[5] = (float)0.0 ;
+          /*printf ( "ftempx < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[5] = (float)(tempx) ;
+       }
+
+       if ( ftempy > MAX_DISP )
+       {
+          wfsSpecific->s[6] = (float)0.0 ;
+          /*printf ( "ftempy > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempy < MIN_DISP )
+       {
+          wfsSpecific->s[6] = (float)0.0 ;
+          /*printf ( "ftempy < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[6] = (float)(tempy) ;
+       }
+
+       wfsSpecific->dssq[5] = 0.0 ;
+       wfsSpecific->dssq[6] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[5] = 0.0 ;
+       wfsSpecific->s[6] = 0.0 ;
+       wfsSpecific->dssq[5] = OSP_NO_LIGHT;
+       wfsSpecific->dssq[6] = OSP_NO_LIGHT;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[5]=%f, s[6]=%f\n" , 
+             wfsSpecific->s[5] , wfsSpecific->s[6] ) ;*/
+
+    x += xs ;
+    y += (ys + totals*wfsSpecific->ospyraster) ;
+    total += totals ;
+    /*printf ( "x=%lf, y=%lf, total=%lf\n" , x, y, total ) ;*/
+    /***************************************************** Last subaperture ***/
+
+    xs = (double)(0.0) ;
+    ys = (double)(0.0) ;
+    totals  = (double)(0.0) ;
+    if ( binFlag == FALSE )
+    {
+       xdiff = (double)(wfsSpecific->centres[14] + 1.0) ;
+       ydiff = (double)(wfsSpecific->centres[16] + 1.0) ;
+    }
+    else
+    {
+       xdiff = (double)(10.5) ;
+       ydiff = (double)(10.5) ;
+    }
+    /*printf ( "last subaperture, xdiff=%lf, ydiff=%lf\n" , xdiff, ydiff ) ;*/
+    offset = wfsSpecific->ospyraster*wfsSpecific->xframesize +
+             wfsSpecific->ospxraster ;
+
+    for ( i = 1 ; i <= wfsSpecific->ospyraster ; i ++ ) 
+    {
+        j = 1 ;
+        minp = buffp + (i-1)*wfsSpecific->xframesize + offset ;
+        maxp = minp + wfsSpecific->ospxraster ;
+        /*printf ( "min=%x, max=%x\n" , minp, maxp ) ;*/
+        for ( p = minp ; p < maxp ; p ++)
+        {
+            pixFloat = *p - wfsSpecific->thresh ;
+            if ( pixFloat > (float)(0.0) )
+            {
+               pixel = (double)(pixFloat) ;
+               xs += (pixel*j) ;
+               ys += (pixel*i) ;
+               totals += (pixel) ;
+               /*printf ( "i=%d, j=%d, pixel=%lf, xs=%lf, ys=%lf, totals=%lf\n" ,
+                        i, j, pixel, xs, ys, totals ) ;*/
+            }
+            j ++ ;
+        }
+    }
+
+    if ( totals > (double)(0.0) )
+    {
+       tempx = (xs / totals) - xdiff ;
+       tempy = (ys / totals) - ydiff ;
+       ftempx = fabs ( tempx ) ;
+       ftempy = fabs ( tempy ) ;
+       /*printf ( "tempx=%lf, tempy=%lf, ftempx=%lf, ftempy=%lf\n" ,
+                tempx, tempy, ftempx, ftempy ) ;*/
+
+       if ( ftempx > MAX_DISP )
+       {
+          wfsSpecific->s[7] = (float)0.0 ;
+          /*printf ( "ftempx > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempx < MIN_DISP )
+       {
+          wfsSpecific->s[7] = (float)0.0 ;
+          /*printf ( "ftempx < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[7] = (float)(tempx) ;
+       }
+
+       if ( ftempy > MAX_DISP )
+       {
+          wfsSpecific->s[8] = (float)0.0 ;
+          /*printf ( "ftempy > MAX_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else if ( ftempy < MIN_DISP )
+       {
+          wfsSpecific->s[8] = (float)0.0 ;
+          /*printf ( "ftempy < MIN_DISP \n" ) ;*/
+          wfsSpecific->osplight = 1 ;
+       }
+       else
+       {
+          wfsSpecific->s[8] = (float)(tempy) ;
+       }
+
+       wfsSpecific->dssq[7] = 0.0 ;
+       wfsSpecific->dssq[8] = 0.0 ;
+    }
+    else
+    {
+       wfsSpecific->s[7] = 0.0 ;
+       wfsSpecific->s[8] = 0.0 ;
+       wfsSpecific->dssq[7] = OSP_NO_LIGHT;
+       wfsSpecific->dssq[8] = OSP_NO_LIGHT;
+       wfsSpecific->osplight = 1 ;
+    }
+    /*printf ( "s[7]=%f, s[8]=%f\n" , 
+             wfsSpecific->s[7] , wfsSpecific->s[8] ) ;*/
+
+    x += (xs + totals*wfsSpecific->ospxraster) ;
+    y += (ys + totals*wfsSpecific->ospyraster) ;
+    total += totals ;
+    /*printf ( "x=%lf, y=%lf, total=%lf\n" , x, y, total ) ;*/
+
+    /******************************* Computation of Tip/Tilt for each frame ***/
+
+    if ( wfsSpecific->osplight == 0 )
+    {
+       tip = (wfsSpecific->s[1] + wfsSpecific->s[3] + 
+              wfsSpecific->s[5] + wfsSpecific->s[7]) / 4.0 ;
+       
+       tilt = (wfsSpecific->s[2] + wfsSpecific->s[4] + 
+               wfsSpecific->s[6] + wfsSpecific->s[8]) / 4.0 ;
+
+       wfsSpecific->z[1] = wfsSpecific->tipscale * 
+       ( (wfsSpecific->cosAngle)*tip - (wfsSpecific->sinAngle)*tilt ) ;
+       wfsSpecific->z[2] = wfsSpecific->tiltscale * 
+       ( (wfsSpecific->sinAngle)*tip + (wfsSpecific->cosAngle)*tilt ) ;
+
+       /*printf ( "tip=%f, tilt = %f, z[1]= %f, z[2]=%f\n" , 
+                   tip, tilt, wfsSpecific->z[1] , wfsSpecific->z[2] ) ;*/
+    }
+    else
+    {
+       if ( total > (double)(0.0) )
+       {
+          tempx = (x / total) - wfsSpecific->xcenter ;
+          tempy = (y / total) - wfsSpecific->ycenter ;
+          ftempx = fabs ( tempx ) ;
+          ftempy = fabs ( tempy ) ;
+ 
+          /*printf ( "TT-> tempx=%lf, tempy=%lf, ftempx=%lf, ftempy=%lf\n" ,
+                   tempx, tempy, ftempx, ftempy ) ;*/
+
+          if ( ftempx > MAX_DISP )
+          {
+             wfsSpecific->s[9] = (float)0.0 ;
+             /*printf ( "ftempx > MAX_DISP \n" ) ;*/
+          }
+          else if ( ftempx < MIN_DISP )
+          {
+             wfsSpecific->s[9] = (float)0.0 ;
+             /*printf ( "ftempx < MIN_DISP \n" ) ;*/
+          }
+          else
+          {
+             wfsSpecific->s[9] = (float)(tempx) ;
+          }
+
+          if ( ftempy > MAX_DISP )
+          {
+             wfsSpecific->s[10] = (float)0.0 ;
+             /*printf ( "ftempy > MAX_DISP \n" ) ;*/
+          }
+          else if ( ftempy < MIN_DISP )
+          {
+             wfsSpecific->s[10] = (float)0.0 ;
+             /*printf ( "ftempy < MIN_DISP \n" ) ;*/
+          }
+          else
+          {
+             wfsSpecific->s[10] = (float)(tempy) ;
+          }
+
+          wfsSpecific->dssq[9] = 0.0 ;
+          wfsSpecific->dssq[10] = 0.0 ;
+          wfsSpecific->z[1] = wfsSpecific->tipscale * 
+          ((wfsSpecific->cosAngle)*(wfsSpecific->s[9]) - 
+           (wfsSpecific->sinAngle)*(wfsSpecific->s[10]) ) ;
+          wfsSpecific->z[2] = wfsSpecific->tiltscale * 
+          ((wfsSpecific->sinAngle)*(wfsSpecific->s[9]) + 
+           (wfsSpecific->cosAngle)*(wfsSpecific->s[10]) ) ;
+          /*printf ( "s[9]=%f, s[10] = %f, z[1]= %f, z[2]=%f\n" , 
+                   wfsSpecific->s[9], wfsSpecific->s[10], wfsSpecific->z[1] , 
+                   wfsSpecific->z[2] ) ;*/
+       }
+       else
+       {
+          wfsSpecific->s[9] = 0.0 ;
+          wfsSpecific->s[10] = 0.0 ;
+          wfsSpecific->dssq[9] = OSP_NO_LIGHT;
+          wfsSpecific->dssq[10] = OSP_NO_LIGHT;
+          wfsSpecific->z[1] = 0.0 ;
+          wfsSpecific->z[2] = 0.0 ;
+       } 
+    }
+
+    wfsSpecific->err[1] = 0.0 ;
+    wfsSpecific->err[2] = 0.0 ;
+
+    /************************************************* Computation of focus ***/
+
+    if ( wfsSpecific->osplight == 0 )
+    {
+       focus = (wfsSpecific->s[3] + wfsSpecific->s[7]) -
+               (wfsSpecific->s[1] + wfsSpecific->s[5]) +
+               (wfsSpecific->s[6] + wfsSpecific->s[8]) -
+               (wfsSpecific->s[2] + wfsSpecific->s[4]) ;
+
+       focus = focus/8.0 ;
+    }
+    else
+    {
+       focus = 0.0 ;
+    }
+    /*printf ( "focus=%f, previousfocus=%f\n" , focus, 
+             wfsSpecific->previousFocus ) ;*/
+
+    if ( wfsSpecific->coaddcounter == 0 )
+    {
+       wfsSpecific->previousFocus = focus ;
+       
+       wfsSpecific->coaddcounter ++ ;
+    } ;
+
+    meanFocus = (wfsSpecific->gainFocus * focus) +
+                (wfsSpecific->one_gainFocus * wfsSpecific->previousFocus) ;
+
+    wfsSpecific->z[3]= (wfsSpecific->focusscale * meanFocus) ;
+
+    wfsSpecific->err[3] = 0.0 ; 
+
+    wfsSpecific->previousFocus = meanFocus ;
+
+
+    /*printf ( "z[3]=%f\n" , wfsSpecific->z[3] ) ;*/
+
+    /*************************** Protect write to ospdiag with guard fields ***/
+
+    wfsSpecific->ospdiag[GUARD1] = 1.0;    
+   
+    /*********************************************************** Write data ***/
+
+    wfsSpecific->ospdiag[1] = wfsSpecific->s[1];
+    wfsSpecific->ospdiag[2] = wfsSpecific->s[2];
+    wfsSpecific->ospdiag[3] = wfsSpecific->s[3];
+    wfsSpecific->ospdiag[4] = wfsSpecific->s[4];
+    wfsSpecific->ospdiag[5] = wfsSpecific->s[5];
+    wfsSpecific->ospdiag[6] = wfsSpecific->s[6];
+    wfsSpecific->ospdiag[7] = wfsSpecific->s[7];
+    wfsSpecific->ospdiag[8] = wfsSpecific->s[8];
+    wfsSpecific->ospdiag[9] = wfsSpecific->s[9];
+    wfsSpecific->ospdiag[10] = wfsSpecific->s[10];
+
+    /*********************************** Unset guard field - write complete ***/
+
+    wfsSpecific->ospdiag[GUARD1] = 0.0;    
+
+    /******************************************** Write data to synchro bus ***/
+
+#ifdef vxWorks
+    if ( timeNow (&(wfsSpecific->time)) != OK )
+    {
+       fprintf (stderr,
+       "Error: ospNewTrackingAndFocus failed to take bancom time\n" ) ;
+    } ;
+  
+    if ( writeWfsToSynchro(wfsSpecific) != OK )
+    {
+       fprintf (stderr,
+       "Error: ospNewTrackingAndFocus failed to write data to tcs\n" ) ;
+    } ;
+#endif /*vxWorks*/
+
+    /**************************************************************************/
+
+    return (OK) ;
+}
 /*----------------------------------------------------------------------------*/
 
 /*
