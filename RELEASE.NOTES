@@ -181,3 +181,9 @@ V2-2 13 September 2001 CB:
 V2-3 17 September 2001 CB:
 --------------------------
   - Threshold per subaperture implemented
+
+V2-4 28 November 2001 CB:
+-------------------------
+  - TT guide values x 2 when binning. Gains for TT divided by 2 in par files.
+
+newDev equivalent to V2-4

@@ -75,6 +75,8 @@
  *   aoThresholdPerSubapCompute() - Compute a threshold per subaperture
  * 
  *INDENT-OFF*
+ *   31 Oct 2001: CB - aoGlobalGuide and aoGuideAndFocus x2 the TT values when
+ *                     binning
  *   13 Sep 2001: CB - Add aoThresholdPerSubapCompute()
  *   08 Aug 2001: CB - Major modifications to have ao correction with P2 also
  *   29 Mar 2001: CB - For guide and focus multiply focus per two when binning
@@ -3330,18 +3332,18 @@ STATUS aoGlobalGuide (
       *(pGuidesVect) = xCenter - (x / total);
       *(pGuidesVect + 1) = yCenter - (y / total);
 
-/*
-      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
-                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
-
-      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect+1)) -
-                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
-*/
-      *(pFgVect) = (*pGuidesVect);
-
-      *(pFgVect + 1) = *(pGuidesVect+1);
-
-      *(pFgVect + 2) = 0.0;
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         *(pFgVect) = 2.0 * (*pGuidesVect);
+         *(pFgVect + 1) = 2.0 * (*(pGuidesVect+1));
+         *(pFgVect + 2) = 0.0;
+      }
+      else
+      {
+         *(pFgVect) = (*pGuidesVect);
+         *(pFgVect + 1) = *(pGuidesVect+1);
+         *(pFgVect + 2) = 0.0;
+      }
 
       *(pFgErrorsVect) = 0.0;
       *(pFgErrorsVect + 1) = 0.0;
@@ -3376,7 +3378,6 @@ STATUS aoGlobalGuide (
       *pTime = (double)AO_TIME_NOW_ERROR;
    };
 
- 
    if ( writeWfsToSynchro(aoCtrlId, pFgVect, pFgVectAfterRot, pFgErrorsVect, 
                           pTime) != OK )
    {
@@ -3550,18 +3551,19 @@ STATUS aoGlobalGuideAndError (
 
       *(pGuidesVect) = xCenter - xTemp;
       *(pGuidesVect + 1) = yCenter - yTemp;
-/*
-      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*pGuidesVect) + 
-                     aoCtrlId->sinAngleWithM2 * (*(pGuidesVect+1)) );
 
-      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(pGuidesVect +1)) -
-                         aoCtrlId->sinAngleWithM2 * (*pGuidesVect) ); 
-*/
-      *(pFgVect) = *(pGuidesVect) ;
-
-      *(pFgVect + 1) = *(pGuidesVect +1);
-
-      *(pFgVect + 2) = 0.0;
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         *(pFgVect) = 2.0 * (*(pGuidesVect));
+         *(pFgVect + 1) = 2.0 * (*(pGuidesVect +1));
+         *(pFgVect + 2) = 0.0;
+      }
+      else
+      {
+         *(pFgVect) = *(pGuidesVect);
+         *(pFgVect + 1) = *(pGuidesVect +1);
+         *(pFgVect + 2) = 0.0;
+      }
 
       xSigma = (((xErr / total) - (xTemp * xTemp))/total);
       ySigma = (((yErr / total) - (yTemp * yTemp))/total);
@@ -5545,18 +5547,15 @@ STATUS aoGuideAndFocus (
           for ( pCent = pCentroidsVect ; pCent < pMaxCent ; )
               *pFg += (*(pMat ++)) * (*(pCent ++));
 
-/*
-      *(pFgVect) = ( aoCtrlId->cosAngleWithM2 * (*fg) +
-                   aoCtrlId->sinAngleWithM2 * (*(fg + 1)) );
-      *(pFgVect + 1) = ( aoCtrlId->cosAngleWithM2 * (*(fg + 1)) -
-                       aoCtrlId->sinAngleWithM2 * (*fg) );
-*/
+      if ( aoCcdId->binningFlag == TRUE )
+      {
+         *(fg) *= 2.0;
+         *(fg+1) *= 2.0;
+         *(fg+2) *= 2.0;
+      }
+
       *(pFgVect) = *(fg);
       *(pFgVect + 1) = *(fg + 1);
-
-      if ( aoCcdId->binningFlag == TRUE )
-         *(fg+2) *= 2.0;
-
       *(pFgVect + 2) = *(fg+2);
 
       *(pErrorFg + 0) = 0.0;
