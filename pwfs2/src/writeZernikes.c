@@ -68,6 +68,8 @@
  * 28-Mar-2000: cb - Major modifications, new aoP2Lib library
  * 08-Feb-2001: cb - writeWfsToSynchro(), store the zernikes values into CB
  *                   after rotation
+ * 29-Mar-2001: cb - fix bug for rotation matrix (two bugs which compensate 
+ *                   each others)
  *
  */
 /* INDENT ON */
@@ -742,6 +744,8 @@ long gensubToTcsAo
  * 11-Nov-1998   Add frame of reference conversion
  * 05-Jan-1999   Add null zernike calculation
  * 28-Mar-2000   Simplified version for P2 only (cb)
+ * 29-Mar-2001   Fix rotation matrix (cb)
+ *-
  */
 
 STATUS writeWfsToTcs
@@ -776,34 +780,44 @@ STATUS writeWfsToTcs
    {
       /* first rotate the tip and tilt values to the tcs frame of reference */
 
-      result.z2 = (f->cosTheta*(*pz) - f->sinTheta*(*(pz+1))) - f->null[5];
-      result.z3 = (f->sinTheta*(*pz) + f->cosTheta*(*(pz+1))) - f->null[6];
+      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) - f->null[5];
+      result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) - f->null[6];
+
       result.z4 = *(pz+2) - f->null[7];
-      result.z5 = (f->cosTheta*(*(pz+3)) - f->sinTheta*(*(pz+4))) - f->null[8];
-      result.z6 = (f->sinTheta*(*(pz+3)) + f->cosTheta*(*(pz+4))) - f->null[9];
-      result.z7 = (f->cosTheta*(*(pz+5)) - f->sinTheta*(*(pz+6))) - f->null[10];
-      result.z8 = (f->sinTheta*(*(pz+5)) + f->cosTheta*(*(pz+6))) - f->null[11];
+
+      result.z5 = (f->cosTheta*(*(pz+3)) + f->sinTheta*(*(pz+4))) - f->null[8];
+      result.z6 = (f->cosTheta*(*(pz+4)) - f->sinTheta*(*(pz+3))) - f->null[9];
+
+      result.z7 = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6))) - f->null[10];
+      result.z8 = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5))) - f->null[11];
+
       result.z9 = *(pz+7) - f->null[12];
-      result.z10 = (f->cosTheta*(*(pz+8)) - f->sinTheta*(*(pz+9))) 
+
+      result.z10 = (f->cosTheta*(*(pz+8)) + f->sinTheta*(*(pz+9))) 
                    - f->null[13];
-      result.z11 = (f->sinTheta*(*(pz+8)) + f->cosTheta*(*(pz+9))) 
+      result.z11 = (f->cosTheta*(*(pz+9)) - f->sinTheta*(*(pz+8))) 
                    - f->null[14];
-      result.z12 = (f->cosTheta*(*(pz+10)) - f->sinTheta*(*(pz+11))) 
+
+      result.z12 = (f->cosTheta*(*(pz+10)) + f->sinTheta*(*(pz+11))) 
                    - f->null[15];
-      result.z13 = (f->sinTheta*(*(pz+10)) + f->cosTheta*(*(pz+11))) 
+      result.z13 = (f->cosTheta*(*(pz+11)) - f->sinTheta*(*(pz+10))) 
                    - f->null[16];
-      result.z14 = (f->cosTheta*(*(pz+12)) - f->sinTheta*(*(pz+13))) 
+
+      result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13))) 
                    - f->null[17];
-      result.z15 = (f->sinTheta*(*(pz+12)) + f->cosTheta*(*(pz+13))) 
+      result.z15 = (f->cosTheta*(*(pz+13)) - f->sinTheta*(*(pz+12))) 
                    - f->null[18];
+
       result.z16 = *(pz+14) - f->null[19];
-      result.z17 = (f->cosTheta*(*(pz+15)) - f->sinTheta*(*(pz+16))) 
+
+      result.z17 = (f->cosTheta*(*(pz+15)) + f->sinTheta*(*(pz+16))) 
                    - f->null[20];
-      result.z18 = (f->sinTheta*(*(pz+15)) + f->cosTheta*(*(pz+16))) 
+      result.z18 = (f->cosTheta*(*(pz+16)) - f->sinTheta*(*(pz+15))) 
                    - f->null[21];
-      result.z19 = (f->cosTheta*(*(pz+17)) - f->sinTheta*(*(pz+18))) 
+
+      result.z19 = (f->cosTheta*(*(pz+17)) + f->sinTheta*(*(pz+18))) 
                    - f->null[22];
-      result.z20 = (f->sinTheta*(*(pz+17)) + f->cosTheta*(*(pz+18))) 
+      result.z20 = (f->cosTheta*(*(pz+18)) - f->sinTheta*(*(pz+17))) 
                    - f->null[23];
 
       semGive(f->access);
@@ -921,6 +935,7 @@ STATUS writeWfsToTcs
  * 09-Nov-1998  Write fast tip/tilt to synchro bus (srp)
  * 05-Jan-1999  Add null zernike calculation
  * 28-Mar-2000  Simplified version for P2 only (cb)
+ * 29-Mar-2001  Fix rotation matrix (cb)
  *-
  */
 
@@ -947,8 +962,8 @@ STATUS writeWfsToSynchro
    {
       /* first rotate the tip and tilt values to the m2 frame of reference */
 
-      result.z2 = (f->cosTheta*(*pz) - f->sinTheta*(*(pz+1))) - f->null[5];
-      result.z3 = (f->sinTheta*(*pz) + f->cosTheta*(*(pz+1))) - f->null[6];
+      result.z2 = (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) - f->null[5];
+      result.z3 = (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) - f->null[6];
       result.z4 = *(pz+2);
 
       /*result.z4 = (*(pz+2)) - f->null[7];*/
@@ -1075,6 +1090,7 @@ STATUS writeWfsToSynchro
  * 13-Dec-1999: Remove limit checks for cass rot angle (cb)
  * 28-Mar-2000: Simplified version for P2 only (cb)
  * 11-Dec-2000: Composite angle now + PA in ttfZero (cb)
+ * 29-Mar-2001: Composite angle now * (-1) in ttfZero (cb)
  *
  */
 
@@ -1141,7 +1157,7 @@ long ttfZero
       /*compositeAngle = 
       (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;*/
 
-      compositeAngle = 
+      compositeAngle = (-1.0) * 
       (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec2000*/
 
       f->theta      = compositeAngle;
@@ -1217,6 +1233,7 @@ long ttfZero
                 tcsAngle + (polarityFudge * (zeiss angle + rotationFudge))
  * 28-Mar-2000: simplified version for P2 only
  * 11-Dec-2000: Composite angle now + PA in aoZero (cb)
+ * 29-Mar-2001: Composite angle now * (-1) in aoZero (cb)
  *
  */
 
@@ -1283,7 +1300,7 @@ long aoZero
       /*compositeAngle = 
       (tableAngle - f->null[3] + fudgeAngle - armAngle)*DEGS2RADS;*/
 
-      compositeAngle = 
+      compositeAngle = (-1.0) *
       (tableAngle - f->null[3] + fudgeAngle + armAngle)*DEGS2RADS; /*11dec2000*/
 
       f->theta      = compositeAngle;

@@ -145,4 +145,9 @@ V1-8 23 March 2001 CB:
   - fix a bug with dhsQlRate when only 1 frame
   - install timboot.asm.V3.3
 
-newDev equivalent to V1-8
+V1-9 03 April 2001 CB:
+----------------------
+  - fix focus factor when binning
+  - fix rotation bug in aoP2Lib.c, in writeZernikes.c
+  - add adc0, adc1, adc2, adc3 sir records
+  - add startup_nodhs.vws
