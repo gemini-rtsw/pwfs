@@ -162,3 +162,8 @@ V2-0 08 August 2001 CB:
     Instead of using the time, the data are sent with the variable interval.
     WARNING: the SCS has to be modified to read this variable instead of the 
     time
+
+V2-1 equivalent to V2-0
+  - Major modifications to include astigmatism correction for pwfs2
+
+test equivalent to V2-0
