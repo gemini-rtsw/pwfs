@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.24 2002-05-16 22:16:25 cboyer Exp $"};
+   "$Id: detControl.c,v 1.25 2002-05-23 03:53:41 cboyer Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -31,6 +31,9 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
+ *   22 May 2002: CB - Modify detSigInitFgGain to reinit defFocusScale100Hz
+ *                     when changing the focus gain
+ *                     Add SIR fgFocusGain100
  *   24 Apr 2002: CB - Add fgTipGain, fgTiltGain, fgFocusGain, cfFocusBw, 
  *                     cfTipTiltBw SIR records
  *   20 Mar 2002: CB - Major modifications to download the timing and utility 
@@ -1422,6 +1425,14 @@ STATUS   detControl
       {
          ERROR_LOG (
          "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL, 
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
       }
 
 #ifdef DEBUG
@@ -15860,9 +15871,11 @@ uint32 detSigInitFgGain
 
       obsId->tipScale = tipScale ;
       obsId->tiltScale = tiltScale ;
-      obsId->focusScale = focusScale ;
+      obsId->focusScale = focusScale *
+                          (100.0 * obsId->exposureTime);
       obsId->slidingFocusGain = slidingFocusGain ;
       obsId->updateFgScale = TRUE ;
+      obsId->defFocusScale100Hz = focusScale ; 
 
       if (epToVxPipeWrite (NULL,
                            (char *)(int)& (obsId->tipScale),
@@ -15888,6 +15901,13 @@ uint32 detSigInitFgGain
          "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
       }
 
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
+      }
    }
    else
    {
@@ -15899,9 +15919,11 @@ uint32 detSigInitFgGain
 
       obsId->aoCtrlId->fgScaleFactorVect[0] = tipScale ;
       obsId->aoCtrlId->fgScaleFactorVect[1] = tiltScale ;
-      obsId->aoCtrlId->fgScaleFactorVect[2] = focusScale ;
+      obsId->aoCtrlId->fgScaleFactorVect[2] = focusScale *
+                                              (100.0 * obsId->exposureTime);
       obsId->aoCtrlId->slidingFocusGain = slidingFocusGain;
       obsId->aoCtrlId->one_slidingFocusGain = 1.0 - slidingFocusGain ;
+      obsId->defFocusScale100Hz = focusScale ;
 
       if (epToVxPipeWrite (NULL,
                 (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[0]),
@@ -15919,12 +15941,20 @@ uint32 detSigInitFgGain
          "Failed to init DET_CONTROL_FG_TILT_GAIN_SIR_NAME record");
       }
 
-      if (epToVxPipeWrite (NULL,
+      if (epToVxPipeWrite (NULL, 
                 (char *)(int)& (obsId->aoCtrlId->fgScaleFactorVect[2]),
                 obsId->pFgFocusGainContext) == ERROR)
       {
          ERROR_LOG (
          "Failed to init DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME record");
+      }
+
+      if (epToVxPipeWrite (NULL,
+                           (char *)(int)& (obsId->defFocusScale100Hz),
+                           obsId->pFgFocusGain100Context) == ERROR)
+      {
+         ERROR_LOG (
+         "Failed to init DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME record");
       }
    }
 
@@ -20667,6 +20697,18 @@ uint32 detGetSirContext
                             NULL) == ERROR)
    {
       ERROR_LOG ("Failed to get DET_CONTROL_FG_FOCUS_GAIN_SIR_NAME context") ;
+      errorNumber = ERROR;
+   }
+
+   /* Get the context of the "fgFocusGain100" sir record */
+
+   sprintf (pRecordName, "%s:%s", pRecordPrefix,
+            DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME);
+   if (epToVxRecContextGet (pRecordName, & (obsId->pFgFocusGain100Context), 
+                            NULL) == ERROR)
+   {
+      ERROR_LOG (
+            "Failed to get DET_CONTROL_FG_FOCUS_GAIN_100_SIR_NAME context") ;
       errorNumber = ERROR;
    }
 
