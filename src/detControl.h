@@ -13,6 +13,14 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
+ *   06 Feb 2001: CB - Move all the DATREC_CONTEXT structures into the obsId
+ *                     structure
+ *   12 jan 2001 - cb add DET_CONTROL_PWFS2_CP_INIT_FILE
+ *                        DET_CONTROL_PWFS2_MK_INIT_FILE
+ *   10 jan 2001 - cb replace/add DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE
+ *                                DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE
+ *                                DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE
+ *                                DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE
  *   11 dec 2000 - cb add DET_CONTROL_CMD_SIGRESET
  *   30 oct 2000 - cb add cutoffFrequency rateSamplingFrequency
  *   25 oct 2000 - cb add aoSaveCbIm and aoSaveCbCtrl sir records
@@ -249,17 +257,41 @@
 #define DET_CONTROL_MAX_WCSPOINTS             40 
                                     /* Max number of WCS calibration points.  */
 
-#define DET_CONTROL_PWFS2_AO_FULL_CTRL_INIT_FILE   "defFullCtrlP2.dat"
-                                    /* Define the default ao control init file*/
-                                    /* for PWFS2 when no binning. Set to      */
+#define DET_CONTROL_PWFS2_MK_INIT_FILE        "defDetContP2MK.dat"
+                                    /* Define the MK default init file for    */
+                                    /* PWFS2 detector controller. Set to      */
+                                    /* "NONE" if no default settings is       */
+                                    /* required.                              */
+
+#define DET_CONTROL_PWFS2_CP_INIT_FILE        "defDetContP2CP.dat"
+                                    /* Define the CP default init file for    */
+                                    /* PWFS2 detector controller. Set to      */
+                                    /* "NONE" if no default settings is       */
+                                    /* required.                              */
+
+#define DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE   "defFullCtrlP2MK.dat"
+                                    /* Define the MK default ao control init  */
+                                    /* file for PWFS2 when no binning. Set to */
                                     /* "NONE" if no default ao control        */
                                     /* initialisation is required.            */
 
-#define DET_CONTROL_PWFS2_AO_BIN_CTRL_INIT_FILE    "defBinCtrlP2.dat"
-                                    /* Define the default ao control init file*/
-                                    /* for PWFS2 when binnig. Set to "NONE" if*/
-                                    /* no default ao control initialisation is*/
-                                    /* required.                              */
+#define DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE    "defBinCtrlP2MK.dat"
+                                    /* Define the MK default ao control init  */
+                                    /* file for PWFS2 when binning. Set to    */
+				    /* "NONE" if no default ao control        */
+				    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE   "defFullCtrlP2CP.dat"
+                                    /* Define the CP default ao control init  */
+                                    /* file for PWFS2 when no binning. Set to */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE    "defBinCtrlP2CP.dat"
+                                    /* Define the CP default ao control init  */
+                                    /* file for PWFS2 when binning. Set to    */
+				    /* "NONE" if no default ao control        */
+				    /* initialisation is required.            */
 
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"
                                     /* Directory containing OMF files for the */
@@ -278,7 +310,7 @@
                                     /* Name of the directory containing par   */
                                     /* files.                                 */
 
-#define   DET_CONTROL_DATA_FILE_PATH       "."
+#define   DET_CONTROL_DATA_FILE_PATH          "."
                                     /* Define the default directory to contain*/
                                     /* engineering data files.                */
 
@@ -466,6 +498,20 @@ typedef   struct      /* Context structure used to describe an observation.   */
 
                            /* SAD information                                 */
                            /* ---------------                                 */
+   DATREC_CONTEXT pStateContext;      /* Context structure for state SIR      */
+                                      /* record                               */
+   DATREC_CONTEXT pDetInitContext;    /* Context structure for initialising   */
+                                      /* state SIR record.                    */
+   DATREC_CONTEXT pDetInitStatusContext;     
+                                      /* Context structure for SDSU           */
+                                      /* initialisation status SIR record.    */
+   DATREC_CONTEXT pDetTestContext;    /* Context structure for testing state  */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pTestResultsContext;/* Context structure for SDSU test      */
+                                      /* results SIR record                   */
+   DATREC_CONTEXT pDetPrimReplyContext;
+                                      /* Context structure for SDSU primitive */
+                                      /* reply string SIR record              */
    DATREC_CONTEXT pDetObservingContext;
                                       /* Observing record context.            */
    DATREC_CONTEXT pDetMeasuringContext;
@@ -496,6 +542,10 @@ typedef   struct      /* Context structure used to describe an observation.   */
                                       /* structure                            */
    DATREC_CONTEXT pYbinContext ;      /* Y binning factor SIR  record context */
                                       /* structure                            */
+   DATREC_CONTEXT pAoCtrlInitContext; /* Context structure for aoCtrlInit     */
+                                      /* SIR record.                          */
+   DATREC_CONTEXT pAoFlatInitContext; /* Context structure for aoFlatInit     */
+                                      /* SIR record.                          */
    DATREC_CONTEXT pAoDarkInitContext; /* Context structure for aoDarkInit     */
                                       /* SIR record.                          */
    DATREC_CONTEXT pAoThreshContext;   /* Context structure for aoThresh SIR   */
@@ -510,6 +560,12 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT pAoSaveCbCtrlContext; 
                                       /* Context structure for aoSaveCbCtrl   */
                                       /* SIR record.                          */
+   DATREC_CONTEXT pDetTypeContext;    /* Context structure for detector       */
+                                      /* controller type.                     */
+   DATREC_CONTEXT pDetIdContext;      /* Context structure for detector Id or */
+                                      /* Id or SN                             */
+   DATREC_CONTEXT pBunitContext ;     /* Data unit SIR record context         */
+                                      /* structure                            */
    DATREC_CONTEXT pDataLabelContext ; /* Data Label SIR record context        */
                                       /* structure                            */
    DATREC_CONTEXT pIntTimeContext ;   /* Integration time SIR record context  */

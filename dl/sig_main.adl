@@ -5,9 +5,9 @@ display {
 	magic="305419896"
 	majv="2"
 	mnrv="4"
-	ndyng="0"
-	npc="14"
-	nstr="98"
+	ndyng="1"
+	npc="15"
+	nstr="99"
 	ndynamic="11"
 	nplot="0"
 	nrd="8"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="3872"
+	nwords_dspy="3956"
 	nwords_sta="176"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1848"
-	osta="1672"
-	odynamic="1848"
-	oplot="2580"
-	ord="2580"
-	oes="3860"
-	okd="3860"
-	opd="3872"
-	opo="3872"
+	odyng="1872"
+	osta="1696"
+	odynamic="1932"
+	oplot="2664"
+	ord="2664"
+	oes="3944"
+	okd="3944"
+	opd="3956"
+	opo="3956"
 	opc="68"
-	ostr="232"
-	ocmap="1672"
-	ocrules="1672"
+	ostr="248"
+	ocmap="1696"
+	ocrules="1696"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -222,6 +222,56 @@ display {
 	}
 	textix="SAVE CONTROL CIRCULAR BUFFER :"
 	align="horiz. left"
+}
+"<<basic attribute>>" {
+	attr {
+		clr="2"
+		style="solid"
+		fill="solid"
+		width="0"
+	}
+}
+"<<dynamic attribute>>" {
+	attr {
+		mod {
+			clrmod="static"
+			vis="if not zero"
+		}
+		param {
+			rulecolorfg="1"
+			rulecolorbg="1"
+			chan="$(top)initSigInit.VALJ"
+			rulechan[0] = ""
+			rulechan[1] = ""
+			rulechan[2] = ""
+			rulechan[3] = ""
+			rulechan[4] = ""
+			rulechan[5] = ""
+			rulechan[6] = ""
+			rulechan[7] = ""
+			rulechan[8] = ""
+			rulechan[9] = ""
+			rulechan[10] = ""
+			rulechan[11] = ""
+			rulechan[12] = ""
+			rulechan[13] = ""
+			rulechan[14] = ""
+			rulechan[15] = ""
+			clrrule=""
+			clrargs=""
+		}
+	}
+}
+"text" {
+	object {
+		x="504"
+		y="19"
+		width="114"
+		height="21"
+		groupid="0"
+	}
+	textix="Binning"
+	align="horiz. right"
 }
 "text update" {
 	object {

@@ -66,6 +66,8 @@
  * 17-Feb-1999: cb - ttfZero change computation of theta for TCS and SCS
  * 29-Jun-1999: cb - ttfZero change computation of theta for TCS and SCS
  * 28-Mar-2000: cb - Major modifications, new aoP2Lib library
+ * 08-Feb-2001: cb - writeWfsToSynchro(), store the zernikes values into CB
+ *                   after rotation
  *
  */
 /* INDENT ON */
@@ -875,13 +877,17 @@ STATUS writeWfsToTcs
  * long       STATUS;
  *
  * STATUS writeWfsToSynchro(AO_CTRL_ID aoCtrlId, double *pZernikesVect,
- *                          double *pErrorsVect, double *pTime)
+ *                          double * pZernikesVectAfterRot, double *pErrorsVect,
+ *                          double *pTime)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
- * > AO_CTRL_ID aoCtrlId    - Pointer to the AO control context structure
- * > double * pZernikesVect - Vector containing the zernike modes
- * > double * pErrorsVect   - Vector containing the associated errors
- * > double * pTime         - Pointer to the associated time stamp value
+ * > AO_CTRL_ID aoCtrlId            - Pointer to the AO control context 
+ *                                    structure
+ * > double * pZernikesVect         - Vector containing the zernike modes
+ * > double * pZernikesVectAfterRot - Vector containing the zernike modes after
+ *                                    rotation
+ * > double * pErrorsVect           - Vector containing the associated errors
+ * > double * pTime                 - Pointer to the associated time stamp value
  *
  * FUNCTION VALUE:
  * long  Status value returned to calling routine, a non-zero value indicates
@@ -922,6 +928,7 @@ STATUS writeWfsToSynchro
    (
    AO_CTRL_ID aoCtrlId, 
    double     *pZernikesVect, 
+   double     *pZernikesVectAfterRot, 
    double     *pErrorsVect, 
    double     *pTime
    )
@@ -949,6 +956,11 @@ STATUS writeWfsToSynchro
 /*
       result.z4 = newDfilter (*(pz+2),2);
 */
+      /* store the vector after rotation into pZernikesVectAfterRot */
+
+      *(pZernikesVectAfterRot + 0) = result.z2;
+      *(pZernikesVectAfterRot + 1) = result.z3;
+      *(pZernikesVectAfterRot + 2) = result.z4;
 
       semGive(f->access);
    }
