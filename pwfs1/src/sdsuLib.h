@@ -468,5 +468,6 @@ IMPORT STATUS sdsuParamUpload (SDSU_ID context, char * pFileName,
        const long sourceId);
 IMPORT STATUS sdsuStatusShow (SDSU_ID context);
 IMPORT STATUS sdsuTempShow (SDSU_ID context);
+IMPORT STATUS sdsu_initRepBuf (SDSU_ID context);
 
 #endif     /* ifndef __INCsdsuLibh */

@@ -13,7 +13,10 @@
  *   *** THE SDSU CONTROLLERS AT YOUR SITE. SEE DEFINITIONS BELOW.
  *
  *INDENT-OFF*
- *   8 July 1999: CB - Add a new parameter timeToWaitAo in the structure OBS_ID_STRUCT
+ *   27 oct 1999: CB - Add a new parameter dhsOutOptions in the structure 
+ *                     + fits keywords
+ *   8 July 1999: CB - Add a new parameter timeToWaitAo in the structure 
+ *                     OBS_ID_STRUCT
  *   21 Apr 1999: CB - Simplified version for PWFS1 only
  *INDENT-ON*
  *-
@@ -78,7 +81,7 @@ typedef   unsigned long   DHS_CONNECT;
     * POWERPC 0x08000000
     */
 
-#define   DET_CONTROL_PWFS1_SDSU_ADRS_VME 0xc0000010      
+#define   DET_CONTROL_PWFS1_SDSU_ADRS_VME 0x08000000      
                                     /* VME address of SDSU controller         */
                                     /* for PWFS1.                             */
 
@@ -156,6 +159,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
    DATREC_CONTEXT   pDetObservingContext;
                            /* Observing record context.                       */
    int          totalFrames;/* Total frames for observation.                  */
+   int          outNFrames;/* Frame counter for output display.               */
    int          nframes;   /* Frame counter for this observation.             */
    SEM_ID       syncSem;   /* Observation synchronsisation semaphore.         */
 
@@ -173,6 +177,7 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Data handling information.                      */
                            /* --------------------------                      */
    int          outOptions;/* Output options (0=none, 1=DHS, 2=file).         */
+   int          dhsOutOptions;/* DHS Output options (0=PERM, 1=TEMP, 2=QL).   */
    DHS_CONNECT  dhsConnection;/* DHS connection ID.                           */
    DHS_BD_DATASET dhsDataset; /* DHS dataset ID.                              */
    DHS_BD_FRAME dhsDataFrame; /* DHS data frame ID.                           */
@@ -190,6 +195,19 @@ typedef   struct      /* Context structure used to describe an observation.   */
                            /* Combined path name and file name for simulated  */
                            /* data.                                           */
                            /* (This file is used for engineering only).       */
+
+                           /* Fits keywords                                   */
+                           /* -------------                                   */
+
+   char          dataSec[22];
+   char          ccdSec[22];
+   char          origSec[22];
+   int           timeArrayStart[7];/* Array of year/month/day/hour/min/sec    */
+   char          utStartString[20];/* String which contains UTSTART data      */
+   int           timeArrayEnd[7];  /* Array of year/month/day/hour/min/sec    */
+   char          utEndString[20];  /* String to contain UTEND data            */
+   char          detType[16];
+   char          detId[16];
 
                            /* Signal processing information.                  */
                            /* ------------------------------                  */
@@ -245,9 +263,13 @@ typedef   struct      /* Context structure used to describe an observation.   */
    double       cd1_2;     /* xj rotation/skew matrix element.                */
    double       cd2_1;     /* yi rotation/skew matrix element.                */
    double       cd2_2;     /* yj rotation/skew matrix element.                */
+   double       RA;        /* Right Ascension in hours.                       */
+   double       Dec;       /* Declination in degrees.                         */
+
    char         radecsys[9];/* Type of RA/Dec (for celestial coordinate).     */
    double       equinox;   /* Epoch of mean equator & equinox (celestial      */
                            /* coords).                                        */
+   double       epoch;     /* Epoch of observation as a year.                 */
    double       mjdobs;    /* Epoch of observation as a modified Julian date. */
 } OBS_ID_STRUCT, * OBS_ID;
 
@@ -295,9 +317,7 @@ enum
    DET_CONTROL_CMD_SIGINITGAIN,/* Initialise signal processing gains.         */
    DET_CONTROL_CMD_SIGINITSH,  /* Initialise WFS geometry for signal process. */
    DET_CONTROL_CMD_SIGMODE,    /* Configure signal processing.                */
-   DET_CONTROL_CMD_SIGUPDATE,  /* Update signal processing gains in closed    */
-                               /* loop                                        */
-   DET_CONTROL_CMD_SIGFGUPDATE,/* Update FG gains in closed loop              */
+   DET_CONTROL_CMD_SIGINITFGGAIN,/* Initialize FG gains                       */
 
    /* genSub commands. */
 

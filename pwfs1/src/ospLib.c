@@ -1399,6 +1399,11 @@ int /* STATUS*/ ospFrameScramble
 					 * different from the order of arrival
 					 */
 
+                                        if ( *ps1 < (float)(0.0) ) *ps1 = (float)(0.0) ;
+                                        if ( *ps2 < (float)(0.0) ) *ps2 = (float)(0.0) ;
+                                        if ( *ps3 < (float)(0.0) ) *ps3 = (float)(0.0) ;
+                                        if ( *ps4 < (float)(0.0) ) *ps4 = (float)(0.0) ;
+
 					*ptr++ = (unsigned short int) *ps1++;
 					*ptr++ = (unsigned short int) *ps2--;
 					*ptr++ = (unsigned short int) *ps3--;
@@ -2229,7 +2234,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
  *                 char *pDarkFileName , char *pFlatFileName ,
  *                 double angle , double refX , double refY ,
- *                 double guideThreshold , double tipGain , double tiltGain ,
+ *                 double guideThreshold , 
  *                 char *pRefFileName , double threshold ,
  *                 char *pMatFileName , int modeNb , int centroidNb )
  *
@@ -2240,7 +2245,6 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * (>) angle (double) between CCD and telescope
  * (>) refX, refY (double) ideal coord for whole CCD
  * (>) guideThreshold (double) Threshold for FG computation
- * (>) tipGain, tiltGain (double) Gain for tip and tilt mode computation
  * (>) pRefFileName (char *) Name of file containing ref centers for
  *                           centroids computation
  * (>) treshold (double) threshold for centroid computation
@@ -2257,6 +2261,7 @@ struct OSP_HRCONTEXT * ospInitHr ( char * hrwfsName )
  * DESCRIPTION:
  * Added by cb - 23April 1999
  * Modified by cb - 22 June 1999 - add centroidNb
+ * Modified by cb - 28 Oct 1999 - remove FG gains
  *
  * EXTERNAL VARIABLES:
  * None
@@ -2277,8 +2282,6 @@ int ospUpdate ( struct OSP_CONTEXT * wfsSpecific,
                 double angle , 
                 double refX , double refY ,
                 double guideThreshold , 
-                double tipGain , 
-                double tiltGain ,
                 char *pRefFileName  , 
                 double threshold ,
                 char *pMatFileName ,
@@ -2316,8 +2319,6 @@ wfsSpecific->sinAngle = (float)sin(angle) ;
 wfsSpecific->xcenter = (double)(refX) ; 
 wfsSpecific->ycenter = (double)(refY) ; 
 wfsSpecific->guideThreshold = (float)guideThreshold ; 
-wfsSpecific->tipscale = (float)tipGain ; 
-wfsSpecific->tiltscale = (float)tiltGain ; 
 wfsSpecific->thresh = (float)threshold ; 
 wfsSpecific->np = modeNb ; 
 wfsSpecific->mp = centroidNb ; 
@@ -4284,6 +4285,7 @@ int ospCoAddOnly ( float *buffp ,
         }
     }
 
+    /*printf ( "coaddcounter = %d\n" , wfsSpecific->coaddcounter ) ;*/
     /**************************************************************************/
 
     return (OK) ;
@@ -4769,11 +4771,14 @@ int ospAoCor ( float *buffp ,
         }
     }
 
+    /*printf ( "coaddcounter = %d\n" , wfsSpecific->coaddcounter ) ;*/
+
     if ( wfsSpecific->coaddcounter == N )
     {
        for ( p = sumbuffp ; p < maxp; )
        {
-           * p = ((*(p++) / wfsSpecific->coaddcounter) - *(redsubp ++)) ;
+           /* * p = ((*(p++) / wfsSpecific->coaddcounter) - *(redsubp ++)) ;*/
+           *p = (*(p++) / wfsSpecific->coaddcounter) ;
        }
        wfsSpecific->coaddcounter=0;
            
@@ -4864,9 +4869,9 @@ int ospAoCor ( float *buffp ,
        } ;
 
        writeWfsToTcs(wfsSpecific);
-       printf ( "ospAoCor(): Z coeff sent to TCS, wait now %d s...\n" , timeToWait ) ; 
+       /*printf ( "ospAoCor(): Z coeff sent to TCS, wait now %d s...\n" , timeToWait ) ; */
        taskDelay ( timeToWait * sysClkRateGet() ) ;
-       printf ( "ospAoCor(): end of wait, start again measurements \n" ) ;
+       /*printf ( "ospAoCor(): end of wait, start again measurements \n" ) ;*/
 #endif /*vxWorks*/
 
     }
@@ -7423,8 +7428,8 @@ int ospFGCentroidWrapper ( float * buffp,
 	       for (ii = 0; ii < wfsSpecific->side;ii++)
 	       {
 		   indxy = ii + rowinc;
-		   pixval = *indxy ;
-		   if(pixval > threshold)
+		   pixval = *indxy - threshold ;
+		   if(pixval > (float)(0.0))
 		   {		
 		       itotal += pixval ;
 		       ireptotal = ireptotal + (1.0 / fabs(*indxy));
@@ -7477,8 +7482,9 @@ int ospFGCentroidWrapper ( float * buffp,
 	       for (ii = 0; ii < wfsSpecific->side;ii++)
 	       {
 		   indxy = ii + rowinc;
-		   pixval = *indxy ;
-		   if(pixval > wfsSpecific->thresh)
+		   pixval = *indxy - wfsSpecific->thresh ;
+                   /*printf ( "pixval = %f\n" , pixval ) ;*/
+		   if(pixval > (float)(0.0))
 		   {		
 		       itotal += pixval ;
 		       ireptotal = ireptotal + (1.0 / fabs(*indxy));
@@ -7487,6 +7493,7 @@ int ospFGCentroidWrapper ( float * buffp,
 		   }
 	       }
 	   }
+           /*printf ( "itotal=%f\n" , itotal ) ;*/
 	   if(itotal > 0)
 	   {
                /*printf ( "mu1x=%f, mu1y=%f, itotal=%f, xdiff=%f, ydiff=%f\n" ,
@@ -7664,9 +7671,10 @@ int ospTracking ( float * buffp ,
     {
 	for ( i = 0 ; i < wfsSpecific->xframesize ; i ++)
 	{   
-            pixval = *(localp + wfsSpecific->xframesize*j + i) ;
+            pixval = (*(localp + wfsSpecific->xframesize*j + i)) -
+                     wfsSpecific->guideThreshold ;
 
-            if ( pixval > wfsSpecific->guideThreshold )
+            if ( pixval > (float)(0.0) )
             {
                x += pixval*(i+1) ;
                y += pixval*(j+1) ;
