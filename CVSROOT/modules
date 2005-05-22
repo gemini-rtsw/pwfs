@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.74 2005-02-08 21:29:39 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.75 2005-05-22 22:56:42 mbec Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -226,5 +226,9 @@ pythonCA	mbec/pythonCA
 
 #M	etools	Engineering Tools
 etools	etools
+
+#D	altair	Altair
+#M	altair	Altair
+altair altair
 
 
