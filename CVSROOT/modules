@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.75 2005-05-22 22:56:42 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.76 2005-06-22 19:44:43 gemvx Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -230,5 +230,9 @@ etools	etools
 #D	altair	Altair
 #M	altair	Altair
 altair altair
+
+#D	bto	BTO
+#M	bto	BTO
+bto bto
 
 
