@@ -196,6 +196,7 @@ frame   *ag2tcs;
 wfs     *ptrPwfs2;
 double  ttfData[AO_ARRAY_SIZE+2];
 double  aoData[AO_ARRAY_SIZE+2+2]; /* add 2 data for astig0 and astig45 */
+double  aoDataTcs[AO_ARRAY_SIZE+2];
 float   data[AO_ARRAY_SIZE+2];
 float   errors[AO_ARRAY_SIZE+2];
 SEM_ID  wfsLock;
@@ -808,6 +809,7 @@ long gensubToTcsTtf
  * EXTERNAL VARIABLES:
  * wfsLock       - mutex semaphores
  * aoData        - ao data
+ * aoDataTcs     - ao Data actually sent to Tcs
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -856,25 +858,27 @@ long gensubToTcsAo
 
       /* but make sure there are nothing else than astigmatism sent to TCS */
 
-      aoData[2]=0.0;
-      aoData[3]=0.0;
-      aoData[4]=0.0;
-      aoData[9]=0.0;
-      aoData[10]=0.0;
-      aoData[11]=0.0;
-      aoData[12]=0.0;
-      aoData[13]=0.0;
-      aoData[14]=0.0;
-      aoData[15]=0.0;
-      aoData[16]=0.0;
-      aoData[17]=0.0;
-      aoData[18]=0.0;
-      aoData[19]=0.0;
-      aoData[20]=0.0;
+      aoDataTcs[2]=0.0;
+      aoDataTcs[3]=0.0;
+      aoDataTcs[4]=0.0;
+      aoDataTcs[7]=0.0;
+      aoDataTcs[8]=0.0;
+      aoDataTcs[9]=0.0;
+      aoDataTcs[10]=0.0;
+      aoDataTcs[11]=0.0;
+      aoDataTcs[12]=0.0;
+      aoDataTcs[13]=0.0;
+      aoDataTcs[14]=0.0;
+      aoDataTcs[15]=0.0;
+      aoDataTcs[16]=0.0;
+      aoDataTcs[17]=0.0;
+      aoDataTcs[18]=0.0;
+      aoDataTcs[19]=0.0;
+      aoDataTcs[20]=0.0;
 
-      memcpy (pgsub->valj, aoData, AO_ARRAY_SIZE * sizeof (double));
+     memcpy (pgsub->valj, aoDataTcs, AO_ARRAY_SIZE * sizeof (double));
 
-      /* write Zernike values to vala for display */
+     /* write Zernike values to vala for display */
 
       memcpy (pgsub->vala, zernikes, 19 * sizeof (double));
 
@@ -1508,10 +1512,17 @@ STATUS writeWfsToTcs
       aoData[19] = result.z19;
       aoData[20] = result.z20;
 
+      for(i = 0; i <= 20; i++)
+      {
+         aoDataTcs[i] = aoData[i];
+      }
+
+
       /* copy across error terms */
       for ( i = 0 ; i < aoCtrlId->aoModeNb ; i ++ )
       {
          aoData[21+i] = *(pAoErrorsVect +i);
+         aoDataTcs[21+i] = *(pAoErrorsVect +i);
       }
 
       /* Copy intermediate values astig0 and astig45 */
