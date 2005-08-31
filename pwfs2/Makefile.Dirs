@@ -6,3 +6,5 @@ DIRS += par
 DIRS += startup 
 DIRS += db 
 DIRS += db 
+DIRS += docs 
+DIRS += db 

@@ -16,6 +16,8 @@ else
     site=CP;
 fi
 
+echo `pwd` > APPLIC_INSTALL.txt
+
 cp IMP_Startup$site.pwfs2 IMP_Startup.pwfs2
 
 applSetup.pl -T ppc604 -I adl -I capfast -I src -I startup\
@@ -36,6 +38,9 @@ a
         install -R \${DIST_PATH}/IMP_Startup.pwfs2;
 (\${APPLIC_INSTALL}/RELEASE.NOTES) -> (\${DIST_HOST})
         install -R \${DIST_PATH}/RELEASE.NOTES;
+(\${APPLIC_INSTALL}/APPLIC_INSTALL.txt) -> (\${DIST_HOST})
+        install -R \${DIST_PATH}/APPLIC_INSTALL.txt;
+
 .
 w
 q

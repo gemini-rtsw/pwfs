@@ -350,3 +350,11 @@ V4-7 25 AUG 2004 AAG:
 
   d) writeZernikes.c remove clamping and gain increase for monitored
    mode (comaX-comaY) - CB
+
+V4-8 26 AUG 2005 AAG:
+----------------------
+
+- Fixed problem while written aoData in VALJ (coma values were 
+  actually being read by TCS which was wrong)
+  src/writeZernikes.c
+
