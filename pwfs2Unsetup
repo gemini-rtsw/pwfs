@@ -32,4 +32,5 @@ echo Removing EPICS links...
 /usr/bin/rm Distfile
 /usr/bin/rm pwfs2Build.log
 /usr/bin/rm startup/UAE.dist
-
+echo Removing APPLIC_INSTALL.txt
+/usr/bin/rm APPLIC_INSTALL.txt
