@@ -13,7 +13,7 @@
 1
 # Cos Trefoil = a*cos(3*X+p) + c (double)
 # a p c
-0.0 0.0 0.25
+0.0 0.0 0.0
 # Sin Trefoil = b*sin(3*X+pp) + d (double)
 # b pp d
 0.0 0.0 0.0
@@ -24,9 +24,9 @@
 0.0 0.0 0.0
 # coma Y = b*sin(X+pp) + d (double)
 # b pp d
-0.0 0.0 -0.25
+0.0 0.0 0.0
 # Apply coma model (integer) (double)
-0
+1
 # focus = a1*cos(X+p1) + a2*cos(2*X+p2) + c
 # a1 p1 a2 p2 c
 0.0 0.0 0.0 0.0 0.0
