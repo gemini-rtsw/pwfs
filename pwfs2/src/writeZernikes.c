@@ -833,8 +833,8 @@ long gensubToTcsAo
    int index = 0;
    double zernikes[19];
    double errors[19];
-   double astig0;
-   double astig45;
+   double ast0, astig0;
+   double ast45, astig45;
 
    /* write array to TCS system */
 
@@ -853,6 +853,9 @@ long gensubToTcsAo
 
       astig0 = aoData[40];
       astig45 = aoData[41];
+
+      ast0 = aoData[42];
+      ast45 = aoData[43];
 
       /* write whole array to valj for the TCS to pick up */
 
@@ -894,6 +897,13 @@ long gensubToTcsAo
 
       *(double *)pgsub->vald = astig45 ;
 
+      /* write ast0 to vale for display */
+   
+      *(double *)pgsub->vale = ast0 ;
+
+      /* write ast45 to valf for display */
+
+      *(double *)pgsub->valf = ast45 ;
       semGive(wfsLock);
    }
 
@@ -981,8 +991,11 @@ STATUS writeWfsToTcs
    double    posMaxThresh = (aoCtrlId->aoMaxThreshold);
    double    negMaxThresh = (aoCtrlId->aoMaxThreshold) * -1.0;
 
-   double    astig0=0.0;
+   double    astig0 =0.0;
    double    astig45=0.0;
+
+   double    ast0 =0.0;
+   double    ast45=0.0;
 
    double    g0;
    double    g45;
@@ -1081,8 +1094,12 @@ STATUS writeWfsToTcs
 
          /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
 
+         ast0 = *(pz+3);
+         ast45 = *(pz+4);
+
          astig0 = *(pz+3) - astigModel.offsetAstig0;
          astig45 = *(pz+4) - astigModel.offsetAstig45;
+
          g0 = astigModel.gain0;
          g45 = astigModel.gain45;
 
@@ -1530,7 +1547,8 @@ STATUS writeWfsToTcs
       index = 2*(aoCtrlId->aoModeNb) + 2;
       aoData[index] = astig0;
       aoData[index+1] = astig45;
-
+      aoData[index+2] = ast0;
+      aoData[index+3] = ast45;
       /* release mutex */
 
       semGive(wfsLock);
