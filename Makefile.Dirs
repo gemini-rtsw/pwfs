@@ -8,3 +8,5 @@ DIRS += db
 DIRS += db 
 DIRS += docs 
 DIRS += db 
+DIRS += docs 
+DIRS += db 
