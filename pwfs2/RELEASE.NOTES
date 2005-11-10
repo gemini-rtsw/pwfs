@@ -358,3 +358,13 @@ V4-8 26 AUG 2005 AAG:
   actually being read by TCS which was wrong)
   src/writeZernikes.c
 
+V4-9 08 NOV 2005 AAG:
+----------------------
+
+- Displayed ast0/45 coefficients parameters in aO centroids 
+  for aO tests
+  src/writeZernikes.c
+  adl/showAoDiagP2.adl
+  capfast/wfsGensubSad.sch
+
+  src/pwfs2.version updated
