@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="2"
-	npc="26"
-	nstr="56"
-	ndynamic="24"
+	npc="28"
+	nstr="63"
+	ndynamic="26"
 	nplot="0"
 	nrd="0"
 	nes="2"
@@ -19,27 +19,27 @@ display {
 		x="328"
 		y="298"
 		width="670"
-		height="586"
+		height="613"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="4452"
-	nwords_sta="604"
+	nwords_dspy="4740"
+	nwords_sta="632"
 	nwords_cmap="120"
 	nwords_crules="820"
-	odyng="2432"
-	osta="1828"
-	odynamic="2540"
-	oplot="4124"
-	ord="4124"
-	oes="4124"
-	okd="4440"
-	opd="4452"
-	opo="4452"
+	odyng="2588"
+	osta="1956"
+	odynamic="2696"
+	oplot="4412"
+	ord="4412"
+	oes="4412"
+	okd="4728"
+	opd="4740"
+	opo="4740"
 	opc="68"
-	ostr="408"
-	ocmap="888"
-	ocrules="1008"
+	ostr="428"
+	ocmap="1016"
+	ocrules="1136"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -1250,7 +1250,7 @@ display {
 		x="9"
 		y="46"
 		width="652"
-		height="533"
+		height="560"
 		groupid="0"
 	}
 }
@@ -1488,7 +1488,7 @@ display {
 "text" {
 	object {
 		x="13"
-		y="468"
+		y="469"
 		width="325"
 		height="20"
 		groupid="0"
@@ -1499,7 +1499,7 @@ display {
 "text" {
 	object {
 		x="420"
-		y="466"
+		y="467"
 		width="98"
 		height="20"
 		groupid="0"
@@ -1520,42 +1520,42 @@ display {
 }
 "text" {
 	object {
-		x="24"
-		y="516"
+		x="37"
+		y="540"
 		width="349"
 		height="20"
 		groupid="0"
 	}
-	textix="0 Astigmatism before rotation:"
+	textix="ast0 - m0 (before rotation):"
 	align="horiz. left"
 }
 "text" {
 	object {
 		x="14"
-		y="549"
+		y="573"
 		width="349"
 		height="20"
 		groupid="0"
 	}
-	textix="45 Astigmatism before rotation:"
+	textix="ast45 - m45 (before rotation):"
 	align="horiz. left"
 }
 "line" {
 	object {
-		x="9"
-		y="502"
+		x="8"
+		y="493"
 		width="652"
 		height="0"
 		groupid="0"
 	}
 	npoints="2"
 	point[0] {
-		x="9"
-		y="502"
+		x="8"
+		y="493"
 	}
 	point[1] {
-		x="661"
-		y="502"
+		x="660"
+		y="493"
 	}
 	orgpoint[0] {
 		x="0"
@@ -1608,6 +1608,36 @@ display {
 		groupid="0"
 	}
 	textix="Thresh"
+	align="horiz. left"
+}
+"<<basic attribute>>" {
+	attr {
+		clr="1"
+		style="solid"
+		fill="outline"
+		width="0"
+	}
+}
+"text" {
+	object {
+		x="230"
+		y="511"
+		width="54"
+		height="13"
+		groupid="0"
+	}
+	textix="ast0:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="453"
+		y="512"
+		width="54"
+		height="13"
+		groupid="0"
+	}
+	textix="ast45:"
 	align="horiz. left"
 }
 "<<basic attribute>>" {
@@ -2391,7 +2421,7 @@ display {
 "text update" {
 	object {
 		x="283"
-		y="464"
+		y="465"
 		width="94"
 		height="25"
 		groupid="0"
@@ -2437,7 +2467,7 @@ display {
 "text update" {
 	object {
 		x="512"
-		y="464"
+		y="465"
 		width="95"
 		height="24"
 		groupid="0"
@@ -2529,7 +2559,7 @@ display {
 "text update" {
 	object {
 		x="355"
-		y="515"
+		y="539"
 		width="160"
 		height="21"
 		groupid="0"
@@ -2575,7 +2605,7 @@ display {
 "text update" {
 	object {
 		x="356"
-		y="547"
+		y="571"
 		width="160"
 		height="21"
 		groupid="0"
@@ -2802,10 +2832,102 @@ display {
 	align="horiz. left"
 	format="decimal"
 }
+"text update" {
+	object {
+		x="282"
+		y="506"
+		width="94"
+		height="25"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)ao.VALE"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="514"
+		y="506"
+		width="94"
+		height="25"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)ao.VALF"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
 "execute script" {
 	object {
 		x="518"
-		y="514"
+		y="538"
 		width="131"
 		height="20"
 		groupid="0"
@@ -2938,7 +3060,7 @@ display {
 "execute script" {
 	object {
 		x="519"
-		y="549"
+		y="573"
 		width="131"
 		height="20"
 		groupid="0"
