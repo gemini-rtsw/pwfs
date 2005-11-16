@@ -368,3 +368,7 @@ V4-9 08 NOV 2005 AAG:
   capfast/wfsGensubSad.sch
 
   src/pwfs2.version updated
+
+- CR784 - P2 astig model updated in GS
+par/defAoModP2CP.dat
+
