@@ -4,7 +4,7 @@ data/defBinP2DarkCP.fits
 # Name of the bin flat fits file (string)
 data/defBinP2FlatCP.fits
 # Name of the AO SH reference file (string)
-data/test35BinRefP2.dat
+data/defBinRefP2CP.dat
 # Value for the x center for the whole CCD (double)
 20.5
 # Value for the y center for the whole CCD (double)
