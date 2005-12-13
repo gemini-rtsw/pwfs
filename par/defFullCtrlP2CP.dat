@@ -4,7 +4,7 @@ data/defFullP2DarkCP.fits
 # Name of the full flat fits file (string)
 data/defFullP2FlatCP.fits
 # Name of the AO SH reference file (string)
-data/test35FullRefP2.dat
+data/defFullRefP2CP.dat
 # Value for the x center for the whole CCD (double)
 40.5
 # Value for the y center for the whole CCD (double)
