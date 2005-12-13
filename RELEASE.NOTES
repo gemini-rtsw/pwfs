@@ -372,3 +372,12 @@ V4-9 08 NOV 2005 AAG:
 - CR784 - P2 astig model updated in GS
 par/defAoModP2CP.dat
 
+V4-10 08 NOV 2005 AAG:
+----------------------
+- CR812: 
+- par/defAoModP2MK.dat
+- par/defBinRefP2CP/MK.dat
+- par/defBinCtrlP2CP/MK.dat
+- par/defFullRefP2CP/MK.dat
+- par/defFullCtrlP2CP/MK.dat
+
