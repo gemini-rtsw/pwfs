@@ -381,3 +381,5 @@ V4-10 08 NOV 2005 AAG:
 - par/defFullRefP2CP/MK.dat
 - par/defFullCtrlP2CP/MK.dat
 
+- CR816:
+- src/wfsDb.c
