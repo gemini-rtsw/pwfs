@@ -383,3 +383,9 @@ V4-10 08 NOV 2005 AAG:
 
 - CR816:
 - src/wfsDb.c
+
+Added par/10Hz.fits
+Added par/100Hz.fits
+Added par/20Hz.fits
+Added par/200Hz.fits
+Added par/50Hz.fits
