@@ -412,8 +412,10 @@ V4-6 13 AUG 2004 AAG:
 
 7) defAoModP1MK.dat updated (CR0478)
 
-V4-7 27 SEP 2004 AAG:
---------------------
+V4-6-1 27 SEP 2004 AAG:
+Change Requested by MBOCCAS. Installed in GN, but never officially
+in use, untill January 9th 2006!. 
+-----------------------------------------------------------
 
 a) Updated gains 
  - par/defAoScaleP1.dat
@@ -448,4 +450,7 @@ b) Correct new calculated zerniques, using thresholds to allow clamping
 
 c) CR580 - Updated GN P1 Astigmatism model (b1 value)
  - par/defAoModP1MK.dat
+
+d)
+- Updated par/defAoMod files, CVS rev number 1.4
 
