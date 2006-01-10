@@ -858,6 +858,7 @@ long gensubToTcsAo
 
       /* write whole array to valj for the TCS to pick up */
       /* but make sure that spherical and Z11-Z19 aberrations are not sent to TCS
+       */
  
       aoDataTcs[2]=0.0;
       aoDataTcs[3]=0.0;
@@ -872,8 +873,7 @@ long gensubToTcsAo
       aoDataTcs[18]=0.0;
       aoDataTcs[19]=0.0;
       aoDataTcs[20]=0.0;
-	*/
-
+ 
       memcpy (pgsub->valj, aoDataTcs, AO_ARRAY_SIZE * sizeof (double));
 
       /* write Zernike values to vala for display */
@@ -960,7 +960,6 @@ STATUS writeWfsToTcs
    )
 {
    int       i=0;
-
    frame     *f;
    converted result;
    double    *pz;
@@ -970,9 +969,6 @@ STATUS writeWfsToTcs
 
    double    posMaxThresh = (aoCtrlId->aoMaxThreshold);
    double    negMaxThresh = (aoCtrlId->aoMaxThreshold) * -1.0;
-
-   double    posTcsThresh = (aoCtrlId->aoTcsThreshold);
-   double    negTcsThresh = (aoCtrlId->aoTcsThreshold) * -1.0;
 
    double    astig0;
    double    astig45;
@@ -1237,7 +1233,7 @@ STATUS writeWfsToTcs
 
          result.z12 = z12AfterRot*aoCtrlId->aoScaleFactorVect[10];
          result.z13 = z13AfterRot*aoCtrlId->aoScaleFactorVect[11];
-
+/*
          if ( z12AfterRot >= posThresh )
             result.z12 =
             (z12AfterRot*3.0 - posThresh*2.0)*
@@ -1248,8 +1244,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[10];
          else
             result.z12 = z12AfterRot*aoCtrlId->aoScaleFactorVect[10];
+*/
 
-
+/*
          if ( z13AfterRot >= posThresh )
             result.z13 =
             (z13AfterRot*3.0 - posThresh*2.0)*
@@ -1260,8 +1257,8 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[11];
          else
             result.z13 = z13AfterRot*aoCtrlId->aoScaleFactorVect[11];
-
-
+*/
+/*
          if (result.z12 >= posMaxThresh)
             result.z12 = posMaxThresh;
          else if (result.z12 <= negMaxThresh)
@@ -1271,7 +1268,7 @@ STATUS writeWfsToTcs
             result.z13 = posMaxThresh;
          else if (result.z13 <= negMaxThresh)
             result.z13 = negMaxThresh;
-
+*/
 
 /*
          result.z12 = (f->cos2Theta*(*(pz+10)) + f->sin2Theta*(*(pz+11))) 
@@ -1288,7 +1285,7 @@ STATUS writeWfsToTcs
          result.z14 = z14AfterRot*aoCtrlId->aoScaleFactorVect[12];
          result.z15 = z15AfterRot*aoCtrlId->aoScaleFactorVect[13];
 
-
+/*
          if ( z14AfterRot >= posThresh )
             result.z14 =
             (z14AfterRot*3.0 - posThresh*2.0)*
@@ -1299,9 +1296,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[12];
          else
             result.z14 = z14AfterRot*aoCtrlId->aoScaleFactorVect[12];
+*/
 
-
-
+/*
          if ( z15AfterRot >= posThresh )
             result.z15 =
             (z15AfterRot*3.0 - posThresh*2.0)*
@@ -1312,9 +1309,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[13];
          else
             result.z15 = z15AfterRot*aoCtrlId->aoScaleFactorVect[13];
+*/
 
-
-
+/*
          if (result.z14 >= posMaxThresh)
             result.z14 = posMaxThresh;
          else if (result.z14 <= negMaxThresh)
@@ -1324,7 +1321,7 @@ STATUS writeWfsToTcs
             result.z15 = posMaxThresh;
          else if (result.z15 <= negMaxThresh)
             result.z15 = negMaxThresh;
-
+*/
 
 /*
          result.z14 = (f->cosTheta*(*(pz+12)) + f->sinTheta*(*(pz+13)))
@@ -1345,7 +1342,7 @@ STATUS writeWfsToTcs
          result.z17 = z17AfterRot*aoCtrlId->aoScaleFactorVect[15];
          result.z18 = z18AfterRot*aoCtrlId->aoScaleFactorVect[16];
 
-
+/*
          if ( z17AfterRot >= posThresh )
             result.z17 =
             (z17AfterRot*3.0 - posThresh*2.0)*
@@ -1356,9 +1353,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[15];
          else
             result.z17 = z17AfterRot*aoCtrlId->aoScaleFactorVect[15];
+*/
 
-
-
+/*
          if ( z18AfterRot >= posThresh )
             result.z18 =
             (z18AfterRot*3.0 - posThresh*2.0)*
@@ -1369,9 +1366,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[16];
          else
             result.z18 = z18AfterRot*aoCtrlId->aoScaleFactorVect[16];
+*/
 
-
-
+/*
          if (result.z17 >= posMaxThresh)
             result.z17 = posMaxThresh;
          else if (result.z17 <= negMaxThresh)
@@ -1381,7 +1378,7 @@ STATUS writeWfsToTcs
             result.z18 = posMaxThresh;
          else if (result.z18 <= negMaxThresh)
             result.z18 = negMaxThresh;
-
+*/
 
 /*
          result.z17 = (f->cos4Theta*(*(pz+15)) + f->sin4Theta*(*(pz+16)))
@@ -1398,7 +1395,7 @@ STATUS writeWfsToTcs
          result.z19 = z19AfterRot*aoCtrlId->aoScaleFactorVect[17];
          result.z20 = z20AfterRot*aoCtrlId->aoScaleFactorVect[18];
 
-
+/*
          if ( z19AfterRot >= posThresh )
             result.z19 =
             (z19AfterRot*3.0 - posThresh*2.0)*
@@ -1409,9 +1406,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[17];
          else
             result.z19 = z19AfterRot*aoCtrlId->aoScaleFactorVect[17];
+*/
 
-
-
+/*
          if ( z20AfterRot >= posThresh )
             result.z20 =
             (z20AfterRot*3.0 - posThresh*2.0)*
@@ -1422,9 +1419,9 @@ STATUS writeWfsToTcs
             aoCtrlId->aoScaleFactorVect[18];
          else
             result.z20 = z20AfterRot*aoCtrlId->aoScaleFactorVect[18];
+*/
 
-
-
+/*
          if (result.z19 >= posMaxThresh)
             result.z19 = posMaxThresh;
          else if (result.z19 <= negMaxThresh)
@@ -1434,7 +1431,7 @@ STATUS writeWfsToTcs
             result.z20 = posMaxThresh;
          else if (result.z20 <= negMaxThresh)
             result.z20 = negMaxThresh;
-
+*/
 
 /*
          result.z19 = (f->cos3Theta*(*(pz+17)) + f->sin3Theta*(*(pz+18)))
@@ -1531,19 +1528,9 @@ STATUS writeWfsToTcs
       aoData[19] = result.z19;
       aoData[20] = result.z20;
 
-      for(i = 0; i <= 11; i++)
-	{
-	  aoDataTcs[i] = aoData[i];
-	}
-
-      for(i = 12; i <= 20; i++)
+      for(i = 0; i <= 20; i++)
       {
-	if ((aoData[i] >= posTcsThresh) || (aoData[i] <= negTcsThresh))
-	  {
-	    aoDataTcs[i] = aoData[i];
-	  }
-	else 
-	  aoDataTcs[i] = 0.0;
+         aoDataTcs[i] = aoData[i];
       }
 
       /* copy across error terms */

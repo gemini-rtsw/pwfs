@@ -6,9 +6,9 @@
 
 group {
 double $(top)$(wfs)initSigModeSeq.A = 1.0 ;
-double $(top)$(wfs)initSigModeSeq.B = 10.0 ;
+double $(top)$(wfs)initSigModeSeq.B = 30.0 ;
 int $(top)$(wfs)initSigModeSeq.H = 0 ;
-double $(top)$(wfs)initSigModeSeq.I = 60.0 ;
+double $(top)$(wfs)initSigModeSeq.I = 40.0 ;
 int $(top)$(wfs)initSigModeSeq.J = 0 ;
 double $(top)$(wfs)initSigModeSeq.K = 60.0 ;
 int $(top)$(wfs)initSigModeSeq.L = 0 ;
@@ -42,7 +42,6 @@ double $(top)$(wfs)initSigModeSeqDark.E = 2.5 ;
 group {
 double $(top)$(wfs)initSigInitAoThresh.A = 0.5 ;
 double $(top)$(wfs)initSigInitAoThresh.B = 3.0 ;
-double $(top)$(wfs)initSigInitAoThresh.C = 0.3 ;
 };
 
 #
