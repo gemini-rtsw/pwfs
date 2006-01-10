@@ -454,3 +454,25 @@ c) CR580 - Updated GN P1 Astigmatism model (b1 value)
 d)
 - Updated par/defAoMod files, CVS rev number 1.4
 
+V4-7 10 JAN 2005 AAG:
+-----------------------------------------------------------
+
+Reverted previous changes. It has been decided not to correct zerniques for the moment.
+The following files has been modified back as per version V4-6.
+ - capfast/wfsCadMore.sch
+ - capfast/wfsgensub1.sch
+ - adl/detSigInitAoThresh: removed
+ - src/writeZernikes.c
+ - src/aoP1Lib.h
+ - src/aoP1Lib.c
+ - src/detControl.h
+ - src/detControl.c
+ - src/pwfs1SetDefCommandsMK/CP.pv
+ - src/wfsDb.c
+
+CR783 & CR815
+Updated aO averaging and pause times for GS/GN
+
+ - src/pwfs1SetDefCommandsCP.pv
+ - src/pwfs1.pv
+ - src/wfsDb.c
