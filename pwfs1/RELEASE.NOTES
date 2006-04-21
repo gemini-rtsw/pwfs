@@ -476,3 +476,71 @@ Updated aO averaging and pause times for GS/GN
  - src/pwfs1SetDefCommandsCP.pv
  - src/pwfs1.pv
  - src/wfsDb.c
+
+V4-8 20 APR 2006 AAG:
+-----------------------------------------------------------
+
+1) Modified algorith for Trefoil and Coma zerniques calculation, gains
+   and offsets are now used, similarly to astigModel: 
+   gX/gY and mX/mY for Coma. gCos/gSin and mCos/mSin for Trefoil
+
+par/defAoModP1CP.dat
+par/defAoModP1MK.dat
+Added lines for Trefol and Coma gains/offsets
+
+capfast/wfsCadMore1.sch
+capfast/wfsGenSubMore.sch
+Added new 4 fields (DOUBLE)
+
+src/wfsDb.c
+Modified detSigInitModComa and detSigInitModTref
+
+src/detControl.c
+Used Gains/Offsets in the following modified functions:
+detInitSigInitModTref/Coma
+detSigInitModTref/Coma
+detZpModShow
+
+src/detControl.c
+Modified call to aoModInit to use new trefoilModel and comaModel gains/offsets
+
+src/aoP1Lib.h
+Added gains/offsets to TREF_ZP_MODEL_ID_STRUCT and COMA_ZP_MODEL_ID_STRUCT
+Added gains/offsets arguments in functions aoModTrefFileRead and aoModComaFileRead
+
+src/aoP1Lib.c
+Modified  functions aoModTrefFileRead and aoModComaFileRead
+Modified aoModInit function
+
+src/writesZerniques.c
+Used Coma and Trefoil gains/offsets in gensubToTcsInit and writeWfsToTcs functions
+
+adl/detSigInitModComa.adl
+Added fields for gainX/Y and offsetX/Y for Coma
+
+adl/detSigInitModTref.adl
+Added fields for gainCos/Sin and offsetCos/Sin for Trefoil
+
+2) Monitoring and Displaying temporal calculations for Astig, Coma and Trefoil:
+   astig: ast0/45, tcsAst0/45, theta, ast0 - m0, ast45-m45
+   coma: cmX/cmY, cmX-mX, cmY-mY
+   trefoil: trefCos/trefSin, trefCos-mCos, trefSin-mSin
+
+capfast/wfsGensubSad.sch
+Added aoTemp record
+
+src/writesZerniques.C
+Added aoDataTemp array
+Added wfsTempLock semaphore 
+Modified writeWfsToTcs function
+Added function gensubTempAo to write parameters into dc:aoTemp record
+
+adl/showAoDiagP1.adl
+Calls to showAstig, showComa and showTrefoil dl 
+
+adl/showAstigP1.adl
+adl/showComaP1.adl
+adl/showTrefoilP1.adl
+Added
+
+
