@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="17"
-	nstr="56"
-	ndynamic="17"
+	npc="21"
+	nstr="66"
+	ndynamic="21"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="711"
-		height="403"
+		height="558"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2606"
-	nwords_sta="644"
+	nwords_dspy="3382"
+	nwords_sta="900"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1442"
-	osta="798"
-	odynamic="1442"
-	oplot="2594"
-	ord="2594"
-	oes="2594"
-	okd="2594"
-	opd="2606"
-	opo="2606"
+	odyng="1954"
+	osta="1054"
+	odynamic="1954"
+	oplot="3370"
+	ord="3370"
+	oes="3370"
+	okd="3370"
+	opd="3382"
+	opo="3382"
 	opc="68"
-	ostr="310"
-	ocmap="798"
-	ocrules="798"
+	ostr="374"
+	ocmap="1054"
+	ocrules="1054"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -78,7 +78,7 @@ display {
 		x="6"
 		y="39"
 		width="690"
-		height="355"
+		height="509"
 		groupid="0"
 	}
 }
@@ -319,6 +319,76 @@ display {
 		groupid="0"
 	}
 	textix="comaY (b, d in microns, pp in deg):"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="6"
+		y="402"
+		width="692"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="6"
+		y="402"
+	}
+	point[1] {
+		x="698"
+		y="402"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="26"
+		y="420"
+		width="434"
+		height="16"
+		groupid="0"
+	}
+	textix="Gain for the coma X rotation matrix :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="26"
+		y="451"
+		width="434"
+		height="16"
+		groupid="0"
+	}
+	textix="Gain for the coma Y rotation matrix :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="55"
+		y="482"
+		width="434"
+		height="16"
+		groupid="0"
+	}
+	textix="Offset coma X on the measurement :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="56"
+		y="515"
+		width="434"
+		height="16"
+		groupid="0"
+	}
+	textix="Offset coma Y on the measurement :"
 	align="horiz. left"
 }
 "message button" {
@@ -1105,6 +1175,186 @@ display {
 	pressed_label=""
 	press_msg="1"
 	release_msg=""
+}
+"text entry" {
+	object {
+		x="473"
+		y="419"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModComa.H"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModComa.VAL"
+		rulechan[1] = "$(top)detSigInitModComa.VAL"
+		rulechan[2] = "$(top)detSigInitModComa.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModComa"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="473"
+		y="450"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModComa.I"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModComa.VAL"
+		rulechan[1] = "$(top)detSigInitModComa.VAL"
+		rulechan[2] = "$(top)detSigInitModComa.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModComa"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="472"
+		y="481"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModComa.J"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModComa.VAL"
+		rulechan[1] = "$(top)detSigInitModComa.VAL"
+		rulechan[2] = "$(top)detSigInitModComa.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModComa"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="473"
+		y="514"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModComa.K"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModComa.VAL"
+		rulechan[1] = "$(top)detSigInitModComa.VAL"
+		rulechan[2] = "$(top)detSigInitModComa.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModComa"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
 }
 "kill display" {
 	object {

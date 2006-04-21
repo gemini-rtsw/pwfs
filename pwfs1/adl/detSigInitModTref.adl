@@ -6,9 +6,9 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="0"
-	npc="17"
-	nstr="56"
-	ndynamic="17"
+	npc="21"
+	nstr="63"
+	ndynamic="21"
 	nplot="0"
 	nrd="0"
 	nes="0"
@@ -19,27 +19,27 @@ display {
 		x="0"
 		y="0"
 		width="711"
-		height="403"
+		height="558"
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="2614"
-	nwords_sta="644"
+	nwords_dspy="3342"
+	nwords_sta="900"
 	nwords_cmap="0"
 	nwords_crules="0"
-	odyng="1450"
-	osta="806"
-	odynamic="1450"
-	oplot="2602"
-	ord="2602"
-	oes="2602"
-	okd="2602"
-	opd="2614"
-	opo="2614"
+	odyng="1914"
+	osta="1014"
+	odynamic="1914"
+	oplot="3330"
+	ord="3330"
+	oes="3330"
+	okd="3330"
+	opd="3342"
+	opo="3342"
 	opc="68"
-	ostr="310"
-	ocmap="806"
-	ocrules="806"
+	ostr="374"
+	ocmap="1014"
+	ocrules="1014"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -75,10 +75,10 @@ display {
 }
 "rectangle" {
 	object {
-		x="6"
-		y="39"
-		width="690"
-		height="355"
+		x="4"
+		y="37"
+		width="694"
+		height="512"
 		groupid="0"
 	}
 }
@@ -319,6 +319,76 @@ display {
 		groupid="0"
 	}
 	textix="sin Tref (b, d in microns, pp in deg):"
+	align="horiz. left"
+}
+"line" {
+	object {
+		x="5"
+		y="397"
+		width="692"
+		height="0"
+		groupid="0"
+	}
+	npoints="2"
+	point[0] {
+		x="5"
+		y="397"
+	}
+	point[1] {
+		x="697"
+		y="397"
+	}
+	orgpoint[0] {
+		x="0"
+		y="-1"
+	}
+	orgpoint[1] {
+		x="1000"
+		y="-1"
+	}
+}
+"text" {
+	object {
+		x="23"
+		y="417"
+		width="442"
+		height="16"
+		groupid="0"
+	}
+	textix="Gain for the trefoil Cos rotation matrix :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="23"
+		y="450"
+		width="442"
+		height="16"
+		groupid="0"
+	}
+	textix="Gain for the trefoil Sin rotation matrix :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="50"
+		y="483"
+		width="442"
+		height="16"
+		groupid="0"
+	}
+	textix="Offset trefoil Cos on the measurement :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="49"
+		y="516"
+		width="442"
+		height="16"
+		groupid="0"
+	}
+	textix="Offset trefoil Sin on the measurement :"
 	align="horiz. left"
 }
 "message button" {
@@ -1105,6 +1175,186 @@ display {
 	pressed_label=""
 	press_msg="1"
 	release_msg=""
+}
+"text entry" {
+	object {
+		x="482"
+		y="415"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModTref.H"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModTref.VAL"
+		rulechan[1] = "$(top)detSigInitModTref.VAL"
+		rulechan[2] = "$(top)detSigInitModTref.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModTref"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="482"
+		y="448"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModTref.I"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModTref.VAL"
+		rulechan[1] = "$(top)detSigInitModTref.VAL"
+		rulechan[2] = "$(top)detSigInitModTref.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModTref"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="483"
+		y="480"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModTref.J"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModTref.VAL"
+		rulechan[1] = "$(top)detSigInitModTref.VAL"
+		rulechan[2] = "$(top)detSigInitModTref.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModTref"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
+}
+"text entry" {
+	object {
+		x="482"
+		y="513"
+		width="110"
+		height="19"
+		groupid="0"
+	}
+	control {
+		chan="$(top)detSigInitModTref.K"
+		clr="0"
+		bclr="6"
+		label="none"
+		clrmod="rule"
+		rulechan[0] = "$(top)detSigInitModTref.VAL"
+		rulechan[1] = "$(top)detSigInitModTref.VAL"
+		rulechan[2] = "$(top)detSigInitModTref.VAL"
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule="acceptReject"
+		clrargs="C=$(top)detSigInitModTref"
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	format="decimal"
 }
 "kill display" {
 	object {

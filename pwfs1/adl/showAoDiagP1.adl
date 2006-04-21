@@ -6,11 +6,11 @@ display {
 	majv="2"
 	mnrv="4"
 	ndyng="2"
-	npc="220"
-	nstr="120"
+	npc="156"
+	nstr="125"
 	ndynamic="154"
 	nplot="0"
-	nrd="0"
+	nrd="3"
 	nes="0"
 	nkd="1"
 	npd="0"
@@ -23,23 +23,23 @@ display {
 	}
 	clr="1"
 	bclr="13"
-	nwords_dspy="16292"
+	nwords_dspy="15806"
 	nwords_sta="264"
 	nwords_cmap="120"
 	nwords_crules="922"
-	odyng="6008"
-	osta="5744"
-	odynamic="6116"
-	oplot="16280"
-	ord="16280"
-	oes="16280"
-	okd="16280"
-	opd="16292"
-	opo="16292"
+	odyng="5042"
+	osta="4778"
+	odynamic="5150"
+	oplot="15314"
+	ord="15314"
+	oes="15794"
+	okd="15794"
+	opd="15806"
+	opo="15806"
 	opc="68"
-	ostr="3252"
-	ocmap="4702"
-	ocrules="4822"
+	ostr="2228"
+	ocmap="3736"
+	ocrules="3856"
 	style="solid"
 	fill="outline"
 	width="0"
@@ -1441,7 +1441,7 @@ display {
 }
 "text" {
 	object {
-		x="324"
+		x="306"
 		y="727"
 		width="179"
 		height="20"
@@ -1452,7 +1452,7 @@ display {
 }
 "text" {
 	object {
-		x="635"
+		x="617"
 		y="729"
 		width="37"
 		height="20"
@@ -1507,8 +1507,8 @@ display {
 }
 "text" {
 	object {
-		x="317"
-		y="763"
+		x="307"
+		y="764"
 		width="85"
 		height="20"
 		groupid="0"
@@ -1518,8 +1518,8 @@ display {
 }
 "text" {
 	object {
-		x="545"
-		y="763"
+		x="505"
+		y="764"
 		width="98"
 		height="20"
 		groupid="0"
@@ -1529,8 +1529,8 @@ display {
 }
 "text" {
 	object {
-		x="317"
-		y="794"
+		x="307"
+		y="795"
 		width="92"
 		height="20"
 		groupid="0"
@@ -1540,8 +1540,8 @@ display {
 }
 "text" {
 	object {
-		x="545"
-		y="794"
+		x="505"
+		y="795"
 		width="98"
 		height="20"
 		groupid="0"
@@ -1551,8 +1551,8 @@ display {
 }
 "text" {
 	object {
-		x="317"
-		y="827"
+		x="307"
+		y="828"
 		width="92"
 		height="20"
 		groupid="0"
@@ -1562,8 +1562,8 @@ display {
 }
 "text" {
 	object {
-		x="545"
-		y="827"
+		x="505"
+		y="828"
 		width="98"
 		height="20"
 		groupid="0"
@@ -1573,8 +1573,8 @@ display {
 }
 "text" {
 	object {
-		x="17"
-		y="798"
+		x="32"
+		y="797"
 		width="62"
 		height="20"
 		groupid="0"
@@ -1663,8 +1663,8 @@ display {
 }
 "oval" {
 	object {
-		x="75"
-		y="796"
+		x="90"
+		y="795"
 		width="20"
 		height="21"
 		groupid="0"
@@ -5030,7 +5030,7 @@ display {
 }
 "text update" {
 	object {
-		x="505"
+		x="487"
 		y="726"
 		width="127"
 		height="23"
@@ -6778,8 +6778,8 @@ display {
 }
 "text update" {
 	object {
-		x="408"
-		y="761"
+		x="398"
+		y="762"
 		width="94"
 		height="25"
 		groupid="0"
@@ -6824,8 +6824,8 @@ display {
 }
 "text update" {
 	object {
-		x="637"
-		y="761"
+		x="597"
+		y="762"
 		width="95"
 		height="24"
 		groupid="0"
@@ -6870,8 +6870,8 @@ display {
 }
 "text update" {
 	object {
-		x="408"
-		y="792"
+		x="398"
+		y="793"
 		width="94"
 		height="25"
 		groupid="0"
@@ -6916,8 +6916,8 @@ display {
 }
 "text update" {
 	object {
-		x="637"
-		y="792"
+		x="597"
+		y="793"
 		width="95"
 		height="24"
 		groupid="0"
@@ -6962,8 +6962,8 @@ display {
 }
 "text update" {
 	object {
-		x="408"
-		y="825"
+		x="398"
+		y="826"
 		width="94"
 		height="25"
 		groupid="0"
@@ -7008,8 +7008,8 @@ display {
 }
 "text update" {
 	object {
-		x="637"
-		y="825"
+		x="597"
+		y="826"
 		width="95"
 		height="24"
 		groupid="0"
@@ -8710,9 +8710,9 @@ display {
 }
 "text update" {
 	object {
-		x="17"
+		x="35"
 		y="825"
-		width="279"
+		width="261"
 		height="21"
 		groupid="0"
 	}
@@ -8753,6 +8753,408 @@ display {
 	}
 	align="horiz. left"
 	format="decimal"
+}
+"related display" {
+	object {
+		x="699"
+		y="762"
+		width="38"
+		height="26"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="More"
+		name="showAstigP1.dl"
+		args="top=$(top), sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"related display" {
+	object {
+		x="699"
+		y="790"
+		width="38"
+		height="26"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="More"
+		name="showTrefoilP1.dl"
+		args="top=$(top), sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
+}
+"related display" {
+	object {
+		x="698"
+		y="822"
+		width="38"
+		height="26"
+		groupid="0"
+	}
+	selfkill="off"
+	display[0] {
+		label="More"
+		name="showComaP1.dl"
+		args="top=$(top), sensor=$(sensor)"
+	}
+	display[1] {
+		label=""
+		name=""
+		args=""
+	}
+	display[2] {
+		label=""
+		name=""
+		args=""
+	}
+	display[3] {
+		label=""
+		name=""
+		args=""
+	}
+	display[4] {
+		label=""
+		name=""
+		args=""
+	}
+	display[5] {
+		label=""
+		name=""
+		args=""
+	}
+	display[6] {
+		label=""
+		name=""
+		args=""
+	}
+	display[7] {
+		label=""
+		name=""
+		args=""
+	}
+	display[8] {
+		label=""
+		name=""
+		args=""
+	}
+	display[9] {
+		label=""
+		name=""
+		args=""
+	}
+	display[10] {
+		label=""
+		name=""
+		args=""
+	}
+	display[11] {
+		label=""
+		name=""
+		args=""
+	}
+	display[12] {
+		label=""
+		name=""
+		args=""
+	}
+	display[13] {
+		label=""
+		name=""
+		args=""
+	}
+	display[14] {
+		label=""
+		name=""
+		args=""
+	}
+	display[15] {
+		label=""
+		name=""
+		args=""
+	}
+	display[16] {
+		label=""
+		name=""
+		args=""
+	}
+	display[17] {
+		label=""
+		name=""
+		args=""
+	}
+	display[18] {
+		label=""
+		name=""
+		args=""
+	}
+	display[19] {
+		label=""
+		name=""
+		args=""
+	}
+	display[20] {
+		label=""
+		name=""
+		args=""
+	}
+	display[21] {
+		label=""
+		name=""
+		args=""
+	}
+	display[22] {
+		label=""
+		name=""
+		args=""
+	}
+	display[23] {
+		label=""
+		name=""
+		args=""
+	}
+	clr="1"
+	bclr="13"
+	menu_title=""
+	decorate="none"
 }
 "kill display" {
 	object {

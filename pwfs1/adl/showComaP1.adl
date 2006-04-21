@@ -1,0 +1,1855 @@
+file {
+	name="showComaP1.dl"
+}
+display {
+	magic="305419896"
+	majv="2"
+	mnrv="4"
+	ndyng="0"
+	npc="17"
+	nstr="61"
+	ndynamic="8"
+	nplot="0"
+	nrd="0"
+	nes="0"
+	nkd="1"
+	npd="0"
+	npo="0"
+	object {
+		x="328"
+		y="298"
+		width="758"
+		height="295"
+	}
+	clr="1"
+	bclr="13"
+	nwords_dspy="2506"
+	nwords_sta="144"
+	nwords_cmap="120"
+	nwords_crules="922"
+	odyng="1966"
+	osta="1822"
+	odynamic="1966"
+	oplot="2494"
+	ord="2494"
+	oes="2494"
+	okd="2494"
+	opd="2506"
+	opo="2506"
+	opc="68"
+	ostr="264"
+	ocmap="780"
+	ocrules="900"
+	style="solid"
+	fill="outline"
+	width="0"
+	clrmod="static"
+	vismod="static"
+	precision="-1"
+	clrrule="alarm"
+	pv=""
+	cmap=""
+	pixwid="1280"
+	pixht="1024"
+	mmwid="361"
+	mmht="289"
+}
+"<<color map>>" {
+	ncolors="29"
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="0"
+		b="0"
+		inten="255"
+		blink="on"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="0"
+		inten="255"
+		blink="on"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="0"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="191"
+		g="191"
+		b="191"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="193"
+		g="156"
+		b="128"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="138"
+		g="138"
+		b="138"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="205"
+		g="132"
+		b="64"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="255"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="128"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="218"
+		b="185"
+		inten="251"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="255"
+		blink="on"
+	}
+	dl_color {
+		r="131"
+		g="112"
+		b="255"
+		inten="255"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="191"
+		g="191"
+		b="191"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="0"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="0"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="255"
+		b="0"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="255"
+		g="0"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+	dl_color {
+		r="0"
+		g="255"
+		b="255"
+		inten="0"
+		blink="off"
+	}
+}
+"<<color rules>>" {
+	nrules="9"
+	dl_color_rule {
+		name="alarm"
+		info[0] {
+			chan="$(C).SEVR"
+			value="MAJOR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[1] {
+			chan="$(C).SEVR"
+			value="MINOR"
+			connector="use"
+			comparator="equals"
+			clr="3"
+		}
+		info[2] {
+			chan="$(C).SEVR"
+			value="INVALID"
+			connector="use"
+			comparator="equals"
+			clr="14"
+		}
+		info[3] {
+			chan="$(C).SEVR"
+			value="NO_ALARM"
+			connector="use"
+			comparator="equals"
+			clr="4"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="equals"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="health"
+		info[0] {
+			chan="$(C).VAL"
+			value="BAD"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="WARNING"
+			connector="use"
+			comparator="equals"
+			clr="3"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="GOOD"
+			connector="use"
+			comparator="equals"
+			clr="4"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="limit"
+		info[0] {
+			chan="$(C).VAL"
+			value="$(L)"
+			connector="use"
+			comparator="less than"
+			clr="2"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="$(H)"
+			connector="use"
+			comparator="greater than"
+			clr="2"
+		}
+		info[2] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="flashifbusy"
+		info[0] {
+			chan="$(C).VAL"
+			value="UNAVAILABLE"
+			connector="use"
+			comparator="equals"
+			clr="11"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="ERR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="BUSY"
+			connector="use"
+			comparator="equals"
+			clr="14"
+		}
+		info[3] {
+			chan="$(C).VAL"
+			value="PAUSED"
+			connector="use"
+			comparator="equals"
+			clr="15"
+		}
+		info[4] {
+			chan="$(C).VAL"
+			value="IDLE"
+			connector="use"
+			comparator="equals"
+			clr="16"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="greyifbusy"
+		info[0] {
+			chan="$(C).VAL"
+			value="UNAVAILABLE"
+			connector="use"
+			comparator="equals"
+			clr="11"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="ERR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="BUSY"
+			connector="use"
+			comparator="equals"
+			clr="18"
+		}
+		info[3] {
+			chan="$(C).VAL"
+			value="PAUSED"
+			connector="use"
+			comparator="equals"
+			clr="15"
+		}
+		info[4] {
+			chan="$(C).VAL"
+			value="IDLE"
+			connector="use"
+			comparator="equals"
+			clr="16"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="greyifnotbusy"
+		info[0] {
+			chan="$(C).VAL"
+			value="UNAVAILABLE"
+			connector="use"
+			comparator="equals"
+			clr="11"
+		}
+		info[1] {
+			chan="$(C).VAL"
+			value="ERR"
+			connector="use"
+			comparator="equals"
+			clr="2"
+		}
+		info[2] {
+			chan="$(C).VAL"
+			value="BUSY"
+			connector="use"
+			comparator="equals"
+			clr="0"
+		}
+		info[3] {
+			chan="$(C).VAL"
+			value="PAUSED"
+			connector="use"
+			comparator="equals"
+			clr="15"
+		}
+		info[4] {
+			chan="$(C).VAL"
+			value="IDLE"
+			connector="use"
+			comparator="equals"
+			clr="18"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="wfs"
+		info[0] {
+			chan="$(C)"
+			value="0"
+			connector="use"
+			comparator="equals"
+			clr="4"
+		}
+		info[1] {
+			chan="$(C)"
+			value="32767"
+			connector="use"
+			comparator="equals"
+			clr="3"
+		}
+		info[2] {
+			chan="$(C)"
+			value="65536"
+			connector="use"
+			comparator="equals"
+			clr="23"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="17"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="subap"
+		info[0] {
+			chan="$(C)"
+			value="-99.99"
+			connector="use"
+			comparator="equals"
+			clr="5"
+		}
+		info[1] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[2] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="5"
+		default_bg="18"
+	}
+	dl_color_rule {
+		name="time"
+		info[0] {
+			chan="$(C)"
+			value="-5.55e9"
+			connector="use"
+			comparator="equals"
+			clr="3"
+		}
+		info[1] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[2] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[3] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[4] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[5] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[6] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[7] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[8] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[9] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[10] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[11] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[12] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[13] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[14] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		info[15] {
+			chan=""
+			value=""
+			connector="use"
+			comparator="less than"
+			clr="1"
+		}
+		fg_enable="on"
+		bg_enable="off"
+		default_fg="24"
+		default_bg="1"
+	}
+}
+"<<basic attribute>>" {
+	attr {
+		clr="12"
+		style="solid"
+		fill="outline"
+		width="0"
+	}
+}
+"rectangle" {
+	object {
+		x="9"
+		y="49"
+		width="733"
+		height="219"
+		groupid="0"
+	}
+}
+"text" {
+	object {
+		x="11"
+		y="16"
+		width="625"
+		height="22"
+		groupid="0"
+	}
+	textix="$(sensor) - coma intermediate coefficients"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="23"
+		y="72"
+		width="179"
+		height="20"
+		groupid="0"
+	}
+	textix="Composite angle:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="334"
+		y="74"
+		width="37"
+		height="20"
+		groupid="0"
+	}
+	textix="deg"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="33"
+		y="130"
+		width="189"
+		height="20"
+		groupid="0"
+	}
+	textix="comaX:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="406"
+		y="129"
+		width="200"
+		height="20"
+		groupid="0"
+	}
+	textix="comaY :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="491"
+		y="75"
+		width="82"
+		height="20"
+		groupid="0"
+	}
+	textix="Theta:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="695"
+		y="76"
+		width="37"
+		height="20"
+		groupid="0"
+	}
+	textix="rad"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="31"
+		y="210"
+		width="189"
+		height="20"
+		groupid="0"
+	}
+	textix="Model comaX:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="403"
+		y="209"
+		width="200"
+		height="20"
+		groupid="0"
+	}
+	textix="Model comaY:"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="32"
+		y="166"
+		width="189"
+		height="20"
+		groupid="0"
+	}
+	textix="comaX - mX :"
+	align="horiz. left"
+}
+"text" {
+	object {
+		x="404"
+		y="166"
+		width="200"
+		height="20"
+		groupid="0"
+	}
+	textix="comaY - mY :"
+	align="horiz. left"
+}
+"text update" {
+	object {
+		x="204"
+		y="71"
+		width="127"
+		height="23"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoZero.VALF"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="221"
+		y="124"
+		width="94"
+		height="25"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoTemp.VALH"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="610"
+		y="127"
+		width="95"
+		height="24"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoTemp.VALI"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="565"
+		y="73"
+		width="127"
+		height="23"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoTemp.VALA"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="220"
+		y="206"
+		width="94"
+		height="25"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoZero.VALK"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="219"
+		y="161"
+		width="94"
+		height="25"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoTemp.VALJ"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="612"
+		y="163"
+		width="95"
+		height="24"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoTemp.VALK"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"text update" {
+	object {
+		x="614"
+		y="208"
+		width="95"
+		height="24"
+		groupid="0"
+	}
+	monitor {
+		chan="$(top)aoZero.VALL"
+		clr="0"
+		bclr="7"
+		label="none"
+		clrmod="static"
+		rulechan[0] = ""
+		rulechan[1] = ""
+		rulechan[2] = ""
+		rulechan[3] = ""
+		rulechan[4] = ""
+		rulechan[5] = ""
+		rulechan[6] = ""
+		rulechan[7] = ""
+		rulechan[8] = ""
+		rulechan[9] = ""
+		rulechan[10] = ""
+		rulechan[11] = ""
+		rulechan[12] = ""
+		rulechan[13] = ""
+		rulechan[14] = ""
+		rulechan[15] = ""
+		clrrule=""
+		clrargs=""
+		rulecolorbg="1"
+		rulecolorfg="1"
+		hdl="0"
+		ldl="0"
+		prec="-1"
+		newunits=""
+		units="none"
+		decorate="none"
+		convertFunc=""
+		convertParams=""
+	}
+	align="horiz. left"
+	format="decimal"
+}
+"kill display" {
+	object {
+		x="671"
+		y="14"
+		width="70"
+		height="23"
+		groupid="0"
+	}
+	label="EXIT"
+	clr="1"
+	bclr="9"
+	decorate="none"
+}
