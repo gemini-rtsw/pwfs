@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.38 2006-01-10 19:21:53 gemvx Exp $"};
+   "$Id: detControl.c,v 1.39 2006-04-21 21:28:33 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -1609,6 +1609,10 @@ STATUS   detControl
          trefoilModel.pp = tempTrefModel.pp;
          trefoilModel.d = tempTrefModel.d;
          trefoilModel.applyModel = tempTrefModel.applyModel;
+         trefoilModel.gainCos = tempTrefModel.gainCos;
+         trefoilModel.gainSin = tempTrefModel.gainSin;
+         trefoilModel.offsetTrefCos = tempTrefModel.offsetTrefCos;
+         trefoilModel.offsetTrefSin = tempTrefModel.offsetTrefSin;
 
          semGive (accessTrefoilModel);
       }
@@ -1626,7 +1630,10 @@ STATUS   detControl
          comaModel.pp = tempComaModel.pp;
          comaModel.d = tempComaModel.d;
          comaModel.applyModel = tempComaModel.applyModel;
-
+         comaModel.gainX = tempComaModel.gainX;
+         comaModel.gainY = tempComaModel.gainY;
+         comaModel.offsetComaX = tempComaModel.offsetComaX;
+         comaModel.offsetComaY = tempComaModel.offsetComaY;
          semGive (accessComaModel);
       }
 
@@ -8182,6 +8189,10 @@ uint32 detInit
          trefoilModel.pp = tempTrefModel.pp;
          trefoilModel.d = tempTrefModel.d;
          trefoilModel.applyModel = tempTrefModel.applyModel;
+         trefoilModel.gainCos = tempTrefModel.gainCos;
+         trefoilModel.gainSin = tempTrefModel.gainSin;
+         trefoilModel.offsetTrefCos = tempTrefModel.offsetTrefCos;
+         trefoilModel.offsetTrefSin = tempTrefModel.offsetTrefSin;
 
          semGive (accessTrefoilModel);
       }
@@ -8199,7 +8210,10 @@ uint32 detInit
          comaModel.pp = tempComaModel.pp;
          comaModel.d = tempComaModel.d;
          comaModel.applyModel = tempComaModel.applyModel;
-
+         comaModel.gainX = tempComaModel.gainX;
+         comaModel.gainY = tempComaModel.gainY;
+         comaModel.offsetComaX = tempComaModel.offsetComaX;
+         comaModel.offsetComaY = tempComaModel.offsetComaY;
          semGive (accessComaModel);
       }
 
@@ -21828,6 +21842,10 @@ uint32 detSigInitModTref
    double       pp;
    double       d;
    long         apply;
+   double       gainCos;
+   double       gainSin;
+   double       offsetCos;
+   double       offsetSin;
 
 
    /*
@@ -21867,6 +21885,10 @@ uint32 detSigInitModTref
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&pp);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&d);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&apply);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&gainCos);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&gainSin);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *)&offsetCos);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&offsetSin);
 
    /*
     * Update the trefoilModel structure
@@ -21889,7 +21911,10 @@ uint32 detSigInitModTref
       trefoilModel.pp = pp;
       trefoilModel.d = d;
       trefoilModel.applyModel = apply;
-
+      trefoilModel.gainCos = gainCos;
+      trefoilModel.gainSin = gainSin;
+      trefoilModel.offsetTrefCos = offsetCos;
+      trefoilModel.offsetTrefSin = offsetSin;
       semGive (accessTrefoilModel);
    }
 
@@ -21951,6 +21976,10 @@ uint32 detSigInitModComa
    double       pp;
    double       d;
    long         apply;
+   double       gainX;
+   double       gainY;
+   double       offsetX;
+   double       offsetY;
 
 
    /*
@@ -21990,6 +22019,10 @@ uint32 detSigInitModComa
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 4, (char *)&pp);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 5, (char *)&d);
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 6, (char *)&apply);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 7, (char *)&gainX);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 8, (char *)&gainY);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 9, (char *)&offsetX);
+   EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 10, (char *)&offsetY);
 
    /*
     * Update the comaModel structure
@@ -22012,7 +22045,10 @@ uint32 detSigInitModComa
       comaModel.pp = pp;
       comaModel.d = d;
       comaModel.applyModel = apply;
-
+      comaModel.gainX = gainX;
+      comaModel.gainY = gainY;
+      comaModel.offsetComaX = offsetX;
+      comaModel.offsetComaY = offsetY;
       semGive (accessComaModel);
    }
 
@@ -22274,7 +22310,10 @@ uint32 detZpModShow
       tempTrefModel.pp = trefoilModel.pp;
       tempTrefModel.d = trefoilModel.d;
       tempTrefModel.applyModel = trefoilModel.applyModel;
-
+      tempTrefModel.gainCos = trefoilModel.gainCos;
+      tempTrefModel.gainSin = trefoilModel.gainSin;
+      tempTrefModel.offsetTrefCos = trefoilModel.offsetTrefCos;
+      tempTrefModel.offsetTrefSin = trefoilModel.offsetTrefSin;
       semGive (accessTrefoilModel);
    }
 
@@ -22290,6 +22329,12 @@ uint32 detZpModShow
 
    printf ("Trefoil model applied : %s\n\n",
            (tempTrefModel.applyModel ? "TRUE" : "FALSE") );
+
+   printf ( "Trefoil Cos gain: %f, Trefoil Sin gain: %f\n" ,
+            (float)tempTrefModel.gainCos, (float)tempTrefModel.gainSin );
+   printf ( "Trefoil Cos offset: %f, Trefoil Sin offset: %f\n\n" ,
+            (float)tempTrefModel.offsetTrefCos, (float)tempTrefModel.offsetTrefSin );
+
 
    /*
     * Show the comaModel structure
@@ -22312,7 +22357,10 @@ uint32 detZpModShow
       tempComaModel.pp = comaModel.pp;
       tempComaModel.d = comaModel.d;
       tempComaModel.applyModel = comaModel.applyModel;
-
+      tempComaModel.gainX = comaModel.gainX;
+      tempComaModel.gainY = comaModel.gainY;
+      tempComaModel.offsetComaX = comaModel.offsetComaX;
+      tempComaModel.offsetComaY = comaModel.offsetComaY;
       semGive (accessComaModel);
    }
 
@@ -22328,6 +22376,12 @@ uint32 detZpModShow
 
    printf ("Coma model applied : %s\n\n",
            (tempComaModel.applyModel ? "TRUE" : "FALSE") );
+
+   printf ( "Coma X gain: %f, Coma Y gain: %f\n" ,
+            (float)tempComaModel.gainX, (float)tempComaModel.gainY);
+   printf ( "Coma X offset: %f, Coma Y offset: %f\n\n" ,
+            (float)tempComaModel.offsetComaX, (float)tempComaModel.offsetComaY );
+
 
    /*
     * Show the focusModel structure
@@ -22529,6 +22583,10 @@ STATUS detInitSigInitModTref
    double b;
    double pp;
    double d;
+   double gainCos;
+   double gainSin;
+   double offsetCos;
+   double offsetSin;
    int apply;
 
    /* Read default parameters from par file */
@@ -22546,7 +22604,7 @@ STATUS detInitSigInitModTref
       strcat ( modInitFileName , defFileName ) ;
 
       if ( aoModTrefFileRead ( modInitFileName, &a, &p, &c, &b, &pp, 
-                               &d, &apply ) == ERROR )
+                               &d, &gainCos, &gainSin, &offsetCos, &offsetSin, &apply ) == ERROR )
       {
          ERROR_LOG ("Failed to read model file parameters\n");
          return (ERROR);
@@ -22559,6 +22617,10 @@ STATUS detInitSigInitModTref
       *(double *)pgsub->vale = pp;
       *(double *)pgsub->valf = d;
       *(long *)pgsub->valg = apply;
+      *(double *)pgsub->valh = gainCos;
+      *(double *)pgsub->vali = gainSin;
+      *(double *)pgsub->valj = offsetCos;
+      *(double *)pgsub->valk = offsetSin;
    }
 
    return (OK) ;
@@ -22612,6 +22674,10 @@ STATUS detInitSigInitModComa
    double b;
    double pp;
    double d;
+   double gainX;
+   double gainY;
+   double offsetX;
+   double offsetY;
    int apply;
 
    /* Read default parameters from par file */
@@ -22629,7 +22695,7 @@ STATUS detInitSigInitModComa
       strcat ( modInitFileName , defFileName ) ;
 
       if ( aoModComaFileRead ( modInitFileName, &a, &p, &c, &b, &pp, 
-                               &d, &apply ) == ERROR )
+                               &d, &gainX, &gainY, &offsetX, &offsetY, &apply ) == ERROR )
       {
          ERROR_LOG ("Failed to read model file parameters\n");
          return (ERROR);
@@ -22642,6 +22708,10 @@ STATUS detInitSigInitModComa
       *(double *)pgsub->vale = pp;
       *(double *)pgsub->valf = d;
       *(long *)pgsub->valg = apply;
+      *(double *)pgsub->valh = gainX;
+      *(double *)pgsub->vali = gainY;
+      *(double *)pgsub->valj = offsetX;
+      *(double *)pgsub->valk = offsetY;
    }
 
    return (OK) ;

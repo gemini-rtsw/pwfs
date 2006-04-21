@@ -18,7 +18,7 @@ int $(top)$(wfs)initSigModeSeq.O = 1 ;
 int $(top)$(wfs)initSigModeSeq.P = 1 ;
 int $(top)$(wfs)initSigModeSeq.Q = 1 ;
 double $(top)$(wfs)initSigModeSeq.R = 15.0 ;
-double $(top)$(wfs)initSigModeSeq.S = 2.5 ;
+double $(top)$(wfs)initSigModeSeq.S = 3.5 ;
 int $(top)$(wfs)initSigModeSeq.T = 1 ;
 };
 
@@ -31,7 +31,7 @@ int $(top)$(wfs)initSigModeSeqDark.A = 100 ;
 string $(top)$(wfs)initSigModeSeqDark.B = "./data" ;
 string $(top)$(wfs)initSigModeSeqDark.C = "coadd.fits";
 int $(top)$(wfs)initSigModeSeqDark.D = 100 ;
-double $(top)$(wfs)initSigModeSeqDark.E = 2.5 ;
+double $(top)$(wfs)initSigModeSeqDark.E = 3.5 ;
 };
 
 #

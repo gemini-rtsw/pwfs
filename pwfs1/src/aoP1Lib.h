@@ -778,6 +778,11 @@ typedef struct
    int      applyModel;                /* Apply the trefoil zero point model  */
                                        /* TRUE|FALSE                          */
 
+   double   gainCos;                     
+   double   gainSin;                   
+   double   offsetTrefCos;            
+   double   offsetTrefSin; 
+
 } TREF_ZP_MODEL_ID_STRUCT, *TREF_ZP_MODEL_ID;
 
 /************************* Structure for zero point model for coma off axis ***/
@@ -795,6 +800,10 @@ typedef struct
    double   comaY;                     /* Zero point model for comaY          */
    int      applyModel;                /* Apply the coma zero point model     */
                                        /* TRUE|FALSE                          */
+   double   gainX;                     
+   double   gainY;                   
+   double   offsetComaX;            
+   double   offsetComaY; 
 
 } COMA_ZP_MODEL_ID_STRUCT, *COMA_ZP_MODEL_ID;
 
@@ -915,10 +924,12 @@ STATUS aoModAstFileRead (char * pInitFileName, double * pA1, double * pA2,
                          double * pOffset0, double * pOffset45, int * pApply);
 STATUS aoModTrefFileRead (char * pInitFileName, double * pA, double * pP,
                           double * pC, double * pB, double * pPp, double * pD,
-                          int * pApply);
+                          double * pGainCos, double * pGainSin,
+                          double * pOffsetCos, double * pOffsetSin, int * pApply);
 STATUS aoModComaFileRead (char * pInitFileName, double * pA, double * pP,
                           double * pC, double * pB, double * pPp,
-                          double * pD, int * pApply);
+                          double * pD, double * pGainX, double * pGainY,
+                          double * pOffsetX, double * pOffsetY, int * pApply);
 STATUS aoModFocFileRead (char * pInitFileName, double * pA1, double * pP1,
                          double * pA2, double * pP2, double * pC,
                          int * pApply);

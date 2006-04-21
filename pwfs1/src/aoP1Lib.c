@@ -7433,6 +7433,75 @@ STATUS aoModInit (
 
    if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
    {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModInit(): %s\n", comment );
+#endif   
+
+   /* Read the values for the gain for trefoil model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                &(trefModelId->gainCos), 
+                &(trefModelId->gainSin)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read gains for trefoil model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModInit(): trefoil gainCos: %f\n", (float)trefModelId->gainCos );
+   printf ( "aoModInit(): trefoil gainSin: %f\n", (float)trefModelId->gainSin );
+   /*#endif*/
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModInit(): %s\n", comment );
+#endif   
+
+   /* Read the values for the offsets for trefoil model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                &(trefModelId->offsetTrefCos), 
+                &(trefModelId->offsetTrefSin)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read offsets for trefoil model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModInit(): trefoil offsetCos: %f\n", 
+            (float)trefModelId->offsetTrefCos );
+   printf ( "aoModInit(): trefoil offsetSin: %f\n", 
+            (float)trefModelId->offsetTrefSin );
+   /*#endif*/
+
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
       ERROR_SET1 ( 0,
       "Failed to read the next line of comments from the model init file %s",
       ERROR_LOG_SAVE, pInitFileName );
@@ -7533,6 +7602,74 @@ STATUS aoModInit (
    printf ( "aoModInit(): coma Y pp: %f\n", (float)comaModelId->pp );
    printf ( "aoModInit(): coma Y d: %f\n", (float)comaModelId->d );
 #endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModInit(): %s\n", comment );
+#endif   
+
+   /* Read the values for the gain for coma model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                &(comaModelId->gainX), 
+                &(comaModelId->gainY)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read gains for coma model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModInit(): coma gainX: %f\n", (float)comaModelId->gainX );
+   printf ( "aoModInit(): coma gainY: %f\n", (float)comaModelId->gainY );
+   /*#endif*/
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+#ifdef DEBUG
+   printf ( "aoModInit(): %s\n", comment );
+#endif   
+
+   /* Read the values for the offsets for coma model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                &(comaModelId->offsetComaX), 
+                &(comaModelId->offsetComaY)) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read offsets for coma model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModInit(): coma offsetX: %f\n", 
+            (float)comaModelId->offsetComaX );
+   printf ( "aoModInit(): coma offsetY: %f\n", 
+            (float)comaModelId->offsetComaY );
+   /*#endif*/
 
    /* Skip the next line of comment */
 
@@ -7954,6 +8091,10 @@ STATUS aoModAstFileRead (
  *   (<) pB            (double *) b
  *   (<) pPp           (double *) pp
  *   (<) pD            (double *) d
+ *   (<) pGainCos      (double *) gainCos
+ *   (<) pGainSin      (double *) gainSin
+ *   (<) pOffsetCos    (double *) offsetTrefCos
+ *   (<) pOffsetSin    (double *) offsetTrefSin
  *   (<) pApply        (int *) applyModel
  *
  *   FUNCTION VALUE:
@@ -7989,6 +8130,10 @@ STATUS aoModTrefFileRead (
    double * pB,
    double * pPp,
    double * pD,
+   double * pGainCos,
+   double * pGainSin,
+   double * pOffsetCos,
+   double * pOffsetSin,
    int * pApply
    )
 {
@@ -8094,6 +8239,74 @@ STATUS aoModTrefFileRead (
    printf ( "aoModTrefFileRead(): sin tref d: %f\n", (float)*pD );
 #endif
 
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModTrefFileRead(): %s\n", comment );
+   /*#endif*/   
+
+   /* Read the values for the gains for Trefoil model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                pGainCos, pGainSin ) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read gains for Trefol model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModTrefFileRead(): Trefol gainCos: %f\n", (float)*pGainCos );
+   printf ( "aoModTrefFileRead(): Trefol gainSin: %f\n", (float)*pGainSin );
+   /*#endif*/
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModTrefFileRead(): %s\n", comment );
+   /*#endif   */
+
+   /* Read the values for the offsets for Trefoil model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                pOffsetCos, pOffsetSin) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read offsets for Trefol model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModTrefFileRead(): Trefol offsetCos: %f\n", 
+            (float)*pOffsetCos );
+   printf ( "aoModTrefFileRead(): Trefol offsetSin: %f\n", 
+            (float)*pOffsetSin );
+   /*#endif*/
+
+
    /* Skip the next line of comment */
 
    if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
@@ -8149,6 +8362,10 @@ STATUS aoModTrefFileRead (
  *   (<) pB            (double *) b
  *   (<) pPp           (double *) pp
  *   (<) pD            (double *) d
+ *   (<) pGainX        (double *) gainX
+ *   (<) pGainY        (double *) gainY
+ *   (<) pOffsetX      (double *) offsetComaX
+ *   (<) pOffsetY      (double *) offsetComaY
  *   (<) pApply        (int *) applyModel
  *
  *   FUNCTION VALUE:
@@ -8184,6 +8401,10 @@ STATUS aoModComaFileRead (
    double * pB,
    double * pPp,
    double * pD,
+   double * pGainX,
+   double * pGainY,
+   double * pOffsetX,
+   double * pOffsetY,
    int * pApply
    )
 {
@@ -8219,7 +8440,7 @@ STATUS aoModComaFileRead (
 
    /* Skip the next lines of comment */
 
-   for ( i = 0 ; i < 22 ; i ++ )
+   for ( i = 0 ; i < 26 ; i ++ )
    {
       if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
       {
@@ -8288,6 +8509,73 @@ STATUS aoModComaFileRead (
    printf ( "aoModComaFileRead(): coma Y pp: %f\n", (float)*pPp );
    printf ( "aoModComaFileRead(): coma Y d: %f\n", (float)*pD );
 #endif
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModComaFileRead(): %s\n", comment );
+   /*#endif*/   
+
+   /* Read the values for the gains for coma model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                pGainX, pGainY ) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read gains for Coma model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModComaFileRead(): Coma gainX: %f\n", (float)*pGainX );
+   printf ( "aoModComaFileRead(): Coma gainY: %f\n", (float)*pGainY );
+   /*#endif*/
+
+   /* Skip the next line of comment */
+
+   if ( fgets (comment, STRING_SIZE, pFile) == (char *)NULL )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read the next line of comments from the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModComaFileRead(): %s\n", comment );
+   /*#endif   */
+
+   /* Read the values for the offsets for coma model */
+
+   if ( fscanf (pFile, "%lf %lf\n", 
+                pOffsetX, pOffsetY) == EOF )
+   {
+      ERROR_SET1 ( 0, 
+      "Failed to read offsets for Coma model in the model init file %s",
+      ERROR_LOG_SAVE, pInitFileName );
+      fclose (pFile);
+      return (ERROR);
+   }
+
+   /*#ifdef DEBUG*/
+   printf ( "aoModComaFileRead(): Coma offsetX: %f\n", 
+            (float)*pOffsetX );
+   printf ( "aoModComaFileRead(): Coma offsetY: %f\n", 
+            (float)*pOffsetY );
+   /*#endif*/
+
 
    /* Skip the next line of comment */
 

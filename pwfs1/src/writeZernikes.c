@@ -202,9 +202,11 @@ wfs     *ptrPwfs1;
 double  ttfData[AO_ARRAY_SIZE+2];
 double  aoData[AO_ARRAY_SIZE+2];
 double  aoDataTcs[AO_ARRAY_SIZE+2];
+double  aoDataTemp[AO_ARRAY_SIZE+2];
 float   data[AO_ARRAY_SIZE+2];
 float   errors[AO_ARRAY_SIZE+2];
 SEM_ID  wfsLock;
+SEM_ID  wfsTempLock;
 
 WFS_VECT localCentroidsVect;
 WFS_VECT localTotalCountsVect;
@@ -489,6 +491,19 @@ long gensubToTcsInit
       }
    }
 
+  /* create semaphore to prevent multiple access to wfs Temporaldata */
+
+   if(wfsTempLock == NULL)
+   {
+      if ((wfsTempLock = 
+          semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE)) 
+          == NULL)
+      {
+             printf ("unable to create wfsTempLock sem\n");
+      }
+   }
+
+
    /* create semaphore to prevent multiple access to ao data */
 
    if(accessAoData == NULL)
@@ -596,6 +611,10 @@ long gensubToTcsInit
    trefoilModel.costref = 0.0;
    trefoilModel.sintref = 0.0;
    trefoilModel.applyModel = 0.0;
+   trefoilModel.gainCos = 1.0;
+   trefoilModel.gainSin = 1.0;
+   trefoilModel.offsetTrefCos = 0.0;
+   trefoilModel.offsetTrefSin = 0.0;
 
    /* init structure comaModel */
 
@@ -608,6 +627,10 @@ long gensubToTcsInit
    comaModel.comaX = 0.0;
    comaModel.comaY = 0.0;
    comaModel.applyModel = 0.0;
+   comaModel.gainX = 1.0;
+   comaModel.gainY = 1.0;
+   comaModel.offsetComaX = 0.0;
+   comaModel.offsetComaY = 0.0;
 
    /* init structure focusModel */
 
@@ -841,6 +864,7 @@ long gensubToTcsAo
    double zernikes[19];
    double errors[19];
 
+
    /* write array to TCS system */
 
    if(semTake(wfsLock, WFS_TIMEOUT) != OK)
@@ -855,6 +879,7 @@ long gensubToTcsAo
          zernikes[index] = aoData[index+2];
          errors[index] = aoData[index+21];
       }
+
 
       /* write whole array to valj for the TCS to pick up */
       /* but make sure that spherical and Z11-Z19 aberrations are not sent to TCS
@@ -890,6 +915,152 @@ long gensubToTcsAo
 
    return (OK);
 }
+
+/* ===================================================================== */
+/*
+ *+
+ * FUNCTION NAME:
+ * gensubTempAo
+ *
+ * INVOCATION:
+ * struct genSubRecord * pgsub
+ * long   status;
+ *
+ * long gensubTempAo(struct genSubRecord * pgsub)
+ *
+ * PARAMETERS: (">" input, "!" modified, "<" output)
+ * > genSubRecord (struct genSubRecord *)   pointer to record
+ *
+ * FUNCTION VALUE:
+ * long  Status value returned to calling routine, a non-zero value indicates
+ *       an error
+ *
+ * PURPOSE:
+ *
+ * DESCRIPTION:
+ *
+ * EXTERNAL VARIABLES:
+ * wfsTempLock    - mutex semaphore
+ * aoDataTemp     - Intermediate aoData parameters for astig/coma/trefoil
+ *
+ * PRIOR REQUIREMENTS:
+ * None
+ *
+ * DEFICIENCIES:
+ * None known.
+ *
+ * HISTORY (optional):
+ */
+
+long gensubTempAo 
+   (
+   struct genSubRecord * pgsub
+   )
+{
+   int index = 0;
+   double theta;
+   double ast0, astig0, tcsast0;
+   double ast45, astig45, tcsast45;
+   double cmX, comaX;
+   double cmY, comaY;
+   double trefCos, trefoilCos;
+   double trefSin, trefoilSin;
+
+
+   if(semTake(wfsTempLock, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access wfsLock\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      theta = aoDataTemp[index];
+
+      ast0 = aoDataTemp[index+1];
+      ast45 = aoDataTemp[index+2];
+      astig0 = aoDataTemp[index+3];
+      astig45 = aoDataTemp[index+4];
+      tcsast0 = aoDataTemp[index+5];
+      tcsast45 = aoDataTemp[index+6];
+
+      cmX = aoDataTemp[index+7];
+      cmY = aoDataTemp[index+8];
+      comaX = aoDataTemp[index+9];
+      comaY = aoDataTemp[index+10];
+
+      trefCos = aoDataTemp[index+11];
+      trefSin = aoDataTemp[index+12];
+      trefoilCos = aoDataTemp[index+13];
+      trefoilSin = aoDataTemp[index+14];
+
+
+      /* write theta to vala for display */
+
+      *(double *)pgsub->vala = theta ;
+
+      /* write ast0 to valb for display */
+  
+      *(double *)pgsub->valb = ast0 ;
+
+      /* write ast45 to valc for display */
+
+      *(double *)pgsub->valc = ast45 ;
+
+      /* write astig0=ast0-m0 to vald for display */
+  
+      *(double *)pgsub->vald = astig0 ;
+
+      /* write astig45=ast45-m45 to vale for display */
+
+      *(double *)pgsub->vale = astig45 ;
+
+      /* write tcsast0 to valf for display */
+  
+      *(double *)pgsub->valf = tcsast0 ;
+
+      /* write tcsast45 to valg for display */
+
+      *(double *)pgsub->valg = tcsast45 ;
+
+      /* write cmX to valh for display */
+
+      *(double *)pgsub->valh = cmX ;
+
+      /* write cmY to vali for display */
+
+      *(double *)pgsub->vali = cmY ;
+
+      /* write comaX to valj for display */
+
+      *(double *)pgsub->valj = comaX ;
+
+      /* write comaY to valk for display */
+
+      *(double *)pgsub->valk = comaY ;
+
+      /* write trefCos to vall for display */
+
+      *(double *)pgsub->vall = trefCos ;
+
+      /* write trefSin to valm for display */
+
+      *(double *)pgsub->valm = trefSin ;
+
+      /* write trefoilCos to valn for display */
+
+      *(double *)pgsub->valn = trefoilCos ;
+
+      /* write trefoilSin to valo for display */
+
+      *(double *)pgsub->valo = trefoilSin ;
+
+
+      semGive(wfsTempLock);
+   }
+
+   return (OK);
+}
+
 
 /* ===================================================================== */
 /*
@@ -931,6 +1102,7 @@ long gensubToTcsAo
  *
  * EXTERNAL VARIABLES:
  * wfsLock       - Global mutex semaphores
+ * wfsTempLock   - Global mutex semaphores
  *
  * PRIOR REQUIREMENTS:
  * None
@@ -960,6 +1132,7 @@ STATUS writeWfsToTcs
    )
 {
    int       i=0;
+   int       index;
    frame     *f;
    converted result;
    double    *pz;
@@ -970,11 +1143,37 @@ STATUS writeWfsToTcs
    double    posMaxThresh = (aoCtrlId->aoMaxThreshold);
    double    negMaxThresh = (aoCtrlId->aoMaxThreshold) * -1.0;
 
-   double    astig0;
-   double    astig45;
+   double    astig0=0.0;
+   double    astig45=0.0;
+
+   double    ast0 =0.0;
+   double    ast45=0.0;
+
+   double    tcsast0 =0.0;
+   double    tcsast45=0.0;
 
    double    g0;
    double    g45;
+
+   double    trefoilCos=0.0;
+   double    trefoilSin=0.0;
+
+   double    trefCos=0.0;
+   double    trefSin=0.0;
+
+   double    gCos;
+   double    gSin;
+
+   double    comaX=0.0;
+   double    comaY=0.0;
+
+   double    cmX=0.0;
+   double    cmY=0.0;
+
+   double    gX;
+   double    gY;
+
+   double    theta=0.0;
 
    double    z2AfterRot;
    double    z3AfterRot;
@@ -1069,10 +1268,19 @@ STATUS writeWfsToTcs
 
          /* astig0 and astig45: r^2 * cos(2t) and r^2 * sin(2t) */
 
+         ast0 = *(pz+3);
+         ast45 = *(pz+4);
+
          astig0 = *(pz+3) - astigModel.offsetAstig0;
          astig45 = *(pz+4) - astigModel.offsetAstig45;
+
          g0 = astigModel.gain0;
          g45 = astigModel.gain45;
+
+	 tcsast0 = (f->null[8])*1000.0;
+	 tcsast45 = (f->null[9])*1000.0;
+
+	 theta = f->theta;
 
          z5AfterRot = (g0*f->cos2Theta*(astig0) + g0*f->sin2Theta*(astig45))
                       - ((f->null[8])*1000.0)
@@ -1126,10 +1334,19 @@ STATUS writeWfsToTcs
          /* comaX and comaY: (3*r^2 - 2) * r * cos(t) and 
             (3*r^2 - 2) * r * sin(t) */
 
-         z7AfterRot = (f->cosTheta*(*(pz+5)) + f->sinTheta*(*(pz+6)))
+	 cmX = *(pz+5);
+	 cmY = *(pz+6);
+
+         comaX = *(pz+5) - comaModel.offsetComaX;
+         comaY = *(pz+6) - comaModel.offsetComaY;
+
+         gX = comaModel.gainX;
+         gY = comaModel.gainY;
+
+         z7AfterRot = (gX*f->cosTheta*(comaX) + gX*f->sinTheta*(comaY))
                       - (comaModel.comaX);
 
-         z8AfterRot = (f->cosTheta*(*(pz+6)) - f->sinTheta*(*(pz+5)))
+         z8AfterRot = (gY*f->cosTheta*(comaY) - gY*f->sinTheta*(comaX))
                       - (comaModel.comaY);
 
          if ( z7AfterRot >= posThresh )
@@ -1178,10 +1395,19 @@ STATUS writeWfsToTcs
 
          /* trefoilX and trefoilY: r^3 * cos(3t) and r^3 * sin(3t) */
 
-         z10AfterRot = (f->cos3Theta*(*(pz+8)) + f->sin3Theta*(*(pz+9)))
+	 trefCos = *(pz+8);
+	 trefSin = *(pz+9);
+
+         trefoilCos = *(pz+8) - trefoilModel.offsetTrefCos;
+         trefoilSin = *(pz+9) - trefoilModel.offsetTrefSin;
+
+         gCos = trefoilModel.gainCos;
+         gSin = trefoilModel.gainSin;
+
+         z10AfterRot = (gCos*f->cos3Theta*(trefoilCos) + gCos*f->sin3Theta*(trefoilSin))
                        - (trefoilModel.costref);
 
-         z11AfterRot = (f->cos3Theta*(*(pz+9)) - f->sin3Theta*(*(pz+8)))
+         z11AfterRot = (gSin*f->cos3Theta*(trefoilSin) - gSin*f->sin3Theta*(trefoilCos))
                        - (trefoilModel.sintref);
 
          if ( z10AfterRot >= posThresh )
@@ -1544,6 +1770,41 @@ STATUS writeWfsToTcs
 
       semGive(wfsLock);
    }
+
+
+   /* take mutex semaphore to gain access to wfs Temporal array */
+
+   if(semTake(wfsTempLock, WFS_TIMEOUT) != OK)
+   {
+      logMsg("timeout on mutex access wfsTempLock\n", 0, 0, 0, 0, 0, 0);
+      return(ERROR);
+   }
+   else
+   {
+      /* Copy intermediate values astig0 and astig45, comaX/Y and trefoil Cos/Sin */
+
+      /*index = 2*(aoCtrlId->aoModeNb) + 2;*/
+      index = 0;
+      aoDataTemp[index] = theta;
+      aoDataTemp[index+1] = ast0;
+      aoDataTemp[index+2] = ast45;
+      aoDataTemp[index+3] = astig0;
+      aoDataTemp[index+4] = astig45;
+      aoDataTemp[index+5] = tcsast0;
+      aoDataTemp[index+6] = tcsast45;
+      aoDataTemp[index+7] = cmX;
+      aoDataTemp[index+8] = cmY;
+      aoDataTemp[index+9] = comaX;
+      aoDataTemp[index+10] = comaY;
+      aoDataTemp[index+11] = trefCos;
+      aoDataTemp[index+12] = trefSin;
+      aoDataTemp[index+13] = trefoilCos;
+      aoDataTemp[index+14] = trefoilSin;
+      /* release mutex */
+
+      semGive(wfsTempLock);
+   }
+ 
 
    return(OK);
 }
