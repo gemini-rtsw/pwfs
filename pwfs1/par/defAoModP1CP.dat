@@ -1,14 +1,14 @@
 # Init file for aO zero point models
 # Astig 0 = a1*cos(X+p1) + a2*cos(2*X+p2) + a3*cos(4*X+p3) + c (double)
 # a1 a2 a3 p1 p2 p3 c
-0.0 1.5 0.0 0.0 0.0 0.0 0.0
+0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # Astig 45 = b1*sin(X+pp1) + b2*sin(2*X+pp2) + b3*sin(4*X+pp3) + d (double)
 # b1 b2 b3 pp1 pp2 pp3 d
-0.3 1.5 0.0 270.0 180.0 0.0 -0.25
+0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 # Gain for astigmatism 0 and 45 rotation matrix (double)
 1.0 1.0
 # Offset for astigmatism 0 and 45 on the measurement (double)
-0.0 0.0
+1.20 -0.12
 # Apply astigmatism model (integer)
 1
 # Cos Trefoil = a*cos(3*X+p) + c (double)
@@ -20,7 +20,7 @@
 # Gain for Cos and Sin Trefol rotation matrix (double)
 1.0 1.0
 # Offset for Cos and Sin Trefol on the measurement (double)
-0.0 0.0
+0.0 -0.13
 # Apply trefoil model (integer)
 1
 # coma X = a*cos(X+p) + c (double)
@@ -32,7 +32,7 @@
 # Gain for Coma X and Y rotation matrix (double)
 1.0 1.0
 # Offset for Coma X and Y on the measurement (double)
-0.0 0.0
+0.22 0.35
 # Apply coma model (integer) (double)
 1
 # focus = a1*cos(X+p1) + a2*cos(2*X+p2) + c
