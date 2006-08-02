@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.39 2006-04-21 21:28:33 gemvx Exp $"};
+   "$Id: detControl.c,v 1.40 2006-08-02 15:54:45 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -780,7 +780,7 @@ STATUS   detControl
    obsId->saveCbIm = FALSE;
    obsId->saveCbAoCtrl = FALSE;
    obsId->saveCbFgCtrl = FALSE;
-   obsId->sigMode = AO_MODE_NONE;
+   obsId->sigMode = AO_MODE_CLOSED_LOOP;
    obsId->dhsQlRate = 100;
    obsId->writeToRm = 1;
 
