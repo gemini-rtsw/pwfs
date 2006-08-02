@@ -546,3 +546,7 @@ Added
 3) GS P1 Optical Model updated - CR0929
 par/defAoModP1CP.dat updated 
 
+V4-9 28 JUL 2006 AAG:
+-----------------------------------------------------------
+- Changed default Processing Mode at init from "None" to "Closed Loop"
+src/detControl.c
