@@ -395,3 +395,13 @@ V4-11 28 JUL 2006 AAG:
 - Changed default Processing Mode at init from "None" to "Closed Loop"
 src/detControl.c
 
+V4-12  08 AUG 2006 AAG:
+-----------------------------------------------------------
+- JIRA IMIQ-16 : pwfs2 synchronization with CEM
+  src/pwsf2.pv
+  src/writeZernikes.c
+  src/aoP2Lib.h
+  src/aoP2Lib.c
+  src/detControl.c
+
+  

@@ -48,6 +48,8 @@
 
 #define FG_MODE_NB           3         /* Max number of FG modes to correct   */
 
+#define ACT_CEM_NB           3         /* Number of CEM actuators to monitor  */
+
 #define AO_MODE_NB           19        /* Max number of aO mode to correct    */
 
 #define MODE_NB              (FG_MODE_NB + AO_MODE_NB)
@@ -152,6 +154,8 @@ typedef double GUIDE_VECT [ 2 ];       /* only 2 information for the whole CCD*/
 typedef double FG_VECT [ FG_MODE_NB ];
 
 typedef double AO_VECT [ AO_MODE_NB ];
+
+typedef double ACT_VECT [ ACT_CEM_NB ];
 
 typedef double AO_MATRIX [ 2 * SUBAP_NB * AO_MODE_NB ];
 
@@ -654,6 +658,19 @@ typedef struct                         /* Definition of the FG control        */
 
    int          unused;                /* The structure size must be equal to */
                                        /* a number multiple of a double       */
+
+   double       cemXTilt;              /* cem status block values   */
+
+   double       cemYTilt;
+      
+   ACT_VECT     cemActuatorVect;       
+
+   int          cemChopTransition;
+
+   int          cemChopOn;
+
+   int          cemBeamPosition;
+ 
 
 } CB_FG_CTRL_RECORD_STRUCT;
 

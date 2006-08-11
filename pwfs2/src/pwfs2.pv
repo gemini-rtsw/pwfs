@@ -8,7 +8,7 @@ string $(sadtop)name = "PWFS2 DC";
 #
 # Set up version of the software 
 #
-string $(sadtop)version = "V4-11";
+string $(sadtop)version = "V4-12";
 
 #
 #set default value for inPosition SIR record

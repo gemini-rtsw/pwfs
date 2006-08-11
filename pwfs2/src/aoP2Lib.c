@@ -5281,6 +5281,13 @@ STATUS aoCbFgCtrlZero
    {
        aoCbFgCtrlId->cbFgCtrlRecord[index].time = 0.0;
        aoCbFgCtrlId->cbFgCtrlRecord[index].wfsStatus = 0;
+
+       aoCbFgCtrlId->cbFgCtrlRecord[index].cemXTilt = 0.0;
+       aoCbFgCtrlId->cbFgCtrlRecord[index].cemYTilt = 0.0;
+       aoCbFgCtrlId->cbFgCtrlRecord[index].cemChopTransition = 0;
+       aoCbFgCtrlId->cbFgCtrlRecord[index].cemChopOn = 0;
+       aoCbFgCtrlId->cbFgCtrlRecord[index].cemBeamPosition = 0;
+
        for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
        {
            aoCbFgCtrlId->cbFgCtrlRecord[index].thresholdVect[i] = 0.0;
@@ -5298,6 +5305,10 @@ STATUS aoCbFgCtrlZero
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgVectAfterRot[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgErrorsVect[i] = 0.0;
+       }
+       for ( i = 0 ; i < ACT_CEM_NB ; i ++ )
+       {
+           aoCbFgCtrlId->cbFgCtrlRecord[index].cemActuatorVect[i] = 0.0;
        }
    }
   
