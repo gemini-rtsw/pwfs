@@ -194,6 +194,7 @@ typedef struct
 frame   *ag2m2;
 frame   *ag2tcs;
 wfs     *ptrPwfs2;
+statusBlock *ptrCEM=NULL;
 double  ttfData[AO_ARRAY_SIZE+2];
 double  aoData[AO_ARRAY_SIZE+2+2]; /* add 2 data for astig0 and astig45 */
 double  aoDataTcs[AO_ARRAY_SIZE+2];
@@ -699,6 +700,12 @@ long gensubToTcsInit
       ptrPwfs2->interval = 0.0;
    }
 
+   if(ptrCEM == NULL)
+   {
+      ptrCEM = (statusBlock*)&basePtr->page1;
+   }
+
+
    return (OK);
 }
 
@@ -1037,6 +1044,12 @@ STATUS writeWfsToTcs
 
    pz = pAoVect;
    f = ag2tcs;
+
+   if ( (ptrCEM != NULL) && ((int)ptrCEM->statusWord.flags.chopOn) && (!(int)ptrCEM->chopTransition))
+   {
+     return(OK);
+   }
+
 
    if(semTake(f->access, WFS_TIMEOUT) == OK)
    {
@@ -1643,6 +1656,12 @@ STATUS writeWfsToSynchro
    f = ag2m2;
 
    pz = pFgVect;
+
+
+   if ( (ptrCEM != NULL) && ((int)ptrCEM->statusWord.flags.chopOn) && (!(int)ptrCEM->chopTransition))
+   {
+     return(OK);
+   }
 
    if(semTake(f->access, WFS_TIMEOUT) == OK)
    {

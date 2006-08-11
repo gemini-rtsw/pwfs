@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.35 2006-08-04 16:50:44 gemvx Exp $"};
+   "$Id: detControl.c,v 1.36 2006-08-11 20:16:21 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -234,6 +234,9 @@ int     readTempReadyFlag=FALSE;
 extern int sdsuFrameLost ;         /* Defined in sdsuLib.c                    */
 
 extern wfs *ptrPwfs2;              /* Pointer to the reflective memory page   */
+                                   /* of CEM defined in writeZernikes.c       */
+
+extern statusBlock *ptrCEM;        /* Pointer to the reflective memory page   */
                                    /* defined in writeZernikes.c              */
 
 extern AO_CCD_ID aoCcdIdP2;        /* Pointer to the ccd geometry structure   */
@@ -11290,6 +11293,18 @@ void detObserveEnd
 
       pFlux = pTotal + obsId->aoCcdId->subapUsedNb;
 
+
+      /* record the CEM info before processing starts */
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemXTilt = (double) ptrCEM->xTilt;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemYTilt = (double) ptrCEM->yTilt;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemActuatorVect[0] = (double) ptrCEM->actuator1;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemActuatorVect[1] = (double) ptrCEM->actuator2;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemActuatorVect[2] = (double) ptrCEM->actuator3;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopTransition = (int) ptrCEM->chopTransition;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopOn = (int) ptrCEM->statusWord.flags.chopOn;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemBeamPosition = (int) ptrCEM->beamPosition;
+      
+      
       if ( obsId->threshRealTimeFlag == FALSE )
       {
          pPrevThresh = obsId->aoCtrlId->thresholdVect;
