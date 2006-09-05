@@ -404,4 +404,7 @@ V4-12  08 AUG 2006 AAG:
   src/aoP2Lib.c
   src/detControl.c
 
-  
+ - Added timestamp of first FG record in Image CB header 
+  src/aoP2Lib.c
+  src/aoP2Lib.h
+  src/detControl.c

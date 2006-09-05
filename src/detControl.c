@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.36 2006-08-11 20:16:21 gemvx Exp $"};
+   "$Id: detControl.c,v 1.37 2006-09-05 19:20:19 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -11292,19 +11292,14 @@ void detObserveEnd
       pTime = &(obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].time);
 
       pFlux = pTotal + obsId->aoCcdId->subapUsedNb;
+ 
+	       /* record the CEM info before processing starts */
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemXTilt = ptrCEM->xTilt;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemYTilt = ptrCEM->yTilt;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopTransition = ptrCEM->chopTransition;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopOn = ptrCEM->statusWord.flags.chopOn;
+      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemBeamPosition = ptrCEM->beamPosition;
 
-
-      /* record the CEM info before processing starts */
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemXTilt = (double) ptrCEM->xTilt;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemYTilt = (double) ptrCEM->yTilt;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemActuatorVect[0] = (double) ptrCEM->actuator1;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemActuatorVect[1] = (double) ptrCEM->actuator2;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemActuatorVect[2] = (double) ptrCEM->actuator3;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopTransition = (int) ptrCEM->chopTransition;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopOn = (int) ptrCEM->statusWord.flags.chopOn;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemBeamPosition = (int) ptrCEM->beamPosition;
-      
-      
       if ( obsId->threshRealTimeFlag == FALSE )
       {
          pPrevThresh = obsId->aoCtrlId->thresholdVect;
@@ -12578,7 +12573,8 @@ void detObserveEnd
 #endif
                   }
                }
-
+          
+      
                if ( obsId->saveCbFgCtrlClosedLoop == TRUE )
                {
                   obsId->saveFgCbCounter ++;
@@ -12950,7 +12946,7 @@ void detObserveEnd
       if ( obsId->saveCbIm == TRUE )
       {
          if ( aoCbImSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
-                          obsId->aoCbImId) == ERROR )
+                          obsId->aoCbImId, obsId->aoCbFgCtrlId->cbFgCtrlRecord[0].time) == ERROR )
          {
             ERROR_LOG ("Failed to save image circular buffer\n" ) ;
          }

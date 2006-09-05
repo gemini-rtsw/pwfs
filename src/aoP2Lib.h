@@ -48,8 +48,6 @@
 
 #define FG_MODE_NB           3         /* Max number of FG modes to correct   */
 
-#define ACT_CEM_NB           3         /* Number of CEM actuators to monitor  */
-
 #define AO_MODE_NB           19        /* Max number of aO mode to correct    */
 
 #define MODE_NB              (FG_MODE_NB + AO_MODE_NB)
@@ -60,8 +58,8 @@
 #define CB_AO_CTRL_RECORD_NB 800       /* Number of records of the aO control */
                                        /* circular buffer                     */
 
-#define CB_FG_CTRL_RECORD_NB 8192      /* Number of records of the FG control */
-                                       /* circular buffer                     */
+#define CB_FG_CTRL_RECORD_NB 7857      /* Number of records of the FG control */
+                                       /* circular buffer  (it was 8192)      */
 
 #define AO_SUBAP_OFF         32767     /* Indicates there is no light on at   */
                                        /* least one subaperture               */
@@ -154,8 +152,6 @@ typedef double GUIDE_VECT [ 2 ];       /* only 2 information for the whole CCD*/
 typedef double FG_VECT [ FG_MODE_NB ];
 
 typedef double AO_VECT [ AO_MODE_NB ];
-
-typedef double ACT_VECT [ ACT_CEM_NB ];
 
 typedef double AO_MATRIX [ 2 * SUBAP_NB * AO_MODE_NB ];
 
@@ -654,22 +650,16 @@ typedef struct                         /* Definition of the FG control        */
    double       time;                  /* Time stamp of the record            */
 
    int          wfsStatus;             /* Status when computing guide values  */
-                                       /* OK or AO_SH_OFF                     */
 
-   int          unused;                /* The structure size must be equal to */
-                                       /* a number multiple of a double       */
+   float        cemXTilt;              /* Added cem status block values       */
 
-   double       cemXTilt;              /* cem status block values   */
-
-   double       cemYTilt;
+   float        cemYTilt;
       
-   ACT_VECT     cemActuatorVect;       
+   long         cemChopTransition;
 
-   int          cemChopTransition;
+   long         cemChopOn;
 
-   int          cemChopOn;
-
-   int          cemBeamPosition;
+   long         cemBeamPosition;
  
 
 } CB_FG_CTRL_RECORD_STRUCT;
@@ -714,6 +704,8 @@ typedef struct
 
    IMAGE_VECT   flatVect;              /* Vector containing the flat fielding */
                                        /* image for the whole CCD             */
+
+    double      time;                  /* Time stamp of first frame           */
 
 } AO_HEADER_CB_IM_ID_STRUCT, * AO_HEADER_CB_IM_ID;
 
@@ -968,7 +960,7 @@ STATUS aoModeCompute (float * pImage, int imageStatus, AO_CCD_ID aoCcdId,
                       AO_CTRL_ID aoCtrlId, int imageNb, int pauseNb,
                       double *pThreshVect, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbImSave (char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                   AO_CB_IM_ID aoCbImId);
+                   AO_CB_IM_ID aoCbImId, double aoCbFgRecordTime);
 STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
 STATUS aoCbAoCtrlZero (AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbFgCtrlZero (AO_CB_FG_CTRL_ID aoCbFgCtrlId);

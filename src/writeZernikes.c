@@ -1031,6 +1031,9 @@ STATUS writeWfsToTcs
    double    z19AfterRot;
    double    z20AfterRot;
 
+   /* CEM changes */
+   /*  int       cemFlag=0;*/
+
    /* check that array counts are within limits */
 
    if(aoCtrlId->aoModeNb > AO_MODE_NB)
@@ -1045,15 +1048,17 @@ STATUS writeWfsToTcs
    pz = pAoVect;
    f = ag2tcs;
 
+   /* CEM 
    if ( (ptrCEM != NULL) && ((int)ptrCEM->statusWord.flags.chopOn) && (!(int)ptrCEM->chopTransition))
    {
-     return(OK);
+     cemFlag = 1;;
    }
-
+   */
 
    if(semTake(f->access, WFS_TIMEOUT) == OK)
    {
-      if ( *pWfsStatus != AO_SH_OFF )
+     /*if (( *pWfsStatus != AO_SH_OFF ) && !cemFlag)*/
+     if ( *pWfsStatus != AO_SH_OFF )
       {
          /* first rotate the tip and tilt values to the tcs frame of reference*/
          /* tip and tilt: r * cos(t) and r * sin(t) */
@@ -1649,7 +1654,8 @@ STATUS writeWfsToSynchro
    double     *pz;
    double     averageFocus;
    double     focus;
-
+ 
+   /* CEM  int        cemFlag=0; */
 
    /* access frame */
 
@@ -1657,60 +1663,74 @@ STATUS writeWfsToSynchro
 
    pz = pFgVect;
 
-
+   /* CEM
    if ( (ptrCEM != NULL) && ((int)ptrCEM->statusWord.flags.chopOn) && (!(int)ptrCEM->chopTransition))
    {
-     return(OK);
+     cemFlag=1;
    }
+   */
 
    if(semTake(f->access, WFS_TIMEOUT) == OK)
    {
-      /* first rotate the tip and tilt values to the m2 frame of reference */
 
-      result.z2 = 
-      ( (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
-        - f->null[5] ) * aoCtrlId->fgScaleFactorVect[0];
+     /* CEM 
+     if (!cemFlag)
+       {
+     */
 
-      result.z3 = 
-      ( (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) 
-        - f->null[6] ) * aoCtrlId->fgScaleFactorVect[1];
+	 /* first rotate the tip and tilt values to the m2 frame of reference */
+	 
+	 result.z2 = 
+	   ( (f->cosTheta*(*pz) + f->sinTheta*(*(pz+1))) 
+	     - f->null[5] ) * aoCtrlId->fgScaleFactorVect[0];
 
-      focus = *(pz+2) - focusModel.focus;
+	 result.z3 = 
+	   ( (f->cosTheta*(*(pz+1)) - f->sinTheta*(*pz)) 
+	     - f->null[6] ) * aoCtrlId->fgScaleFactorVect[1];
+
+	 focus = *(pz+2) - focusModel.focus;
 
 #ifdef RUNNING_AVERAGE
-      if ( aoCtrlId->focusCounter == 0 )
-      {
-         aoCtrlId->previousFocus = focus;
-         aoCtrlId->focusCounter ++;
-      }
+	 if ( aoCtrlId->focusCounter == 0 )
+	   {
+	     aoCtrlId->previousFocus = focus;
+	     aoCtrlId->focusCounter ++;
+	   }
 
-      averageFocus = 
-      (aoCtrlId->slidingFocusGain * focus) +
-      (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus) ;
+	 averageFocus = 
+	   (aoCtrlId->slidingFocusGain * focus) +
+	   (aoCtrlId->one_slidingFocusGain * aoCtrlId->previousFocus) ;
 #else
-      averageFocus = newDfilter (focus,2);
+	 averageFocus = newDfilter (focus,2);
 #endif 
 
-      result.z4 = averageFocus * aoCtrlId->fgScaleFactorVect[2];
+	 result.z4 = averageFocus * aoCtrlId->fgScaleFactorVect[2];
 
 #ifdef RUNNING_AVERAGE
-      aoCtrlId->previousFocus = averageFocus;
+	 aoCtrlId->previousFocus = averageFocus;
 #endif
+	 /* CEM
+       } else {
+	 result.z2 = 0;
+	 result.z3 = 0;
+	 result.z4 = 0;
+       }
+	 */
 
-      /* store the vector after rotation into pFgVectAfterRot */
+     /* store the vector after rotation into pFgVectAfterRot */
 
-      *pFgVectAfterRot = result.z2;
-      *(pFgVectAfterRot + 1) = result.z3;
-      *(pFgVectAfterRot + 2) = result.z4;
+     *pFgVectAfterRot = result.z2;
+     *(pFgVectAfterRot + 1) = result.z3;
+     *(pFgVectAfterRot + 2) = result.z4;
 
-      semGive(f->access);
+     semGive(f->access);
    }
    else
-   {
-      logMsg("writeWfsToSynchro - unable to get mutex for conversion frame\n", 
-             0, 0, 0, 0 ,0 ,0);
-      return(ERROR);
-   }
+     {
+       logMsg("writeWfsToSynchro - unable to get mutex for conversion frame\n", 
+	      0, 0, 0, 0 ,0 ,0);
+       return(ERROR);
+     }
 
    /* scale data and write to the synchro bus, check that pointer has been 
       initialised with null check */
