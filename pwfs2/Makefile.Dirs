@@ -10,3 +10,5 @@ DIRS += docs
 DIRS += db 
 DIRS += docs 
 DIRS += db 
+DIRS += docs 
+DIRS += db 

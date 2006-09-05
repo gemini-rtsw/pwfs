@@ -4807,7 +4807,7 @@ STATUS aoModeCompute (
  *   aoCbImSave
  *
  *   INVOCATION:
- *   aoCbImSave (pCbImFilePath, aoCcdId, aoCtrlId, aoCbImId)
+ *   aoCbImSave (pCbImFilePath, aoCcdId, aoCtrlId, aoCbImId, aoCbFgRecordTime)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pCbImFilePath (char *)      Directory where to save the circular buffer
@@ -4816,6 +4816,7 @@ STATUS aoModeCompute (
  *                                   structure
  *   (>) aoCtrlId      (AO_CTRL_ID)  Pointer to the control context structure
  *   (>) aoCbImId      (AO_CB_IM_ID) Pointer to the image circular buffer
+ *   (>) aoCbFgRecordTime (double)     Timestamp of first record in FG CB structure
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -4848,7 +4849,8 @@ STATUS aoCbImSave
    char *          pCbImFilePath,   /* Image circular buffer directory        */
    AO_CCD_ID       aoCcdId,         /* Pointer to the CCD geometry structure  */
    AO_CTRL_ID      aoCtrlId,        /* Pointer to the control structure       */
-   AO_CB_IM_ID     aoCbImId         /* Pointer to the image circular buffer   */
+   AO_CB_IM_ID     aoCbImId,        /* Pointer to the image circular buffer   */
+   double aoCbFgRecordTime            /* Timestamp of first frame record in FG CB structure*/
    )
 {
    int                       i;
@@ -4941,6 +4943,8 @@ STATUS aoCbImSave
    {
       aoHeaderCbIm.recordNb = CB_IM_RECORD_NB;
    }
+
+   aoHeaderCbIm.time = aoCbFgRecordTime;
 
    /* 
     * Open the image circular buffer save file
@@ -5305,10 +5309,6 @@ STATUS aoCbFgCtrlZero
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgVect[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgVectAfterRot[i] = 0.0;
            aoCbFgCtrlId->cbFgCtrlRecord[index].fgErrorsVect[i] = 0.0;
-       }
-       for ( i = 0 ; i < ACT_CEM_NB ; i ++ )
-       {
-           aoCbFgCtrlId->cbFgCtrlRecord[index].cemActuatorVect[i] = 0.0;
        }
    }
   
