@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.78 2007-11-06 11:41:26 mbec Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.79 2007-12-19 18:37:22 jluhrs Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -238,3 +238,7 @@ bto bto
 #D	nici	NICI
 #M	nici	NICI
 nici nici
+
+#D	opiGEM	Linux porting of edd/dm
+#M	opiGEM	Linux porting of edd/dm
+opiGEM opiGEM
