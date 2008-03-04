@@ -1,7 +1,7 @@
 #
 # The CVS Modules File
 #
-#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.79 2007-12-19 18:37:22 jluhrs Exp $"
+#ident	"@(#)cvs/examples:$Name: not supported by cvs2svn $:$Id: modules,v 1.80 2008-03-04 18:47:20 jluhrs Exp $"
 #
 # Three different line formats are valid:
 #	key	-a    aliases...
@@ -235,9 +235,13 @@ altair altair
 #M	bto	BTO
 bto bto
 
-#D	nici	NICI
-#M	nici	NICI
-nici nici
+#D	niciIC	NICI Instrument Controller
+#M	niciIC	NICI Instrument Controller
+niciIC niciIC
+
+#D  niciIS  NICI Instrument Sequencer
+#M  niciIS  NICI Instrument Sequencer
+niciIS niciIS
 
 #D	opiGEM	Linux porting of edd/dm
 #M	opiGEM	Linux porting of edd/dm
