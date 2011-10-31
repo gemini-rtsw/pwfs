@@ -408,3 +408,11 @@ V4-12  08 AUG 2006 AAG:
   src/aoP2Lib.c
   src/aoP2Lib.h
   src/detControl.c
+
+-----------------------------------------------------------
+AWE: All changes since tagged V4-11 have been reverted in the repository
+The head is now the same as V4-11
+
+V4-12 was never tagged.
+Will be using this as the base of a new module: pwfs
+which will ultimately replace both pwfs1 and pwfs2
