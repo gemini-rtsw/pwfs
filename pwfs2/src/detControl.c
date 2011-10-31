@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.37 2006-09-05 19:20:19 gemvx Exp $"};
+   "$Id: detControl.c,v 1.38 2011-10-31 19:27:18 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -234,9 +234,6 @@ int     readTempReadyFlag=FALSE;
 extern int sdsuFrameLost ;         /* Defined in sdsuLib.c                    */
 
 extern wfs *ptrPwfs2;              /* Pointer to the reflective memory page   */
-                                   /* of CEM defined in writeZernikes.c       */
-
-extern statusBlock *ptrCEM;        /* Pointer to the reflective memory page   */
                                    /* defined in writeZernikes.c              */
 
 extern AO_CCD_ID aoCcdIdP2;        /* Pointer to the ccd geometry structure   */
@@ -11292,13 +11289,6 @@ void detObserveEnd
       pTime = &(obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].time);
 
       pFlux = pTotal + obsId->aoCcdId->subapUsedNb;
- 
-	       /* record the CEM info before processing starts */
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemXTilt = ptrCEM->xTilt;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemYTilt = ptrCEM->yTilt;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopTransition = ptrCEM->chopTransition;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemChopOn = ptrCEM->statusWord.flags.chopOn;
-      obsId->aoCbFgCtrlId->cbFgCtrlRecord[indexFgCtrl].cemBeamPosition = ptrCEM->beamPosition;
 
       if ( obsId->threshRealTimeFlag == FALSE )
       {
@@ -12573,8 +12563,7 @@ void detObserveEnd
 #endif
                   }
                }
-          
-      
+
                if ( obsId->saveCbFgCtrlClosedLoop == TRUE )
                {
                   obsId->saveFgCbCounter ++;
@@ -12946,7 +12935,7 @@ void detObserveEnd
       if ( obsId->saveCbIm == TRUE )
       {
          if ( aoCbImSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
-                          obsId->aoCbImId, obsId->aoCbFgCtrlId->cbFgCtrlRecord[0].time) == ERROR )
+                          obsId->aoCbImId) == ERROR )
          {
             ERROR_LOG ("Failed to save image circular buffer\n" ) ;
          }
