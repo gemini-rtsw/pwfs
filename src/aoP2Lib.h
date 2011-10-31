@@ -58,8 +58,8 @@
 #define CB_AO_CTRL_RECORD_NB 800       /* Number of records of the aO control */
                                        /* circular buffer                     */
 
-#define CB_FG_CTRL_RECORD_NB 7857      /* Number of records of the FG control */
-                                       /* circular buffer  (it was 8192)      */
+#define CB_FG_CTRL_RECORD_NB 8192      /* Number of records of the FG control */
+                                       /* circular buffer                     */
 
 #define AO_SUBAP_OFF         32767     /* Indicates there is no light on at   */
                                        /* least one subaperture               */
@@ -650,17 +650,10 @@ typedef struct                         /* Definition of the FG control        */
    double       time;                  /* Time stamp of the record            */
 
    int          wfsStatus;             /* Status when computing guide values  */
+                                       /* OK or AO_SH_OFF                     */
 
-   float        cemXTilt;              /* Added cem status block values       */
-
-   float        cemYTilt;
-      
-   long         cemChopTransition;
-
-   long         cemChopOn;
-
-   long         cemBeamPosition;
- 
+   int          unused;                /* The structure size must be equal to */
+                                       /* a number multiple of a double       */
 
 } CB_FG_CTRL_RECORD_STRUCT;
 
@@ -704,8 +697,6 @@ typedef struct
 
    IMAGE_VECT   flatVect;              /* Vector containing the flat fielding */
                                        /* image for the whole CCD             */
-
-    double      time;                  /* Time stamp of first frame           */
 
 } AO_HEADER_CB_IM_ID_STRUCT, * AO_HEADER_CB_IM_ID;
 
@@ -960,7 +951,7 @@ STATUS aoModeCompute (float * pImage, int imageStatus, AO_CCD_ID aoCcdId,
                       AO_CTRL_ID aoCtrlId, int imageNb, int pauseNb,
                       double *pThreshVect, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbImSave (char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
-                   AO_CB_IM_ID aoCbImId, double aoCbFgRecordTime);
+                   AO_CB_IM_ID aoCbImId);
 STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
 STATUS aoCbAoCtrlZero (AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbFgCtrlZero (AO_CB_FG_CTRL_ID aoCbFgCtrlId);

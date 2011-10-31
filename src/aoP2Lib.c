@@ -4807,7 +4807,7 @@ STATUS aoModeCompute (
  *   aoCbImSave
  *
  *   INVOCATION:
- *   aoCbImSave (pCbImFilePath, aoCcdId, aoCtrlId, aoCbImId, aoCbFgRecordTime)
+ *   aoCbImSave (pCbImFilePath, aoCcdId, aoCtrlId, aoCbImId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
  *   (>) pCbImFilePath (char *)      Directory where to save the circular buffer
@@ -4816,7 +4816,6 @@ STATUS aoModeCompute (
  *                                   structure
  *   (>) aoCtrlId      (AO_CTRL_ID)  Pointer to the control context structure
  *   (>) aoCbImId      (AO_CB_IM_ID) Pointer to the image circular buffer
- *   (>) aoCbFgRecordTime (double)     Timestamp of first record in FG CB structure
  *
  *   FUNCTION VALUE:
  *   (STATUS) OK if successful, ERROR if unsuccessful
@@ -4849,8 +4848,7 @@ STATUS aoCbImSave
    char *          pCbImFilePath,   /* Image circular buffer directory        */
    AO_CCD_ID       aoCcdId,         /* Pointer to the CCD geometry structure  */
    AO_CTRL_ID      aoCtrlId,        /* Pointer to the control structure       */
-   AO_CB_IM_ID     aoCbImId,        /* Pointer to the image circular buffer   */
-   double aoCbFgRecordTime            /* Timestamp of first frame record in FG CB structure*/
+   AO_CB_IM_ID     aoCbImId         /* Pointer to the image circular buffer   */
    )
 {
    int                       i;
@@ -4943,8 +4941,6 @@ STATUS aoCbImSave
    {
       aoHeaderCbIm.recordNb = CB_IM_RECORD_NB;
    }
-
-   aoHeaderCbIm.time = aoCbFgRecordTime;
 
    /* 
     * Open the image circular buffer save file
@@ -5285,13 +5281,6 @@ STATUS aoCbFgCtrlZero
    {
        aoCbFgCtrlId->cbFgCtrlRecord[index].time = 0.0;
        aoCbFgCtrlId->cbFgCtrlRecord[index].wfsStatus = 0;
-
-       aoCbFgCtrlId->cbFgCtrlRecord[index].cemXTilt = 0.0;
-       aoCbFgCtrlId->cbFgCtrlRecord[index].cemYTilt = 0.0;
-       aoCbFgCtrlId->cbFgCtrlRecord[index].cemChopTransition = 0;
-       aoCbFgCtrlId->cbFgCtrlRecord[index].cemChopOn = 0;
-       aoCbFgCtrlId->cbFgCtrlRecord[index].cemBeamPosition = 0;
-
        for ( i = 0 ; i < 2*SUBAP_NB ; i ++ )
        {
            aoCbFgCtrlId->cbFgCtrlRecord[index].thresholdVect[i] = 0.0;
