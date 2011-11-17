@@ -1,14 +1,22 @@
 [schematic2]
-uniq 150
+uniq 166
 [tools]
 [detail]
+w -412 1499 100 2 n#165 hwin.hwin#164.in -416 1504 -416 1504 egenSub.ttf.INPG
+w 164 1499 100 2 n#163 hwin.hwin#162.in 160 1504 160 1504 egenSub.ao.INPG
 w 1138 1195 100 0 n#134 egenSubC.aoE.FLNK 1088 1184 1248 1184 1248 1216 1344 1216 egenSubC.aoZ.SLNK
 w 546 1195 100 0 n#133 egenSub.ao.FLNK 448 1184 704 1184 704 1216 800 1216 egenSubC.aoE.SLNK
 w 914 2043 100 0 n#131 egenSub.ao.OUTA 448 1888 640 1888 640 2032 1248 2032 1248 1920 1344 1920 egenSubC.aoZ.A
 w 546 1835 100 0 n#130 egenSub.ao.OUTB 448 1824 704 1824 704 1920 800 1920 egenSubC.aoE.A
 s 2464 -704 500 512 wfsGensubSad.sch
-s 128 2176 500 0 PWFS2 - WFS Gensub Status Records
+s 128 2176 500 0 PWFS - WFS Gensub Status Records
 [cell use]
+use hwin -32 1463 100 0 hwin#162
+xform 0 64 1504
+p -29 1496 100 0 -1 val(in):$(wfsnum)
+use hwin -608 1463 100 0 hwin#164
+xform 0 -512 1504
+p -605 1496 100 0 -1 val(in):$(wfsnum)
 use egenSubC 800 1127 100 0 aoE
 xform 0 944 1552
 p 864 1072 100 0 1 DESC:Display AO Error values
@@ -31,6 +39,7 @@ use egenSub 160 1127 100 0 ao
 xform 0 304 1552
 p 224 1072 100 0 1 DESC:Active optics data
 p 240 1536 100 0 0 FTE:DOUBLE
+p 240 1536 100 0 -1 FTG:LONG
 p 240 1392 100 0 1 FTJ:DOUBLE
 p 240 1904 100 0 1 FTVA:DOUBLE
 p 240 1824 100 0 1 FTVB:DOUBLE
@@ -52,10 +61,12 @@ p 224 912 100 0 1 PREC:4
 p 224 976 100 0 1 PV:$(sadtop)$(wfs)
 p 224 944 100 0 1 SCAN:.1 second
 p 224 1008 100 0 1 SNAM:gensubToTcsAo
+p -128 1566 100 0 0 def(INPG):0.0
 p 448 1322 75 0 -1 pproc(OUTJ):NPP
 use egenSub -416 1127 100 0 ttf
 xform 0 -272 1552
 p -352 1072 100 0 1 DESC:Time averaged T-T-F data
+p -352 1536 100 0 -1 FTG:LONG
 p -336 1392 100 0 1 FTJ:DOUBLE
 p -336 1360 100 0 1 FTVJ:DOUBLE
 p -352 1040 100 0 1 INAM:gensubToTcsInit
@@ -65,6 +76,7 @@ p -352 912 100 0 1 PREC:4
 p -352 976 100 0 1 PV:$(sadtop)$(wfs)
 p -352 944 100 0 1 SCAN:.1 second
 p -352 1008 100 0 1 SNAM:gensubToTcsTtf
+p -704 1566 100 0 0 def(INPG):0.0
 p -464 1898 75 0 -1 pproc(INPA):NPP
 p -128 1322 75 0 -1 pproc(OUTJ):NPP
 use bd200tr -1024 -920 -100 0 frame
@@ -72,10 +84,10 @@ xform 0 1616 784
 p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
-p 3120 -784 200 0 -1 date:$Date: 2005-11-10 14:19:44 $
+p 3120 -784 200 0 -1 date:$Date: 2005/11/10 14:19:44 $
 p 2576 2320 200 0 -1 id:
 p 2720 -768 100 0 1 modified:C. Boyer
-p 3120 -432 200 0 -1 project:Gemini PWFS2
+p 3120 -432 200 0 -1 project:Gemini PWFS
 p 2608 -496 200 0 -1 revision:$Revision: 1.3 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor Gensub Status Records
 [comments]

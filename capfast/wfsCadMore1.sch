@@ -180,7 +180,7 @@ p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 0 checked:B.Goodrich
 p 3120 -784 200 0 -1 date:$Date: 2002-05-16 22:16:25 $
-p 2592 2304 200 0 -1 id:$Id: wfsCadMore1.sch,v 1.4 2002-05-16 22:16:25 cboyer Exp $
+p 2592 2304 200 0 -1 id:$Id$
 p 2720 -768 100 0 1 modified:C. Boyer
 p 3120 -432 200 0 -1 project:Gemini PWFS2
 p 2592 -528 200 0 -1 revision:$Revision: 1.4 $

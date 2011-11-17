@@ -2,13 +2,13 @@
 uniq 15
 [tools]
 [detail]
-s 1488 80 500 512 pwfs2Top.sch
-s -368 2160 500 0 Gemini A&G PWFS2
+s -368 2160 500 0 Gemini A&G PWFS1
+s 1488 80 500 512 pwfs1Top.sch
 [cell use]
 use pwfs 64 1063 100 0 pwfs#14
 xform 0 512 1360
-p 288 1040 100 0 1 set1:top pwfs2:
-p 288 1008 100 0 1 set2:sadtop pwfs2:
+p 288 1040 100 0 1 set1:top pwfs1:
+p 288 1008 100 0 1 set2:sadtop pwfs1:
 use bc200tr -1024 -104 -100 0 frame
 xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard

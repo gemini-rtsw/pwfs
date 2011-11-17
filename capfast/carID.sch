@@ -57,7 +57,7 @@ p 1552 64 100 0 1 author:S.M.Beard
 p 1776 48 100 0 -1 border:C
 p 1552 32 100 0 1 checked:B.Goodrich
 p 1776 16 100 0 -1 date:$Date: 1999-07-17 02:13:24 $
-p 1552 2368 100 0 -1 id:$Id: carID.sch,v 1.2 1999-07-17 02:13:24 cboyer Exp $
+p 1552 2368 100 0 -1 id:$Id$
 p 1792 176 100 0 -1 project:Gemini Wavefront Sensing System
 p 1792 112 100 0 -1 title:CAR record plus client ID record
 [comments]

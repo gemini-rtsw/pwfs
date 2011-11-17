@@ -2,14 +2,14 @@
 uniq 16
 [tools]
 [detail]
-s -832 2144 500 0 Gemini A&G Peripheral Wavefront Sensing 2 System
-s 1488 80 500 512 pwfs2SadTop.sch
+s 1488 80 500 512 pwfs1SadTop.sch
+s -832 2144 500 0 Gemini A&G Peripheral Wavefront Sensing 1 System
 [cell use]
 use pwfsSad 64 1095 100 0 pwfsSad#15
 xform 0 544 1296
-p 64 1072 100 0 1 set1:top pwfs2:
-p 64 1040 100 0 1 set2:sadtop pwfs2:
-p 64 1008 100 0 1 set3:wfsnum 2
+p 64 1072 100 0 1 set1:top pwfs1:
+p 64 1040 100 0 1 set2:sadtop pwfs1:
+p 64 992 100 0 1 set3:wfsnum 1
 use bc200tr -1024 -104 -100 0 frame
 xform 0 656 1200
 p 1552 64 100 0 1 author:S.M.Beard

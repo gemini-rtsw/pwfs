@@ -125,7 +125,7 @@ p 2496 -352 200 0 1 author:S.M.Beard
 p 3008 -384 100 0 0 border:D
 p 2496 -432 200 0 1 checked:B.Goodrich
 p 2992 -448 200 0 -1 date:$Date: 2001-09-04 19:52:57 $
-p 2480 2656 200 0 -1 id:$Id: systemTcs.sch,v 1.7 2001-09-04 19:52:57 cboyer Exp $
+p 2480 2656 200 0 -1 id:$Id$
 p 3008 -96 200 0 -1 project:Gemini Wavefront Sensing System
 p 2496 -176 200 0 -1 revision:$Revision: 1.7 $
 p 3008 -224 200 0 -1 title:System TCS Interface Database

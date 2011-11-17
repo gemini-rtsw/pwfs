@@ -19,7 +19,7 @@ p -736 1504 100 0 0 FDSC:System name
 p -608 1696 100 0 1 FTVL:STRING
 p -608 1632 100 0 1 PV:$(sadtop)
 p -608 1664 100 0 1 SNAM:
-p -608 1600 100 0 1 VAL:Gemini A&G Wavefront Processing System
+p -608 1600 100 0 1 VAL:Peripheral WFS
 use esirs 0 1767 100 0 state
 xform 0 208 1920
 p 64 1728 100 0 1 DESC:System state
@@ -92,7 +92,7 @@ xform 0 1616 800
 p 2608 -672 200 0 1 author:S.M.Beard
 p 3120 -704 100 0 0 border:D
 p 2608 -752 200 0 0 checked:B.Goodrich
-p 3184 -688 200 0 -1 date:$Date: 2002-07-04 03:43:05 $
+p 3184 -688 200 0 -1 date:$Date: 2002/07/04 03:43:05 $
 p 2592 2336 200 0 -1 id:
 p 2704 -752 100 0 1 modified:C. Boyer
 p 3120 -416 200 0 -1 project:Gemini PWFS2

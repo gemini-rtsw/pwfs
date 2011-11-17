@@ -13,6 +13,6 @@ include $(APPLIC_TOP)/config/CONFIG
 # DEPSCHS is a list of schematics they depend on
 DEPSCHS = $(wildcard ../*.sch)
 #DATA   = $(patsubst ../%.sch, %.db, $(wildcard ../*.sch))
-DATA =	pwfs2Top.db pwfs2SadTop.db
+DATA =	pwfs2Top.db pwfs2SadTop.db pwfs1Top.db pwfs1SadTop.db
 
 include $(APPLIC_TOP)/config/RULES.Build
