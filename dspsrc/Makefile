@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 2002-11-05 00:38:06 cboyer Exp $
+# $Id$
 #
 
 include .applTop
