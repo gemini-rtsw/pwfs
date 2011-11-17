@@ -1,0 +1,5 @@
+# Init file for butterworth filters of PWFS1 - Sampling frequency: 100Hz
+# Cutoff Freq. for the Tip-tilt BW filter in Hz (double)
+10
+# Cutoff Freq. for the focus BW filter in Hz (double)
+0.0167

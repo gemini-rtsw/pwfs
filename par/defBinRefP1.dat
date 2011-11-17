@@ -1,0 +1,5 @@
+# Ideal centers for P1 (SH 2x2, CCD 40x40 Binning mode), Coord of pixel 1: 0.5, 0.5, -1, -1 means subaperture not used 
+10.5 10.5
+30.5 10.5
+10.5 30.5
+30.5 30.5
