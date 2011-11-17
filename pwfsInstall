@@ -1,6 +1,6 @@
 #!/bin/sh -f
 #
-# Install script for Gemini PWFS2 system
+# Install script for Gemini PWFS system
 #
 
 astlib_dir=/gemini/epics3.13.4/astlib/astlib
@@ -18,13 +18,14 @@ fi
 
 echo `pwd` > APPLIC_INSTALL.txt
 
+cp IMP_Startup$site.pwfs1 IMP_Startup.pwfs1
 cp IMP_Startup$site.pwfs2 IMP_Startup.pwfs2
 
 applSetup.pl -T ppc604 -I adl -I capfast -I src -I startup\
              -I docs -I dspsrc -I par -I db\
              -d $astlib_dir -d $slalib_dir \
              -d $timelib_dir -d $cfitsio_dir\
-             -d $dhs_dir -S $site $1 > pwfs2Build.log 2>&1
+             -d $dhs_dir -S $site $1 > pwfsBuild.log 2>&1
 
 editUAE()
 {
@@ -34,7 +35,9 @@ a
 
 (\${APPLIC_INSTALL}/bin/asm56000) -> (\${DIST_HOST})
         install -R \${DIST_PATH}/bin/asm56000;
-(\${APPLIC_INSTALL}/IMP_Startup.pwfs2) -> (\${DIST_HOST})
+(\${APPLIC_INSTALL}/IMP_Startup.pwfs) -> (\${DIST_HOST})
+        install -R \${DIST_PATH}/IMP_Startup.pwfs1;
+(\${APPLIC_INSTALL}/IMP_Startup.pwfs) -> (\${DIST_HOST})
         install -R \${DIST_PATH}/IMP_Startup.pwfs2;
 (\${APPLIC_INSTALL}/RELEASE.NOTES) -> (\${DIST_HOST})
         install -R \${DIST_PATH}/RELEASE.NOTES;
@@ -51,6 +54,6 @@ cd startup
 editUAE
 cd ..
 
-gmake >> pwfs2Build.log 2>&1
+gmake >> pwfsBuild.log 2>&1
 
 exit 0
