@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: timeoutLib.c,v 1.2 1999-07-17 02:14:19 cboyer Exp $"};
+	"$Id$"};
 
 /*+
  *	MODULE NAME:

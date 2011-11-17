@@ -28,7 +28,7 @@ LIBSRCS.c	= \
 	../cicsLib.c \
 	../epToVxLib.c \
 	../errorLib.c \
-	../aoP2Lib.c \
+	../aoPWLib.c \
 	../xycom.c \
 	../sdsuLib.c \
 	../timeoutLib.c \
@@ -91,7 +91,7 @@ INC	= \
 	../wfsControl.h \
 	../wfsResourceMonitor.h \
 	../xycom.h \
-	../aoP2Lib.h
+	../aoPWLib.h
 
 # MAN1 is installed in INSTALL_MAN/man1
 MAN1	=

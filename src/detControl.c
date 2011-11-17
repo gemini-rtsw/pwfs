@@ -1,6 +1,3 @@
-static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.38 2011-10-31 19:27:18 gemvx Exp $"};
-
 /*+
  *   MODULE NAME:
  *   detControl
@@ -9,17 +6,17 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   detControl.c
  *
  *   PURPOSE:
- *   Detector controller application code for PWFS2
+ *   Detector controller application code for PWFS
  *
  *   DESCRIPTION:
- *   This file contains the detector controller application code for PWFS2.
+ *   This file contains the detector controller application code for PWFS.
  *   The code runs in a VxWorks task.
  *
  *   PRIOR REQUIREMENTS:
  *
  *   INCLUDE FILES:
  *   detControl.h
- *   aoP2Lib.h
+ *   aoPWLib.h
  *   gemTypes.h
  *   wfsLib.h
  *   epToVxLib.h
@@ -156,7 +153,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "wfsWcs.h"
 #include "errorLib.h"
 #include "sdsuLib.h"
-#include "aoP2Lib.h"
+#include "aoPWLib.h"
 #include "synchroMap.h"
 #include "wfsControl.h"
 #include "wfsDb.h"
@@ -167,6 +164,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 /****************************************************************** Defines ***/
 
 /*#define DEBUG*/               /* Define this macro to enable debug messages.*/
+#define DEBUG2
 
 #define DEBUG_DHS               /* Define this macro to enable debug messages */
                                 /* for DHS only.                              */
@@ -209,15 +207,18 @@ BOOL    detDhsConnected = NOT_CONNECTED;
 
 int     detDhsTaskId = 0;     /* Task Id of the dhs task                      */
 
+int     wfsNum=0;             /* 1 or 2 to differentiate between P1 or P2     */
+char    dbTopName[EPICS_MAX_BYTES_RECORD_NAME]; /* dynamic top name           */
+
 DHS_CONNECT detDhsConnection = NULL; 
                               /* DHS connection ID for this controller.       */
 
 SEM_ID  detDhsStartSem = NULL;/* Semaphore to start DHS when starting a       */
                               /* new observation                              */
 
-SDSU_ID detSdsuIdP2 = NULL;   /* SDSU context structure for PWFS2.            */
+SDSU_ID detSdsuIdPW = NULL;   /* SDSU context structure for PWFS.             */
 
-OBS_ID  detObsIdP2 = NULL;    /* Observation context structure for PWFS2.     */
+OBS_ID  detObsIdPW = NULL;    /* Observation context structure for PWFS.      */
 
 uint32  detControlStop = 0x0; /* This bit mask provides a way of aborting     */
                               /* the detector control task(s) cleanly.        */
@@ -233,23 +234,23 @@ int     readTempReadyFlag=FALSE;
 
 extern int sdsuFrameLost ;         /* Defined in sdsuLib.c                    */
 
-extern wfs *ptrPwfs2;              /* Pointer to the reflective memory page   */
+extern wfs *ptrPwfs;               /* Pointer to the reflective memory page   */
                                    /* defined in writeZernikes.c              */
 
-extern AO_CCD_ID aoCcdIdP2;        /* Pointer to the ccd geometry structure   */
+extern AO_CCD_ID aoCcdIdPW;        /* Pointer to the ccd geometry structure   */
                                    /* defined in writeZernikes.c              */
 
-extern AO_CB_AO_CTRL_ID aoCbAoCtrlIdP2; 
+extern AO_CB_AO_CTRL_ID aoCbAoCtrlIdPW; 
                                    /* Pointer to the aO control circular      */
                                    /* buffer defined in writeZernikes.c       */
 
-extern AO_CB_FG_CTRL_ID aoCbFgCtrlIdP2; /* Pointer to the FG control circular */
+extern AO_CB_FG_CTRL_ID aoCbFgCtrlIdPW; /* Pointer to the FG control circular */
                                    /* buffer defined in writeZernikes.c       */
 
-extern AO_CB_IM_ID aoCbImIdP2;     /* Pointer to the image circular buffer    */
+extern AO_CB_IM_ID aoCbImIdPW;     /* Pointer to the image circular buffer    */
                                    /* defined in writeZernikes.c              */
 
-extern AO_CTRL_ID aoCtrlIdP2 ;     /* Pointer to the aO control context       */
+extern AO_CTRL_ID aoCtrlIdPW ;     /* Pointer to the aO control context       */
                                    /* structure defined in writeZernikes.c    */
 
 extern double sampleData[5][3];    /* Samples for butterworth filter          */
@@ -283,11 +284,11 @@ extern SEM_ID accessFocusModel;    /* Semaphore Focus model defined in        */
                                    /* writeZernikes.c                         */
 
 extern double angleWithM1;         /* Angle with M1 (equivalent to the one    */
-                                   /* contained in aoCtrlIdP2) defined in     */
+                                   /* contained in aoCtrlIdPW) defined in     */
                                    /* writeZernikes.c                         */
 
 extern double angleWithM2;         /* Angle with M2 (equivalent to the one    */
-                                   /* contained in aoCtrlIdP2) defined in     */
+                                   /* contained in aoCtrlIdPW) defined in     */
                                    /* writeZernikes.c                         */
 
 /******************************************************* External functions ***/
@@ -443,12 +444,12 @@ LOCAL uint32   detSigModeTotal (const char * pRecordPrefix,
                                 int commandNumber, SDSU_ID sdsuId,
                                 OBS_ID obsId);
 
-LOCAL uint32   detSigModeFgFocus (const char * pRecordPrefix,
+LOCAL uint32   detSigModeFgFoc (const char * pRecordPrefix,
                                   CAD_CMD_CONTEXT cadCmdContext,
                                   int commandNumber, SDSU_ID sdsuId,
                                   OBS_ID obsId);
 
-LOCAL uint32   detSigModeFgFocusAo (const char * pRecordPrefix,
+LOCAL uint32   detSigModeFgFocAo (const char * pRecordPrefix,
                                     CAD_CMD_CONTEXT cadCmdContext,
                                     int commandNumber, SDSU_ID sdsuId,
                                     OBS_ID obsId);
@@ -553,7 +554,7 @@ uint32 detInitBwDef (char * pInitFileName, double * pCfTipTiltBw,
 
 STATUS   detControl
    (
-   const char *   pWfsName,         /* Name of wavefront sensor "p2"          */
+   const char *   pWfsName,         /* Name of wavefront sensor "p1" or "p2"  */
    const char *   pRecordPrefix     /* Record name prefix                     */
    )
 {
@@ -698,6 +699,16 @@ STATUS   detControl
       vmeAddress = DET_CONTROL_PWFS2_SDSU_ADRS_VME;
       detControlStopMask = DET_CONTROL_PWFS2_MASK;
       maxFrames = DET_CONTROL_PWFS2_MAX_FRAMES;
+      wfsNum = 2;
+      strcpy(dbTopName,"pwfs2:");
+   }
+   else if (strcmp (pWfsName, "p1") == 0)
+   {
+      vmeAddress = DET_CONTROL_PWFS1_SDSU_ADRS_VME;
+      detControlStopMask = DET_CONTROL_PWFS1_MASK;
+      maxFrames = DET_CONTROL_PWFS1_MAX_FRAMES;
+      wfsNum = 1;
+      strcpy(dbTopName,"pwfs1:");
    }
    else
    {
@@ -705,6 +716,19 @@ STATUS   detControl
                   ERROR_LOG_NOW, pWfsName);
       return (ERROR);
    }
+
+   /*
+    * AWE: another work around reuired to consolidate pwfs1 and pwfs2
+    * Need to set the pWfsName fields in the Gensub structures to p1 or p2
+    */
+
+   for (i = 0; i < wfsDbNGsubRecord; i++)
+     {
+       strncpy(pWfsDbGsubList[i].pWfsName, pWfsName, 2);
+#ifdef DEBUG2
+       printf("in detControl: set wfs to %s for gensub \"%s\"\n",pWfsDbGsubList[i].pWfsName, pWfsDbGsubList[i].pRecordName);
+#endif /* DEBUG */
+     }
 
    /*
     * Initialise the alarm timer.
@@ -834,7 +858,7 @@ STATUS   detControl
    }
 
    obsId->aoCcdId = aoCcdId;
-   aoCcdIdP2 = aoCcdId;
+   aoCcdIdPW = aoCcdId;
 
    /*
     * Create the AO control context structure and the circular buffer
@@ -849,7 +873,7 @@ STATUS   detControl
    };
 
    obsId->aoCtrlId = aoCtrlId;
-   aoCtrlIdP2 = aoCtrlId;
+   aoCtrlIdPW = aoCtrlId;
 
    aoCbImId = aoCbImContextCreate();
 
@@ -860,7 +884,7 @@ STATUS   detControl
    };
 
    obsId->aoCbImId = aoCbImId;
-   aoCbImIdP2 = aoCbImId;
+   aoCbImIdPW = aoCbImId;
 
    aoCbAoCtrlId = aoCbAoCtrlContextCreate();
 
@@ -871,7 +895,7 @@ STATUS   detControl
    };
 
    obsId->aoCbAoCtrlId = aoCbAoCtrlId;
-   aoCbAoCtrlIdP2 = aoCbAoCtrlId;
+   aoCbAoCtrlIdPW = aoCbAoCtrlId;
 
    aoCbFgCtrlId = aoCbFgCtrlContextCreate();
 
@@ -882,7 +906,7 @@ STATUS   detControl
    };
 
    obsId->aoCbFgCtrlId = aoCbFgCtrlId;
-   aoCbFgCtrlIdP2 = aoCbFgCtrlId;
+   aoCbFgCtrlIdPW = aoCbFgCtrlId;
 
    /*
     * If the WFS has control over the SDSU hardware, attempt to init 
@@ -965,10 +989,10 @@ STATUS   detControl
        */
 
       sdsuId->fastCamera = TRUE;
-      detSdsuIdP2 = sdsuId;
+      detSdsuIdPW = sdsuId;
    }
 
-   detObsIdP2 = obsId;
+   detObsIdPW = obsId;
    obsId->sdsuId = sdsuId;
 
    /*
@@ -1025,16 +1049,28 @@ STATUS   detControl
       initFailed = TRUE;
    }
 
-   strcpy (obsId->pWfsName, "PWFS2");
+   if (wfsNum==2) {
+     strcpy (obsId->pWfsName, "PWFS2");
+   } else {
+     strcpy (obsId->pWfsName, "PWFS1");
+   }
 
    /* 
     * Read the default settings from the detector controller init file
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_MK_INIT_FILE);
+   if (wfsNum==2){
+     strcpy ( defFileName, DET_CONTROL_PWFS2_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_CP_INIT_FILE);
+   if (wfsNum==2){
+     strcpy ( defFileName, DET_CONTROL_PWFS2_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_CP_INIT_FILE);
+   }
 #endif
 
    printf ( "defFileName =%s\n", defFileName);
@@ -1123,7 +1159,7 @@ STATUS   detControl
    }
 
    /*
-    * Set the default offsets for the PWFS2 CCD sectors
+    * Set the default offsets for the PWFS CCD sectors
     */
 
    if ( sdsuId == NULL )
@@ -1305,15 +1341,33 @@ STATUS   detControl
     */
 
 #if (MK)
-   if ( obsId->aoCcdId->binningFlag == FALSE )
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
-   else
+   if ( obsId->aoCcdId->binningFlag == FALSE ) {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE);
+     }
+   } else {
+     if (wfsNum==2) {
       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE);
+     } else {
+      strcpy ( defFileName, DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE);
+     }
+   }
 #else
-   if ( obsId->aoCcdId->binningFlag == FALSE )
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
-   else
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE ) {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE);
+     }
+   } else {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE);
+     }
+   }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -1493,7 +1547,7 @@ STATUS   detControl
    }
    else
    {
-      MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
+      MESSAGE_LOG (MSG_LOG, "PWFS - AO control context not initialised");
    }
 
    /*
@@ -1501,9 +1555,17 @@ STATUS   detControl
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_MK_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_BW_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_BW_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_CP_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_BW_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_BW_CP_INIT_FILE);
+   }
 #endif
 
    printf ( "defFileName =%s\n", defFileName);
@@ -1584,9 +1646,17 @@ STATUS   detControl
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE);
+   }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -2262,7 +2332,7 @@ STATUS   detControl
             /* Set to FG and focus the signal processing */
 
             errorNumber =
-            detSigModeFgFocus (pRecordPrefix, cadCmdContext, commandNumber, 
+            detSigModeFgFoc (pRecordPrefix, cadCmdContext, commandNumber, 
                                sdsuId, obsId);
          }
 
@@ -2272,7 +2342,7 @@ STATUS   detControl
             /* Set to FG and focus and aO the signal processing */
 
             errorNumber =
-            detSigModeFgFocusAo (pRecordPrefix,
+            detSigModeFgFocAo (pRecordPrefix,
                                  cadCmdContext, commandNumber, sdsuId, obsId);
          }
 
@@ -2730,7 +2800,7 @@ STATUS detDownloadDefault
  *
  *   INCLUDE FILES:
  *   detControl.h
- *   aoP2Lib.h
+ *   aoPWLib.h
  *   sdsuLib.h
  *
  *   DEFICIENCIES:
@@ -3052,7 +3122,7 @@ STATUS detReadDefaultDspCcdGeometry
  *
  *   INCLUDE FILES:
  *   detControl.h
- *   aoP2Lib.h
+ *   aoPWLib.h
  *   sdsuLib.h
  *
  *   DEFICIENCIES:
@@ -4228,7 +4298,7 @@ STATUS detDhsInit
  *   (STATUS)   OK if command successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Start a dhs task for PWFS2
+ *   Start a dhs task for PWFS
  *
  *   DESCRIPTION:
  *   This routine will start a DHS task. This routine uses global variables. 
@@ -4321,7 +4391,7 @@ STATUS detDhsTaskOpen
  *   (STATUS)   OK if command successful, ERROR if unsuccessful
  *
  *   PURPOSE:
- *   Shut down the dhs task for PWFS2
+ *   Shut down the dhs task for PWFS
  *
  *   DESCRIPTION:
  *   This routine will stop the DHS task. This routine uses global variables. 
@@ -4759,7 +4829,7 @@ void detDhsTask
    {
        /* Wait for the start DHS semaphore  */
 
-       if ( detObsIdP2->stopped != TRUE )
+       if ( detObsIdPW->stopped != TRUE )
        {
           if ( semTake ( detDhsStartSem, WAIT_FOREVER ) == ERROR )
           {
@@ -4772,9 +4842,9 @@ void detDhsTask
 
           /* Init the address of the image to display */
 
-          indexCb = detObsIdP2->aoCbImId->position;
+          indexCb = detObsIdPW->aoCbImId->position;
 
-          while ( ( indexCb == 0 ) && ( detObsIdP2->aoCbImId->counter == 0) )
+          while ( ( indexCb == 0 ) && ( detObsIdPW->aoCbImId->counter == 0) )
                 taskDelay(1);
 
           if ( indexCb != 0 )
@@ -4785,39 +4855,39 @@ void detDhsTask
           MESSAGE_LOG1 ( MSG_FULLDEBUG, "Position read in the image CB: %d",
                          indexCb ) ;
 
-          pImage = detObsIdP2->aoCbImId->cbImRecord[indexCb].imageVect;
+          pImage = detObsIdPW->aoCbImId->cbImRecord[indexCb].imageVect;
 
           /* Copy the image into pCurFrame */
 
-          imageSize = detObsIdP2->aoCcdId->xPixels * 
-                      detObsIdP2->aoCcdId->yPixels;
+          imageSize = detObsIdPW->aoCcdId->xPixels * 
+                      detObsIdPW->aoCcdId->yPixels;
           pMax = (float *)((int)pImage + imageSize*sizeof(float));
-          pc = detObsIdP2->pCurFrame ;
+          pc = detObsIdPW->pCurFrame ;
 
           for ( pi = pImage ; pi < pMax ; pi ++ )
               *(pc ++) = *pi;
 
           for ( i = 0 ; i < 10 ; i ++ )
               printf ( "dhs pixel %d= %f\n" , i , 
-                       *(detObsIdP2->pCurFrame + i) );
+                       *(detObsIdPW->pCurFrame + i) );
        
           /*
            * Compute the elapsed time
            */
 
-          elapsed = detObsIdP2->rawtEnd - detObsIdP2->rawtStart ;
+          elapsed = detObsIdPW->rawtEnd - detObsIdPW->rawtStart ;
 
           /* Write some keyworks */
 
-          if ( detObsIdP2->totalFrames == 1 )
+          if ( detObsIdPW->totalFrames == 1 )
           {
              /*
               * Convert the time stamps from Gemini raw time into Universal Time
               * and construct these into character strings.
               */
 
-             if (timeThenC( detObsIdP2->rawtEnd, UT1, 2, 
-                            detObsIdP2->timeArrayEnd ) != OK)
+             if (timeThenC( detObsIdPW->rawtEnd, UT1, 2, 
+                            detObsIdPW->timeArrayEnd ) != OK)
              {
                 ERROR_SET (0,
                 "Failed to convert time stamp at observation end to date/time" ,
@@ -4826,29 +4896,29 @@ void detDhsTask
              else
              {
 
-                sprintf (detObsIdP2->utEndString, 
+                sprintf (detObsIdPW->utEndString, 
                          "%04d-%02d-%02d:%02d:%02d:%02d",
-                         detObsIdP2->timeArrayEnd[0], 
-                         detObsIdP2->timeArrayEnd[1], 
-                         detObsIdP2->timeArrayEnd[2], 
-                         detObsIdP2->timeArrayEnd[3], 
-                         detObsIdP2->timeArrayEnd[4], 
-                         detObsIdP2->timeArrayEnd[5]);
+                         detObsIdPW->timeArrayEnd[0], 
+                         detObsIdPW->timeArrayEnd[1], 
+                         detObsIdPW->timeArrayEnd[2], 
+                         detObsIdPW->timeArrayEnd[3], 
+                         detObsIdPW->timeArrayEnd[4], 
+                         detObsIdPW->timeArrayEnd[5]);
 
-                dhsBdAttribAdd (detObsIdP2->dhsDataFrame, "utend", 
+                dhsBdAttribAdd (detObsIdPW->dhsDataFrame, "utend", 
                                 DHS_DT_STRING, 0, NULL, 
-                                detObsIdP2->utEndString, &dhsErrno);
+                                detObsIdPW->utEndString, &dhsErrno);
                 CHECK_DHS (dhsErrno);
 
-                if (epToVxPipeWrite( NULL, (char *)detObsIdP2->utEndString, 
-                                     detObsIdP2->pUTendContext) == ERROR)
+                if (epToVxPipeWrite( NULL, (char *)detObsIdPW->utEndString, 
+                                     detObsIdPW->pUTendContext) == ERROR)
                 {
                    ERROR_LOG (
                          "Failed to set UT at end of observation SIR record");
                 }
 
                 if (epToVxPipeWrite( NULL, (char *)(int)&elapsed, 
-                                     detObsIdP2->pElapsedContext ) == ERROR)
+                                     detObsIdPW->pElapsedContext ) == ERROR)
                 {
                    ERROR_LOG ("Failed to set elapsed time SIR record");
                 }
@@ -4856,7 +4926,7 @@ void detDhsTask
           }
 
 #ifdef DEBUG
-          dhsBdDsPrint (detObsIdP2->dhsDataset, &dhsErrno);
+          dhsBdDsPrint (detObsIdPW->dhsDataset, &dhsErrno);
           CHECK_DHS (dhsErrno);
 #endif /* DEBUG */
 
@@ -4864,34 +4934,34 @@ void detDhsTask
 
           MESSAGE_LOG3 (MSG_FULLDEBUG, 
                         "dhsBdPut, dhsConnection=%d, pDataLabel=%s, dataset=%d",
-                        (int) detDhsConnection, detObsIdP2->pDataLabel, 
-                        (int) detObsIdP2->dhsDataset);
+                        (int) detDhsConnection, detObsIdPW->pDataLabel, 
+                        (int) detObsIdPW->dhsDataset);
 
-          if ( detObsIdP2->dhsOutOptions == 2 ) /* QL only */
+          if ( detObsIdPW->dhsOutOptions == 2 ) /* QL only */
           {
-             if ( detObsIdP2->totalFrames == 1 )
-                putTag = dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
+             if ( detObsIdPW->totalFrames == 1 )
+                putTag = dhsBdPut (detDhsConnection, detObsIdPW->pDataLabel,
                                    DHS_BD_PT_DS_QL, DHS_TRUE,
-                                   detObsIdP2->dhsDataset, NULL, &dhsErrno);
+                                   detObsIdPW->dhsDataset, NULL, &dhsErrno);
              else
-                putTag = dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
+                putTag = dhsBdPut (detDhsConnection, detObsIdPW->pDataLabel,
                                    DHS_BD_PT_DS_QL, DHS_FALSE,
-                                   detObsIdP2->dhsDataset, NULL, &dhsErrno);
+                                   detObsIdPW->dhsDataset, NULL, &dhsErrno);
           }
           else
           {
-             if ( detObsIdP2->totalFrames == 1 )
+             if ( detObsIdPW->totalFrames == 1 )
              {
                 putTag =
-                dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
-                          DHS_BD_PT_DS, DHS_TRUE, detObsIdP2->dhsDataset, NULL, 
+                dhsBdPut (detDhsConnection, detObsIdPW->pDataLabel,
+                          DHS_BD_PT_DS, DHS_TRUE, detObsIdPW->dhsDataset, NULL, 
                           &dhsErrno);
              }
              else
              {
                 putTag =
-                dhsBdPut (detDhsConnection, detObsIdP2->pDataLabel,
-                          DHS_BD_PT_DS, DHS_FALSE, detObsIdP2->dhsDataset, NULL,
+                dhsBdPut (detDhsConnection, detObsIdPW->pDataLabel,
+                          DHS_BD_PT_DS, DHS_FALSE, detObsIdPW->dhsDataset, NULL,
                           &dhsErrno);
              }
           }
@@ -4907,7 +4977,7 @@ void detDhsTask
              dhsTagFree (putTag, &dummyDhsErrno);
              CHECK_DHS (dummyDhsErrno);
              dummyDhsErrno = DHS_S_SUCCESS;
-             dhsBdDsFree (detObsIdP2->dhsDataset, &dummyDhsErrno);
+             dhsBdDsFree (detObsIdPW->dhsDataset, &dummyDhsErrno);
              CHECK_DHS (dummyDhsErrno);
           }
           else
@@ -4929,7 +4999,7 @@ void detDhsTask
                 dhsTagFree (putTag, &dummyDhsErrno);
                 CHECK_DHS (dummyDhsErrno);
                 dummyDhsErrno = DHS_S_SUCCESS;
-                dhsBdDsFree (detObsIdP2->dhsDataset, &dummyDhsErrno);
+                dhsBdDsFree (detObsIdPW->dhsDataset, &dummyDhsErrno);
                 CHECK_DHS (dummyDhsErrno);
              }
              else
@@ -4948,7 +5018,7 @@ void detDhsTask
                    dhsTagFree (putTag, &dummyDhsErrno);
                    CHECK_DHS (dummyDhsErrno);
                    dummyDhsErrno = DHS_S_SUCCESS;
-                   dhsBdDsFree (detObsIdP2->dhsDataset, &dummyDhsErrno);
+                   dhsBdDsFree (detObsIdPW->dhsDataset, &dummyDhsErrno);
                    CHECK_DHS (dummyDhsErrno);
                 }
                 else
@@ -4964,10 +5034,10 @@ void detDhsTask
                    dhsErrno = DHS_S_SUCCESS;
                    dhsTagFree (putTag, &dhsErrno);
 
-                   if ( (detObsIdP2->totalFrames == 1) || 
-                        (detObsIdP2->stopped) )
+                   if ( (detObsIdPW->totalFrames == 1) || 
+                        (detObsIdPW->stopped) )
                    {
-                      dhsBdDsFree (detObsIdP2->dhsDataset, &dhsErrno);
+                      dhsBdDsFree (detObsIdPW->dhsDataset, &dhsErrno);
                       CHECK_DHS (dhsErrno);
                       semFlush (detDhsStartSem) ;
                       MESSAGE_LOG (MSG_FULLDEBUG, 
@@ -5198,7 +5268,7 @@ uint32 detObserveStart
        */
 
 #ifdef DEBUG
-      printf ( "ptrPwfs2->interval=%f\n" , ptrPwfs2->interval ) ;
+      printf ( "ptrPwfs->interval=%f\n" , ptrPwfs->interval ) ;
 #endif
       errorNumber = detStop (cadCmdContext, commandNumber, sdsuId, obsId);
    }
@@ -5234,9 +5304,9 @@ uint32 detObserveStart
       printf ( "detControl : updateAoThresh = %d\n" , obsId->updateAoThresh );
 #endif
 
-      ptrPwfs2->interval = 0.0 ;
+      ptrPwfs->interval = 0.0 ;
 #ifdef DEBUG
-      printf ( "ptrPwfs2->interval=%f\n" , ptrPwfs2->interval ) ;
+      printf ( "ptrPwfs->interval=%f\n" , ptrPwfs->interval ) ;
 #endif
 
       for ( i = 0 ; i < 5 ; i ++ )   /* reset the butterworth filter */
@@ -7095,7 +7165,7 @@ uint32 detAbort(
  *   This function initialises the SDSU controller and redownloads the DSP code.
  *
  *   EXTERNAL VARIABLES:
- *   (<)   detSdsuIdP2   (SDSU_ID)         SDSU context structure for PWFS2
+ *   (<)   detSdsuIdPW   (SDSU_ID)         SDSU context structure for PWFS
  *
  *   PRIOR REQUIREMENTS:
  *   The VME address supplied must have been previously verified to be 
@@ -7419,7 +7489,7 @@ uint32 detInit
        */
 
       (*pSdsuId)->fastCamera = TRUE;
-      detSdsuIdP2 = *pSdsuId;
+      detSdsuIdPW = *pSdsuId;
    }
 
    /* Determine whether any code should be downloaded to the VME DSP */
@@ -7735,9 +7805,17 @@ uint32 detInit
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_MK_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_CP_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_CP_INIT_FILE);
+   }
 #endif
 
    printf ( "defFileName =%s\n", defFileName);
@@ -7800,7 +7878,7 @@ uint32 detInit
    }
 
    /*
-    * Set the default offsets for the PWFS2 CCD sectors
+    * Set the default offsets for the PWFS CCD sectors
     */
 
    MESSAGE_LOG4 (MSG_LOG,
@@ -7984,15 +8062,33 @@ uint32 detInit
     */
 
 #if (MK)
-   if ( obsId->aoCcdId->binningFlag == FALSE )
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
-   else
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE ) {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE);
+     }
+   } else {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE);
+     }
+   }
 #else
-   if ( obsId->aoCcdId->binningFlag == FALSE )
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
-   else
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE);
+   if ( obsId->aoCcdId->binningFlag == FALSE ) {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE);
+     }
+   } else {
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE);
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE);
+     }
+   }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -8173,7 +8269,7 @@ uint32 detInit
    }
    else
    {
-      MESSAGE_LOG (MSG_LOG, "PWFS2 - AO control context not initialised");
+      MESSAGE_LOG (MSG_LOG, "PWFS - AO control context not initialised");
    }
 
    /*
@@ -8181,9 +8277,17 @@ uint32 detInit
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_MK_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_BW_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_BW_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_BW_CP_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_BW_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_BW_CP_INIT_FILE);
+   }
 #endif
 
    printf ( "defFileName =%s\n", defFileName);
@@ -8274,9 +8378,17 @@ uint32 detInit
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE);
+   }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -8761,9 +8873,17 @@ uint32 detReset
     */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_MK_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_MK_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_MK_INIT_FILE);
+   }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_CP_INIT_FILE);
+   if (wfsNum==2) {
+     strcpy ( defFileName, DET_CONTROL_PWFS2_CP_INIT_FILE);
+   } else {
+     strcpy ( defFileName, DET_CONTROL_PWFS1_CP_INIT_FILE);
+   }
 #endif
 
    printf ( "defFileName =%s\n", defFileName);
@@ -8826,7 +8946,7 @@ uint32 detReset
    }
 
    /*
-    * Set the default offsets for the PWFS2 CCD sectors
+    * Set the default offsets for the PWFS CCD sectors
     */
 
    MESSAGE_LOG4 (MSG_LOG,
@@ -11352,7 +11472,7 @@ void detObserveEnd
            (obsId->aoCtrlId->initFlag == FALSE) )
       {
          MESSAGE_LOG (MSG_MINDEBUG,
-         "PWFS2: Cannot process data - no AO control structure defined");
+         "PWFS: Cannot process data - no AO control structure defined");
       }   
       else
       {
@@ -12570,7 +12690,7 @@ void detObserveEnd
                   if (obsId->saveFgCbCounter == 
                       obsId->saveCbFgCtrlClosedLoopFrame)
                   {
-                     if ( aoCbFgCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
+                     if ( aoCbFgCtrlSave (wfsNum, obsId->pCbPathSeq, obsId->aoCcdId, 
                                           obsId->aoCtrlId, obsId->aoCbFgCtrlId) 
                           == ERROR )
                      {
@@ -12586,7 +12706,7 @@ void detObserveEnd
                   if (obsId->saveAoCbCounter == 
                       obsId->saveCbAoCtrlClosedLoopFrame)
                   {
-                     if ( aoCbAoCtrlSave (obsId->pCbPathSeq, obsId->aoCcdId, 
+                     if ( aoCbAoCtrlSave (wfsNum, obsId->pCbPathSeq, obsId->aoCcdId, 
                                           obsId->aoCtrlId, obsId->aoCbAoCtrlId) 
                           == ERROR )
                      {
@@ -12934,7 +13054,7 @@ void detObserveEnd
 
       if ( obsId->saveCbIm == TRUE )
       {
-         if ( aoCbImSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+         if ( aoCbImSave (wfsNum, obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
                           obsId->aoCbImId) == ERROR )
          {
             ERROR_LOG ("Failed to save image circular buffer\n" ) ;
@@ -12943,7 +13063,7 @@ void detObserveEnd
 
       if ( obsId->saveCbAoCtrl == TRUE )
       {
-         if ( aoCbAoCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+         if ( aoCbAoCtrlSave (wfsNum, obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
                             obsId->aoCbAoCtrlId) == ERROR )
          {
             ERROR_LOG ("Failed to save control circular buffer\n" ) ;
@@ -12952,7 +13072,7 @@ void detObserveEnd
 
       if ( obsId->saveCbFgCtrl == TRUE )
       {
-         if ( aoCbFgCtrlSave (obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
+         if ( aoCbFgCtrlSave (wfsNum, obsId->pCbPath, obsId->aoCcdId, obsId->aoCtrlId, 
                               obsId->aoCbFgCtrlId) == ERROR )
          {
             ERROR_LOG ("Failed to save FG control circular buffer\n" ) ;
@@ -14339,9 +14459,17 @@ uint32 detFrameSize
       /* Read default parameters from par file */
 
 #if (MK)
-      strcpy ( defFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE ) ;
+      if (wfsNum==2) {
+	strcpy ( defFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE ) ;
+      } else {
+	strcpy ( defFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE ) ;
+      }
 #else
-      strcpy ( defFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE ) ;
+      if (wfsNum==2) {
+	strcpy ( defFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE ) ;
+      } else {
+	strcpy ( defFileName , DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE ) ;
+      }
 #endif
 
       if ( strcmp (defFileName, "NONE") != 0 )
@@ -14496,9 +14624,17 @@ uint32 detFrameSize
       /* Read default parameters from par file */
 
 #if (MK)
-      strcpy (defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+      if (wfsNum==2) {
+	strcpy (defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE);
+      } else {
+	strcpy (defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE);
+      }
 #else
-      strcpy (defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+      if (wfsNum==2) {
+	strcpy (defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE);
+      } else {
+	strcpy (defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE);
+      }
 #endif
 
       if ( strcmp (defFileName, "NONE") != 0 )
@@ -15276,7 +15412,7 @@ uint32 detDhsDisplay
  *   None.
  *
  *   PRIOR REQUIREMENTS:
- *   external variables :detSdsuIdP2, detObsIdP2
+ *   external variables :detSdsuIdPW, detObsIdPW
  *
  *   INCLUDE FILES:
  *   detControl.h
@@ -15299,23 +15435,23 @@ STATUS detHeadTempGet
    double   meanValue6, meanValue7;
    double   sdsuTemp6, sdsuTemp7, sdsuTemp;
 
-   if ( detObsIdP2 == NULL )
+   if ( detObsIdPW == NULL )
    {
       return (ERROR);
    }
 
-   if ( detSdsuIdP2 == NULL )
+   if ( detSdsuIdPW == NULL )
    {
       return (ERROR);
    }
 
-   if ( ( detObsIdP2->observing != TRUE ) && ( readTempReadyFlag != FALSE ) )
+   if ( ( detObsIdPW->observing != TRUE ) && ( readTempReadyFlag != FALSE ) )
    {
 
       meanValue6 = meanValue7 = 0.0;
       for ( sample=0; sample<1; sample++)
       {
-         if (sdsuParamRead (detSdsuIdP2, SDSU_IDENT_UTL, "U_ADC6", &value) == 
+         if (sdsuParamRead (detSdsuIdPW, SDSU_IDENT_UTL, "U_ADC6", &value) == 
              ERROR)
          {
             ERROR_LOG ("Failed to read thermistor 1 temperature parameter");
@@ -15326,7 +15462,7 @@ STATUS detHeadTempGet
             meanValue6 += (double) value;
          }
 
-         if (sdsuParamRead (detSdsuIdP2, SDSU_IDENT_UTL, "U_ADC7", &value) 
+         if (sdsuParamRead (detSdsuIdPW, SDSU_IDENT_UTL, "U_ADC7", &value) 
              == ERROR)
          {
             ERROR_LOG ("Failed to read thermistor 2 temperature parameter");
@@ -15390,8 +15526,8 @@ STATUS detHeadTempGet
  *   This function is designed to be invoked from the VxWorks shell
  *
  *   EXTERNAL VARIABLES:
- *   (>) detSdsuIdP2  (SDSU_ID)  SDSU context structure for PWFS2
- *   (>) detObsIdP2   (OBS_ID)   Observation context structure for PWFS2
+ *   (>) detSdsuIdPW  (SDSU_ID)  SDSU context structure for PWFS
+ *   (>) detObsIdPW   (OBS_ID)   Observation context structure for PWFS
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -15412,33 +15548,33 @@ void detShow
 {
    /*
     * Display the contents of the SDSU context structures for the
-    * wavefront sensor: PWFS2
+    * wavefront sensor: PWFS
     */
 
    if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
         (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
       )
    {
-      printf ("detShow:          PWFS2\n");
+      printf ("detShow:          PWFS%i\n", wfsNum);
       printf ("detShow:          -----\n");
 
-      if ( detSdsuIdP2 != NULL )
+      if ( detSdsuIdPW != NULL )
       {
-         if ( sdsuShow (detSdsuIdP2, verbose) != ERROR )
+         if ( sdsuShow (detSdsuIdPW, verbose) != ERROR )
          {
-            if (detObsIdP2 != NULL)
+            if (detObsIdPW != NULL)
             {
-               detObsShow (detObsIdP2, verbose);
+               detObsShow (detObsIdPW, verbose);
             }
          }
          else
          {
-            printf ("detShow: SDSU controller context for PWFS2 invalid.\n");
+            printf ("detShow: SDSU controller context for PWFS%i invalid.\n",wfsNum);
          }
       }
       else
       {
-         printf ("detShow: SDSU controller for PWFS2 not initialised.\n");
+         printf ("detShow: SDSU controller for PWFS%i not initialised.\n",wfsNum);
       }
    }
 
@@ -15471,7 +15607,7 @@ void detShow
  *   This function is designed to be invoked from the VxWorks shell
  *
  *   EXTERNAL VARIABLES:
- *   (>) detSdsuIdP2 (SDSU_ID) SDSU context structure for PWFS2
+ *   (>) detSdsuIdPW (SDSU_ID) SDSU context structure for PWFS
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -15490,31 +15626,27 @@ void detStatusShow
    )
 {
    /*
-    * Display the SDSU status parameters for PWFS2
+    * Display the SDSU status parameters for PWFS
     */
 
-   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
-        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
-      )
-   {
-      printf ("detStatusShow:          PWFS2\n");
-      printf ("detStatusShow:          -----\n");
 
-      if ( detSdsuIdP2 != NULL )
-      {
-         if ( sdsuStatusShow (detSdsuIdP2) == ERROR )
-         {
-            printf (
-            "detStatusShow: SDSU controller context for PWFS2 invalid.\n");
-         }
-      }
-      else
-      {
-         printf ("detStatusShow: SDSU controller for PWFS2 not initialised.\n");
-      }
-   }
-
-   return;
+  printf ("detStatusShow:          PWFS%i\n",wfsNum);
+  printf ("detStatusShow:          -----\n");
+  
+  if ( detSdsuIdPW != NULL )
+    {
+      if ( sdsuStatusShow (detSdsuIdPW) == ERROR )
+	{
+	  printf (
+		  "detStatusShow: SDSU controller context for PWFS%i invalid.\n",wfsNum);
+	}
+    }
+  else
+    {
+      printf ("detStatusShow: SDSU controller for PWFS%i not initialised.\n",wfsNum);
+    }
+  
+  return;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -15543,7 +15675,7 @@ void detStatusShow
  *   This function is designed to be invoked from the VxWorks shell
  *
  *   EXTERNAL VARIABLES:
- *   (>) detSdsuIdP2 (SDSU_ID) SDSU context structure for PWFS2
+ *   (>) detSdsuIdPW (SDSU_ID) SDSU context structure for PWFS
  *
  *   PRIOR REQUIREMENTS:
  *   None
@@ -15562,31 +15694,25 @@ void detTempShow
    )
 {
    /*
-    * Display the SDSU status parameters for PWFS2
+    * Display the SDSU status parameters for PWFS
     */
 
-   if ( (pWfsName == NULL) || (strcmp (pWfsName, " ") == 0) ||
-        (strstr(pWfsName, "p2") != NULL) || (strstr(pWfsName, "pwfs2") != NULL)
-      )
-   {
+  printf ("detTempShow:          PWFS%i\n",wfsNum);
+  printf ("detTempShow:          -----\n");
+  
+  if ( detSdsuIdPW != NULL )
+    {
+      if ( sdsuTempShow (detSdsuIdPW) == ERROR )
+	{
+	  printf ("detTempShow: SDSU controller context for PWFS%i invalid.\n",wfsNum);
+	}
+    }
+  else
+    {
+      printf ("detTempShow: SDSU controller for PWFS%i not initialised.\n",wfsNum);
+    }
 
-      printf ("detTempShow:          PWFS2\n");
-      printf ("detTempShow:          -----\n");
-
-      if ( detSdsuIdP2 != NULL )
-      {
-         if ( sdsuTempShow (detSdsuIdP2) == ERROR )
-         {
-           printf ("detTempShow: SDSU controller context for PWFS2 invalid.\n");
-         }
-      }
-      else
-      {
-         printf ("detTempShow: SDSU controller for PWFS2 not initialised.\n");
-      }
-   }
-
-   return;
+  return;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -17337,10 +17463,10 @@ uint32 detSigModeAo
 
 /*+
  *   FUNCTION NAME:
- *   detSigModeFgFocus
+ *   detSigModeFgFoc
  *
  *   INVOCATION:
- *   detSigModeFgFocus (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *   detSigModeFgFoc (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
  *                      obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -17354,7 +17480,7 @@ uint32 detSigModeAo
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigModeFgFocus command
+ *   Execute detSigModeFgFoc command
  *
  *   DESCRIPTION:
  *   This function defines the AO processing mode to Fast Guide and Focus 
@@ -17373,7 +17499,7 @@ uint32 detSigModeAo
  *-
  */
 
-uint32 detSigModeFgFocus
+uint32 detSigModeFgFoc
    (
    const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
@@ -17703,10 +17829,10 @@ uint32 detSigModeFgCoadd
 
 /*+
  *   FUNCTION NAME:
- *   detSigModeFgFocusAo
+ *   detSigModeFgFocAo
  *
  *   INVOCATION:
- *   detSigModeFgFocusAo (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
+ *   detSigModeFgFocAo (pRecordPrefix, cadCmdContext, commandNumber, sdsuId, 
  *                        obsId)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
@@ -17720,7 +17846,7 @@ uint32 detSigModeFgCoadd
  *   (uint32)   Error number. 0 if command successful.
  *
  *   PURPOSE:
- *   Execute detSigModeFgFocusAo command
+ *   Execute detSigModeFgFocAo command
  *
  *   DESCRIPTION:
  *   This function defines the AO processing mode to Fast Guide and Focus and
@@ -17740,7 +17866,7 @@ uint32 detSigModeFgCoadd
  *-
  */
 
-uint32 detSigModeFgFocusAo
+uint32 detSigModeFgFocAo
    (
    const char *    pRecordPrefix,   /* Record Name Prefix.                    */
    CAD_CMD_CONTEXT cadCmdContext,   /* CAD command context structure.         */
@@ -19558,11 +19684,16 @@ uint32 detSigModeSeqDark
 
    if ( obsId->aoCcdId->binningFlag == FALSE )
    {
-      strcpy ( pDarkFileName, "./data/zeroFullP2Dark.fits" );
+     /* AWE: need to differentiate btw P1/P2 */
+     /* strcpy ( pDarkFileName, "./data/zeroFullP2Dark.fits" );*/
+      sprintf(pDarkFileName, "./data/zeroFullP%iDark.fits",wfsNum);
+      printf("pDarkFileName is %s\n",pDarkFileName);
    }
    else
    {   
-      strcpy ( pDarkFileName, "./data/zeroBinP2Dark.fits" );
+      sprintf(pDarkFileName, "./data/zeroBinP%iDark.fits",wfsNum);
+      printf("pDarkFileName is %s\n",pDarkFileName);
+      /*strcpy ( pDarkFileName, "./data/zeroBinP2Dark.fits" );*/
    }
 
    if ( aoDarkUpdate ( pDarkFileName, obsId->aoCcdId, obsId->aoCtrlId) 
@@ -19713,7 +19844,7 @@ uint32 detSimulateImage
 
 /*+
  *   FUNCTION NAME:
- *   detInitObserbeRecord
+ *   detInitObserveRecord
  *
  *   INVOCATION:
  *   detInitObserbeRecord (pRecordPrefix, nExp, expTime, outOption)
@@ -19773,7 +19904,7 @@ uint32 detInitObserveRecord
 
    /* Init the field A of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.A", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.A", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    if ( cicsDbPut (pRecordName, message, DBF_LONG, pNExp) == ERROR )
@@ -19784,7 +19915,7 @@ uint32 detInitObserveRecord
 
    /* Init the field B of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.B", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.B", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    /*if ( cicsDbPut (pRecordName, message, DBF_DOUBLE, pExpTime) == ERROR )*/
@@ -19796,7 +19927,7 @@ uint32 detInitObserveRecord
 
    /* Init the field C of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.C", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.C", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    if ( cicsDbPut (pRecordName, message, DBF_LONG, pOutOption) == ERROR )
@@ -19807,7 +19938,7 @@ uint32 detInitObserveRecord
 
    /* Init the field D of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.D", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.D", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    strcpy ( label, "NONE" );
@@ -19819,7 +19950,7 @@ uint32 detInitObserveRecord
 
    /* Init the field E of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.E", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.E", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    value = 2;
@@ -19831,7 +19962,7 @@ uint32 detInitObserveRecord
 
    /* Init the field F of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.F", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.F", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    strcpy (path, "." );
@@ -19843,7 +19974,7 @@ uint32 detInitObserveRecord
 
    /* Init the field G of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.G", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.G", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    strcpy (file, "pwfs2.fits");
@@ -19855,7 +19986,7 @@ uint32 detInitObserveRecord
 
    /* Init the field H of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.H", TOP, pRecordPrefix, 
+   sprintf ( pRecordName, "%s%s:%s.H", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
    strcpy (sim, "NONE");
@@ -19894,7 +20025,7 @@ uint32 detInitObserveRecord
  *   None.
  *
  *   PRIOR REQUIREMENTS:
- *   external variables: detObsIdP2
+ *   external variables: detObsIdPW
  *
  *   INCLUDE FILES:
  *   detControl.h
@@ -19933,7 +20064,7 @@ STATUS detInitSigInit
    double fgGain[3];
    double slidingFocusGain;
 
-   if ( detObsIdP2 == NULL )
+   if ( detObsIdPW == NULL )
    {
       return (ERROR);
    }
@@ -19947,9 +20078,17 @@ STATUS detInitSigInit
       /* Read default parameters from par file */
 
 #if (MK)
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_MK_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE );
+     }
 #else
-      strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_FULL_CTRL_CP_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE );
+     }
 #endif
 
       if ( strcmp (defFileName, "NONE") != 0 )
@@ -19997,9 +20136,17 @@ STATUS detInitSigInit
       /* Read default parameters from par file */
 
 #if (MK)
-      strcpy ( defFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_MK_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE );
+     }
 #else
-      strcpy ( defFileName , DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_BIN_CTRL_CP_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE );
+     }
 #endif
 
       if ( strcmp (defFileName, "NONE") != 0 )
@@ -22838,9 +22985,17 @@ STATUS detInitSigInitModAst
    /* Read default parameters from par file */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE );
+     }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE );
+     }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -22935,9 +23090,17 @@ STATUS detInitSigInitModTref
    /* Read default parameters from par file */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE );
+     }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE );
+     }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -23018,9 +23181,17 @@ STATUS detInitSigInitModComa
    /* Read default parameters from par file */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE );
+     }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE );
+     }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -23100,9 +23271,17 @@ STATUS detInitSigInitModFoc
    /* Read default parameters from par file */
 
 #if (MK)
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_MK_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE );
+     }
 #else
-   strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     if (wfsNum==2) {
+       strcpy ( defFileName, DET_CONTROL_PWFS2_AO_MOD_CP_INIT_FILE );
+     } else {
+       strcpy ( defFileName, DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE );
+     }
 #endif
 
    if ( strcmp (defFileName, "NONE") != 0 )
@@ -23428,7 +23607,7 @@ uint32 testTDL (
  *   None.
  *
  *   PRIOR REQUIREMENTS:
- *   external variables: detObsIdP2
+ *   external variables: detObsIdPW
  *
  *   INCLUDE FILES:
  *   detControl.h
@@ -23495,7 +23674,7 @@ STATUS detInitSigModeSeq
  *   None.
  *
  *   PRIOR REQUIREMENTS:
- *   external variables: detObsIdP2
+ *   external variables: detObsIdPW
  *
  *   INCLUDE FILES:
  *   detControl.h
@@ -23701,7 +23880,7 @@ uint32 detSigInitAoThresh
  *   None.
  *
  *   PRIOR REQUIREMENTS:
- *   external variables: detObsIdP2
+ *   external variables: detObsIdPW
  *
  *   INCLUDE FILES:
  *   detControl.h

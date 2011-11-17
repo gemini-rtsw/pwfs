@@ -6,7 +6,7 @@
  *   detControl.h
  *
  *   PURPOSE:
- *   Include file for detControl for PWFS2
+ *   Include file for detControl for PWFS
  *
  *   IMPORTANT:
  *   *** THIS FILE MUST BE MODIFIED TO REFLECT THE ACTUAL VME ADDRESSES OF
@@ -68,7 +68,7 @@
 #include "gemModNum.h"
 #include "epToVxLib.h"
 #include "sdsuLib.h"
-#include "aoP2Lib.h"
+#include "aoPWLib.h"
 
 #include "dhs.h"   
 
@@ -350,14 +350,27 @@
                                     /* controller will then be simulated      */
                                     /* MVME167 0xc0000020, POWERPC 0x08000000 */
 
+#define   DET_CONTROL_PWFS1_SDSU_ADRS_VME     0x08000000
+                                    /* VME address of PWFS1 SDSU controller   */
+                                    /* If the controller is not installed its */
+                                    /* address should be set to 0x0, and the  */
+                                    /* controller will then be simulated      */
+                                    /* MVME167 0xc0000020, POWERPC 0x08000000 */
 #define   DET_CONTROL_PWFS2_MASK              0x2               
                                     /* Define the bit masks used to stop      */
                                     /* the detector control process, Bit 1 set*/
 
+#define   DET_CONTROL_PWFS1_MASK              0x1      
+                                    /* Define the bit masks used to stop      */
+                                    /* the detector control process, Bit 1 set*/
 
 #define DET_CONTROL_PWFS2_MAX_FRAMES          1   
                                     /* Define the default number of SDSU data */
                                     /* buffers allocated for PWFS2            */
+
+#define DET_CONTROL_PWFS1_MAX_FRAMES          1   
+                                    /* Define the default number of SDSU data */
+                                    /* buffers allocated for PWFS1            */
 
 #define DET_CONTROL_MAX_WCSPOINTS             40 
                                     /* Max number of WCS calibration points.  */
@@ -416,6 +429,62 @@
 #define DET_CONTROL_PWFS2_BW_CP_INIT_FILE             "defBwP2CP.dat"
                                     /* Define the CP butterworth filter init  */
                                     /* file for PWFS2. Set to "NONE" if no    */
+                                    /* butterworth filter required            */
+
+#define DET_CONTROL_PWFS1_MK_INIT_FILE        "defDetContP1MK.dat"
+                                    /* Define the MK default init file for    */
+                                    /* PWFS1 detector controller. Set to      */
+                                    /* "NONE" if no default settings is       */
+                                    /* required.                              */
+
+#define DET_CONTROL_PWFS1_CP_INIT_FILE        "defDetContP1CP.dat"
+                                    /* Define the CP default init file for    */
+                                    /* PWFS1 detector controller. Set to      */
+                                    /* "NONE" if no default settings is       */
+                                    /* required.                              */
+
+#define DET_CONTROL_PWFS1_AO_FULL_CTRL_MK_INIT_FILE   "defFullCtrlP1MK.dat"  
+                                    /* Define the MK default ao control init  */
+                                    /* file for PWFS1 when no binning. Set to */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_BIN_CTRL_MK_INIT_FILE    "defBinCtrlP1MK.dat"  
+                                    /* Define the MK default ao control init  */
+                                    /* file for PWFS1 when binning. Set to    */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_FULL_CTRL_CP_INIT_FILE   "defFullCtrlP1CP.dat"  
+                                    /* Define the CP default ao control init  */
+                                    /* file for PWFS1 when no binning. Set to */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_BIN_CTRL_CP_INIT_FILE    "defBinCtrlP1CP.dat"  
+                                    /* Define the CP default ao control init  */
+                                    /* file for PWFS1 when binning. Set to    */
+                                    /* "NONE" if no default ao control        */
+                                    /* initialisation is required.            */
+
+#define DET_CONTROL_PWFS1_AO_MOD_MK_INIT_FILE         "defAoModP1MK.dat"
+                                    /* Define the MK default model init file  */
+                                    /* for PWFS1. Set to "NONE" if no default */
+                                    /* zero point models required             */
+
+#define DET_CONTROL_PWFS1_AO_MOD_CP_INIT_FILE         "defAoModP1CP.dat"
+                                    /* Define the CP default model init file  */
+                                    /* for PWFS1. Set to "NONE" if no default */
+                                    /* zero point models required             */
+
+#define DET_CONTROL_PWFS1_BW_MK_INIT_FILE             "defBwP1MK.dat"
+                                    /* Define the MK butterworth filter init  */
+                                    /* file for PWFS1. Set to "NONE" if no    */
+                                    /* butterworth filter required            */
+
+#define DET_CONTROL_PWFS1_BW_CP_INIT_FILE             "defBwP1CP.dat"
+                                    /* Define the CP butterworth filter init  */
+                                    /* file for PWFS1. Set to "NONE" if no    */
                                     /* butterworth filter required            */
 
 #define   DET_CONTROL_OMF_FILE_PATH           "./bin/asm56000"

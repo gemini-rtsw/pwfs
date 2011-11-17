@@ -32,10 +32,6 @@
 
 /* defines */
 
-#ifndef   TOP
-#define   TOP   "pwfs2:"       /* Top level prefix for all EPICS record names */
-#endif   
-
    /*
     * Declare the data structures to contain EPICS record information.
     * The CAD_RECORD, CAR_RECORD and SIR_RECORD data types are declared
@@ -58,7 +54,6 @@ IMPORT int wfsDbNGsubRecord;          /* Total number of genSub records.      */
 IMPORT int wfsDbNCarRecord;           /* Total number of CAR records.         */
 IMPORT int wfsDbNSirRecord;           /* Total number of SIR records.         */
 
-IMPORT char pWfsDbRecNamePrefix [];   /* Record name prefix string.           */
 IMPORT BOOL pWfsDbRecInitialised [];  /* Array of flags indicating when       */
                                       /* the set of records of each type      */
                                       /* have been initialised.               */

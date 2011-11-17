@@ -9,7 +9,10 @@
  *   Include file for epToVxLib
  *
  *INDENT-OFF*
- * $Log: not supported by cvs2svn $
+ * $Log: epToVxLib.h,v $
+ * Revision 1.4  2002/01/03 03:39:26  cboyer
+ * Major modifications: Port to epics3.13.4 + threshold in real time
+ *
  * Revision 1.3  2000/07/10 21:47:34  cboyer
  * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
  *
@@ -457,7 +460,7 @@ IMPORT STATUS epToVxCaInit (int recordType, const char * pRecordName,
                             CA_DEF pCaDef);
 IMPORT void   epToVxCaShow (CA_DEF pCaDef, const BOOL verbose);
 IMPORT void   epToVxChidShow (chid pChid);
-IMPORT STATUS epToVxCaInitRecords (void);
+IMPORT STATUS epToVxCaInitRecords (const char * topName);
 IMPORT STATUS epToVxCaInitCar (void);
 IMPORT STATUS epToVxCaInitSir (void);
 IMPORT STATUS epToVxCaWrite (CA_DEF pContextKnown);

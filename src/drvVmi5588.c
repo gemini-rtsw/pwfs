@@ -1,5 +1,5 @@
 /* drvVmi5588.c -  Device driver for VMIC VMIVME5588 */
-/* $Id: drvVmi5588.c,v 1.4 2002-01-24 21:00:20 cboyer Exp $
+/* $Id$
 *
 *	Author:		Andrew Johnson
 *	Date:		10-10-94

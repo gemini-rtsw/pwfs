@@ -23,15 +23,15 @@
  * dfilter           - low pass filter
  * ttfZero           - Receive ttfZero array from TCS
  * aoZero            - Receive aoZero array from TCS
- * showFgDiag1P2     - Write diagnostic data from PWFS2 FG structure to gensub
+ * showFgDiag1PW     - Write diagnostic data from PWFS FG structure to gensub
  *                     outputs for display
- * showFgDiag2P2     - Write diagnostic data from PWFS2 FG structure to gensub
+ * showFgDiag2PW     - Write diagnostic data from PWFS FG structure to gensub
  *                     outputs for display
- * showAoDiagP2      - Write diagnostic data from PWFS2 aO structure to gensub
+ * showAoDiagPW      - Write diagnostic data from PWFS aO structure to gensub
  *                     outputs for display
  * showCbDiag        - Write diagnostic data from cb structure to gensub
  *                     outputs for display 
- * showThreshDiagP2  - Write diagnostic data from ao control structure to 
+ * showThreshDiagPW  - Write diagnostic data from ao control structure to 
  *                     gensub outputs for display
  * gensubFanDouble   - receive array of doubles on port A, write elements to
  *                     individual output ports
@@ -146,7 +146,7 @@
 #include <float.h>
 #include <gemTypes.h>
 
-#include "aoP2Lib.h"
+#include "aoPWLib.h"
 #include "synchroMap.h"
 
 typedef struct
@@ -193,7 +193,7 @@ typedef struct
 
 frame   *ag2m2;
 frame   *ag2tcs;
-wfs     *ptrPwfs2;
+wfs     *ptrPwfs;
 double  ttfData[AO_ARRAY_SIZE+2];
 double  aoData[AO_ARRAY_SIZE+2+2]; /* add 2 data for astig0 and astig45 */
 double  aoDataTcs[AO_ARRAY_SIZE+2];
@@ -211,11 +211,11 @@ WFS_VECT localRealTimeAoThresholdVect;
 SEM_ID   accessAoData=NULL;
 SEM_ID   accessFgData=NULL;
 
-AO_CCD_ID aoCcdIdP2;
-AO_CB_AO_CTRL_ID aoCbAoCtrlIdP2;
-AO_CB_FG_CTRL_ID aoCbFgCtrlIdP2;
-AO_CB_IM_ID aoCbImIdP2;
-AO_CTRL_ID aoCtrlIdP2;
+AO_CCD_ID aoCcdIdPW;
+AO_CB_AO_CTRL_ID aoCbAoCtrlIdPW;
+AO_CB_FG_CTRL_ID aoCbFgCtrlIdPW;
+AO_CB_IM_ID aoCbImIdPW;
+AO_CTRL_ID aoCtrlIdPW;
 double angleWithM1=0.0;
 double angleWithM2=0.0;
 
@@ -460,6 +460,7 @@ long gensubToTcsInit
 {
    memMap   *basePtr = (memMap *)SYNCHROBASE;
    static   int processedFlag = FALSE;
+   long     wfsnum;
    char     junk;
 
    /* this initialisation routine only needs to be called once */
@@ -690,13 +691,29 @@ long gensubToTcsInit
    /* if synchro card present, initialise structure pointers */
 
    /* assign pointers and write ID strings for synchro bus */
+   /* need to know if this is P1 or P2 ... wfsnum is on input G*/
 
-   if(ptrPwfs2 == NULL)
-   {
-      ptrPwfs2 = (wfs*)&basePtr->pwfs2;
-      strncpy(ptrPwfs2->name, "pwfs2", 15);
-      ptrPwfs2->time = 0.0;
-      ptrPwfs2->interval = 0.0;
+   wfsnum= *(long *)pgsub->g;
+   printf("\ngensubToTcsInit: wfs number is: %d\n", wfsnum);
+   
+   if (wfsnum==2) {
+     printf("setting up ptrPwfs for P2\n");
+     if(ptrPwfs == NULL)
+       {
+	 ptrPwfs = (wfs*)&basePtr->pwfs2;
+	 strncpy(ptrPwfs->name, "pwfs2", 15);
+	 ptrPwfs->time = 0.0;
+	 ptrPwfs->interval = 0.0;
+       }
+   } else {
+     printf("setting up ptrPwfs for P1\n");
+     if(ptrPwfs == NULL)
+       {
+	 ptrPwfs = (wfs*)&basePtr->pwfs1;
+	 strncpy(ptrPwfs->name, "pwfs1", 15);
+	 ptrPwfs->time = 0.0;
+	 ptrPwfs->interval = 0.0;
+       }
    }
 
    return (OK);
@@ -1696,18 +1713,18 @@ STATUS writeWfsToSynchro
    /* scale data and write to the synchro bus, check that pointer has been 
       initialised with null check */
 
-   if ( (ptrPwfs2 != NULL) && (writeToRm == TRUE) )
+   if ( (ptrPwfs != NULL) && (writeToRm == TRUE) )
    {
-     ptrPwfs2->z1 = (float)(result.z2);
-     ptrPwfs2->z2 = (float)(result.z3);
-     ptrPwfs2->z3 = (float)(result.z4);
+     ptrPwfs->z1 = (float)(result.z2);
+     ptrPwfs->z2 = (float)(result.z3);
+     ptrPwfs->z3 = (float)(result.z4);
 
-     ptrPwfs2->err1   = (float)(*(pFgErrorsVect));
-     ptrPwfs2->err2   = (float)(*(pFgErrorsVect + 1));
-     ptrPwfs2->err3   = (float)(*(pFgErrorsVect + 2));
-     ptrPwfs2->interval  += (float)(0.0001);
+     ptrPwfs->err1   = (float)(*(pFgErrorsVect));
+     ptrPwfs->err2   = (float)(*(pFgErrorsVect + 1));
+     ptrPwfs->err3   = (float)(*(pFgErrorsVect + 2));
+     ptrPwfs->interval  += (float)(0.0001);
 
-     ptrPwfs2->time = (double)(*pTime);
+     ptrPwfs->time = (double)(*pTime);
 
      /* raise interrupt on SCS */
 
@@ -2198,13 +2215,13 @@ long aoZero
 /*
  *+
  * FUNCTION NAME:
- * showAoDiagP2
+ * showAoDiagPW
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showAoDiagP2 (struct genSubRecord * pgsub)
+ * long showAoDiagPW (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2234,7 +2251,7 @@ long aoZero
  *-
  */
 
-STATUS showAoDiagP2
+STATUS showAoDiagPW
    (
    struct genSubRecord * pgsub
    )
@@ -2248,7 +2265,7 @@ STATUS showAoDiagP2
    double   *pThresh;
    double   time;
 
-   if (aoCbAoCtrlIdP2 == NULL)
+   if (aoCbAoCtrlIdPW == NULL)
    {
       /* context structure not yet initialised */
       return(OK);
@@ -2263,9 +2280,9 @@ STATUS showAoDiagP2
    {
       /* grab data from the circular buffer */
 
-      indexCb = aoCbAoCtrlIdP2->position;
+      indexCb = aoCbAoCtrlIdPW->position;
 
-      if (( indexCb == 0 ) && ( aoCbAoCtrlIdP2->counter == 0))
+      if (( indexCb == 0 ) && ( aoCbAoCtrlIdPW->counter == 0))
          return (OK);
 
       if ( (indexCb < 0) && (indexCb > (CB_AO_CTRL_RECORD_NB - 1)) )
@@ -2279,16 +2296,16 @@ STATUS showAoDiagP2
       else
          indexCb = CB_AO_CTRL_RECORD_NB - 1;
 
-      pThresh = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].thresholdVect;
-      pCentroids = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].centroidsVect;
-      pTotal = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].totalCountsVect;
-      wfsStatus = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].wfsStatus;
-      time = aoCbAoCtrlIdP2->cbAoCtrlRecord[indexCb].time;
+      pThresh = aoCbAoCtrlIdPW->cbAoCtrlRecord[indexCb].thresholdVect;
+      pCentroids = aoCbAoCtrlIdPW->cbAoCtrlRecord[indexCb].centroidsVect;
+      pTotal = aoCbAoCtrlIdPW->cbAoCtrlRecord[indexCb].totalCountsVect;
+      wfsStatus = aoCbAoCtrlIdPW->cbAoCtrlRecord[indexCb].wfsStatus;
+      time = aoCbAoCtrlIdPW->cbAoCtrlRecord[indexCb].time;
 
       j = 0;
-      for ( i = 0 ; i < aoCcdIdP2->subapNb ; i ++ )
+      for ( i = 0 ; i < aoCcdIdPW->subapNb ; i ++ )
       {
-          if ( aoCcdIdP2->subapUsedVect[i] == TRUE )
+          if ( aoCcdIdPW->subapUsedVect[i] == TRUE )
           {
              *(localCentroidsVect + 2*i) = *(pCentroids + 2*j);
              *(localCentroidsVect + 2*i+1) = *(pCentroids + 2*j+1);
@@ -2340,13 +2357,13 @@ STATUS showAoDiagP2
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag1P2
+ * showFgDiag1PW
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long    showFgDiag1P2(struct genSubRecord * pgsub)
+ * long    showFgDiag1PW(struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2376,7 +2393,7 @@ STATUS showAoDiagP2
  *-
  */
 
-STATUS showFgDiag1P2(struct genSubRecord * pgsub)
+STATUS showFgDiag1PW(struct genSubRecord * pgsub)
 {
    int i=0;
    int j=0;
@@ -2388,7 +2405,7 @@ STATUS showFgDiag1P2(struct genSubRecord * pgsub)
    double *pThresh;
    double time;
 
-   if (aoCbFgCtrlIdP2 == NULL )
+   if (aoCbFgCtrlIdPW == NULL )
    {
        /* context structure not yet initialised */
        return(OK);
@@ -2404,9 +2421,9 @@ STATUS showFgDiag1P2(struct genSubRecord * pgsub)
       
       /* grab data from the circular buffer */
 
-      indexCb = aoCbFgCtrlIdP2->position;
+      indexCb = aoCbFgCtrlIdPW->position;
 
-      if (( indexCb == 0 ) && ( aoCbFgCtrlIdP2->counter == 0))
+      if (( indexCb == 0 ) && ( aoCbFgCtrlIdPW->counter == 0))
          return (OK);
 
       if ( (indexCb < 0) && (indexCb > (CB_FG_CTRL_RECORD_NB - 1)) )
@@ -2420,17 +2437,17 @@ STATUS showFgDiag1P2(struct genSubRecord * pgsub)
       else
          indexCb = CB_FG_CTRL_RECORD_NB - 1;
 
-      wfsStatus = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].wfsStatus;
-      time = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].time;
-      pGuide = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].guidesVect;
-      pTotal = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].totalCountsVect;
-      pCentroids = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].centroidsVect;
-      pThresh = aoCbFgCtrlIdP2->cbFgCtrlRecord[indexCb].thresholdVect;
+      wfsStatus = aoCbFgCtrlIdPW->cbFgCtrlRecord[indexCb].wfsStatus;
+      time = aoCbFgCtrlIdPW->cbFgCtrlRecord[indexCb].time;
+      pGuide = aoCbFgCtrlIdPW->cbFgCtrlRecord[indexCb].guidesVect;
+      pTotal = aoCbFgCtrlIdPW->cbFgCtrlRecord[indexCb].totalCountsVect;
+      pCentroids = aoCbFgCtrlIdPW->cbFgCtrlRecord[indexCb].centroidsVect;
+      pThresh = aoCbFgCtrlIdPW->cbFgCtrlRecord[indexCb].thresholdVect;
 
       j = 0;
-      for ( i = 0 ; i < aoCcdIdP2->subapNb ; i ++ )
+      for ( i = 0 ; i < aoCcdIdPW->subapNb ; i ++ )
       {
-          if ( aoCcdIdP2->subapUsedVect[i] == TRUE )
+          if ( aoCcdIdPW->subapUsedVect[i] == TRUE )
           {
              *(localFgCentroidsVect + 2*i) = *(pCentroids + 2*j);
              *(localFgCentroidsVect + 2*i+1) = *(pCentroids + 2*j+1);
@@ -2481,13 +2498,13 @@ STATUS showFgDiag1P2(struct genSubRecord * pgsub)
 /*
  *+
  * FUNCTION NAME:
- * showFgDiag2P2
+ * showFgDiag2PW
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long    showFgDiag2P2(struct genSubRecord * pgsub)
+ * long    showFgDiag2PW(struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2515,7 +2532,7 @@ STATUS showFgDiag1P2(struct genSubRecord * pgsub)
  *-
  */
 
-STATUS showFgDiag2P2(struct genSubRecord * pgsub)
+STATUS showFgDiag2PW(struct genSubRecord * pgsub)
 {
 
    if(semTake(accessFgData, WFS_TIMEOUT) != OK)
@@ -2587,19 +2604,19 @@ STATUS showCbDiag(struct genSubRecord * pgsub)
 
    /* Check the circular buffer structures are initialised */
 
-   if (aoCbAoCtrlIdP2 == NULL )
+   if (aoCbAoCtrlIdPW == NULL )
    {
        /* context structure not yet initialised */
        return(OK);
    }
 
-   if (aoCbFgCtrlIdP2 == NULL )
+   if (aoCbFgCtrlIdPW == NULL )
    {
        /* context structure not yet initialised */
        return(OK);
    }
 
-   if (aoCbImIdP2 == NULL )
+   if (aoCbImIdPW == NULL )
    {
        /* context structure not yet initialised */
        return(OK);
@@ -2607,14 +2624,14 @@ STATUS showCbDiag(struct genSubRecord * pgsub)
 
    /* Grab data from the circular buffers */
 
-   indexCbAoCtrl = aoCbAoCtrlIdP2->position;
-   counterCbAoCtrl = aoCbAoCtrlIdP2->counter;
+   indexCbAoCtrl = aoCbAoCtrlIdPW->position;
+   counterCbAoCtrl = aoCbAoCtrlIdPW->counter;
 
-   indexCbFgCtrl = aoCbFgCtrlIdP2->position;
-   counterCbFgCtrl = aoCbFgCtrlIdP2->counter;
+   indexCbFgCtrl = aoCbFgCtrlIdPW->position;
+   counterCbFgCtrl = aoCbFgCtrlIdPW->counter;
 
-   indexCbIm = aoCbImIdP2->position;
-   counterCbIm = aoCbImIdP2->counter;
+   indexCbIm = aoCbImIdPW->position;
+   counterCbIm = aoCbImIdPW->counter;
 
    *(int *)pgsub->vala = indexCbIm;
    *(int *)pgsub->valb = counterCbIm;
@@ -2712,13 +2729,13 @@ long gensubFanDoubles
 /*
  *+
  * FUNCTION NAME:
- * showThreshDiagP2
+ * showThreshDiagPW
  *
  * INVOCATION:
  * struct genSubRecord * pgsub
  * long   status;
  *
- * long showThreshDiagP2 (struct genSubRecord * pgsub)
+ * long showThreshDiagPW (struct genSubRecord * pgsub)
  *
  * PARAMETERS: (">" input, "!" modified, "<" output)
  * > genSubRecord (struct genSubRecord *)   pointer to record
@@ -2745,7 +2762,7 @@ long gensubFanDoubles
  *-
  */
 
-STATUS showThreshDiagP2
+STATUS showThreshDiagPW
    (
    struct genSubRecord * pgsub
    )
@@ -2754,7 +2771,7 @@ STATUS showThreshDiagP2
    int j = 0;
    double   *pThreshold;
 
-   if (aoCtrlIdP2 == NULL)
+   if (aoCtrlIdPW == NULL)
    {
       /* context structure not yet initialised */
       return(OK);
@@ -2762,12 +2779,12 @@ STATUS showThreshDiagP2
 
    /* grab data from the ao control structure */
 
-   pThreshold = aoCtrlIdP2->thresholdVect;
+   pThreshold = aoCtrlIdPW->thresholdVect;
 
    j = 0;
-   for ( i = 0 ; i < aoCcdIdP2->subapNb ; i ++ )
+   for ( i = 0 ; i < aoCcdIdPW->subapNb ; i ++ )
    {
-       if ( aoCcdIdP2->subapUsedVect[i] == TRUE )
+       if ( aoCcdIdPW->subapUsedVect[i] == TRUE )
        {
           *(localThresholdVect + i) = *(pThreshold + j);
           j ++ ;

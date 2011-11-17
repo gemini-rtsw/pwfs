@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-	"$Id: cicsCarHealth.c,v 1.4 2002-01-03 03:39:25 cboyer Exp $"};
+	"$Id$"};
 
 /*+
  *   MODULE NAME:
@@ -58,7 +58,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  */
 /* *INDENT-OFF* */
 /*
- * $Log: not supported by cvs2svn $
+ * $Log: cicsCarHealth.c,v $
+ * Revision 1.4  2002/01/03 03:39:25  cboyer
+ * Major modifications: Port to epics3.13.4 + threshold in real time
+ *
  * Revision 1.3  2000/07/10 21:47:31  cboyer
  * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
  *

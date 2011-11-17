@@ -29,7 +29,7 @@ LIBSRCS.c	= \
 	../epToVxLib.c \
 	../errorLib.c \
         ../matrixLib.c \
-	../aoP2Lib.c \
+	../aoPWLib.c \
 	../sdsuLib.c \
 	../timeoutLib.c \
 	../wfsLib.c \
@@ -91,7 +91,7 @@ INC	= \
 	./wfsControl.h \
 	./wfsResourceMonitor.h \
         ./matrixLib.h \
-	./aoP2Lib.h
+	./aoPWLib.h
 
 # MAN1 is installed in INSTALL_MAN/man1
 MAN1	=
@@ -100,7 +100,8 @@ MAN1	=
 DOCS	=
 
 # DATA are installed in INSTALL_DATA
-DATA	= ../pwfs2.pv ../pwfs2SetDefCommandMK.pv ../pwfs2SetDefCommandCP.pv
+DATA	= ../pwfs2.pv ../pwfs2SetDefCommandMK.pv ../pwfs2SetDefCommandCP.pv \
+	../pwfs1.pv ../pwfs1SetDefCommandMK.pv ../pwfs1SetDefCommandCP.pv
 
 # Any extra targets can be placed in a TARGETS macro (the build target
 # builds only pre_build, LIBNAME, TARGETS and PROD, not SCRIPTS, INC etc)

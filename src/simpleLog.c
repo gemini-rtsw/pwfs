@@ -1,6 +1,3 @@
-static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: simpleLog.c,v 1.4 2002-01-03 03:39:26 cboyer Exp $"};
-
 /*+
  *   MODULE NAME:
  *   simpleLog
@@ -35,7 +32,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  *   Steven Beard
  *
  *INDENT-OFF*
- * $Log: not supported by cvs2svn $
+ * $Log: simpleLog.c,v $
+ * Revision 1.4  2002/01/03 03:39:26  cboyer
+ * Major modifications: Port to epics3.13.4 + threshold in real time
+ *
  * Revision 1.3  2000/07/10 21:47:41  cboyer
  * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
  *
@@ -90,7 +90,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 
 /* defines */
 
-/*#define DEBUG*/            /* Define this macro to enable debug messages.   */
+#define DEBUG          /* Define this macro to enable debug messages.   */
 
 #define NUM_FILES 100                 /* Maximum number of file descriptors   */
                                       /* as defined in ${VX_DIR}/.../config.h */
@@ -131,6 +131,7 @@ BOOL simpleLogStop = FALSE;           /* This flag provides a way of aborting */
 /* -------------------------------------------------------------------------- */
 
 STATUS   simpleLog (
+   const char * ptopName,              /* Top DB Name  */
    const char * pGivenFileName,        /* Name of log file to be used (NULL   */
                                        /* if no log file is to be used).      */
    const int    nFlush                 /* Flush the file every nFlush message.*/
@@ -170,6 +171,12 @@ STATUS   simpleLog (
    char *       pStartPrev;             /* Previous value of pStart.          */
    int          nByte;                  /* Number of bytes read from pipe.    */
    int          counter;                /* Message counter.                   */
+   char         recordName[EPICS_MAX_BYTES_RECORD_NAME];
+
+
+#ifdef DEBUG
+   printf ("simpleLog: Starting with topName: %s filename: %s nFlush: %i\n", ptopName, pGivenFileName, nFlush);
+#endif /* DEBUG */
 
    /* Create and initialise an error context structure for this task */
 
@@ -469,7 +476,8 @@ STATUS   simpleLog (
 
                   strncpy (pHistoryMessage, pStart, 
                            EPICS_MAX_BYTES_STRING_ATTRIB);
-                  if (cicsDbPut (TOP LOGTASK_ERROR_LOG_NAME0, 
+		  sprintf(recordName, "%s%s", ptopName, LOGTASK_ERROR_LOG_NAME0);
+                  if (cicsDbPut (recordName, 
                       pMessage, DBF_STRING, (void *) pHistoryMessage) == ERROR)
                   {
                      ERROR_SET (S_errorLog_EPICS_ERROR, pMessage, 
@@ -492,7 +500,8 @@ STATUS   simpleLog (
                      pSubString = pStart+EPICS_MAX_BYTES_STRING_ATTRIB-1;
                      strncpy (pHistoryMessage, pSubString, 
                               EPICS_MAX_BYTES_STRING_ATTRIB);
-                     if (cicsDbPut (TOP LOGTASK_ERROR_LOG_NAME1, pMessage, 
+		     sprintf(recordName, "%s%s", ptopName, LOGTASK_ERROR_LOG_NAME1);
+                     if (cicsDbPut (recordName, pMessage, 
                                     DBF_STRING, (void *) pHistoryMessage)
                          == ERROR)
                      {
@@ -521,7 +530,8 @@ STATUS   simpleLog (
 
                   strncpy (pHistoryMessage, pMsgBuffer, 
                            EPICS_MAX_BYTES_STRING_ATTRIB);
-                  if (cicsDbPut (TOP LOGTASK_HISTORY_LOG_NAME0, 
+		  sprintf(recordName, "%s%s", ptopName, LOGTASK_HISTORY_LOG_NAME0);
+                  if (cicsDbPut (recordName, 
                                  pMessage, DBF_STRING, 
                                  (void *) pHistoryMessage) == ERROR)
                   {
@@ -546,7 +556,8 @@ STATUS   simpleLog (
                      pSubString = pMsgBuffer+EPICS_MAX_BYTES_STRING_ATTRIB-1;
                      strncpy (pHistoryMessage, pSubString, 
                               EPICS_MAX_BYTES_STRING_ATTRIB);
-                     if (cicsDbPut (TOP LOGTASK_HISTORY_LOG_NAME1, 
+		     sprintf(recordName, "%s%s", ptopName, LOGTASK_HISTORY_LOG_NAME1);
+                     if (cicsDbPut (recordName, 
                                     pMessage, DBF_STRING,
                                     (void *) pHistoryMessage) == ERROR)
                      {

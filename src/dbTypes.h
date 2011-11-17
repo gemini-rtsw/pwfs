@@ -10,7 +10,10 @@
  * might one day be replaced by something supplied by Gemini
  *
  *INDENT-OFF*
- * $Log: not supported by cvs2svn $
+ * $Log: dbTypes.h,v $
+ * Revision 1.3  2000/07/10 21:47:32  cboyer
+ * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
+ *
  * Revision 1.2  1999/07/17 02:14:00  cboyer
  * Minor modifications
  *
@@ -90,9 +93,10 @@
    /*
     * RECORD_NAME: Construct a record name by prefixing the given string
     * with TOP (which is defined in wfsDb.h).
+    * AWE: removed TOP to allow a shared pwfs1 and pwfs2 module
     */
 
-#define   RECORD_NAME(name)            (TOP ## name)
+#define   RECORD_NAME(name)            (name)
 
    /*
     * TASK_NAME: Construct a full task name by concatenating the subsystem
@@ -133,7 +137,7 @@ typedef struct                 /* CAD attribute definition structure.         */
 
 typedef struct                 /* CAD record definition structure.            */
    {
-      char *   pRecordName;    /* CAD record name.                            */
+      char     pRecordName[EPICS_MAX_BYTES_RECORD_NAME];  /* CAD record name. */
       char *   pTaskName;      /* Name of task which receives commands        */
                                /* when this record is activated.              */
       int      commandNumber;
@@ -153,7 +157,7 @@ typedef struct                 /* CAD record definition structure.            */
 
 typedef struct                 /* genSub record definition structure.         */
    {
-      char *   pRecordName;    /* genSub record name.                         */
+      char     pRecordName[EPICS_MAX_BYTES_RECORD_NAME];/* genSub record name.*/
       char *   pTaskName;      /* Name of task associated with this record    */
       char *   pWfsName;       /* Name of WFS associated with this record     */
       BOOL     inputRecord;    /* Flag indicating whether this is an input    */
@@ -166,14 +170,14 @@ typedef struct                 /* genSub record definition structure.         */
 
 typedef struct                 /* CAR record definition structure.            */
    {
-      char *   pRecordName;    /* CAR record name.                            */
+      char     pRecordName[EPICS_MAX_BYTES_RECORD_NAME];  /* CAR record name. */
       char *   pTaskName;      /* Name of task whose state this CAR record    */
                                /* describes.                                  */
    } CAR_RECORD;
 
 typedef struct                 /* SIR record definition structure.            */
    {
-      char *   pRecordName;    /* SIR record name.                            */
+      char     pRecordName[EPICS_MAX_BYTES_RECORD_NAME]; /* SIR record name.  */
       uint32   type;           /* Data type (string, long or double).         */
       double   hysteresis;     /* Hysteresis value. (The record will only     */
                                /* be updated when the value changes by        */

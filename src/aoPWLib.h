@@ -1,15 +1,15 @@
-#ifndef __INCaoP2Libh
-#define __INCaoP2Libh
+#ifndef __INCaoPWLibh
+#define __INCaoPWLibh
 
 /*
  * MODULE NAME: 
- * aoP2Lib
+ * aoPWLib
  * 
  * FILENAME: 
- * aoP2Lib.h
+ * aoPWLib.h
  *
  * PURPOSE: 
- * Include file for PWFS2 active optics library 
+ * Include file for PWFS active optics library 
  * Contains all the types and constants definition of this library
  * Note: aO means active optics, FG means fast guide
  * 
@@ -950,14 +950,14 @@ STATUS aoCentroidsCompute (float * pImage, AO_CCD_ID aoCcdId,
 STATUS aoModeCompute (float * pImage, int imageStatus, AO_CCD_ID aoCcdId, 
                       AO_CTRL_ID aoCtrlId, int imageNb, int pauseNb,
                       double *pThreshVect, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
-STATUS aoCbImSave (char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
+STATUS aoCbImSave (int wfsNum, char *pCbImFilePath, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                    AO_CB_IM_ID aoCbImId);
 STATUS aoCbImZero (AO_CB_IM_ID aoCbImId);
 STATUS aoCbAoCtrlZero (AO_CB_AO_CTRL_ID aoCbAoCtrlId);
 STATUS aoCbFgCtrlZero (AO_CB_FG_CTRL_ID aoCbFgCtrlId);
-STATUS aoCbAoCtrlSave (char * pCbAoCtrlFilePath, AO_CCD_ID aoCcdId, 
+STATUS aoCbAoCtrlSave (int wfsNum, char * pCbAoCtrlFilePath, AO_CCD_ID aoCcdId, 
                        AO_CTRL_ID aoCtrlId, AO_CB_AO_CTRL_ID aoCbAoCtrlId);
-STATUS aoCbFgCtrlSave (char * pCbFgCtrlFilePath, AO_CCD_ID aoCcdId, 
+STATUS aoCbFgCtrlSave (int wfsNum, char * pCbFgCtrlFilePath, AO_CCD_ID aoCcdId, 
                        AO_CTRL_ID aoCtrlId, AO_CB_FG_CTRL_ID aoCbFgCtrlId);
 STATUS aoGuideAndFocus (float * pImage, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId, 
                         double * pThreshVect, double * pTotalCountsVect, 
@@ -1018,4 +1018,4 @@ STATUS aoNewSeeingCompute (double * pCentroidsVect, int * pWfsStatus,
                            int framesNb);
 #endif
 
-#endif /* __INCaoP2Libh */
+#endif /* __INCaoPWLibh */

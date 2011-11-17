@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: cicsLib.c,v 1.3 2000-07-10 21:47:31 cboyer Exp $"};
+   "$Id$"};
 /*
 *   FILENAME
 *   -------- 
@@ -63,7 +63,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 */
 /* *INDENT-OFF* */
 /*
- * $Log: not supported by cvs2svn $
+ * $Log: cicsLib.c,v $
+ * Revision 1.3  2000/07/10 21:47:31  cboyer
+ * Major Modifications : V1-0 10 July 2000 CB (see RELEASE.NOTES)
+ *
  * Revision 1.2  1999/07/17 02:13:59  cboyer
  * Minor modifications
  *

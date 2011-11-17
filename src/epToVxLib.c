@@ -1,6 +1,3 @@
-static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: epToVxLib.c,v 1.5 2002-01-03 03:39:25 cboyer Exp $"};
-
 /*+
  * MODULE NAME:
  * epToVxLib
@@ -126,7 +123,10 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
  * Corinne Boyer
  *
  *INDENT-OFF*
- * $Log: not supported by cvs2svn $
+ * $Log: epToVxLib.c,v $
+ * Revision 1.5  2002/01/03 03:39:25  cboyer
+ * Major modifications: Port to epics3.13.4 + threshold in real time
+ *
  * Revision 1.4  2001/09/17 20:15:09  cboyer
  * V2-3 Implement threshold per subaperture
  *
@@ -278,7 +278,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 
 /* defines */
 
-/*#define DEBUG*/
+/* #define DEBUG */
 
 #define NUM_FILES 100             /* Maximum number of file descriptors       */
                                   /* (as defined in ${VX_DIR}/.../config.h)   */
@@ -609,6 +609,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
     * Global variables have the unique prefix "epToVx" or "pEpToVx".
     */
 
+char           epToVxTopName[EPICS_MAX_BYTES_RECORD_NAME];
 LOCAL int      getNumberAttribRangeValues (char ** ppAttribRangeValue);
 LOCAL uint32   getNumberAttribs (CAD_ATTRIB * pAttribList);
 LOCAL STATUS   attribStringToUnion (uint32 type, char * pStringAttrib, 
@@ -1042,10 +1043,10 @@ void   epToVxChidShow
  *   epToVxCaInitRecords
  *
  *   INVOCATION:
- *   epToVxCaInitRecords ()
+ *   epToVxCaInitRecords (topName)
  *
  *   PARAMETERS: (">" input, "!" modified, "<" output)
- *   None
+ *   > topName:  topLevel db name
  *
  *   FUNCTION VALUE:
  *   (STATUS)   OK, or ERROR if the EPICS records could not be initialised
@@ -1059,6 +1060,7 @@ void   epToVxChidShow
  *   them accessible through epToVxLib functions. It initialises the Channel
  *   Access library and then calls epToVxInitCar() and epToVxInitSir().
  *   The function is designed to be executed from a VxWorks startup script.
+ *   AWE: Modified to receive the db top name
  *
  *   Note that only CAR and SIR records are initialised by this function.
  *   CAD records are initialised automatically through the epToVxCadInit
@@ -1101,10 +1103,14 @@ void   epToVxChidShow
  *-
  */
 
-STATUS   epToVxCaInitRecords (void)
+STATUS   epToVxCaInitRecords (const char * topName)
 {
+   FAST int      i;
+   char          recordName[EPICS_MAX_BYTES_RECORD_NAME+1];
 
    /* Initialise Channel Access library */
+
+   strncpy(epToVxTopName, topName, EPICS_MAX_BYTES_RECORD_NAME);
 
    if (ca_task_initialize () != ECA_NORMAL)
    {
@@ -1114,7 +1120,36 @@ STATUS   epToVxCaInitRecords (void)
    }
 
    /*
-    * NOTE: CAD records do not need to be initialised here.
+    * AWE: prepend topName to all of the stored record names.
+    * This is neccesary to allow dynamic definition of the
+    * topName (pwfs1: or pwfs2:)
+    * Yucky ... need to do the CADs and Gensubs elsewhere since they are initialized 
+    * at iocInit if the INAM is specified
+    */
+   for (i = 0; i < wfsDbNCarRecord; i++)
+   {
+     sprintf(recordName,"%s%.*s", topName, 
+	      (int)(EPICS_MAX_BYTES_RECORD_NAME-strlen(topName)),
+	      pWfsDbCarList[i].pRecordName);
+     strncpy(pWfsDbCarList[i].pRecordName, recordName, EPICS_MAX_BYTES_RECORD_NAME);
+#ifdef DEBUG
+     printf("CarList: have name \"%s\"\n",pWfsDbCarList[i].pRecordName);
+#endif /* DEBUG */
+   }
+
+   for (i = 0; i < wfsDbNSirRecord; i++)
+   {
+     sprintf(recordName,"%s%.*s", topName, 
+	      (int)(EPICS_MAX_BYTES_RECORD_NAME-strlen(topName)),
+	      pWfsDbSirList[i].pRecordName);
+     strncpy(pWfsDbSirList[i].pRecordName, recordName, EPICS_MAX_BYTES_RECORD_NAME);
+#ifdef DEBUG
+     printf("SirList: have name \"%s\"\n",pWfsDbSirList[i].pRecordName);
+#endif /* DEBUG */
+   }
+
+   /*
+    * NOTE: CAD and Gensub records do not need to be initialised here.
     * They are initialised automatically by iocInit().
     */
 
@@ -2221,10 +2256,52 @@ STATUS   epToVxCadInit
 {
    SYM_TYPE      symType;
    CAD_CONTEXT   context;
+   char          topName[EPICS_MAX_BYTES_RECORD_NAME];
+   char          recordName[EPICS_MAX_BYTES_RECORD_NAME];
+   FAST int      i;
 
 #ifdef DEBUG
    printf ("epToVxCadInit: %s\n", pcad->name);
+   printf ("epToVxCadInit: epToVxTopName: %s with length:%i\n", epToVxTopName, strlen(epToVxTopName));
 #endif /* DEBUG */
+
+   /*
+    * AWE:  Need to extract the topName from the pcad and fix the names in the CAD and gensub structs
+    * only do this once ... this is called for every CAD in the db
+    * since I can't be sure if a gensub or cad will init first, I'm checking this in the INAM for both
+    */
+
+   if (strlen(epToVxTopName) == 0) {
+     strncpy (topName, pcad->name, EPICS_MAX_BYTES_RECORD_NAME);
+     sprintf (topName, "%s:", strtok(topName, ":"));
+#ifdef DEBUG
+     printf ("epToVxCadInit: topName: %s\n", topName);
+#endif /* DEBUG */
+     strncpy(epToVxTopName, topName, EPICS_MAX_BYTES_RECORD_NAME);
+
+     for (i = 0; i < wfsDbNCadRecord; i++)
+       {
+	 sprintf(recordName,"%s%.*s", topName, 
+		 (int)(EPICS_MAX_BYTES_RECORD_NAME-strlen(topName)),
+		 pWfsDbCadList[i].pRecordName);
+	 strncpy(pWfsDbCadList[i].pRecordName, recordName, EPICS_MAX_BYTES_RECORD_NAME);
+#ifdef DEBUG
+	 printf("CadList: have name \"%s\"\n",pWfsDbCadList[i].pRecordName);
+#endif /* DEBUG */
+       }
+
+     for (i = 0; i < wfsDbNGsubRecord; i++)
+       {
+	 sprintf(recordName,"%s%.*s", topName, 
+		 (int)(EPICS_MAX_BYTES_RECORD_NAME-strlen(topName)),
+		 pWfsDbGsubList[i].pRecordName);
+	 strncpy(pWfsDbGsubList[i].pRecordName, recordName, EPICS_MAX_BYTES_RECORD_NAME);
+#ifdef DEBUG
+	 printf("GsubList: have name \"%s\"\n",pWfsDbGsubList[i].pRecordName);
+#endif /* DEBUG */
+       }
+
+   }
 
    /*
     * It is assumed that the attribute strings for CAD attributes "a", "b",
@@ -2270,7 +2347,7 @@ STATUS   epToVxCadInit
        (SYM_TYPE *) & symType,
        (SYM_TYPE) CAD_RECORD_TYPE, SYM_TYPE_MASK) == ERROR)
    {
-      ERROR_SET1 (0, "Could not find CAD \"%s\" in symbol table", 
+       ERROR_SET1 (0, "Could not find CAD \"%s\" in symbol table", 
                   ERROR_LOG_NOW, pcad->name);
       return (ERROR);
    }
@@ -3208,6 +3285,51 @@ STATUS   epToVxGensubInit
 {
    SYM_TYPE      symType;
    GSUB_CONTEXT  context;
+   char          topName[EPICS_MAX_BYTES_RECORD_NAME];
+   char          recordName[EPICS_MAX_BYTES_RECORD_NAME];
+   FAST int      i;
+
+#ifdef DEBUG
+   printf ("epToVxGensubInit: %s\n", pgensub->name);
+   printf ("epToVxGensubInit: epToVxTopName: %s with length:%i\n", epToVxTopName, strlen(epToVxTopName));
+#endif /* DEBUG */
+
+   /*
+    * AWE:  Need to extract the topName from the pgensub and fix the names in the CAD and Gensub struct
+    * only do this once ... this is called for every gensub in the db with the INAM specified
+    * since I can't be sure if a gensub or cad will init first, I'm checking this in the INAM for both
+    */
+
+   if (strlen(epToVxTopName) == 0) {
+     strncpy (topName, pgensub->name, EPICS_MAX_BYTES_RECORD_NAME);
+     sprintf (topName, "%s:", strtok(topName, ":"));
+#ifdef DEBUG
+     printf ("epToVxGensubInit: topName: %s\n", topName);
+#endif /* DEBUG */
+     strncpy(epToVxTopName, topName, EPICS_MAX_BYTES_RECORD_NAME);
+
+     for (i = 0; i < wfsDbNCadRecord; i++)
+       {
+	 sprintf(recordName,"%s%.*s", topName, 
+		 (int)(EPICS_MAX_BYTES_RECORD_NAME-strlen(topName)),
+		 pWfsDbCadList[i].pRecordName);
+	 strncpy(pWfsDbCadList[i].pRecordName, recordName, EPICS_MAX_BYTES_RECORD_NAME);
+#ifdef DEBUG
+	 printf("CadList: have name \"%s\"\n",pWfsDbCadList[i].pRecordName);
+#endif /* DEBUG */
+       }
+
+     for (i = 0; i < wfsDbNGsubRecord; i++)
+       {
+	 sprintf(recordName,"%s%.*s", topName, 
+		 (int)(EPICS_MAX_BYTES_RECORD_NAME-strlen(topName)),
+		 pWfsDbGsubList[i].pRecordName);
+	 strncpy(pWfsDbGsubList[i].pRecordName, recordName, EPICS_MAX_BYTES_RECORD_NAME);
+#ifdef DEBUG
+	 printf("GsubList: have name \"%s\"\n",pWfsDbGsubList[i].pRecordName);
+#endif /* DEBUG */
+       }
+   }
 
 #ifdef DEBUG
    printf ("epToVxGensubInit: %s\n", pgensub->name);
@@ -5731,7 +5853,7 @@ STATUS   epToVxDbInitCadCar (void)
 
 #ifdef DEBUG
       printf ("epToVxDbInitCadCar: Added CAD record %d = \"%s\" to symbol table\n", i,
-         pWfsDbCadList [i].pRecordName);
+         pWfsDbCadList[i].pRecordName);
 #endif /* DEBUG */
 
       /* Copy the CAD definition from pWfsDbCadList[i] to its context 
@@ -7127,23 +7249,25 @@ STATUS   epToVxSetHealth
     *
     *   <TOP>:<pRecordPrefix>:health
     *
+    * AWE: modified to use epToVxTopName instead of TOP
     */
 
    if ( pRecordPrefix == NULL )
    {
-      sprintf (pRecordNameFull, TOP "health" );
+      sprintf (pRecordNameFull, "%s%s", epToVxTopName, "health" );
+
    }
    else if ( (strstr(pRecordPrefix, "Health") != NULL) || 
              (strstr(pRecordPrefix, "health") != NULL) )
    {
-      sprintf (pRecordNameFull, TOP "%.*s", 
-               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(TOP)),
+      sprintf (pRecordNameFull, "%s%.*s", epToVxTopName,
+               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(epToVxTopName)),
                pRecordPrefix);
    }
    else
    {
-      sprintf (pRecordNameFull, TOP "%.*s:health",
-               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(TOP) - 7),
+      sprintf (pRecordNameFull, "%s%.*s:health", epToVxTopName,
+               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(epToVxTopName) - 7),
                pRecordPrefix);
    }
       
@@ -7252,7 +7376,11 @@ CAD_CMD_CONTEXT epToVxCmdInit
    SYM_TYPE             symType;
    struct timespec      timeStart;
 
-   /*
+#ifdef DEBUG
+   printf("epToVxCmdInit with taskname: %s\n", pTaskName);
+#endif
+
+/*
     * Get the name of this task.
     * If a name is not specified it is assumed to be the current task.
     */
@@ -7265,6 +7393,9 @@ CAD_CMD_CONTEXT epToVxCmdInit
    {
       pTaskName1 = pTaskName;
    }
+#ifdef DEBUG
+   printf("epToVxCmdInit with taskname1: %s\n", pTaskName1);
+#endif
 
    /*
     * For every CAD record known to the system (defined in pWfsDbCadList[]), 
@@ -7374,8 +7505,8 @@ CAD_CMD_CONTEXT epToVxCmdInit
              (char **) & pOldContext, (SYM_TYPE *) & symType, 
              (SYM_TYPE) CAD_RECORD_TYPE, SYM_TYPE_MASK) == ERROR)
          {
-            ERROR_SET1 (0, "Could not find CAD \"%s\" in symbol table", 
-                        ERROR_LOG_SAVE, pWfsDbCadList [cadRecNum].pRecordName);
+             ERROR_SET1 (0, "Could not find CAD \"%s\" in symbol table", 
+                        ERROR_LOG_SAVE, pWfsDbCadList[cadRecNum].pRecordName);
             cfree ((char *) pCadCmdContext->ppCadContext);
             cfree ((char *) pCadCmdContext);
             return (NULL);
@@ -7998,12 +8129,13 @@ STATUS   epToVxRecContextGet
     * Search for the record name prefix, TOP, in the given record name. 
     * If not found concatenate TOP with pRecordName, otherwise just use 
     * pRecordName
+    * AWE: replaced use of TOP with epToVxTopName
     */
 
-   if (strstr (pRecordName, TOP) == NULL)
+   if (strstr (pRecordName, epToVxTopName) == NULL)
    {
-      sprintf (pRecordNameFull, TOP "%.*s", 
-               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(TOP)),
+      sprintf (pRecordNameFull, "%s%.*s", epToVxTopName, 
+               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(epToVxTopName)),
                pRecordName);
    }
    else
@@ -8137,7 +8269,7 @@ GSUB_DATA_CONTEXT epToVxUpdateInit
       pTaskName1 = pTaskName;
    }
 
-#ifdef DEBUG
+#ifdef DEBUG2
    printf ("epToVxUpdateInit: pWfsName=%s, pTaskName1=%s.\n", pWfsName, 
            pTaskName1);
 #endif
@@ -8504,12 +8636,13 @@ STATUS   epToVxShow
     * Search for the record name prefix, TOP, in the given record name. If 
     * not found concatenate TOP with pRecordName, otherwise just use 
     * pRecordName
+    * AWE: replaced use of TOP with epToVxTopName
     */
 
-   if (strstr (pRecordName, TOP) == NULL)
+   if (strstr (pRecordName, epToVxTopName) == NULL)
    {
-      sprintf (pRecordNameFull, TOP "%.*s", 
-               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(TOP)),
+      sprintf (pRecordNameFull, "%s%.*s", epToVxTopName, 
+               (int) (EPICS_MAX_BYTES_RECORD_NAME - strlen(epToVxTopName)),
                pRecordName);
    }
    else

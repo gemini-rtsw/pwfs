@@ -1,0 +1,55 @@
+# pvload defaults to commands for PWFS1 Detector Controller
+
+#
+# Set up defaults for detSigModeSeq CAD commands
+#
+
+group {
+double $(top)$(wfs)initSigModeSeq.A = 1.0 ;
+int $(top)$(wfs)initSigModeSeq.B = 10.0 ;
+int $(top)$(wfs)initSigModeSeq.H = 0 ;
+double $(top)$(wfs)initSigModeSeq.I = 40.0 ;
+int $(top)$(wfs)initSigModeSeq.J = 0 ;
+double $(top)$(wfs)initSigModeSeq.K = 60.0 ;
+int $(top)$(wfs)initSigModeSeq.L = 0 ;
+double $(top)$(wfs)initSigModeSeq.M = 0.1 ;
+string $(top)$(wfs)initSigModeSeq.N = "." ;
+int $(top)$(wfs)initSigModeSeq.O = 1 ;
+int $(top)$(wfs)initSigModeSeq.P = 1 ;
+int $(top)$(wfs)initSigModeSeq.Q = 1 ;
+double $(top)$(wfs)initSigModeSeq.R = 15.0 ;
+double $(top)$(wfs)initSigModeSeq.S = 2.5 ;
+int $(top)$(wfs)initSigModeSeq.T = 1 ;
+};
+
+
+#
+# Set up defaults for detSigModeSeqDark CAD commands
+#
+
+group {
+int $(top)$(wfs)initSigModeSeqDark.A = 100 ;
+string $(top)$(wfs)initSigModeSeqDark.B = "./data" ;
+string $(top)$(wfs)initSigModeSeqDark.C = "coadd.fits";
+int $(top)$(wfs)initSigModeSeqDark.D = 100 ;
+double $(top)$(wfs)initSigModeSeqDark.E = 2.5 ;
+};
+
+#
+# Set up defaults for detSigInitAoThresh CAD commands
+#
+
+group {
+double $(top)$(wfs)initSigInitAoThresh.A = 0.5 ;
+double $(top)$(wfs)initSigInitAoThresh.B = 3.0 ;
+};
+
+#
+# Init the defaults at startup
+#
+
+int $(top)$(wfs)initSigModeSeq.PROC = 1 ;
+int $(top)$(wfs)initSigModeSeqDark.PROC = 1 ;
+int $(top)$(wfs)initSigInitAoThresh.PROC = 1 ;
+int $(top)$(wfs)detSigInitAoThresh.DIR = 0 ;
+int $(top)$(wfs)detSigInitAoThresh.DIR = 3 ;

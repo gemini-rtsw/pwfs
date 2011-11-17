@@ -60,7 +60,7 @@
 #include <timeLib.h>
 #include <time.h>
 
-#include "aoP2Lib.h"
+#include "aoPWLib.h"
 #include "synchroMap.h"
 
 typedef struct
