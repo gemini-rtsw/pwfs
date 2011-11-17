@@ -42,6 +42,6 @@ data/defFgContMatP2MK.dat
 # Name of seeing coefficient matrix file
 data/defSeeingCoeffMatP2MK.dat
 # Name of seeing coefficient vector file
-data/defSeeingCoeffVectP2CP.dat
+data/defSeeingCoeffVectP2MK.dat
 # Scale factor for seeing computation (double)
 1.02
