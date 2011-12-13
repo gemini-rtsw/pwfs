@@ -1,4 +1,4 @@
-# $Id: startupMK.vws,v 1.6 2004-08-18 22:07:12 cboyer Exp $
+# $Id: startupMK.vws,v 1.7 2011-12-13 03:19:16 gemvx Exp $
 #
 # VxWorks startup script to load and execute system (iocCore) software.
 #
@@ -156,6 +156,9 @@ taskSpawn ("wfsResMonitor", 255, 0x8, 4000, wfsResourceMonitor, 10000000, 200000
 
 # Do not allow to use D64 cycles on the bus
 *0xfd050128 &= 0xffffbfff
+
+# AWE: this delay ensures that epToVxLib has finished initializing
+taskDelay(5 * sysClkRateGet())
 
 # More database initializations
 pvload "$(version)/data/pwfs2SetDefCommandMK.pv","top=pwfs2:, wfs=dc:"
