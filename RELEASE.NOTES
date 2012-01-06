@@ -416,3 +416,13 @@ The head is now the same as V4-11
 V4-12 was never tagged.
 Will be using this as the base of a new module: pwfs
 which will ultimately replace both pwfs1 and pwfs2
+
+
+-----------------------------------------------------------
+PWFS-RT  1-0
+-----------------------------------------------------------
+This module is now in SVN.
+All of the old history from the pwfs2 module has been ported over from CVS.
+From this point forwards, the pwfs module can be used for both PWFS1 and PWFS2 at GN.  When the GS Pwfs1 lenslet array is updated as for the GN PWFS1, this module could be used at GS as well.
+
+There is a corresponding pwfs module in svn which contains the dm screens for this merged module.
