@@ -36,9 +36,9 @@ data/defFgContMatP1MK.dat
 # Threshold value for total counts (double)
 0
 # Angle in radians between M2 and PWFS1 (double)
-3.14159
+0
 # Angle in radians between M1 and PWFS1 (double)
-3.14159
+0
 # Name of seeing coefficient matrix file
 data/defSeeingCoeffMatP1MK.dat
 # Name of seeing coefficient vector file
