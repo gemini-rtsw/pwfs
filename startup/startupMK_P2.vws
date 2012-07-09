@@ -21,7 +21,7 @@ pwd
 
 < $(version)/bin/$(arch)/local
 
-hostAdd ("acamar","10.2.2.52")
+hostAdd ("mkodhs2","10.2.2.41")
 
 # Load EPICS core, sequencer and pvload
 ld < /gemini/external/GEM8.4/base/bin/$(arch)/iocCore
@@ -126,7 +126,7 @@ epToVxCaInitRecords ("pwfs2:")
 # (clientName, numConnect, hostName, serverName)
 # (Uncomment this line to activate the DHS. Comment it to prevent the DHS 
 # from being used).
-detDhsParamInit ("pwfs2", 16, "10.2.2.52", "dataServerAcamar")
+detDhsParamInit ("pwfs2", 16, "10.2.2.41", "dataServerWfsNS")
 
 # Spawn generic-record i/o Daemon task after querying the number of processors
 NProc = 1
