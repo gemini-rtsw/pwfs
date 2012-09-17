@@ -426,3 +426,12 @@ All of the old history from the pwfs2 module has been ported over from CVS.
 From this point forwards, the pwfs module can be used for both PWFS1 and PWFS2 at GN.  When the GS Pwfs1 lenslet array is updated as for the GN PWFS1, this module could be used at GS as well.
 
 There is a corresponding pwfs module in svn which contains the dm screens for this merged module.
+
+-----------------------------------------------------------
+PWFS-RT  1-1
+----------------------------------------------------------
+This version fixes a bug in calculating the composite angle.  It is now different for P1 and P2
+Changes:
+capfast/wfsGensub.sch Use the probe hierarchical name when reading the arm angle.
+capfast/pwfs2Top.sch  Set the probe hierarchical name
+capfast/pwfs1Top.sch  Set the probe hierarchical name
