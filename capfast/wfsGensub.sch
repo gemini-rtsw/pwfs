@@ -11,7 +11,7 @@ s -848 1952 100 0 port C reads the arm angle from the Zeiss system
 s -848 1984 100 0 port B selects a fudge angle
 s -848 2016 100 0 port A reads the table angle from the Zeiss system
 s 2464 -704 500 512 wfsGensub.sch
-s 112 2224 500 0 PWFS2 - WFS genSub records
+s 112 2224 500 0 PWFS - WFS genSub records
 [cell use]
 use egenSubC -608 7 100 0 fgDiag1PW
 xform 0 -464 432
@@ -312,16 +312,16 @@ p 3488 256 100 0 0 def(OUTR):0.000000000000000e+00
 p 3488 224 100 0 0 def(OUTS):0.000000000000000e+00
 use hwin 432 1815 100 0 hwin#108
 xform 0 528 1856
-p 416 1888 100 0 -1 val(in):ag:p2:armAngle
+p 336 1888 100 0 -1 val(in):ag:$(probe)armAngle
 use hwin -192 1815 100 0 hwin#105
 xform 0 -96 1856
-p -208 1888 100 0 -1 val(in):ag:p2:armAngle
+p -288 1888 100 0 -1 val(in):ag:$(probe)armAngle
 use hwin 416 1943 100 0 hwin#98
 xform 0 512 1984
-p 400 2016 100 0 -1 val(in):ag:p2:tableAngle
+p 352 2016 100 0 -1 val(in):ag:$(probe)tableAngle
 use hwin -192 1943 100 0 hwin#96
 xform 0 -96 1984
-p -208 2016 100 0 -1 val(in):ag:p2:tableAngle
+p -272 2032 100 0 -1 val(in):ag:$(probe)tableAngle
 use egenSub 1216 1223 100 0 probeOffset
 xform 0 1360 1648
 p 1280 1184 100 0 1 DESC:Probe offsets
