@@ -6510,7 +6510,11 @@ uint32 detObserveStart
          contrib[0] = pDetDhsClientName;  
                                       /* a global variable, set in detDhsInit */
 
-         qlStreams[0] = "pwfs2Science"; 
+	 if (wfsNum==2) {
+	   qlStreams[0] = "pwfs2Science"; 
+	 } else {
+	   qlStreams[0] = "pwfs1Science"; 
+	 }
                                 /* THIS IS A FUDGE. DEFINE IN setDhs command. */
 
          wfsGetTelName ( telName ) ;
