@@ -435,3 +435,13 @@ Changes:
 capfast/wfsGensub.sch Use the probe hierarchical name when reading the arm angle.
 capfast/pwfs2Top.sch  Set the probe hierarchical name
 capfast/pwfs1Top.sch  Set the probe hierarchical name
+
+-----------------------------------------------------------
+PWFS-RT  1-2
+----------------------------------------------------------
+This version fixes a bug in configuring the QL Stream name.  PWFS1 now correctly identifies itself as pwfs1Science
+Changes:
+
+src/detControl.c   Make the QL Stream name probe dependent.
+IMP_Startup.pwfs1  Configured to use linux DHS
+IMP_Startup.pwfs2  Configured to use linux DHS
