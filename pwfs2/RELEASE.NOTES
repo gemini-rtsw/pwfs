@@ -416,3 +416,7 @@ The head is now the same as V4-11
 V4-12 was never tagged.
 Will be using this as the base of a new module: pwfs
 which will ultimately replace both pwfs1 and pwfs2
+
+4-11-1 PG:
+-----------------------------------------------------------
+Modified code to update ${top}dc:health when there's a thermistor error, as requested in REL-362.
