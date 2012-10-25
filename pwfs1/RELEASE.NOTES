@@ -550,3 +550,6 @@ V4-9 28 JUL 2006 AAG:
 -----------------------------------------------------------
 - Changed default Processing Mode at init from "None" to "Closed Loop"
 src/detControl.c
+
+V4-9-1 25 OCT 2012 PG:
+- Modified code to update ${top}dc:health when there's a thermistor error, as requested in REL-362.

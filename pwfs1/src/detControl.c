@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.41 2006-08-02 20:51:37 gemvx Exp $"};
+   "$Id: detControl.c,v 1.42 2012-10-25 15:51:55 pedro Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -15108,6 +15108,7 @@ STATUS detHeadTempGet
              ERROR)
          {
             ERROR_LOG ("Failed to read thermistor 1 temperature parameter");
+	    epToVxSetHealth ("dc", "BAD");
             return (ERROR);
          }
          else
@@ -15119,6 +15120,7 @@ STATUS detHeadTempGet
              == ERROR)
          {
             ERROR_LOG ("Failed to read thermistor 2 temperature parameter");
+	    epToVxSetHealth ("dc", "BAD");
             return (ERROR);
          }
          else
