@@ -447,7 +447,7 @@ IMP_Startup.pwfs1  Configured to use linux DHS
 IMP_Startup.pwfs2  Configured to use linux DHS
 
 -----------------------------------------------------------
-PWFS-RT  1-3
+PWFS-RT  1-3 (PG)
 ----------------------------------------------------------
 Addded setting of $(top)dc:health to BAD when a thermistor error is detected, as requested in REL-362.
 Changes:
