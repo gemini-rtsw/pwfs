@@ -553,3 +553,9 @@ src/detControl.c
 
 V4-9-1 25 OCT 2012 PG:
 - Modified code to update ${top}dc:health when there's a thermistor error, as requested in REL-362.
+
+-----------------------------------------------------------
+V4-9-2 28 MAR 2014 CUR:
+- Modified pwfs1:dc:intTime precision to 4, as requested in REL-1749
+(capfast/wfsDetSad.sch schematic)
+
