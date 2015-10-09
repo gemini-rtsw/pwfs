@@ -12,9 +12,9 @@
 # default ADC offset for output 3 - no binning
 2560
 # Default ADC offset for output 0 - binning
-2563
+2561
 # Default ADC offset for output 1 - binning
-2602
+2599
 # Default ADC offset for output 2 - binning
 2562
 # default ADC offset for output 3 - binning
