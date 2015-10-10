@@ -16,8 +16,8 @@
 # Default ADC offset for output 1 - binning
 2602
 # Default ADC offset for output 2 - binning
-2400
+2403
 # default ADC offset for output 3 - binning
-2473
+2476
 # Default serial number of the CCD - do not change
 a5207-2-13
