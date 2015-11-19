@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id: detControl.c,v 1.39 2012-10-25 15:55:41 pedro Exp $"};
+   "$Id: detControl.c,v 1.40 2015-11-19 17:58:12 gemvx Exp $"};
 
 /*+
  *   MODULE NAME:
@@ -19836,7 +19836,7 @@ uint32 detInitObserveRecord
    sprintf ( pRecordName, "%s%s:%s.F", TOP, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
-   strcpy (path, "." );
+   strcpy (path, DET_CONTROL_DATA_FILE_PATH);
    if ( cicsDbPut (pRecordName, message, DBF_STRING, path) == ERROR )
    {
       ERROR_LOG ( "Failed to init %s field");
