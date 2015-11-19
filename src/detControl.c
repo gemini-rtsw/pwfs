@@ -19971,7 +19971,7 @@ uint32 detInitObserveRecord
    sprintf ( pRecordName, "%s%s:%s.F", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
    /*printf ( "record name: %s\n" , pRecordName);*/
-   strcpy (path, "." );
+   strcpy (path, DET_CONTROL_DATA_FILE_PATH );
    if ( cicsDbPut (pRecordName, message, DBF_STRING, path) == ERROR )
    {
       ERROR_LOG ( "Failed to init %s field");
