@@ -415,9 +415,15 @@
                                     /* Name of the directory containing par   */
                                     /* files.                                 */
 
-#define   DET_CONTROL_DATA_FILE_PATH          "."
+#define   DET_CONTROL_DATA_FILE_PATH          "/gemini/wfsdata/pwfs1"
                                     /* Define the default directory to contain*/
                                     /* engineering data files.                */
+
+#if 0
+#define   DET_CONTROL_DATA_CB_FILE_PATH          "/gemini/wfsdata/pwfs1"
+                                    /* Define the default directory to contain*/
+                                    /* circular buffer  data files.                */
+#endif
 
 #define   DET_TYPE "CCD39+SDSUII"
 
