@@ -4,11 +4,11 @@
 # Default temperature coefficient - do not change
 128
 # Default ADC offset for output 0  - no binning
-2575
+2490
 # Default ADC offset for output 1 - no binning
-2610
+2520
 # Default ADC offset for output 2 - no binning
-3050
+3100
 # default ADC offset for output 3 - no binning
 3050
 # Default ADC offset for output 0 - binning
