@@ -59,6 +59,7 @@ ld < $(version)/bin/$(arch)/wfsControl
 ld < $(version)/bin/$(arch)/wfsResourceMonitor
 ld < $(version)/bin/$(arch)/simpleLog
 ld < $(version)/bin/$(arch)/fpscr
+ld < $(version)/bin/$(arch)/autoPath
 
 # Load test harness library if required
 ld < $(version)/bin/$(arch)/testKit
@@ -162,5 +163,9 @@ pvload "$(version)/data/pwfs2SetDefCommandMK.pv","top=pwfs2:, wfs=dc:"
 
 # Start sequences
 seq &timeSeq, "sys=pwfs2:"
+
+# Spawn autoPath task
+taskDelay(1 * sysClkRateGet())
+taskSpawn("autoPath", 100, 0, 6000, autoPath)
 
 # End of standalone startup

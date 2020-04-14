@@ -291,6 +291,9 @@ extern double angleWithM2;         /* Angle with M2 (equivalent to the one    */
                                    /* contained in aoCtrlIdPW) defined in     */
                                    /* writeZernikes.c                         */
 
+extern char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB]; 	   	/* Default path to where to put image and  */
+extern char data_filename[EPICS_MAX_BYTES_STRING_ATTRIB];	/* CB files				      */
+
 /******************************************************* External functions ***/
 
 extern void ImpMaster ();
@@ -19034,6 +19037,10 @@ uint32 detSigSaveCb
     * command.
     */
 
+   printf("XXXXXXXXXXXXXX\n");
+   printf("XXXXXXXXXXXXXXX detSigSaveCb %d\n", commandNumber);
+   printf("XXXXXXXXXXXXXX\n");
+
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
                           (char *) & saveCbImFlag);
@@ -19968,10 +19975,10 @@ uint32 detInitObserveRecord
 
    /* Init the field F of the observe CAD record */
 
-   sprintf ( pRecordName, "%s%s:%s.F", dbTopName, pRecordPrefix, 
+   sprintf (pRecordName, "%s%s:%s.F", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
-   /*printf ( "record name: %s\n" , pRecordName);*/
-   strcpy (path, DET_CONTROL_DATA_FILE_PATH );
+   strcpy (path, ioc_path);
+   printf ("Record name: %s path: %s\n" , pRecordName, ioc_path);
    if ( cicsDbPut (pRecordName, message, DBF_STRING, path) == ERROR )
    {
       ERROR_LOG ( "Failed to init %s field");
@@ -19982,8 +19989,8 @@ uint32 detInitObserveRecord
 
    sprintf ( pRecordName, "%s%s:%s.G", dbTopName, pRecordPrefix, 
              DET_CONTROL_OBSERVE_CAD_NAME);
-   /*printf ( "record name: %s\n" , pRecordName);*/
-   strcpy (file, "pwfs2.fits");
+   strcpy (file, data_filename);
+   printf ("Record name: %s filename: %s\n" , pRecordName, data_filename);
    if ( cicsDbPut (pRecordName, message, DBF_STRING, file) == ERROR )
    {
       ERROR_LOG ( "Failed to init %s field");

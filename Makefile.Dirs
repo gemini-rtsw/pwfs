@@ -1,4 +1,3 @@
-DIRS += adl 
 DIRS += capfast 
 DIRS += src 
 DIRS += dspsrc 

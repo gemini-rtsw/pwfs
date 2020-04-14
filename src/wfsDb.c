@@ -109,6 +109,9 @@
 #include "wfsControl.h"   /* This is where WFS_CONTROL_ parameters come from. */
 #include "errorLog.h"     /* This is where LOGTASK_ parameters comes from.    */
 
+char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB];
+char data_filename[EPICS_MAX_BYTES_STRING_ATTRIB];
+
 
 /* The pWfsDbCadList data structure array contains information on the CAD records
  * recognised by the system, and the commands associated with them. Each
@@ -259,13 +262,13 @@ CAD_RECORD pWfsDbCadList [] =
   STOP_DIRECTIVE_SUPPORTED,
   SIMULATION_MODE_SUPPORTED,
   180.0,
-  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG,  "-1",   {"-1", NO_HI_LIMIT},
+  CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG,    "-1",   {"-1", NO_HI_LIMIT},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_DOUBLE,  "0.01",   {"0.005", "10000.0"},
-  CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG,  "0",      {"0", "2"},
+  CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG,    "0",      {"0", "2"},
   CAD_ATTRIB_D, EPICS_DATA_TYPE_STRING,  "NONE",      {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_E, EPICS_DATA_TYPE_LONG,  "2",      {"0", "2"},
-  CAD_ATTRIB_F, EPICS_DATA_TYPE_STRING,  DET_CONTROL_DATA_FILE_PATH, {NO_ATTRIBUTE_LIMITS},
-  CAD_ATTRIB_G, EPICS_DATA_TYPE_STRING,  "pwfs2.fits",    {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_E, EPICS_DATA_TYPE_LONG,    "2",      {"0", "2"},
+  CAD_ATTRIB_F, EPICS_DATA_TYPE_STRING,  ioc_path, {NO_ATTRIBUTE_LIMITS},
+  CAD_ATTRIB_G, EPICS_DATA_TYPE_STRING,  data_filename,    {NO_ATTRIBUTE_LIMITS},
   CAD_ATTRIB_H, EPICS_DATA_TYPE_STRING,  "NONE",      {NO_ATTRIBUTE_LIMITS}
  },
  {
@@ -764,7 +767,7 @@ CAD_RECORD pWfsDbCadList [] =
   CAD_ATTRIB_A, EPICS_DATA_TYPE_LONG, "0", {"0", "1"},
   CAD_ATTRIB_B, EPICS_DATA_TYPE_LONG, "0", {"0", "1"},
   CAD_ATTRIB_C, EPICS_DATA_TYPE_LONG, "0", {"0", "1"},
-  CAD_ATTRIB_D, EPICS_DATA_TYPE_STRING, DET_CONTROL_DATA_FILE_PATH, {NO_ATTRIBUTE_LIMITS}
+  CAD_ATTRIB_D, EPICS_DATA_TYPE_STRING, ioc_path, {NO_ATTRIBUTE_LIMITS}
  },
  {
   RECORD_NAME ("dc:detSigMeasAoIm"),
