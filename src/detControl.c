@@ -5733,7 +5733,7 @@ uint32 detObserveStart
       }
       else if ( outOptions == 2 )
       {
-         MESSAGE_LOG1 (MSG_LOG, "Will save data to directly to file \"%s\"",
+         MESSAGE_LOG1 (MSG_LOG, "Will save data to directly to file \"%s.fits\"",
             pFullOutFileName);
       }
 
@@ -19037,10 +19037,6 @@ uint32 detSigSaveCb
     * command.
     */
 
-   printf("XXXXXXXXXXXXXX\n");
-   printf("XXXXXXXXXXXXXXX detSigSaveCb %d\n", commandNumber);
-   printf("XXXXXXXXXXXXXX\n");
-
    errorNumber = 0;
    EPTOVX_CAD_ATTRIB_GET (cadCmdContext, commandNumber, 0,
                           (char *) & saveCbImFlag);
@@ -19700,13 +19696,10 @@ uint32 detSigModeSeqDark
      /* AWE: need to differentiate btw P1/P2 */
      /* strcpy ( pDarkFileName, "./data/zeroFullP2Dark.fits" );*/
       sprintf(pDarkFileName, "./data/zeroFullP%iDark.fits",wfsNum);
-      printf("pDarkFileName is %s\n",pDarkFileName);
    }
    else
    {   
       sprintf(pDarkFileName, "./data/zeroBinP%iDark.fits",wfsNum);
-      printf("pDarkFileName is %s\n",pDarkFileName);
-      /*strcpy ( pDarkFileName, "./data/zeroBinP2Dark.fits" );*/
    }
 
    if ( aoDarkUpdate ( pDarkFileName, obsId->aoCcdId, obsId->aoCtrlId) 

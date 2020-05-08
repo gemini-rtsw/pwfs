@@ -8,7 +8,7 @@
 # Gain for astigmatism 0 and 45 rotation matrix (double)
 1.0 1.0
 # Offset for astigmatism 0 and 45 on the measurement (double)
-1.40 0.05
+1.4 0.05
 # Apply astigmatism model (integer)
 1
 # Cos Trefoil = a*cos(3*X+p) + c (double)
