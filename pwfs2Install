@@ -51,6 +51,6 @@ cd startup
 editUAE
 cd ..
 
-gmake >> pwfs2Build.log 2>&1
+# gmake >> pwfs2Build.log 2>&1
 
 exit 0

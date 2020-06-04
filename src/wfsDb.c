@@ -112,6 +112,7 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "wfsControl.h"   /* This is where WFS_CONTROL_ parameters come from. */
 #include "errorLog.h"     /* This is where LOGTASK_ parameters comes from.    */
 
+char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB];
 
 /* The pWfsDbCadList data structure array contains information on the CAD records
  * recognised by the system, and the commands associated with them. Each
