@@ -4593,6 +4593,17 @@ void   eptovx_loadDefaultInputAttribs
       {
          case EPICS_DATA_TYPE_STRING:
 
+           /*
+                The following line as added to update the in-memory version of pAttrib[i].pDefault
+                so that, "default" (i.e., "CLEAR") will update with the correct value when the default
+                has changed. So far this is only a problem with the path to ioc_data that changes daily.
+                This is why this is only done in the TYPE_STRING path.
+            */
+
+            strncpy (pContext->pDefault [i].pStringAttrib,
+                     pContext->pCadRecord->pAttrib[i].pDefault,
+                     EPICS_MAX_BYTES_STRING_ATTRIB);
+
             strncpy (& pAttrib [i * EPICS_MAX_BYTES_STRING_ATTRIB],
                      pContext->pDefault [i].pStringAttrib,
                      EPICS_MAX_BYTES_STRING_ATTRIB);

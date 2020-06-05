@@ -45,7 +45,8 @@ APPLSRCS.c	= \
 	../wfsResourceMonitor.c \
 	../wfsSite.c \
 	../testKit.c \
-	../fpscr.c
+	../fpscr.c \
+	../autoPath.c
 
 SRCS.c	= $(LIBSRCS.c) $(APPLSRCS.c)
 

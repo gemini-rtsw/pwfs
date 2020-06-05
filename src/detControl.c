@@ -5592,7 +5592,7 @@ uint32 detObserveStart
       }
       else if ( outOptions == 2 )
       {
-         MESSAGE_LOG1 (MSG_LOG, "Will save data to directly to file \"%s\"",
+         MESSAGE_LOG1 (MSG_LOG, "Will save data to directly to file \"%s.fits\"",
             pFullOutFileName);
       }
 
