@@ -167,8 +167,6 @@ pvload "$(version)/data/pwfs2SetDefCommandMK.pv","top=pwfs2:, wfs=dc:"
 # Start sequences
 seq &timeSeq, "sys=pwfs2:"
 
-taskDelay(5 * sysClkRateGet())
-
 taskDelay(1 * sysClkRateGet())
 taskSpawn("autoPath", 100, 0, 5000, autoPath)
 
