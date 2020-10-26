@@ -161,4 +161,9 @@ pvload "$(version)/data/pwfs1SetDefCommandCP.pv","top=pwfs1:, wfs=dc:"
 # Start sequences
 seq &timeSeq, "sys=pwfs1:"
 
+taskDelay(5 * sysClkRateGet())
+
+taskDelay(1 * sysClkRateGet())
+taskSpawn("autoPath", 100, 0, 5000, autoPath)
+
 # End of standalone startup
