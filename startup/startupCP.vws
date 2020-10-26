@@ -161,8 +161,7 @@ pvload "$(version)/data/pwfs1SetDefCommandCP.pv","top=pwfs1:, wfs=dc:"
 # Start sequences
 seq &timeSeq, "sys=pwfs1:"
 
-taskDelay(5 * sysClkRateGet())
-
+# Spawn autoPath task to autocreate paths for CB's and wfs readout.
 taskDelay(1 * sysClkRateGet())
 taskSpawn("autoPath", 100, 0, 5000, autoPath)
 
