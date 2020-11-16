@@ -85,7 +85,7 @@ STATUS autoPath () {
 
       /* printf("autoPath: Localhour vs UTC %d %d\n", tmutc->tm_hour, tmloc->tm_hour); */
 
-      sprintf(ioc_path, "%s/%04d%02d%02d", DET_CONTROL_DATA_FILE_PATH,
+      sprintf(ioc_path, "%s/pwfs1/%04d%02d%02d", DET_CONTROL_DATA_FILE_PATH,
          1900 + tmutc->tm_year, tmutc->tm_mon + 1, tmutc->tm_mday);
 
       printf("autoPath: Creating IOC path: \"%s\".\n", ioc_path);
