@@ -23,6 +23,11 @@ pwd
 
 hostAdd ("reggie","172.17.2.12")
 
+# Hawaii:
+# putenv("TIMEZONE=hawaii::600:000000:000000")
+# Chile:
+putenv("TIMEZONE=chile::180:040402:090602")
+
 # Load EPICS core, sequencer and pvload
 ld < /gemini/external/GEM8.4/base/bin/$(arch)/iocCore
 ld < /gemini/external/GEM8.4/base/bin/$(arch)/seq
@@ -59,6 +64,7 @@ ld < $(version)/bin/$(arch)/wfsControl
 ld < $(version)/bin/$(arch)/wfsResourceMonitor
 ld < $(version)/bin/$(arch)/simpleLog
 ld < $(version)/bin/$(arch)/fpscr
+ld < $(version)/bin/$(arch)/autoPath
 
 # Load test harness library if required
 ld < $(version)/bin/$(arch)/testKit
