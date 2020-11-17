@@ -60,7 +60,7 @@ extern int snprintf(char *str, size_t count, const char *fmt, ...);
 
 /* Note that EPICS_MAX_BYTES_STRING_ATTRIB == 40, and the current path is at 32 chars */
 extern char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB];		/* Path to where to write images, cb's	*/
-extern char data_filename[EPICS_MAX_BYTES_STRING_ATTRIB];	/* Fits file name			*/
+extern char data_filename[EPICS_MAX_BYTES_STRING_ATTRIB];
 
 extern char epToVxTopName[];					/* Name of pwfs				*/
 
