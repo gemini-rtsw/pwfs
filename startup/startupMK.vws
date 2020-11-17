@@ -23,6 +23,11 @@ pwd
 
 hostAdd ("acamar","10.2.2.52")
 
+# Hawaii:
+putenv("TIMEZONE=hawaii::600:000000:000000")
+# Chile:
+# putenv("TIMEZONE=chile::180:040402:090602")
+
 # Load EPICS core, sequencer and pvload
 ld < /gemini/external/GEM8.4/base/bin/$(arch)/iocCore
 ld < /gemini/external/GEM8.4/base/bin/$(arch)/seq
