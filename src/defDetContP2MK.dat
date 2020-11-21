@@ -1,0 +1,23 @@
+# Init file for PWFS2 detector controller 
+# Default target temperature (between -40.0C and 0C)
+-20.0
+# Default temperature coefficient - do not change
+128
+# Default ADC offset for output 0 - no binning
+2561
+# Default ADC offset for output 1 - no binning
+2601
+# Default ADC offset for output 2 - no binning
+2562
+# default ADC offset for output 3 - no binning
+2560
+# Default ADC offset for output 0 - binning
+2561
+# Default ADC offset for output 1 - binning
+2600
+# Default ADC offset for output 2 - binning
+2561
+# default ADC offset for output 3 - binning
+2560
+# Default serial number of the CCD - do not change
+a5207-2-13
