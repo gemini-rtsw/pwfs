@@ -120,7 +120,6 @@ char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB];
  * - List of command attributes, together with the data type, default value
  *   and allowed range for each attribute. There can be zero or more attributes.
  */
-
 CAD_RECORD pWfsDbCadList [] =
 {
  {

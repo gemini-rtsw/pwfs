@@ -170,7 +170,7 @@ seq &timeSeq, "sys=pwfs1:"
 
 taskDelay(5 * sysClkRateGet())
 
-taskDelay(1 * sysClkRateGet())
-taskSpawn("autoPath", 100, 0, 5000, autoPath)
+#taskDelay(1 * sysClkRateGet())
+#taskSpawn("autoPath", 100, 0, 5000, autoPath)
 
 # End of standalone startup

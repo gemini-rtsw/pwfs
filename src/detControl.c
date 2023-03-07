@@ -155,6 +155,15 @@ static struct {void *v; char *c;} rcsid = {&rcsid,
 #include "wfsControl.h"
 #include "wfsDb.h"
 #include "cicsLib.h"
+#include <pipeDrv.h>
+#include <ioLib.h>
+#include <memLib.h>
+#include <math.h>
+#include <tickLib.h>
+#include <sys/stat.h>
+#include "gemTypes.h"
+#include "errorLib.h"
+#include <time.h>
 
 #include "detControl.h"
 
@@ -287,6 +296,16 @@ extern double angleWithM2;         /* Angle with M2 (equivalent to the one    */
                                    /* contained in aoCtrlIdP2) defined in     */
                                    /* writeZernikes.c                         */
 
+extern char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB];		/* Path to where to write images, cb's	*/
+
+extern int snprintf(char *str, size_t count, const char *fmt, ...);
+
+/* Note that EPICS_MAX_BYTES_STRING_ATTRIB == 40, and the current path is at 32 chars */
+extern char ioc_path[EPICS_MAX_BYTES_STRING_ATTRIB];            /* Path to where to write images, cb's  */
+extern char data_filename[EPICS_MAX_BYTES_STRING_ATTRIB];
+
+extern char epToVxTopName[];                                    /* Name of pwfs                         */
+
 /******************************************************* External functions ***/
 
 extern void ImpMaster ();
@@ -296,6 +315,8 @@ extern void ImpMaster ();
 STATUS detReadDefaultDspCcdGeometry (SDSU_ID sdsuId, AO_CCD_ID aoCcdId);
 
 STATUS detSetDefaultDspCcdGeometry (SDSU_ID sdsuId, AO_CCD_ID aoCcdId);
+
+STATUS autoPath_createDir ();
 
 LOCAL uint32   detChop  (CAD_CMD_CONTEXT cadCmdContext, int commandNumber,
                          SDSU_ID sdsuId, OBS_ID obsId);
@@ -2259,7 +2280,12 @@ STATUS   detControl
 
          else if (commandNumber == DET_CONTROL_CMD_SIG_SAVE_CB)
          {
-
+	 /*printf ("in detControl.c, line 2264\n");
+	 printf("calling autoPath_createDir\n");
+	 */
+	 autoPath_createDir(); 
+         /*printf("detControl: IOC path: \"%s\".\n", ioc_path); */
+	 
             /* Init parameters for saving circular buffers */
 
             errorNumber =
@@ -23369,6 +23395,70 @@ STATUS detInitSigInitAoThresh
 {
    *(double *)pgsub->vala = *(double *)pgsub->a;
    *(double *)pgsub->valb = *(double *)pgsub->b;
+
+   return (OK);
+}
+
+/*+
+ *   MODULE NAME:
+ *   autoPath_createSDir
+ *
+ *   FILENAME:
+ *   autoPath.c
+ *
+ *   PURPOSE:
+ *   Wavefront sensor task application code
+ *
+ *   DESCRIPTION:
+ *   This file contains the function "autoPath", which is started from
+ *   the command line (i.e., startup script) to watch for UTC midnight and
+ *   create a default directory and default paths for writing fits files
+ *   and circular buffers.
+ *
+ *   INCLUDE FILES:
+ *   None
+ *
+ *   DEFICIENCIES:
+ *   Never
+ *
+ *   ORIGINAL AUTHOR:
+ *   TCC
+ *
+ *   MODIFIED BY:
+ *   TCC
+ *
+ * INDENT-OFF*
+ *
+ *INDENT-ON*
+ *-
+ */
+STATUS autoPath_createDir () {
+   struct tm *tmutc;    /* UTC tm struct */
+   time_t now;
+   int offset;
+   struct stat sb;
+   char *site = getenv("SITE");
+
+
+      printf("autoPath: Creating IOC path: \"%s\".\n", ioc_path);
+
+
+      /*
+       * Attempt to create the directory. On failure, wait 10 minutes and try again
+       * just in case there's a transient error on nfs.
+       */
+
+      if (stat(ioc_path, &sb) == ERROR) {       /* Should fail as it hasn't been created yet */
+         if (mkdir(ioc_path) == ERROR) {
+            printf("autoPath: Failed to create directory \"%s\".\n", ioc_path);
+            taskDelay(10 * 60 * sysClkRateGet());
+         }
+      }
+      else {
+         printf("autoPath: Directory \"%s\" already exists.\n", ioc_path);
+      }
+
+   MESSAGE_LOG(MSG_WARNING, "autoPath task exited.");
 
    return (OK);
 }
