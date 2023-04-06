@@ -64,18 +64,21 @@ extern char data_filename[EPICS_MAX_BYTES_STRING_ATTRIB];
 
 extern char epToVxTopName[];					/* Name of pwfs				*/
 
+#define SECSNADAY	(24 * 60 * 60)
+#define SECSNADIR	(14 * 60 * 60)
 
 STATUS autoPath () {
-   struct tm *tmutc;	/* UTC tm struct */
+   struct tm *tmnow;
    time_t now;
+   int secstomidnight;
    int offset;
    struct stat sb;
    char *site = getenv("SITE");
 
-   if (site == NULL)                 offset = 10 * 60 * 60;	/* Default HST */
-   else if (strcmp("MK", site) == 0) offset = 10 * 60 * 60;	/* -10 hours UTC */
-   else if (strcmp("CP", site) == 0) offset =  3 * 60 * 60;	/* -3  hours UTC, ignore CLST */
-   else                              offset = 10 * 60 * 60;	/* Default HST */
+   if (site == NULL)                 offset = 10;     /* Default HST */
+   else if (strcmp("MK", site) == 0) offset = 10;     /* -10 hours UTC */
+   else if (strcmp("CP", site) == 0) offset =  3;     /* -3  hours UTC, ignore CLST */
+   else                              offset = 10;     /* Default HST */
 
    if (errorInit () == ERROR) {
       printErr("autoPath: Failed to initialise error context structure.\n");
@@ -83,37 +86,39 @@ STATUS autoPath () {
    }
 
    while (1) {
-      now = time(NULL);
-      tmutc = gmtime(&now);
+      time( &now );
+      tmnow = localtime( &now );
+      /*tmnow = gmtime(&now); */
+      /*printf("Current local time and date: %s", asctime(tmnow));*/
+      tmnow->tm_hour=tmnow->tm_hour-offset;
+      /*printf("tmnow->tm_hour = %d \n",tmnow->tm_hour);
+      printf("tmnow->tm_mday = %d \n",tmnow->tm_mday);*/
+      if ( tmnow != NULL &&
+                 ( tmnow->tm_hour >= 14 ) )
+      {
+          /*
+            It is after 14:00, so the day in the prefix is tomorrow's date.
+         */
 
-      /* printf("autoPath: Localhour vs UTC %d\n", tmutc->tm_hour); */
-
-      sprintf(ioc_path, "%s/pwfs2/%04d%02d%02d", DET_CONTROL_DATA_FILE_PATH,
-         1900 + tmutc->tm_year, tmutc->tm_mon + 1, tmutc->tm_mday);
-
-      printf("autoPath: Creating IOC path: \"%s\".\n", ioc_path);
-
+          now = now + ( 64800 ) ;
+          tmnow = localtime( &now );
+      }
 
       /*
-       * Attempt to create the directory. On failure, wait 10 minutes and try again
-       * just in case there's a transient error on nfs.
-       */
+        Compose the time part of the prefix into YYYYddMM.
+      */
 
-      if (stat(ioc_path, &sb) == ERROR) {	/* Should fail as it hasn't been created yet */
-         if (mkdir(ioc_path) == ERROR) {
-            printf("autoPath: Failed to create directory \"%s\".\n", ioc_path);
-            taskDelay(10 * 60 * sysClkRateGet());
-            continue;
-         }
-      }
-      else {
-         printf("autoPath: Directory \"%s\" already exists.\n", ioc_path);
-      }
+    /*  strftime( ioc_path, sizeof(ioc_path), "%Y%m%d", tmnow );  */
+      sprintf(ioc_path, "%s/pwfs2/%04d%02d%02d", DET_CONTROL_DATA_FILE_PATH,
+         1900 + tmnow->tm_year, tmnow->tm_mon + 1, tmnow->tm_mday);
 
-      now = now % (24 * 60 * 60);		/* Get seconds into the current day	*/
-      now = offset + (14 * 60 * 60) - now;	/* Get seconds until 2pm tomorrow	*/
-      printf("autoPath: waiting %d seconds to 2pm localtime\n", now);
-      taskDelay(now * sysClkRateGet());		/* Wait until midnight			*/
+      /*printf("autoPath: Setting IOC path: \"%s\".\n", ioc_path);*/
+
+      now = time(NULL);
+      /* secstomidnight = (SECSNADAY - (now % SECSNADAY))+SECSNADIR; */
+      secstomidnight = 3;	
+      /*printf("autoPath: waiting %d seconds to 14 hours local time\n", secstomidnight);*/
+      taskDelay(secstomidnight * sysClkRateGet());	/* Wait until midnight */
    }
 
    MESSAGE_LOG(MSG_WARNING, "autoPath task exited.");
