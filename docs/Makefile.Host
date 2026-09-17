@@ -1,0 +1,41 @@
+# Include file identifying the target architecture (defines the T_A
+# macro) and application configuration definitions
+
+include ../.applTop
+include $(APPLIC_TOP)/config/CONFIG
+
+# User compiler and loader flags
+# HOST_OPT = NO
+# USR_CFLAGS   =
+
+# Add the source code files to this variable. The default has all .c files 
+SRCS	= $(patsubst ../%.c, %.c $(wildcard ../*.c) )
+
+# Standard macros for files which are to be built and installed.
+# PROD (products) and SCRIPTS are installed in INSTALL_BIN
+PROD	= $(notdir $(shell cd ..; pwd))
+SCRIPTS	=
+
+# LIBRARY installs compiled LIBSRCS installed in INSTALL_LIB
+LIBRARY	=
+LIBSRCS =
+
+# INC is installed in INSTALL_INCLUDE
+INC	=
+
+# MAN1 is installed in INSTALL_MAN/man1
+MAN1	=
+
+# DOCS are installed in INSTALL_DOC
+DOCS	=
+
+# DATA are installed in INSTALL_DATA
+DATA	=
+
+# Any extra targets can be placed in a TARGETS macro (the build target
+# builds only pre_build, LIBNAME, TARGETS and PROD, not SCRIPTS, INC etc)
+
+TARGETS =
+
+# Rules for building targets
+include $(APPLIC_TOP)/config/RULES.Build

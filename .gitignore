@@ -1,0 +1,33 @@
+# applSetup / gmake output. config/ in particular bakes the checkout's
+# ABSOLUTE path into CONFIG.Defs, which is why setup.sh regenerates it rather
+# than the repository carrying one.
+/config/
+/bin/
+/lib/
+/include/
+/dbd/
+/data/
+/javalib/
+/Distfile
+/.applTop
+/resource.def
+/APPLIC_INSTALL.txt
+/pwfsBuild.log
+O.*/
+*.o
+
+# applSetup writes one of these per included directory, each containing the
+# checkout's ABSOLUTE path.
+.applTop
+
+# DSP assembler intermediates. asm56000/dsplnk/cldlod are SPARC Solaris
+# binaries, so dspsrc cannot be rebuilt on Linux at all -- the ten .lod images
+# ARE committed, because they are the irreproducible product. These are the
+# by-products of the run that made them and carry no information.
+dspsrc/*.cld
+dspsrc/*.cln
+dspsrc/*.ls
+dspsrc/*.p0
+dspsrc/*.p1
+dspsrc/*.p2
+dspsrc/*.s

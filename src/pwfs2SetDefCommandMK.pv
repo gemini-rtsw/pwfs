@@ -52,3 +52,8 @@ int $(top)$(wfs)initSigModeSeqDark.PROC = 1 ;
 int $(top)$(wfs)initSigInitAoThresh.PROC = 1 ;
 int $(top)$(wfs)detSigInitAoThresh.DIR = 0 ;
 int $(top)$(wfs)detSigInitAoThresh.DIR = 3 ;
+
+string $(top)$(wfs)detOffset.A = "2562" ;
+string $(top)$(wfs)detOffset.B = "2599" ;
+string $(top)$(wfs)detOffset.C = "2585" ;
+string $(top)$(wfs)detOffset.D = "2593" ;

@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id$"};
+   "$Id: cicsLib.c 39188 2011-11-17 02:20:32Z aebbers $"};
 /*
 *   FILENAME
 *   -------- 

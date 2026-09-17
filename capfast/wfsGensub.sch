@@ -369,7 +369,7 @@ p 2608 -688 200 0 1 author:S.M.Beard
 p 3120 -720 100 0 0 border:D
 p 2608 -768 200 0 1 checked:B.Goodrich
 p 3120 -784 200 0 -1 date:$Date: 2002/01/03 03:39:12 $
-p 2592 2304 200 0 -1 id:$Id$
+p 2592 2304 200 0 -1 id:$Id: wfsGensub.sch 48254 2012-09-17 22:55:43Z aebbers $
 p 3120 -432 200 0 -1 project:Gemini PWFS2
 p 2592 -528 200 0 -1 revision:$Revision: 1.7 $
 p 3120 -560 200 0 -1 title:Wavefront Sensor genSub Records

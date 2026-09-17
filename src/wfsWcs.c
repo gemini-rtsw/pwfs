@@ -1,5 +1,5 @@
 static struct {void *v; char *c;} rcsid = {&rcsid,
-   "$Id$"};
+   "$Id: wfsWcs.c 39188 2011-11-17 02:20:32Z aebbers $"};
 
 /*+
  * MODULE NAME:

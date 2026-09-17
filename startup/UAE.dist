@@ -1,0 +1,18 @@
+
+(${APPLIC_INSTALL}/bin/${T_A}) -> ${DIST_HOST}
+	install -R ${DIST_PATH}/bin/${T_A};
+
+(${APPLIC_INSTALL}/bin/solaris) -> ${DIST_HOST}
+	install -R ${DIST_PATH}/bin/solaris;
+
+(${APPLIC_INSTALL}/lib) -> ${DIST_HOST}
+	install -R ${DIST_PATH}/lib;
+
+(${APPLIC_INSTALL}/include) -> ${DIST_HOST}
+	install -R ${DIST_PATH}/include;
+
+(${APPLIC_INSTALL}/dbd) -> ${DIST_HOST}
+	install -R ${DIST_PATH}/dbd;
+
+(${APPLIC_INSTALL}/data) -> ${DIST_HOST}
+	install -R ${DIST_PATH}/data;

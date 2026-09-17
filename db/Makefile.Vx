@@ -1,0 +1,37 @@
+
+include ../.applTop
+include $(APPLIC_TOP)/config/CONFIG
+
+DBFILES = $(strip   $(wildcard $(EPICS_BASE)/templates/makeBaseApp/top/exampleApp/src/base.dbd) \
+		    $(wildcard $(EPICS_BASE)/dbd/geminiRec.dbd)         \
+		    $(wildcard $(EPICS_BASE)/dbd/geminiBancommDev.dbd)  \
+		    $(wildcard $(EPICS_BASE)/dbd/geminiSoftDev.dbd)     \
+		    $(wildcard $(EPICS_BASE)/dbd/geminiDrv.dbd)         \
+		    $(shell if [ -d $(APPLIC_INSTALL)/dbd ] ; then          \
+			       find $(APPLIC_INSTALL)/dbd -name "*.dbd" -print; \
+			    fi ) )
+
+include $(EPICS_BASE)/templates/makeBaseApp/top/exampleApp/src/baseLIBOBJS
+include $(EPICS_BASE)/dbd/geminiRecLIBOBJS
+include $(EPICS_BASE)/dbd/geminiBancommDevLIBOBJS
+include $(EPICS_BASE)/dbd/geminiSoftDevLIBOBJS
+include $(EPICS_BASE)/dbd/geminiDrvLIBOBJS
+
+DBDINSTALL = gemini$(APPLIC_DBNAME).dbd
+
+LIBNAME = gemini$(APPLIC_DBNAME).Support
+
+include $(APPLIC_TOP)/config/RULES.Build
+
+#----------------------------------------
+#  ADD RULES AFTER THIS LINE
+
+$(LIBNAME): $(EPICS_BASE)/templates/makeBaseApp/top/exampleApp/src/baseLIBOBJS	\
+	    $(EPICS_BASE)/dbd/geminiRecLIBOBJS					\
+	    $(EPICS_BASE)/dbd/geminiBancommDevLIBOBJS				\
+	    $(EPICS_BASE)/dbd/geminiSoftDevLIBOBJS				\
+	    $(EPICS_BASE)/dbd/geminiDrvLIBOBJS
+ 
+$(DBDINSTALL) : $(DBFILES)
+	$(EPICS_BASE)/bin/$(HOST_ARCH)/dbExpand \
+		-I$(APPLIC_INSTALL)/dbd -I$(EPICS_BASE)/dbd $(DBFILES) > $(@F)
