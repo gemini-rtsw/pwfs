@@ -36,12 +36,12 @@ ld < $(version)/bin/$(arch)/drvVmi5588
 
 # Load the Gemini astrometric and time libraries
 ld < /gemini/epics3.13.4/slalib/V1-9-1/bin/$(arch)/slalib
-ld < /gemini/epics3.13.4/support/timelib/@TIMELIB_VER@/bin/$(arch)/timelib
-ld < /gemini/epics3.13.4/support/astlib/@ASTLIB_VER@/bin/$(arch)/astlib
-ld < /gemini/epics3.13.4/support/cfitsio/@CFITSIO_VER@/bin/$(arch)/cfitsiolib
+ld < /gemini/epics3.13.4/support/timelib/$(timelib_ver)/bin/$(arch)/timelib
+ld < /gemini/epics3.13.4/support/astlib/$(astlib_ver)/bin/$(arch)/astlib
+ld < /gemini/epics3.13.4/support/cfitsio/$(cfitsio_ver)/bin/$(arch)/cfitsiolib
 
 # Load sequences here
-ld < /gemini/epics3.13.4/support/timelib/@TIMELIB_VER@/bin/$(arch)/timeSeq
+ld < /gemini/epics3.13.4/support/timelib/$(timelib_ver)/bin/$(arch)/timeSeq
 
 # Load the Gemini data handling libraries
 ld < /gemini/dhs/dhs/external/lib/mv2700T2/libers.o

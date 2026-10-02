@@ -1,6 +1,14 @@
 #
-# This file contains site-specific information
-# 
+# Site-specific information: routes, the NFS server that exports /gemini, and
+# the unix identity VxWorks presents over NFS.
+#
+# Production (pwfs/V1-7) booted from pisces-control, with this file
+# byte-identical to the GEM8.4 localMK.vws template. Re-homed to
+# mkotcsbootv2-lv1, matching the move hrwfs made and validated.
+#
+# NOTE the export paths change with the server: pisces-control exported
+# /export/gemini and /export/gemdata, mkotcsbootv2-lv1 exports /gemini and
+# /gemdata.
 
 < /gemini/external/vxWorks/tornado2.0/vxUsers
 
@@ -8,14 +16,19 @@ routeAdd "0.0.0.0" , "10.2.2.1"
 routeAdd "0.0.0.0" , "10.1.2.1"
 routeAdd "0.0.0.0" , "10.1.5.1"
 
-hostAdd ("pisces-control","10.2.2.57")
+hostAdd ("mkotcsbootv2-lv1","10.2.2.145")
 
-nfsMount "pisces-control", "/export/gemini", "/gemini"
-nfsMount "pisces-control", "/export/gemdata", "/gemdata"
+nfsMount "mkotcsbootv2-lv1", "/gemini", "/gemini"
+
+# detControl.h defines DET_CONTROL_DATA_FILE_PATH "/gemdata/ioc_data", and
+# autoPath creates <that>/<top>/<date> under it, so the mount is not optional.
+nfsMount "mkotcsbootv2-lv1", "/gemdata", "/gemdata"
 
 # Tell VxWorks the unix user ID and group ID of "gemvx",
 # so that file access over NFS works.
 
-nfsAuthUnixSet "pisces-control", 2966, 10, 0
+nfsAuthUnixSet "mkotcsbootv2-lv1", 2966, 10, 0
 
+# Left as the macro: build.conf sets APPLIC_IOCPATH to the deploy path, so
+# every build -- local or pipeline -- cd's into /gemini/epics3.13.4/pwfs/pwfs.
 cd "$(iocpath)"
