@@ -16,10 +16,14 @@
 # are frozen and not booted; their history is on the archive/* branches.
 #
 # %{deploy} is currently a symlink to the versioned directory of the day. The
-# RPM replaces it with a real directory of the same name, so no boot parameter
-# changes -- the same transition gmoscc and hrwfs made. rpm -q names what is
-# installed and dnf downgrade is the rollback, which is what the symlink could
-# never tell you.
+# RPM replaces it with a real directory of the same name, so the startup script
+# path in the boot parameters does not change -- the same transition gmoscc and
+# hrwfs made. rpm -q names what is installed and dnf downgrade is the rollback,
+# which is what the symlink could never tell you.
+#
+# The boot SERVER does change: both crates move from pisces-control
+# (10.2.2.57) to mkotcsbootv2-lv1 (10.2.2.145), as hrwfs did -- `host name`
+# and `host inet` in each crate's boot parameters, and startup/local.vws here.
 
 %global _build_id_links none
 %global __os_install_post %{nil}
@@ -37,25 +41,28 @@
 # All four were verified byte-identical to what the crates already load from
 # the unversioned /gemini/epics3.13.4/<lib>/<lib> paths, so these are the same
 # builds under managed names -- no new library packaging was needed for pwfs.
-%global slalib_ver  V1-9-4
-%global timelib_ver V1-8-6
-%global astlib_ver  V1-4
-%global cfitsio_ver V4-1
+# Read from tools/linux-build/build.conf, the single source shared with
+# setup.sh and the Makefile, so a local build and this one cannot disagree.
+# rpmbuild runs from the repository root (build_rpm.sh does `cd /work`), the
+# same assumption the git_hash macro already makes.
+%define buildconf() %(. tools/linux-build/build.conf 2>/dev/null && echo $%1)
+%global slalib_ver  %{buildconf SLALIB_VER}
+%global timelib_ver %{buildconf TIMELIB_VER}
+%global astlib_ver  %{buildconf ASTLIB_VER}
+%global cfitsio_ver %{buildconf CFITSIO_VER}
+%if "%{slalib_ver}" == ""
+%{error:tools/linux-build/build.conf not readable -- rpmbuild must run from the repository root}
+%endif
+
+# Exact builds the package is compiled against -- the same pins hrwfs uses.
+%global slalib_nvr  1.9.4-1.git4a156f2%{?dist}
+%global timelib_nvr 1.8.6-1.git63b2b74%{?dist}
+%global astlib_nvr  1.4-1.gitdcad7c0%{?dist}
+%global cfitsio_nvr 4.1-1.git819bc30%{?dist}
 
 %global supdir  /gemini/epics3.13.4/support
-%global deploy  /gemini/epics3.13.4/pwfs/pwfs
+%global deploy  %{buildconf DEPLOY}
 
-# Host half of APPLIC_IOCPATH. Only the path half reaches the startup scripts;
-# this exists because CONFIG_APPLIC splits the value on a colon.
-#
-# STILL pisces-control, unlike hrwfs which was re-homed to mkotcsbootv2-lv1.
-# Production's boot parameters and local.vws both name pisces-control
-# (10.2.2.57), so this reproduces what operations runs today. Moving pwfs to
-# the new boot server is a separate, deliberate change -- it means editing
-# startup/local.vws (server name AND export path: pisces exports
-# /export/gemini, mkotcsbootv2-lv1 exports /gemini) and adding 10.2.2.111 and
-# 10.2.2.112 to the boot server's exports and rhosts.
-%global iocpath_host pisces-control
 
 # $GIT_HASH first: build_rpm.sh computes it on the HOST and passes it in.
 %define git_hash %(if [ -n "$GIT_HASH" ]; then echo "$GIT_HASH"; else git rev-parse --short HEAD 2>/dev/null || echo nogit; fi)
@@ -64,7 +71,7 @@
 %define version 1.7
 Name:           %{name}
 Version:        %{version}
-Release:        1.git%{git_hash}%{?dist}
+Release:        2.git%{git_hash}%{?dist}
 Summary:        Gemini PWFS IOC software, unified P1/P2 (vxWorks 5.4 ppc604)
 License:        Gemini Observatory (org-internal)
 Source0:        %{name}-%{version}.tar.gz
@@ -75,10 +82,10 @@ BuildArch:      noarch
 
 BuildRequires:  gem-tornado20-linux = 2.0.2-1%{?dist}
 BuildRequires:  gem-epics3134gem84 = 3.13.4-1%{?dist}
-BuildRequires:  gem7-slalib-%{slalib_ver}-devel
-BuildRequires:  gem7-timelib-%{timelib_ver}-devel
-BuildRequires:  gem7-astlib-%{astlib_ver}-devel
-BuildRequires:  gem7-cfitsio-%{cfitsio_ver}-devel
+BuildRequires:  gem7-slalib-%{slalib_ver}-devel = %{slalib_nvr}
+BuildRequires:  gem7-timelib-%{timelib_ver}-devel = %{timelib_nvr}
+BuildRequires:  gem7-astlib-%{astlib_ver}-devel = %{astlib_nvr}
+BuildRequires:  gem7-cfitsio-%{cfitsio_ver}-devel = %{cfitsio_nvr}
 BuildRequires:  hrwfs-dhs-vxlibs
 BuildRequires:  make, gcc, perl, tcsh
 
@@ -120,47 +127,17 @@ Pulls the pinned pwfs build dependencies into a dev container.
 %setup -q
 
 %build
-. /etc/profile.d/gem84.sh
+# Exactly what a developer runs. All build logic -- setup, the deploy path,
+# the library versions -- lives in the repository (Makefile, setup.sh,
+# build.conf), so this is the same command, producing the same files, as a
+# local `make` in the same container.
+#
+# APPLIC_SITE selects which site's #if (MK)/(CP) blocks compile in; the
+# default comes from build.conf.
+make %{?site:APPLIC_SITE=%{site}}
 
-# Bootstrap is shared with interactive use, so a developer build and this one
-# run identical steps.
-APPLIC_SITE=%{?site}%{!?site:MK} ./tools/linux-build/setup.sh
-
-# Re-home APPLIC_IOCPATH to the deploy path BEFORE building. macTest
-# substitutes $(iocpath) into every generated script, so without this the
-# startup scripts cd into the rpmbuild directory and the crate boots into
-# nothing. It must be host:path -- CONFIG_APPLIC derives DIST_PATH with
-#   $(word 2, $(subst :, ,$(APPLIC_IOCPATH)))
-# so a bare path yields an empty cd "".
-sed -i 's|^APPLIC_IOCPATH *=.*|APPLIC_IOCPATH = %{iocpath_host}:%{deploy}|' config/CONFIG.Defs
-grep -q "^APPLIC_IOCPATH = %{iocpath_host}:%{deploy}$" config/CONFIG.Defs || {
-    echo "ERROR: APPLIC_IOCPATH rewrite did not take" >&2; exit 1; }
-
-make
-
-# Re-home the support-library load paths. The sources name the unversioned
-# shared trees (/gemini/epics3.13.4/slalib/slalib/...) which record nothing;
-# the packages install under %%{supdir}/<lib>/<VER>.
-sed -i -e 's|@SLALIB_VER@|%{slalib_ver}|g' -e 's|@TIMELIB_VER@|%{timelib_ver}|g' \
-       -e 's|@ASTLIB_VER@|%{astlib_ver}|g' -e 's|@CFITSIO_VER@|%{cfitsio_ver}|g' \
-       bin/ppc604/startup* bin/ppc604/local
-
-# Guards. Each of these has failed at least once during the hrwfs port, and
-# every one of them is silent at build time and fatal at boot.
-if grep -l '@[A-Z_]*_VER@' bin/ppc604/* 2>/dev/null | grep -q .; then
-    echo "ERROR: unsubstituted @..._VER@ remains in a generated script" >&2; exit 1
-fi
-for v in %{slalib_ver} %{timelib_ver} %{astlib_ver} %{cfitsio_ver}; do
-    grep -q "$v" bin/ppc604/startupMK_P1 || {
-        echo "ERROR: startupMK_P1 does not name $v" >&2; exit 1; }
-done
-for f in startupMK_P1 startupMK_P2 local; do
-    grep -q 'cd "%{deploy}"' bin/ppc604/$f || {
-        echo "ERROR: $f does not cd into %{deploy}" >&2; exit 1; }
-done
-if grep -rl '/root/rpmbuild' bin 2>/dev/null | grep -q .; then
-    echo "ERROR: build path leaked into the payload" >&2; exit 1
-fi
+# The same checks a developer can run by hand after a local build.
+./tools/linux-build/check-build.sh
 
 %install
 # Mirror the historical rdist payload (startup/UAE.dist): bin/<arch>, include,
@@ -194,6 +171,10 @@ cp -a IMP_Startup.pwfs1 IMP_Startup.pwfs2 $D/ 2>/dev/null || :
 %files devel
 
 %changelog
+* Fri Oct 02 2026 Hawi Stecher <hawi.stecher@noirlab.edu> - 1.7-2
+- Build in the gemini-rtsw-ci pipeline. All build logic in the repository
+  (build.conf, Makefile, setup.sh); %build is plain make, identical to a local
+  build. Re-homed to mkotcsbootv2-lv1.
 * Wed Sep 16 2026 Hawi Stecher <hawi.stecher@noirlab.edu> - 1.7-1
 - Initial RPM packaging via the Linux cross-build. Source is the unified pwfs
   application deployed as V1-7, verified byte-identical to production across
