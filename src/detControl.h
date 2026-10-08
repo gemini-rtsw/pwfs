@@ -558,8 +558,9 @@ typedef   struct      /* Context structure used to describe an observation.   */
    int          yPixelsDhs;/* Number of rows in frame, in pixels for dhs      */
    int          dhsCounter;/* Counter for frames to be sent to the QL         */
    int          dhsQlRate; /* Number of frames send to the DHS QL             */
-   DHS_BD_DATASET dhsDataset; /* DHS dataset ID.                              */
+   DHS_BD_DATASET dhsDataset; /* DHS dataset ID, or DHS_BD_DATASET_NULL.      */
    DHS_BD_FRAME dhsDataFrame; /* DHS data frame ID.                           */
+   SEM_ID       dhsDatasetSem;/* Guards dhsDataset, dhsDataFrame, pCurFrame.  */
    float *      pCurFrame; /* Pointer to current unscrambled data frame.      */
    uint32       outputs;   /* Number of detector outputs.                     */
 
