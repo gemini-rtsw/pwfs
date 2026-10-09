@@ -182,6 +182,8 @@
 
 #define OBS_WAIT_TIMEOUT   1200 /* Timeout waiting for obs sync semaphore 20s */
 
+#define DHS_DATASET_TIMEOUT 300 /* Timeout waiting for DHS dataset lock 5s    */
+
 #ifndef PI
 #define PI 3.14159265358979
 #endif
@@ -527,6 +529,8 @@ void   detDhsCheckErrno (const DHS_STATUS dhsErrno, const int line,
                          const char * filename);
 
 STATUS detDhsCheckCmdStatus (const DHS_TAG dhsTag);
+
+STATUS detDhsDatasetFree (OBS_ID obsId);
 
 void   detObserveEnd (SDSU_ID sdsuId, void * obsIdIn, SDSU_FRAME * pFrame );
 
@@ -2576,7 +2580,100 @@ OBS_ID detObsContextCreate (void)
       return (NULL);
    }
 
+   /*
+    * Create the mutex guarding the DHS dataset. The dataset is created and
+    * reclaimed by the command task but filled and sent by the readout task.
+    * calloc left the ids at 0, which is not the DHS "none" value (-1).
+    */
+
+   obsId->dhsDatasetSem =
+      semMCreate (SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE);
+   if ( obsId->dhsDatasetSem == NULL )
+   {
+      ERROR_SET (0, "Failed to create DHS dataset semaphore", ERROR_LOG_SAVE);
+      semDelete (obsId->syncSem);
+      cfree ((char *) obsId);
+      return (NULL);
+   }
+
+   obsId->dhsDataset   = DHS_BD_DATASET_NULL;
+   obsId->dhsDataFrame = DHS_BD_FRAME_NULL;
+
    return (obsId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   detDhsDatasetFree
+ *
+ *   INVOCATION:
+ *   detDhsDatasetFree (obsId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (!) obsId    (OBS_ID)   Observation context structure
+ *
+ *   FUNCTION VALUE:
+ *   (STATUS)   OK, or ERROR if the dataset lock could not be taken
+ *
+ *   PURPOSE:
+ *   Release the observation's DHS dataset, if it has one
+ *
+ *   DESCRIPTION:
+ *   Frees the dataset, which also frees the frame and its pixel buffer
+ *   (pCurFrame), then marks all three absent so a later call is harmless.
+ *   Safe to call from any task and with the dataset lock already held.
+ *
+ *   The readout task holds the lock across dhsWait, which has no timeout,
+ *   so the lock is waited for only DHS_DATASET_TIMEOUT. On a timeout the
+ *   dataset is left for the next observation to release.
+ *
+ *   The DHS free functions do nothing if they are passed a status that
+ *   is already an error, so a private status, reset to success, is used.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   obsId created by detObsContextCreate
+ *
+ *   INCLUDE FILES:
+ *   detControl.h
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+STATUS detDhsDatasetFree (OBS_ID obsId)
+{
+   DHS_STATUS   dhsErrno;   /* DHS error number.                            */
+
+   if ( semTake (obsId->dhsDatasetSem, DHS_DATASET_TIMEOUT) == ERROR )
+   {
+      ERROR_SET (S_detControl_DHS_ERROR,
+                 "DHS dataset still in use by a frame transfer - not freed",
+                 ERROR_LOG_NOW);
+      return (ERROR);
+   }
+
+   if ( obsId->dhsDataset != DHS_BD_DATASET_NULL )
+   {
+      MESSAGE_LOG1 (MSG_FULLDEBUG, "Freeing DHS dataset %ld",
+                    (long) obsId->dhsDataset);
+
+      dhsErrno = DHS_S_SUCCESS;
+      dhsBdDsFree (obsId->dhsDataset, &dhsErrno);
+      CHECK_DHS (dhsErrno);
+
+      obsId->dhsDataset   = DHS_BD_DATASET_NULL;
+      obsId->dhsDataFrame = DHS_BD_FRAME_NULL;
+      obsId->pCurFrame    = NULL;
+   }
+
+   semGive (obsId->dhsDatasetSem);
+   return (OK);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -6521,7 +6618,24 @@ uint32 detObserveStart
       /*
        * If the DHS is being used then create a dataset to hold the 
        * unscrambled data. Otherwise allocate a buffer directly.
+       *
+       * First release the dataset of any earlier observation that did not
+       * release its own (an abort, or an error before its last frame);
+       * overwriting the id would leak it. Hold the dataset lock until the
+       * new dataset is complete, so the readout task cannot send a frame
+       * through a half-built one. If a frame of the earlier observation is
+       * still stuck in a DHS transfer, refuse rather than hang this task.
        */
+
+      if ( semTake (obsId->dhsDatasetSem, DHS_DATASET_TIMEOUT) == ERROR )
+      {
+         ERROR_SET (S_detControl_DHS_ERROR,
+                    "Previous frame is still being sent to the DHS",
+                    ERROR_LOG_NOW);
+         errorNumber = S_detControl_DHS_ERROR;
+         return (errorNumber);
+      }
+      detDhsDatasetFree (obsId);
 
       if ( obsId->outOptions == 1 )
       {
@@ -6602,6 +6716,8 @@ uint32 detObserveStart
                         "Failed to create dataset (dhsErrno=%d)",
                         ERROR_LOG_NOW, dhsErrno);
             errorNumber = S_detControl_DHS_ERROR;
+            detDhsDatasetFree (obsId);
+            semGive (obsId->dhsDatasetSem);
             return (errorNumber);
          }
 
@@ -6747,6 +6863,8 @@ uint32 detObserveStart
                         "Failed to create new data frame (dhsErrno=%d)",
                         ERROR_LOG_NOW, dhsErrno);
             errorNumber = S_detControl_DHS_ERROR;
+            detDhsDatasetFree (obsId);
+            semGive (obsId->dhsDatasetSem);
             return (errorNumber);
          }
       }
@@ -6755,6 +6873,8 @@ uint32 detObserveStart
          /* The DHS is not being used. */
 
       }
+
+      semGive (obsId->dhsDatasetSem);
 
       /*
        * Give the binary semaphore, which will allow the observation thread to
@@ -7133,6 +7253,13 @@ uint32 detAbort(
       ERROR_LOG ("Failed to abort readouts");
       errorNumber = S_detControl_SDSU_ERROR;
    }
+
+   /*
+    * No further frames will be sent, so release the DHS dataset. The lock
+    * inside waits out, for a while, any frame still being sent.
+    */
+
+   detDhsDatasetFree (obsId);
 
    /*
     * Reset the "observation in progress" flag and set the observeC CAR record
@@ -11179,6 +11306,7 @@ void detObserveEnd
    BOOL         bufferReserved;    /* TRUE if the SDSU frame buffer been      */
                                    /* reserved.                               */
    BOOL         obsAlreadyAborted; /* TRUE if observation already  aborted.   */
+   BOOL         dhsDatasetLocked;  /* TRUE while holding obsId->dhsDatasetSem.*/
 
    double       readoutTimeout;    /* Readout timeout in seconds.             */
    double       waitTimeSecs;      /* Wait time in seconds.                   */
@@ -11197,6 +11325,7 @@ void detObserveEnd
 
    bufferReserved = FALSE;
    obsAlreadyAborted = FALSE;
+   dhsDatasetLocked = FALSE;
 
 #ifdef DEBUG
    /* Check the pointers provided as arguments. */
@@ -11474,14 +11603,6 @@ void detObserveEnd
            == ERROR )
       {
          ERROR_LOG ("Failed to unscramble data");
-         if ( obsId->outOptions == 1 )
-         {
-            dummyDhsErrno = DHS_S_SUCCESS;         
-            dhsBdDsFree ( obsId->dhsDataset, &dummyDhsErrno );
-         }
-         else
-         {
-         }
          goto ERROR_EXIT;
       }
 
@@ -12756,9 +12877,19 @@ void detObserveEnd
       /*
        * Send the data to the DHS, store it to disk or do nothing, 
        * as appropriate
+       *
+       * Hold the dataset lock while sending, so the command task cannot
+       * free the dataset mid-send. The dataset may already be gone, if
+       * this frame was in flight when the observation was aborted; it is
+       * then not sent.
        */
 
+      semTake (obsId->dhsDatasetSem, WAIT_FOREVER);
+      dhsDatasetLocked = TRUE;
+
       if ( (obsId->outOptions == 1) && 
+           (obsId->dhsDataset != DHS_BD_DATASET_NULL) &&
+           (obsId->pCurFrame != NULL) &&
            ((obsId->dhsCounter % obsId->dhsQlRate) == 0) )
       {
          /*
@@ -12863,9 +12994,6 @@ void detObserveEnd
             dummyDhsErrno = DHS_S_SUCCESS;
             dhsTagFree (putTag, &dummyDhsErrno);
             CHECK_DHS (dummyDhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS;
-            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
             goto ERROR_EXIT;
          }
 
@@ -12887,9 +13015,6 @@ void detObserveEnd
             dummyDhsErrno = DHS_S_SUCCESS;
             dhsTagFree (putTag, &dummyDhsErrno);
             CHECK_DHS (dummyDhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS;
-            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
             goto ERROR_EXIT;
          }
 
@@ -12906,14 +13031,13 @@ void detObserveEnd
             dummyDhsErrno = DHS_S_SUCCESS;
             dhsTagFree (putTag, &dummyDhsErrno);
             CHECK_DHS (dummyDhsErrno);
-            dummyDhsErrno = DHS_S_SUCCESS;
-            dhsBdDsFree (obsId->dhsDataset, &dummyDhsErrno);
-            CHECK_DHS (dummyDhsErrno);
             goto ERROR_EXIT;
          }
 
          /*
-          * If the last frame has been received free the DHS dataset.
+          * The dataset is freed when the observation ends, below, not here:
+          * the last frame is not always sent (dhsQlRate), and for a
+          * multi-frame observation "stopped" is only set after this point.
           */
 
 #ifdef DEBUG
@@ -12922,12 +13046,7 @@ void detObserveEnd
 
          dhsErrno = DHS_S_SUCCESS;
          dhsTagFree (putTag, &dhsErrno);
-
-         if ( (frameCount == 1) || (obsId->stopped) )
-         {
-            dhsBdDsFree (obsId->dhsDataset, &dhsErrno);
-            CHECK_DHS (dhsErrno);
-         }
+         CHECK_DHS (dhsErrno);
       }
       else if ( obsId->outOptions == 2 )
       {
@@ -12992,6 +13111,9 @@ void detObserveEnd
 
          MESSAGE_LOG (MSG_MINDEBUG, "... file saved ok");
       }
+
+      semGive (obsId->dhsDatasetSem);
+      dhsDatasetLocked = FALSE;
 
       /* If obsId->totalFrames > 1 and obsId->outNFrames = obsId->totalFrames */
       /* stop the observation */
@@ -13059,6 +13181,10 @@ void detObserveEnd
 
    if ( (frameCount == 1) || (obsId->stopped) )
    {
+      /* The observation is over, so no more frames go to the DHS. */
+
+      detDhsDatasetFree (obsId);
+
       if ( sdsuId->frameErrors <= 0 )
       {
          MESSAGE_LOG1 (MSG_LOG, 
@@ -13194,6 +13320,14 @@ ERROR_EXIT:
          ERROR_LOG ("Failed to abort readouts after error");
       }
       obsAlreadyAborted = TRUE;
+   }
+
+   /* The observation is over, so release its DHS dataset. */
+
+   detDhsDatasetFree (obsId);
+   if ( dhsDatasetLocked )
+   {
+      semGive (obsId->dhsDatasetSem);
    }
 
    obsId->observing = FALSE;
