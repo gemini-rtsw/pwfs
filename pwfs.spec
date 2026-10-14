@@ -167,6 +167,11 @@ cp -a IMP_Startup.pwfs1 IMP_Startup.pwfs2 $D/ 2>/dev/null || :
 %config(noreplace) %{deploy}/data/defDetContP2MK.dat
 %config(noreplace) %{deploy}/data/pwfs1SetDefCommandMK.pv
 %config(noreplace) %{deploy}/data/pwfs2SetDefCommandMK.pv
+# Taking a dark makes the crate (NFS uid 2966) write p1_/p2_<rate>Hz.fits
+# and coadd.fits into ./data. On pisces data/ was owned by that uid; here it
+# is root's, so it must be world-writable or every dark fails. None of those
+# files ship in this package, so an upgrade cannot replace them.
+%dir %attr(0777,root,root) %{deploy}/data
 
 %files devel
 
