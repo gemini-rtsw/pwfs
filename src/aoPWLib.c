@@ -456,6 +456,251 @@ AO_CB_FG_CTRL_ID aoCbFgCtrlContextCreate (void)
 
 /*+
  *   FUNCTION NAME:
+ *   aoCcdContextDestroy
+ *
+ *   INVOCATION:
+ *   aoCcdContextDestroy (aoCcdId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCcdId (AO_CCD_ID) Pointer to the AO CCD geometry context structure
+ *
+ *   FUNCTION VALUE:
+ *   (void)
+ *
+ *   PURPOSE:
+ *   Destroy an AO CCD geometry context structure and free its memory.
+ *
+ *   DESCRIPTION:
+ *   This function frees the memory allocated for an AO CCD geometry context
+ *   structure. It should be called when the context is no longer needed,
+ *   typically during shutdown or cleanup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The aoCcdId parameter must be a valid pointer returned from
+ *   aoCcdContextCreate(), or NULL.
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void aoCcdContextDestroy (AO_CCD_ID aoCcdId)
+{
+   if (aoCcdId == NULL)
+   {
+      return;  /* NULL pointer is safe to ignore */
+   }
+
+#ifdef DEBUG
+   printf ("aoCcdContextDestroy: Freeing AO_CCD_ID structure.\n");
+#endif /* DEBUG */
+
+   free ((char *) aoCcdId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoCtrlContextDestroy
+ *
+ *   INVOCATION:
+ *   aoCtrlContextDestroy (aoCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCtrlId (AO_CTRL_ID) Pointer to the AO control context structure
+ *
+ *   FUNCTION VALUE:
+ *   (void)
+ *
+ *   PURPOSE:
+ *   Destroy an AO control context structure and free its memory.
+ *
+ *   DESCRIPTION:
+ *   This function frees the memory allocated for an AO control context
+ *   structure. It should be called when the context is no longer needed,
+ *   typically during shutdown or cleanup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The aoCtrlId parameter must be a valid pointer returned from
+ *   aoCtrlContextCreate(), or NULL.
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void aoCtrlContextDestroy (AO_CTRL_ID aoCtrlId)
+{
+   if (aoCtrlId == NULL)
+   {
+      return;  /* NULL pointer is safe to ignore */
+   }
+
+#ifdef DEBUG
+   printf ("aoCtrlContextDestroy: Freeing AO_CTRL_ID structure.\n");
+#endif /* DEBUG */
+
+   free ((char *) aoCtrlId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoCbImContextDestroy
+ *
+ *   INVOCATION:
+ *   aoCbImContextDestroy (aoCbImId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCbImId (AO_CB_IM_ID) Pointer to the AO image CB context structure
+ *
+ *   FUNCTION VALUE:
+ *   (void)
+ *
+ *   PURPOSE:
+ *   Destroy an AO image circular buffer context structure and free its memory.
+ *
+ *   DESCRIPTION:
+ *   This function frees the memory allocated for an AO image circular buffer
+ *   context structure. It should be called when the context is no longer needed,
+ *   typically during shutdown or cleanup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The aoCbImId parameter must be a valid pointer returned from
+ *   aoCbImContextCreate(), or NULL.
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void aoCbImContextDestroy (AO_CB_IM_ID aoCbImId)
+{
+   if (aoCbImId == NULL)
+   {
+      return;  /* NULL pointer is safe to ignore */
+   }
+
+#ifdef DEBUG
+   printf ("aoCbImContextDestroy: Freeing AO_CB_IM_ID structure.\n");
+#endif /* DEBUG */
+
+   free ((char *) aoCbImId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoCbAoCtrlContextDestroy
+ *
+ *   INVOCATION:
+ *   aoCbAoCtrlContextDestroy (aoCbAoCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCbAoCtrlId (AO_CB_AO_CTRL_ID) Pointer to the AO control CB context
+ *
+ *   FUNCTION VALUE:
+ *   (void)
+ *
+ *   PURPOSE:
+ *   Destroy an AO control circular buffer context structure and free its memory.
+ *
+ *   DESCRIPTION:
+ *   This function frees the memory allocated for an AO control circular buffer
+ *   context structure. It should be called when the context is no longer needed,
+ *   typically during shutdown or cleanup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The aoCbAoCtrlId parameter must be a valid pointer returned from
+ *   aoCbAoCtrlContextCreate(), or NULL.
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void aoCbAoCtrlContextDestroy (AO_CB_AO_CTRL_ID aoCbAoCtrlId)
+{
+   if (aoCbAoCtrlId == NULL)
+   {
+      return;  /* NULL pointer is safe to ignore */
+   }
+
+#ifdef DEBUG
+   printf ("aoCbAoCtrlContextDestroy: Freeing AO_CB_AO_CTRL_ID structure.\n");
+#endif /* DEBUG */
+
+   free ((char *) aoCbAoCtrlId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
+ *   aoCbFgCtrlContextDestroy
+ *
+ *   INVOCATION:
+ *   aoCbFgCtrlContextDestroy (aoCbFgCtrlId)
+ *
+ *   PARAMETERS: (">" input, "!" modified, "<" output)
+ *   (>) aoCbFgCtrlId (AO_CB_FG_CTRL_ID) Pointer to the FG control CB context
+ *
+ *   FUNCTION VALUE:
+ *   (void)
+ *
+ *   PURPOSE:
+ *   Destroy a FG control circular buffer context structure and free its memory.
+ *
+ *   DESCRIPTION:
+ *   This function frees the memory allocated for a FG control circular buffer
+ *   context structure. It should be called when the context is no longer needed,
+ *   typically during shutdown or cleanup.
+ *
+ *   EXTERNAL VARIABLES:
+ *   None
+ *
+ *   PRIOR REQUIREMENTS:
+ *   The aoCbFgCtrlId parameter must be a valid pointer returned from
+ *   aoCbFgCtrlContextCreate(), or NULL.
+ *
+ *   DEFICIENCIES:
+ *   None known
+ *-
+ */
+
+void aoCbFgCtrlContextDestroy (AO_CB_FG_CTRL_ID aoCbFgCtrlId)
+{
+   if (aoCbFgCtrlId == NULL)
+   {
+      return;  /* NULL pointer is safe to ignore */
+   }
+
+#ifdef DEBUG
+   printf ("aoCbFgCtrlContextDestroy: Freeing AO_CB_FG_CTRL_ID structure.\n");
+#endif /* DEBUG */
+
+   free ((char *) aoCbFgCtrlId);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
  *   aoCcdContextShow
  *
  *   INVOCATION:

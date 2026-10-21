@@ -3447,22 +3447,24 @@ STATUS sdsuMemoryDnload ( SDSU_ID       context,
     * avoid too many file accesses.
     */
 
-   if ((pBuffer = (uint32 *) calloc ((size_t) FILE_LOAD_BUFFER_SIZE, 
+   if ((pBuffer = (uint32 *) calloc ((size_t) FILE_LOAD_BUFFER_SIZE,
                                      sizeof (uint32))) == NULL)
    {
-      ERROR_SET (0, "Memory allocation for file load working buffer failed", 
+      ERROR_SET (0, "Memory allocation for file load working buffer failed",
                  ERROR_LOG_SAVE);
       return (ERROR);
    }
 
    /*
-    * Get the first field of the record, then enter a loop parsing each field 
+    * Get the first field of the record, then enter a loop parsing each field
     * in turn until an "end" record is read.
     */
 
    if (fscanf (fd, "%s", pField) == EOF)
    {
       ERROR_SET (0, "Failed to read first field from OMF file", ERROR_LOG_SAVE);
+      /* MEMORY LEAK FIX: Free pBuffer on error path */
+      cfree ((char *) pBuffer);
       return (ERROR);
    }
 

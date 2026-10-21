@@ -1220,13 +1220,26 @@ void vmi5588_pvtInit
 {
    struct rmpvt   *prmpvt;
 
+   /* MEMORY LEAK FIX: Free previously allocated memory before reallocating
+    * This prevents memory leak if vmi5588_pvtInit is called multiple times
+    * for the same record (e.g., during re-initialization) */
+   if (*ppdpvt != NULL) {
+      free(*ppdpvt);
+      *ppdpvt = NULL;
+   }
+
    prmpvt = (struct rmpvt *) calloc(1, sizeof(struct rmpvt));
+   if (prmpvt == NULL) {
+      /* ROBUSTNESS: Handle allocation failure gracefully */
+      return;
+   }
+
    prmpvt->page = rmPage;
    prmpvt->offset = rmOffset;
    prmpvt->address = prmData;
 
 #ifdef RM_DEBUG
-   printf("page<%x> offset<%x> address<%x>\n", 
+   printf("page<%x> offset<%x> address<%x>\n",
           rmPage, rmOffset, (unsigned long) prmData);
 #endif
 

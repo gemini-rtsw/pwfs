@@ -208,6 +208,14 @@ xy240_init()
 	 * allow for runtime reconfiguration of the
 	 * addr map
 	 */
+	/* MEMORY LEAK FIX: Free previously allocated dio array before reallocating
+	 * This prevents memory leak if xy240_init() is called multiple times
+	 * (e.g., during module reload or re-initialization) */
+	if (dio != NULL) {
+		free(dio);
+		dio = NULL;
+	}
+
 	dio = (struct dio_rec *) calloc(XY240_MAX_CARDS, sizeof(*dio));
 	if(!dio){
 		return ERROR;
@@ -216,6 +224,9 @@ xy240_init()
 	status = sysBusToLocalAdrs(VME_AM_SUP_SHORT_IO,XY240_ADDR0,&pdio_xy240);
         if (status != OK){
            	printf("%s: Unable to map the XY240 A16 base addr\n", __FILE__);
+		/* MEMORY LEAK FIX: Free allocated dio array on error path */
+		free(dio);
+		dio = NULL;
            	return ERROR;
         }
 
