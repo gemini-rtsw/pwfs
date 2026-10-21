@@ -224,9 +224,6 @@ xy240_init()
 	status = sysBusToLocalAdrs(VME_AM_SUP_SHORT_IO,XY240_ADDR0,&pdio_xy240);
         if (status != OK){
            	printf("%s: Unable to map the XY240 A16 base addr\n", __FILE__);
-		/* MEMORY LEAK FIX: Free allocated dio array on error path */
-		free(dio);
-		dio = NULL;
            	return ERROR;
         }
 
