@@ -5796,6 +5796,7 @@ uint32 detObserveStart
 
       obsId->observing = TRUE;
       obsId->stopped = FALSE;
+      obsId->obsSeq++;    /* Before the readout starts: see detObserveEnd. */
       obsId->nframes = 0;
       obsId->outNFrames = 0;
       observingState = menuCarstatesBUSY;
@@ -11308,6 +11309,7 @@ void detObserveEnd
                                    /* reserved.                               */
    BOOL         obsAlreadyAborted; /* TRUE if observation already  aborted.   */
    BOOL         dhsDatasetLocked;  /* TRUE while holding obsId->dhsDatasetSem.*/
+   uint32       frameObsSeq;       /* obsId->obsSeq when this frame arrived.  */
 
    double       readoutTimeout;    /* Readout timeout in seconds.             */
    double       waitTimeSecs;      /* Wait time in seconds.                   */
@@ -11348,6 +11350,14 @@ void detObserveEnd
    /* Convert the observation ID pointer provided as an argument. */
 
    obsId = (OBS_ID) obsIdIn;
+
+   /*
+    * Note which observation this frame belongs to. A frame that outlives
+    * its observation (held up in a DHS send across an ABORT and a new
+    * START) must not end the new observation or free its dataset.
+    */
+
+   frameObsSeq = obsId->obsSeq;
 
    /*
     * Initialise the DHS error number.
@@ -13180,7 +13190,12 @@ void detObserveEnd
     * Otherwise set a timeout on the receipt of the next frame.
     */
 
-   if ( (frameCount == 1) || (obsId->stopped) )
+   if ( frameObsSeq != obsId->obsSeq )
+   {
+      MESSAGE_LOG (MSG_WARNING,
+                   "Frame of an earlier observation - new observation kept");
+   }
+   else if ( (frameCount == 1) || (obsId->stopped) )
    {
       /* The observation is over, so no more frames go to the DHS. */
 
@@ -13306,6 +13321,20 @@ void detObserveEnd
 
 
 ERROR_EXIT:
+
+   /*
+    * A frame of an earlier observation leaves the new one running.
+    */
+
+   if ( frameObsSeq != obsId->obsSeq )
+   {
+      ERROR_LOG ("Error in a frame of an earlier observation - ignored");
+      if ( dhsDatasetLocked )
+      {
+         semGive (obsId->dhsDatasetSem);
+      }
+      return;
+   }
 
    /*
     * If an error occurred, abort the observation, release the SDSU frame 
