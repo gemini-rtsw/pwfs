@@ -212,7 +212,15 @@ STATUS setInterrupts ( SDSU_ID id )
 		return (ERROR);
 	}
 
-	frameSem = semBCreate( SEM_Q_FIFO, SEM_EMPTY );
+	if ( frameSem != NULL )
+	{
+		/* Reuse the semaphore from a previous call; leave it empty */
+		semTake ( frameSem, NO_WAIT );
+	}
+	else
+	{
+		frameSem = semBCreate( SEM_Q_FIFO, SEM_EMPTY );
+	}
 	if ( frameSem == NULL )
 	{
 		ERROR_SET (0, "Failed to create frame sync semaphore", ERROR_LOG_NOW);
