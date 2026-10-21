@@ -949,6 +949,63 @@ SDSU_ID sdsuContextCreate ( const uint32 vmeAddress,
 
 /* -------------------------------------------------------------------------- */
 
+/*
+ * sdsuParamSymsEmpty - remove every symbol from a parameter symbol table.
+ * symEach() is only used to fetch the first remaining symbol (copying its
+ * name and type); the removal is done outside the traversal, so the table
+ * is never modified while symEach() walks it. Stops at the first symbol
+ * that cannot be copied or removed (that symbol, and the table, then leak).
+ */
+
+#define SDSU_PARAM_SYM_LEN  256
+
+typedef struct
+{
+   BOOL      found;
+   SYM_TYPE  type;
+   char      name [SDSU_PARAM_SYM_LEN];
+} SDSU_SYM_FIRST;
+
+LOCAL BOOL sdsuParamSymFirst
+(
+   char *    pName,
+   int       val,
+   SYM_TYPE  type,
+   int       arg,
+   UINT16    group
+)
+{
+   SDSU_SYM_FIRST *  pFirst = (SDSU_SYM_FIRST *) arg;
+
+   if ((pName == NULL) || (strlen (pName) >= SDSU_PARAM_SYM_LEN))
+      return (FALSE);            /* cannot copy safely: stop, leave it */
+
+   strcpy (pFirst->name, pName);
+   pFirst->type  = type;
+   pFirst->found = TRUE;
+   return (FALSE);               /* stop after the first symbol */
+}
+
+LOCAL void sdsuParamSymsEmpty (SYMTAB_ID symTbl)
+{
+   SDSU_SYM_FIRST   first;
+
+   if (symTbl == NULL)
+      return;
+
+   for (;;)
+   {
+      first.found = FALSE;
+      symEach (symTbl, (FUNCPTR) sdsuParamSymFirst, (int) &first);
+      if (!first.found)
+         break;
+      if (symRemove (symTbl, first.name, first.type) == ERROR)
+         break;
+   }
+}
+
+/* -------------------------------------------------------------------------- */
+
 /*+
  *   FUNCTION NAME:
  *   sdsuContextDelete
@@ -1033,7 +1090,16 @@ STATUS sdsuContextDelete ( SDSU_ID   context )
 
    semDelete (context->commandSem);
    semDelete (context->packetSem);
-   symTblDelete (context->paramSyms);
+   if (context->paramSyms != NULL)
+   {
+      /* symTblDelete() refuses a non-empty table, so empty it first */
+      sdsuParamSymsEmpty (context->paramSyms);
+      if (symTblDelete (context->paramSyms) == ERROR)
+      {
+         ERROR_LOG ("Failed to delete parameter symbol table");
+      }
+      context->paramSyms = NULL;
+   }
    cfree ((char *) context->pRepBuffer);
    cfree ((char *) context->pCmdBuffer);
    cfree ((char *) context);
@@ -8126,6 +8192,7 @@ STATUS   sdsuReadoutAbort ( SDSU_ID   context )
 
 STATUS   sdsuReadoutClose ( SDSU_ID   context )
 {
+   void *   pReadErrContext;   /* Readout task's error context */
 
    if (SDSU_ID_IS_INVALID (context))
    {
@@ -8144,12 +8211,18 @@ STATUS   sdsuReadoutClose ( SDSU_ID   context )
    if (context->readTask == 0)
       return (OK);
    
+   /* Fetch the readout task's error context before deleting the task */
+   pReadErrContext = errorTaskContextGet (context->readTask);
+
    if (taskDelete(context->readTask) == ERROR)
    {
       ERROR_SET (0, "Readout task could not be deleted", ERROR_LOG_SAVE);
       return (ERROR);
    }
    
+   /* Task is gone, nothing else references its error context: free it */
+   errorTaskContextFree (pReadErrContext);
+
    context->readStatus = SDSU_READ_CLOSED;
    return (OK);
 }

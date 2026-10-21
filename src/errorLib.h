@@ -352,6 +352,8 @@ IMPORT   SEM_ID errorConsoleSem;  /* Semaphore protecting the console.  */
 
 IMPORT STATUS errorInit (void);
 IMPORT STATUS errorFree (void);
+IMPORT void * errorTaskContextGet (int taskId);
+IMPORT void   errorTaskContextFree (void * pContext);
 IMPORT void   errorGlobalFdSet (const int fd);
 IMPORT int    errorGlobalFdGet (void);
 IMPORT void   errorTaskFdSet (const int fd);
