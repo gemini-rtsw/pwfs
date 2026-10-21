@@ -1032,6 +1032,7 @@ STATUS sdsuContextDelete ( SDSU_ID   context )
     */
 
    semDelete (context->commandSem);
+   semDelete (context->packetSem);
    symTblDelete (context->paramSyms);
    cfree ((char *) context->pRepBuffer);
    cfree ((char *) context->pCmdBuffer);
