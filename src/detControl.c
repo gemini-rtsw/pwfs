@@ -12898,6 +12898,20 @@ void detObserveEnd
       semTake (obsId->dhsDatasetSem, WAIT_FOREVER);
       dhsDatasetLocked = TRUE;
 
+      /*
+       * A frame of an earlier observation, held here across an ABORT and a
+       * new START, must not send its pixels into the new observation's
+       * dataset, nor go on to set its stopped flag or abort its readout.
+       */
+
+      if ( frameObsSeq != obsId->obsSeq )
+      {
+         semGive (obsId->dhsDatasetSem);
+         MESSAGE_LOG (MSG_WARNING,
+                      "Frame of an earlier observation - not sent, new observation kept");
+         return;
+      }
+
       if ( (obsId->outOptions == 1) && 
            (obsId->dhsDataset != DHS_BD_DATASET_NULL) &&
            (obsId->pCurFrame != NULL) &&
