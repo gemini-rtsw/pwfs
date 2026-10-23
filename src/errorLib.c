@@ -385,6 +385,44 @@ STATUS   errorFree (void)
 
 /*+
  *   FUNCTION NAME:
+ *   errorTaskContextGet / errorTaskContextFree
+ *
+ *   PURPOSE:
+ *   Allow a task that deletes another task with taskDelete() to free the
+ *   victim's error context (which the victim can no longer free itself).
+ *   Call errorTaskContextGet(tid) BEFORE taskDelete(tid) and, only if
+ *   taskDelete() returned OK, pass the result to errorTaskContextFree().
+ *   errorTaskContextGet returns NULL if the task has no error context.
+ *   errorTaskContextFree(NULL) does nothing.
+ *-
+ */
+
+void *   errorTaskContextGet (int taskId)
+{
+   ERROR_CONTEXT  pErrorContext;
+
+   if ((taskId == 0) || (taskIdVerify (taskId) == ERROR))
+      return (NULL);
+
+   pErrorContext = (ERROR_CONTEXT) taskVarGet (taskId, & errorContextTask);
+
+   if ((int) pErrorContext == ERROR)
+      return (NULL);
+
+   return ((void *) pErrorContext);
+}
+
+void     errorTaskContextFree (void * pContext)
+{
+   if (pContext != NULL)
+      free (pContext);
+}
+
+
+/* -------------------------------------------------------------------------- */
+
+/*+
+ *   FUNCTION NAME:
  *   errorGlobalFdSet
  *
  *   INVOCATION:

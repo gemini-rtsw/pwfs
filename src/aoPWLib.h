@@ -897,6 +897,13 @@ AO_CTRL_ID aoCtrlContextCreate (void);
 AO_CB_IM_ID aoCbImContextCreate (void);
 AO_CB_AO_CTRL_ID aoCbAoCtrlContextCreate (void);
 AO_CB_FG_CTRL_ID aoCbFgCtrlContextCreate (void);
+
+void aoCcdContextDestroy (AO_CCD_ID aoCcdId);
+void aoCtrlContextDestroy (AO_CTRL_ID aoCtrlId);
+void aoCbImContextDestroy (AO_CB_IM_ID aoCbImId);
+void aoCbAoCtrlContextDestroy (AO_CB_AO_CTRL_ID aoCbAoCtrlId);
+void aoCbFgCtrlContextDestroy (AO_CB_FG_CTRL_ID aoCbFgCtrlId);
+
 STATUS aoCcdContextShow (AO_CCD_ID aoCcdId);
 STATUS aoRefRead (char * pRefFileName, AO_CCD_ID aoCcdId, AO_CTRL_ID aoCtrlId);
 STATUS aoScaleRead (char * pAoScaleFileName, AO_CTRL_ID aoCtrlId);

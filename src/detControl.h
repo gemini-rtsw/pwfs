@@ -532,6 +532,9 @@ typedef   struct      /* Context structure used to describe an observation.   */
    SDSU_ID      sdsuId;    /* SDSU context.                                   */
    BOOL         observing; /* Flag set TRUE when observing.                   */
    BOOL         stopped;   /* Flag set TRUE when observation stopped.         */
+   uint32       obsSeq;    /* Observation number, bumped by each START, so a  */
+                           /* frame of an earlier observation can tell it is  */
+                           /* stale. Wraps; only compared for equality.       */
    BOOL         continuous;/* BUG WORK AROUND: Set TRUE whenever the SDSU     */
                            /* controller is in continuous mode.               */
    int          totalFrames;/* Total frames for observation.                  */
