@@ -208,6 +208,14 @@ xy240_init()
 	 * allow for runtime reconfiguration of the
 	 * addr map
 	 */
+	/* MEMORY LEAK FIX: Free previously allocated dio array before reallocating
+	 * This prevents memory leak if xy240_init() is called multiple times
+	 * (e.g., during module reload or re-initialization) */
+	if (dio != NULL) {
+		free(dio);
+		dio = NULL;
+	}
+
 	dio = (struct dio_rec *) calloc(XY240_MAX_CARDS, sizeof(*dio));
 	if(!dio){
 		return ERROR;
